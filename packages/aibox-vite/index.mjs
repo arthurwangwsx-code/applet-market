@@ -84,6 +84,28 @@ function aiboxVerifyOutput() {
 }
 
 /**
+ * HTML 收尾：去掉 Vite 注入的 `crossorigin`。
+ *
+ * 产物与页面同源（都在 `applet://localhost/<appId>/` 下），`crossorigin` 没有任何收益，
+ * 却让脚本加载多走一条 CORS 判定路径 —— 自定义 scheme + WKWebView 上这条路径的行为
+ * 依赖 scheme handler 是否回 `Access-Control-Allow-Origin`（当前回了，但那是别人的文件，
+ * 不该把自己的可加载性押在它上面）。去掉它是纯减法。
+ */
+function aiboxHtmlShell() {
+  return {
+    name: 'aibox:html-shell',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        return html
+          .replace(/<script([^>]*?)\s+crossorigin(\s|>)/g, '<script$1$2')
+          .replace(/<link([^>]*?)\s+crossorigin(\s|>)/g, '<link$1$2');
+      },
+    },
+  };
+}
+
+/**
  * 小应用 Vite 配置。
  *
  * @param {object} [options]
@@ -114,6 +136,7 @@ export function defineAppletConfig(options = {}) {
     plugins: [
       aiboxManifest({ check: checkGenerated }),
       react({ jsxRuntime: 'automatic' }),
+      aiboxHtmlShell(),
       aiboxVerifyOutput(),
       ...(overrides.plugins ?? []),
     ],

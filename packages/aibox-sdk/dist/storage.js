@@ -85,19 +85,22 @@ export async function list() {
     }
 }
 /**
- * 一个键的类型化句柄。适合「一个模块管一份状态」的写法：
+ * 一个键的类型化句柄。适合「一个模块管一份状态」的写法，且把**编解码与校验收在一处**——
+ * 持久化数据跨版本演进时，只有这一个地方需要改：
  * ```ts
- * const settings = defineKey<Settings>('settings', DEFAULT_SETTINGS)
- * const current = await settings.read()
+ * const settings = defineKey<Settings>('settings', DEFAULTS, { parse: toSettings })
+ * const current = await settings.read()          // 旧形状自动回落 DEFAULTS，不崩
  * await settings.write({ ...current, theme: 'dark' })
  * ```
  */
-export function defineKey(key, fallback) {
+export function defineKey(key, fallback, codec = {}) {
+    const encode = (value) => (codec.serialize ? codec.serialize(value) : value);
     return {
         key,
-        read: () => get(key, fallback),
-        readParsed: (parse, onInvalid) => getParsed(key, parse, fallback, onInvalid),
-        write: (value) => set(key, value),
+        read: () => (codec.parse
+            ? getParsed(key, codec.parse, fallback, codec.onInvalid)
+            : get(key, fallback)),
+        write: (value) => set(key, encode(value)),
         clear: () => remove(key),
     };
 }

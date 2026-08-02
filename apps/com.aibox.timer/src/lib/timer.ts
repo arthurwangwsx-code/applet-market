@@ -25,8 +25,17 @@ export interface RunningTimer {
 export const DEFAULT_SECONDS = 25 * 60;
 const HISTORY_LIMIT = 100;
 
-const running = storage.defineKey<JSONValue>('timer.running', null);
-const history = storage.defineKey<JSONValue>('timer.history', []);
+// 编解码收在一处：旧版本写进去的形状不认识时回落默认值，而不是让整个应用白屏。
+const running = storage.defineKey<RunningTimer | null>('timer.running', null, {
+  parse: (raw) => (raw === null ? null : toRunning(raw)),
+  serialize: (value) => (value === null ? null : ({ ...value } as unknown as JSONValue)),
+});
+const history = storage.defineKey<Session[]>('timer.history', [], {
+  parse: (raw) => (Array.isArray(raw)
+    ? raw.map(toSession).filter((entry): entry is Session => entry !== undefined)
+    : undefined),
+  serialize: (value) => value as unknown as JSONValue,
+});
 
 function asRecord(value: JSONValue): Record<string, JSONValue> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -65,30 +74,27 @@ export function remainingSeconds(timer: RunningTimer, now = Date.now()): number 
   return Math.max(0, timer.plannedSeconds - elapsed);
 }
 
-export async function loadRunning(): Promise<RunningTimer | null> {
-  const value = await running.readParsed(toRunning);
-  return toRunning(value as JSONValue) ?? null;
+export function loadRunning(): Promise<RunningTimer | null> {
+  return running.read();
 }
 
-export async function saveRunning(timer: RunningTimer | null): Promise<void> {
-  await running.write(timer === null ? null : ({ ...timer } as unknown as JSONValue));
+export function saveRunning(timer: RunningTimer | null): Promise<boolean> {
+  return running.write(timer);
 }
 
-export async function loadHistory(): Promise<Session[]> {
-  const value = await history.read();
-  if (!Array.isArray(value)) return [];
-  return value.map(toSession).filter((entry): entry is Session => entry !== undefined);
+export function loadHistory(): Promise<Session[]> {
+  return history.read();
 }
 
 export async function appendHistory(session: Session): Promise<Session[]> {
   const previous = await loadHistory();
   const next = [session, ...previous].slice(0, HISTORY_LIMIT);
-  await history.write(next as unknown as JSONValue);
+  await history.write(next);
   return next;
 }
 
-export async function clearHistory(): Promise<void> {
-  await history.write([]);
+export function clearHistory(): Promise<boolean> {
+  return history.write([]);
 }
 
 /** `mm:ss`（超过一小时给 `h:mm:ss`）。 */

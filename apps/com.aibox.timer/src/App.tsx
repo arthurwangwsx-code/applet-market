@@ -7,7 +7,7 @@ import { HistoryList } from './components/HistoryList';
 import { registerAppletActions } from './lib/actions';
 import type { RunningTimer, Session } from './lib/timer';
 import {
-  DEFAULT_SECONDS, appendHistory, formatDuration, loadHistory, loadRunning,
+  DEFAULT_SECONDS, appendHistory, loadHistory, loadRunning,
   newSessionID, remainingSeconds, saveRunning,
 } from './lib/timer';
 

@@ -9,37 +9,27 @@
 //  2. **没有的能力就不渲染入口**：AI / 文件选择 / 分享 都先探测。
 
 import React from 'react'
-import { THEME_CSS, C, SPACE } from './components/theme.js'
+import { THEME_CSS, C } from './components/theme.js'
 import { FAB, NavBar, ReadOnlyBanner, SearchField, TabBar, ToolbarButton, UndoBar } from './components/Shell.jsx'
-import { Menu, Sheet, SheetButton } from './components/primitives.jsx'
+import { Menu } from './components/primitives.jsx'
+import Sheets, { overflowItems } from './components/Sheets.jsx'
 import TransactionsPage from './components/TransactionsPage.jsx'
 import ReportsPage from './components/ReportsPage.jsx'
 import AccountsPage, { AccountDetail } from './components/AccountsPage.jsx'
 import BudgetPage from './components/BudgetPage.jsx'
 import ProjectsPage from './components/ProjectsPage.jsx'
 import ProjectDetail from './components/ProjectDetail.jsx'
-import EntryEditor from './components/EntryEditor.jsx'
-import SplitEditor from './components/SplitEditor.jsx'
-import CurrencyManager from './components/CurrencyManager.jsx'
-import RecentlyDeleted from './components/RecentlyDeleted.jsx'
-import CSVImportPreview from './components/CSVImportPreview.jsx'
-import AIPanel from './components/AIPanel.jsx'
-import {
-  AccountEditor, BudgetEditor, MemberEditor, ProjectEditor, RateEditor, ReconcileSheet,
-} from './components/Editors.jsx'
 import { KIND, LedgerStore } from './lib/store.js'
 import {
   deleteEntry, purgeEntry, recordEntry, recordTransfer, restoreEntry, updateEntry,
 } from './lib/entries.js'
 import {
-  activateProject, addCurrency, addMember, applyFetchedRates, archiveAccount, createAccount,
-  createProject, removeMember, setBaseCurrency, setRate, updateAccount, updateMember,
-  updateProject, upsertBudget,
+  activateProject, addCurrency, addMember, applyFetchedRates, archiveAccount,
+  removeMember, setBaseCurrency, updateProject,
 } from './lib/entities.js'
-import { setBalance } from './lib/balances.js'
 import { recordSettlement } from './lib/split.js'
 import { fetchRates } from './lib/fx.js'
-import { exportCSV, exportFilename, parseImport, performImport } from './lib/csv.js'
+import { exportCSV, exportFilename, parseImport } from './lib/csv.js'
 import { monthKeyNow } from './lib/dates.js'
 import { rememberAccount, rememberCategory } from './lib/prefs.js'
 import { money } from './lib/money.js'
@@ -482,7 +472,7 @@ export default function App() {
       )}
 
       <Menu open={!!menuItems} onClose={() => setMenuItems(null)} items={menuItems ?? []} />
-      {renderSheet({ sheet, setSheet, ctx, submitRef, store, t, failIfNeeded })}
+      <Sheets sheet={sheet} setSheet={setSheet} ctx={ctx} submitRef={submitRef} failIfNeeded={failIfNeeded} />
     </div>
   )
 }
@@ -490,241 +480,4 @@ export default function App() {
 function routeTitle(route, store, t) {
   if (route.name === 'account') return store.account(route.id)?.name ?? t('tab.accounts')
   return store.project(route.id)?.name ?? t('tab.projects')
-}
-
-/** ⋯ 菜单固定顺序：AI 分析（仅有 AI 时）/ 导出 CSV / 导入 CSV / 最近删除。 */
-function overflowItems({ t, caps, canMutate, setSheet, doExport, doImport }) {
-  const items = []
-  if (caps.ai) items.push({ id: 'ai', label: t('menu.ai'), icon: 'sparkles', onSelect: () => setSheet({ kind: 'ai' }) })
-  if (caps.share) items.push({ id: 'export', label: t('menu.exportCSV'), icon: 'square.and.arrow.up', onSelect: doExport })
-  if (caps.picker && canMutate) {
-    items.push({ id: 'import', label: t('menu.importCSV'), icon: 'square.and.arrow.down', onSelect: doImport })
-  }
-  items.push({
-    id: 'deleted', label: t('menu.recentlyDeleted'), icon: 'trash',
-    onSelect: () => setSheet({ kind: 'recentlyDeleted' }),
-  })
-  return items
-}
-
-/** 全部弹层集中在根上，一一对应原生的「根级弹层清单」。 */
-function renderSheet({ sheet, setSheet, ctx, submitRef, store, t, failIfNeeded }) {
-  if (!sheet) return null
-  const close = () => setSheet(null)
-
-  const formSheet = ({ title, detent, body, onSave, saveLabel }) => (
-    <Sheet
-      open
-      onClose={close}
-      title={title}
-      detent={detent}
-      leading={<SheetButton onClick={close}>{t('x.cancel')}</SheetButton>}
-      trailing={<SheetButton bold onClick={onSave}>{saveLabel ?? t('x.save')}</SheetButton>}
-    >
-      {body}
-    </Sheet>
-  )
-
-  switch (sheet.kind) {
-    case 'entry':
-      return (
-        <div className="lg-backdrop" onClick={(event) => { if (event.target === event.currentTarget) close() }}>
-          <div className="lg-sheet" style={{ height: 'calc(100dvh - 40px)' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', padding: `${SPACE.s3}px ${SPACE.s4}px`,
-              borderBottom: `1px solid ${C.line}`, flex: '0 0 auto',
-            }}
-            >
-              <SheetButton onClick={close}>{t('x.cancel')}</SheetButton>
-              <span style={{ flex: '1 1 auto', textAlign: 'center', fontSize: 16, fontWeight: 500 }}>
-                {sheet.editing ? t('ent.edit') : t('ent.new')}
-              </span>
-              <span style={{ minWidth: 44 }} />
-            </div>
-            <EntryEditor ctx={ctx} editing={sheet.editing} onClose={close} />
-          </div>
-        </div>
-      )
-
-    case 'account':
-      return formSheet({
-        title: sheet.editing ? t('acc.edit') : t('acc.new'),
-        body: <AccountEditor ctx={ctx} editing={sheet.editing} onSubmit={submitRef} />,
-        onSave: async () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          if (sheet.editing) await updateAccount(store, sheet.editing.id, value)
-          else await createAccount(store, value)
-          if (await failIfNeeded()) close()
-        },
-      })
-
-    case 'project':
-      return formSheet({
-        title: sheet.editing ? t('prj.edit') : t('prj.new'),
-        body: <ProjectEditor ctx={ctx} editing={sheet.editing} onSubmit={submitRef} />,
-        onSave: async () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          if (sheet.editing) await updateProject(store, sheet.editing.id, value)
-          else await createProject(store, value)
-          if (await failIfNeeded()) close()
-        },
-      })
-
-    case 'budget':
-      return formSheet({
-        title: t('x.budget'),
-        detent: 360,
-        body: <BudgetEditor ctx={ctx} monthKey={ctx.monthKey} categoryID={sheet.categoryID} onSubmit={submitRef} />,
-        onSave: async () => {
-          const value = submitRef.current()
-          await upsertBudget(store, value.monthKey, value.categoryID, value.limitMinor, value.carryover)
-          if (await failIfNeeded()) close()
-        },
-      })
-
-    case 'member':
-      return formSheet({
-        title: sheet.editing ? t('prj.editMember') : t('prj.newMember'),
-        detent: 320,
-        body: (
-          <MemberEditor
-            ctx={ctx}
-            editing={sheet.editing}
-            order={store.projectMembers(sheet.projectID).length}
-            onSubmit={submitRef}
-          />
-        ),
-        onSave: async () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          if (sheet.editing) await updateMember(store, sheet.editing.id, value)
-          else await addMember(store, sheet.projectID, value)
-          if (await failIfNeeded()) close()
-        },
-      })
-
-    case 'reconcile':
-      return formSheet({
-        title: sheet.account.name,
-        detent: 320,
-        body: <ReconcileSheet ctx={ctx} account={sheet.account} onSubmit={submitRef} />,
-        onSave: async () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          await setBalance(store, sheet.account, value.targetMinor)
-          if (await failIfNeeded()) close()
-        },
-      })
-
-    case 'rate':
-      return formSheet({
-        title: sheet.code,
-        detent: 280,
-        body: <RateEditor ctx={ctx} code={sheet.code} onSubmit={submitRef} />,
-        onSave: async () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          await setRate(store, value.code, value.rate)
-          if (await failIfNeeded()) setSheet({ kind: 'currencies' })
-        },
-      })
-
-    case 'split':
-      return formSheet({
-        title: t('ent.split'),
-        body: <SplitEditor ctx={ctx} request={sheet.request} onSubmit={submitRef} />,
-        saveLabel: t('x.done'),
-        onSave: () => {
-          const value = submitRef.current()
-          if (!value.valid) return
-          sheet.request.onDone(value.split)
-          close()
-        },
-      })
-
-    case 'currencies':
-      return (
-        <Sheet
-          open
-          onClose={close}
-          title={t('acc.currencies')}
-          leading={<SheetButton onClick={close}>{t('x.done')}</SheetButton>}
-        >
-          <CurrencyManager ctx={ctx} />
-        </Sheet>
-      )
-
-    case 'addCurrency':
-      return (
-        <Sheet
-          open
-          onClose={() => setSheet({ kind: 'currencies' })}
-          title={t('cur.add')}
-          leading={<SheetButton onClick={() => setSheet({ kind: 'currencies' })}>{t('x.cancel')}</SheetButton>}
-        >
-          <CurrencyManager ctx={ctx} mode="add" />
-        </Sheet>
-      )
-
-    case 'recentlyDeleted':
-      return (
-        <Sheet
-          open
-          onClose={close}
-          title={t('menu.recentlyDeleted')}
-          trailing={<SheetButton bold onClick={close}>{t('x.done')}</SheetButton>}
-        >
-          <RecentlyDeleted ctx={ctx} />
-        </Sheet>
-      )
-
-    case 'csvPreview': {
-      const draft = sheet.draft
-      // **仅当「有效行非空 且 问题数为 0」才可点**。
-      const importable = (draft.rows ?? []).length > 0 && (draft.problems ?? []).length === 0
-      return (
-        <Sheet
-          open
-          onClose={close}
-          title={t('csv.title')}
-          leading={<SheetButton onClick={close}>{t('x.cancel')}</SheetButton>}
-          trailing={(
-            <SheetButton
-              bold
-              disabled={!importable}
-              onClick={async () => {
-                const result = await performImport(store, draft.rows)
-                close()
-                await nativeAlert({
-                  title: t('import.complete'),
-                  message: t('import.summary', result.imported, result.skipped, result.failed),
-                })
-              }}
-            >
-              {t('csv.import')}
-            </SheetButton>
-          )}
-        >
-          <CSVImportPreview ctx={ctx} draft={draft} />
-        </Sheet>
-      )
-    }
-
-    case 'ai':
-      return (
-        <Sheet
-          open
-          onClose={close}
-          title={t('ai.title')}
-          trailing={<SheetButton bold onClick={close}>{t('x.done')}</SheetButton>}
-        >
-          <AIPanel ctx={ctx} />
-        </Sheet>
-      )
-
-    default:
-      return null
-  }
 }

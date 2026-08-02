@@ -11,9 +11,9 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  LIMITS, ROOT, SCHEMA_VERSION, appPaths, compareSemver, fail, info, listReleaseVersions,
-  listSourceFiles, ok, parseSemver, readBundleFile, readJSON, relativePathError, stripContent,
-  warn, writeJSON,
+  LIMITS, ROOT, SCHEMA_VERSION, appPaths, collectBundleEntries, compareSemver, fail, info,
+  isBuiltApp, listReleaseVersions, ok, parseSemver, readBundleFile, readJSON, relativePathError,
+  stripContent, warn, writeJSON,
 } from './lib/market.mjs'
 import { rebuild } from './build-registry.mjs'
 
@@ -30,6 +30,34 @@ function parseArgs(argv) {
     else positional.push(arg)
   }
   return { positional, flags }
+}
+
+/**
+ * 构建型工程：发布前**先构建**。
+ *
+ * 顺序很重要——构建必须在 validate **之前**：validate 校验的是 `dist/`，先验后构等于验的是上一次的产物。
+ * 这条顺序就是「发出去的东西 = 刚构建出来的东西」的全部保证。
+ *
+ * `npm run typecheck`（若声明了）也在这里跑：**类型不过就不发**。TS 工程的价值全在这一步，
+ * 跳过它等于把 TS 当成带类型注释的 JS。
+ */
+function runBuild(appId) {
+  const paths = appPaths(appId)
+  const pkg = readJSON(paths.packageJSON)
+  const scripts = pkg.scripts ?? {}
+  if (!scripts.build) {
+    throw new Error(`${paths.relative}/package.json 没有 build 脚本 —— 构建型工程必须能被机械地构建出来`)
+  }
+  const run = (script) => {
+    info(`npm run ${script}（${paths.relative}）`)
+    try {
+      execFileSync('npm', ['run', script], { cwd: paths.dir, stdio: 'inherit' })
+    } catch {
+      throw new Error(`npm run ${script} 失败，已中止发布`)
+    }
+  }
+  if (scripts.typecheck) run('typecheck')
+  run('build')
 }
 
 function runValidate(appId) {

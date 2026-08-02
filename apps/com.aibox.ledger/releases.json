@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.ledger",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-02T20:15:50Z",
+      "notes": "首个版本：1:1 复刻原生记账模块",
+      "fileCount": 46,
+      "totalBytes": 435028,
+      "path": "apps/com.aibox.ledger/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "176348691b269ef73edc0c5791c6f5cf52f51ed33630233e5919fb419905db64"
+    }
+  ]
+}

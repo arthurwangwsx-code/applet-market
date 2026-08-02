@@ -21,19 +21,31 @@ export const LIMITS = {
   maxFileCount: 500,
 }
 
-// 离线运行时可用的裸模块白名单，与 Swift 侧 AppletImportRules 保持一致。
+// 离线运行时可用的裸模块白名单。
+//
+// **真值是 Swift 侧 `AppletImportRules.bareToFile`**（Runtime/AppletImportRules.swift）——它同时决定
+// 宿主 react 外壳的 import map。这份表必须与它**逐条相等**：
+//  · 多一条 → validate 放过一个宿主解析不了的说明符 → 装上就白屏（且转译期零报错，极难归因）
+//  · 少一条 → 误拒合法应用
 export const BARE_IMPORT_ALLOWLIST = new Set([
   'react',
   'react-dom',
   'react-dom/client',
   'react/jsx-runtime',
-  'react/jsx-dev-runtime',
   'antd-mobile',
   'chart.js',
-  'chart.js/auto',
   // 框架级 UI 原语（VirtualList / useKeyboardInset / useListGestures / imageURL）——
   // 随运行时资产内置，不是 npm 包。见 docs/capabilities/applet/framework-capabilities.md §3.2/§3.3。
   'aibox/ui',
+])
+
+// 曾经在白名单里、但宿主**其实没有**的说明符。单列出来是为了给一条能自愈的错误，
+// 而不是笼统的「未知模块」。（2026-08-03 修：`react/jsx-dev-runtime` 与 `chart.js/auto`
+// 在市场白名单里但不在 Swift bareToFile、也不在 import map —— 放过去就是 404 白屏。）
+export const KNOWN_MISSING_IMPORTS = new Map([
+  ['react/jsx-dev-runtime', 'jsx-dev-runtime 只存在于开发模式，宿主 import map 没有它。用 production 构建。'],
+  ['chart.js/auto', "宿主只提供整包 'chart.js'。改成 import { Chart, registerables } from 'chart.js' 再 Chart.register(...registerables)。"],
+  ['antd', "手机端要用 'antd-mobile'，桌面版 antd 没有随运行时提供。"],
 ])
 
 export const CATEGORIES = new Set([
@@ -140,9 +152,9 @@ export function encodingFor(relative) {
   return BINARY_EXTENSIONS.has(path.extname(relative).toLowerCase()) ? 'base64' : 'utf8'
 }
 
-/** 读单个源文件 → bundle 文件条目（含 content）。 */
-export function readBundleFile(srcDir, relative) {
-  const bytes = fs.readFileSync(path.join(srcDir, relative))
+/** 读单个文件 → bundle 文件条目（含 content）。`baseDir` 是源目录或产物目录。 */
+export function readBundleFile(baseDir, relative) {
+  const bytes = fs.readFileSync(path.join(baseDir, relative))
   const encoding = encodingFor(relative)
   return {
     path: relative,
@@ -175,12 +187,50 @@ export function appPaths(appId) {
     dir,
     appJSON: path.join(dir, 'app.json'),
     srcDir: path.join(dir, 'src'),
+    distDir: path.join(dir, 'dist'),
+    packageJSON: path.join(dir, 'package.json'),
     manifest: path.join(dir, 'src', 'manifest.json'),
     releasesJSON: path.join(dir, 'releases.json'),
     releasesDir: path.join(dir, 'releases'),
     releaseDir: (version) => path.join(dir, 'releases', version),
     relative: `apps/${appId}`,
   }
+}
+
+// —— 两种工程形态 ——
+//
+// 市场同时承载两条链路（宿主 `AppletRuntimeKind` 的两个取值）：
+//  · **构建型**（有 `package.json`）：TS + Vite 工程，进包的是 `dist/**` + `src/manifest.json`。
+//  · **源码型**（无 `package.json`）：AI 直写的 `.jsx`，进包的是 `src/**`（历史行为，逐字不变）。
+// 判据只有一个——**根目录有没有 `package.json`**。不用 manifest 的 runtimeKind 做判据：
+// 那是给宿主看的运行时声明，而这里要回答的是「本地怎么打包」，两者不该互相依赖
+// （manifest 写错时我们要能报错，而不是跟着它一起走错路）。
+
+/** 这个应用是不是构建型工程。 */
+export function isBuiltApp(appId) {
+  return fs.existsSync(appPaths(appId).packageJSON)
+}
+
+/**
+ * 一个应用要进包的文件清单：`[{ absDir, relative }]`，relative 就是 bundle 里的路径。
+ *
+ * 构建型：`dist/**` **平铺到包根**（`dist/index.html` → `index.html`，`entry: index.html` 因此命中）
+ * ＋ `src/manifest.json` → `manifest.json`。manifest 是**声明不是代码**，永远从 src 取，不进构建。
+ */
+export function collectBundleEntries(appId) {
+  const paths = appPaths(appId)
+  if (!isBuiltApp(appId)) {
+    return listSourceFiles(paths.srcDir).map((relative) => ({ absDir: paths.srcDir, relative }))
+  }
+  if (!fs.existsSync(paths.distDir)) {
+    throw new Error(`${paths.relative} 是构建型工程但没有 dist/ —— 先跑 npm run build`)
+  }
+  const entries = listSourceFiles(paths.distDir).map((relative) => ({ absDir: paths.distDir, relative }))
+  if (entries.some((entry) => entry.relative === 'manifest.json')) {
+    throw new Error('dist/ 里不该有 manifest.json —— 它是声明不是构建产物，只从 src/manifest.json 取')
+  }
+  entries.push({ absDir: paths.srcDir, relative: 'manifest.json' })
+  return entries.sort((a, b) => a.relative.localeCompare(b.relative))
 }
 
 export function listReleaseVersions(appId) {

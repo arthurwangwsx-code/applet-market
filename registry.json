@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T20:11:14Z",
-  "appCount": 3,
+  "updatedAt": "2026-08-02T20:15:50Z",
+  "appCount": 4,
   "apps": [
     {
       "appId": "com.aibox.finance",
@@ -37,6 +37,47 @@
         "watchlist",
         "portfolio",
         "fund"
+      ],
+      "minHostVersion": "1.0.0"
+    },
+    {
+      "appId": "com.aibox.ledger",
+      "name": "记账",
+      "summary": "多账户复式记账与预算",
+      "icon": "book.closed",
+      "category": "productivity",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-02T20:15:50Z",
+      "versionCount": 1,
+      "capabilities": [
+        "ai",
+        "haptics",
+        "net",
+        "picker",
+        "share",
+        "storage",
+        "tabs",
+        "toolbar",
+        "ui"
+      ],
+      "path": "apps/com.aibox.ledger",
+      "localizedNames": {
+        "en": "Ledger"
+      },
+      "localizedSummaries": {
+        "en": "Multi-account ledger with budgets, projects and shared-expense settlement"
+      },
+      "iconTintHex": "2A9D63",
+      "tags": [
+        "ledger",
+        "budget",
+        "expense",
+        "multi-currency",
+        "split",
+        "记账",
+        "预算",
+        "AA"
       ],
       "minHostVersion": "1.0.0"
     },

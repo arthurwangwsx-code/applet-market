@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.timer",
+  "version": "1.0.0",
+  "releasedAt": "2026-08-02T20:18:25Z",
+  "notes": "首个版本：TypeScript + Vite 标准工程范例",
+  "localizedNotes": {
+    "en": "First release: the TypeScript + Vite reference app"
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "计时器",
+    "localizedNames": {
+      "en": "Timer"
+    },
+    "icon": "timer",
+    "iconTintHex": "3A86C8",
+    "summary": "番茄钟与秒表，本地记录",
+    "localizedSummaries": {
+      "en": "Pomodoro timer and stopwatch with local history"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "runtimeKind": "bundle",
+    "securityMode": "secure",
+    "permissions": {
+      "storage": true,
+      "capabilities": [
+        "haptics",
+        "toast"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "sheet",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "timer.start",
+        "name": "start",
+        "displayName": "开始计时",
+        "summary": "Starts a countdown. Pass \"minutes\" (1-180) or \"seconds\" for a precise duration; omit both for the default 25-minute focus block. Optional \"label\" names the session so it is recognisable in history.",
+        "keywords": [
+          "timer",
+          "countdown",
+          "pomodoro",
+          "focus",
+          "计时",
+          "番茄钟",
+          "倒计时"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"minutes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":180,\"description\":\"Duration in whole minutes (1-180).\"},\"seconds\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10800,\"description\":\"Duration in seconds; wins over minutes when both are given.\"},\"label\":{\"type\":\"string\",\"description\":\"What this session is for, e.g. \\\"write report\\\".\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"remainingSeconds\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"remainingSeconds\":{\"type\":\"integer\"},\"label\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "localWrite",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "timer.status",
+        "name": "status",
+        "displayName": "查看状态",
+        "summary": "Reports whether a timer is running and how much time is left. Read-only.",
+        "keywords": [
+          "timer",
+          "status",
+          "remaining",
+          "剩余",
+          "状态"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"running\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"running\":{\"type\":\"boolean\"},\"remainingSeconds\":{\"type\":\"integer\"},\"label\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "timer.stop",
+        "name": "stop",
+        "displayName": "停止计时",
+        "summary": "Stops the running timer. Set \"record\" to true to still write it into history as an interrupted session.",
+        "keywords": [
+          "timer",
+          "stop",
+          "cancel",
+          "停止",
+          "取消"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"record\":{\"type\":\"boolean\",\"description\":\"Write the partial session into history. Default false.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"stopped\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"stopped\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "localWrite",
+        "readOnly": false,
+        "idempotent": true
+      }
+    ]
+  },
+  "totalBytes": 26762,
+  "files": [
+    {
+      "path": "app.js",
+      "bytes": 20266,
+      "sha256": "8c6b08de358960f0ee9fc2208a4ce825f9503da837ca69c001956bf328e83232",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2974,
+      "sha256": "2ef8f9d8bb775d9f8a94e07fa25b492fd1433eab04ec39594c9881a48129ffa5",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 3522,
+      "sha256": "39d0dd6aaf441543924d26dde3294978debb2382db46e3675e1272178c430833",
+      "encoding": "utf8"
+    }
+  ]
+}

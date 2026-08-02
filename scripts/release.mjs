@@ -94,17 +94,21 @@ function main() {
     throw new Error(`版本 ${version} 不高于当前最新 ${existing[0]}`)
   }
 
+  // 构建 → 校验 → 组包。构建必须在校验前：validate 校验的是 dist/，先验后构等于验上一次的产物。
+  const built = isBuiltApp(appId)
+  if (built) runBuild(appId)
   runValidate(appId)
 
   // —— 组包 ——
-  const relatives = listSourceFiles(paths.srcDir)
-  if (relatives.length === 0) throw new Error('src/ 为空，没有可发布的内容')
+  // 构建型进 `dist/**`（平铺到包根）+ `src/manifest.json`；源码型进 `src/**`。见 collectBundleEntries。
+  const entries = collectBundleEntries(appId)
+  if (entries.length === 0) throw new Error(`${built ? 'dist/' : 'src/'} 为空，没有可发布的内容`)
   const files = []
   let totalBytes = 0
-  for (const relative of relatives) {
+  for (const { absDir, relative } of entries) {
     const pathError = relativePathError(relative)
     if (pathError) throw new Error(pathError)
-    const file = readBundleFile(paths.srcDir, relative)
+    const file = readBundleFile(absDir, relative)
     if (file.bytes > LIMITS.maxFileBytes) {
       throw new Error(`${relative} 超过单文件上限 ${LIMITS.maxFileBytes} 字节`)
     }
@@ -143,7 +147,7 @@ function main() {
   writeJSON(path.join(dir, 'bundle.json'), { ...head, files })
 
   ok(`已发布 ${appId} ${version}`)
-  info(`${files.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB`)
+  info(`${built ? '构建型（dist/ + src/manifest.json）' : '源码型（src/）'} · ${files.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB`)
   if (flags.force && existing.includes(version)) warn(`--force 覆盖了已存在的 ${version}`)
 
   rebuild({ quiet: true })

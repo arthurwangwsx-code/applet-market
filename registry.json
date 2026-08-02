@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T20:15:50Z",
-  "appCount": 4,
+  "updatedAt": "2026-08-02T20:18:25Z",
+  "appCount": 5,
   "apps": [
     {
       "appId": "com.aibox.finance",
@@ -154,6 +154,38 @@
         "rsshub",
         "reader",
         "news"
+      ],
+      "minHostVersion": "1.0.0"
+    },
+    {
+      "appId": "com.aibox.timer",
+      "name": "计时器",
+      "summary": "番茄钟与秒表，本地记录",
+      "icon": "timer",
+      "category": "productivity",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-02T20:18:25Z",
+      "versionCount": 1,
+      "capabilities": [
+        "haptics",
+        "storage",
+        "toast"
+      ],
+      "path": "apps/com.aibox.timer",
+      "localizedNames": {
+        "en": "Timer"
+      },
+      "localizedSummaries": {
+        "en": "Pomodoro timer and stopwatch with local history"
+      },
+      "iconTintHex": "3A86C8",
+      "tags": [
+        "timer",
+        "pomodoro",
+        "stopwatch",
+        "typescript",
+        "vite"
       ],
       "minHostVersion": "1.0.0"
     }

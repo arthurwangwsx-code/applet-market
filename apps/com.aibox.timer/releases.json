@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.timer",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-02T20:18:25Z",
+      "notes": "首个版本：TypeScript + Vite 标准工程范例",
+      "fileCount": 3,
+      "totalBytes": 26762,
+      "path": "apps/com.aibox.timer/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release: the TypeScript + Vite reference app"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "62664260fd42fedee34d3c4ad3b258e924290e9076bb980b469cfbf5e036ae98"
+    }
+  ]
+}

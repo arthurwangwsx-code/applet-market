@@ -121,12 +121,12 @@ async function remove(key) {
   }
 }
 __name(remove, "remove");
-function defineKey(key, fallback) {
+function defineKey(key, fallback, codec = {}) {
+  const encode = /* @__PURE__ */ __name((value) => codec.serialize ? codec.serialize(value) : value, "encode");
   return {
     key,
-    read: /* @__PURE__ */ __name(() => get(key, fallback), "read"),
-    readParsed: /* @__PURE__ */ __name((parse, onInvalid) => getParsed(key, parse, fallback, onInvalid), "readParsed"),
-    write: /* @__PURE__ */ __name((value) => set(key, value), "write"),
+    read: /* @__PURE__ */ __name(() => codec.parse ? getParsed(key, codec.parse, fallback, codec.onInvalid) : get(key, fallback), "read"),
+    write: /* @__PURE__ */ __name((value) => set(key, encode(value)), "write"),
     clear: /* @__PURE__ */ __name(() => remove(key), "clear")
   };
 }
@@ -269,8 +269,14 @@ function useScene() {
 __name(useScene, "useScene");
 const DEFAULT_SECONDS = 25 * 60;
 const HISTORY_LIMIT = 100;
-const running = defineKey("timer.running", null);
-const history = defineKey("timer.history", []);
+const running = defineKey("timer.running", null, {
+  parse: /* @__PURE__ */ __name((raw) => raw === null ? null : toRunning(raw), "parse"),
+  serialize: /* @__PURE__ */ __name((value) => value === null ? null : { ...value }, "serialize")
+});
+const history = defineKey("timer.history", [], {
+  parse: /* @__PURE__ */ __name((raw) => Array.isArray(raw) ? raw.map(toSession).filter((entry) => entry !== void 0) : void 0, "parse"),
+  serialize: /* @__PURE__ */ __name((value) => value, "serialize")
+});
 function asRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
@@ -305,19 +311,16 @@ function remainingSeconds(timer, now = Date.now()) {
   return Math.max(0, timer.plannedSeconds - elapsed);
 }
 __name(remainingSeconds, "remainingSeconds");
-async function loadRunning() {
-  const value = await running.readParsed(toRunning);
-  return toRunning(value) ?? null;
+function loadRunning() {
+  return running.read();
 }
 __name(loadRunning, "loadRunning");
-async function saveRunning(timer) {
-  await running.write(timer === null ? null : { ...timer });
+function saveRunning(timer) {
+  return running.write(timer);
 }
 __name(saveRunning, "saveRunning");
-async function loadHistory() {
-  const value = await history.read();
-  if (!Array.isArray(value)) return [];
-  return value.map(toSession).filter((entry) => entry !== void 0);
+function loadHistory() {
+  return history.read();
 }
 __name(loadHistory, "loadHistory");
 async function appendHistory(session) {

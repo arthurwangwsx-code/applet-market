@@ -1,9 +1,45 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T20:06:12Z",
-  "appCount": 2,
+  "updatedAt": "2026-08-02T20:11:14Z",
+  "appCount": 3,
   "apps": [
+    {
+      "appId": "com.aibox.finance",
+      "name": "理财",
+      "summary": "行情、自选与模拟持仓",
+      "icon": "chart.line.uptrend.xyaxis",
+      "category": "information",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-02T20:11:14Z",
+      "versionCount": 1,
+      "capabilities": [
+        "ai",
+        "net",
+        "notifications",
+        "share",
+        "storage",
+        "tabs",
+        "toolbar"
+      ],
+      "path": "apps/com.aibox.finance",
+      "localizedNames": {
+        "en": "Finance"
+      },
+      "localizedSummaries": {
+        "en": "Quotes, watchlist, and paper-trading portfolio"
+      },
+      "iconTintHex": "E64340",
+      "tags": [
+        "stocks",
+        "quotes",
+        "watchlist",
+        "portfolio",
+        "fund"
+      ],
+      "minHostVersion": "1.0.0"
+    },
     {
       "appId": "com.aibox.music",
       "name": "音乐",

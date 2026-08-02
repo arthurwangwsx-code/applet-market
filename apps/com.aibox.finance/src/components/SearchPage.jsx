@@ -12,7 +12,7 @@ import { SearchField } from './Shell.jsx'
 import { C, SPACE } from './theme.js'
 import { formatPercent, formatPriceFor, trendColor } from '../lib/format.js'
 import { HOT_SEEDS } from '../lib/store.js'
-import { canonicalOf, parseStrict, resolveSymbol } from '../lib/symbol.js'
+import { parseStrict, resolveSymbol } from '../lib/symbol.js'
 import * as tencent from '../lib/providers/tencent.js'
 import * as fund from '../lib/providers/fund.js'
 

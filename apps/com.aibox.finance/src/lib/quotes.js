@@ -7,7 +7,7 @@
 import * as tencent from './providers/tencent.js'
 import * as sina from './providers/sina.js'
 import * as fund from './providers/fund.js'
-import { resolveSymbol } from './symbol.js'
+import { canonicalOf, resolveSymbol } from './symbol.js'
 
 /** 内存 TTL = clamp(refreshInterval, 10, 60) 秒；`force` 旁路。 */
 export function quoteTTL(refreshInterval) {
@@ -142,10 +142,7 @@ export class QuoteService {
     if (this.source === 'sina') return sina.fetchQuotes(symbols)
     const primary = await tencent.fetchQuotes(symbols)
     if (this.source === 'tencent') return primary
-    const missing = symbols.filter((symbol) => {
-      const canonical = Object.keys(primary).find((key) => key === canonicalKey(symbol))
-      return !canonical
-    })
+    const missing = symbols.filter((symbol) => !primary[canonicalOf(symbol)])
     if (missing.length === 0) return primary
     const fallback = await sina.fetchQuotes(missing)
     return { ...primary, ...fallback }
@@ -180,16 +177,6 @@ export class QuoteService {
     const rows = await sina.fetchFX()
     if (rows) { this.fx = rows; this.fxAt = now }
     return this.fx
-  }
-}
-
-function canonicalKey(symbol) {
-  switch (symbol.market) {
-    case 'ashare': return `${symbol.exchange}${symbol.code}`
-    case 'hk': return `hk${symbol.code}`
-    case 'us': return `us${symbol.code}`
-    case 'fund': return `fund${symbol.code}`
-    default: return symbol.code
   }
 }
 

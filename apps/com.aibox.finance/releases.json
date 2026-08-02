@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.finance",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-02T20:11:14Z",
+      "notes": "首个版本：1:1 复刻原生理财模块",
+      "fileCount": 44,
+      "totalBytes": 421229,
+      "path": "apps/com.aibox.finance/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "c75c6eaab66598ad86169caa3fb934470d531428d3d018e38f8d9d50d94170f8"
+    }
+  ]
+}

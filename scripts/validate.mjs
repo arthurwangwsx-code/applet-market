@@ -10,14 +10,18 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   APPS_DIR, BARE_IMPORT_ALLOWLIST, CATEGORIES, CONTAINER_NAMESPACES, KNOWN_CAPABILITIES, LIMITS,
-  appPaths, encodingFor, fail, info, isValidAppID, listAppIDs, listReleaseVersions,
+  ROOT, appPaths, encodingFor, fail, info, isValidAppID, listAppIDs, listReleaseVersions,
   listSourceFiles, ok, parseSemver, readJSON, relativePathError, sha256, warn,
 } from './lib/market.mjs'
+import { checkManifestKeys, defaultHostSourceDir, loadHostSchema } from './lib/manifest-keys.mjs'
 
 const errors = []
 const warnings = []
 const err = (appId, message) => errors.push(`${appId}: ${message}`)
 const wrn = (appId, message) => warnings.push(`${appId}: ${message}`)
+
+/** 宿主键表：main() 里加载一次；null = 宿主源码不在场（单独 clone 市场仓库），跳过该闸门。 */
+let hostSchema = null
 
 // 匹配 import / export ... from '<spec>' 与 import('<spec>')。
 const IMPORT_RE = /(?:^|[\s;}])(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm
@@ -67,6 +71,15 @@ function validateManifest(appId, manifest, meta) {
   }
   if ((permissions.networkAllowed ?? []).includes('*')) {
     err(appId, "manifest.networkAllowed 含 '*'——市场包不允许任意 host，请精确列域名")
+  }
+
+  // 键名闸门：宿主用合成 Codable 读 manifest，不认识的键**静默忽略**——写错一个键不会报错，
+  // 只是那条声明从未生效。最容易踩的是照抄 `applet_manage` 工具 schema 的 snake_case
+  //（`timeout_ms` / `max_retries` / `requires_network`…），而 manifest 侧要的是 camelCase。
+  if (hostSchema) {
+    const { errors: keyErrors, warnings: keyWarnings } = checkManifestKeys(manifest, hostSchema)
+    for (const message of keyErrors) err(appId, message)
+    for (const message of keyWarnings) wrn(appId, message)
   }
 }
 
@@ -195,6 +208,15 @@ function main() {
     warn('apps/ 下没有任何应用')
     return 0
   }
+
+  // 键表从宿主 Swift 源码机械提取，宿主加字段这里自动跟随。找不到宿主源码时**跳过而不是 fail**——
+  // 单独 clone 市场仓库的人不该因为没有 AiBox 工程就跑不了校验（用 AIBOX_HOST_SOURCE 可显式指定）。
+  const hostDir = defaultHostSourceDir(ROOT)
+  hostSchema = loadHostSchema(hostDir)
+  if (!hostSchema) {
+    warn(`未找到宿主源码（${hostDir}），跳过 manifest 键名闸门；设 AIBOX_HOST_SOURCE 可指定路径`)
+  }
+
   for (const appId of appIds) validateApp(appId)
 
   for (const message of warnings) warn(message)

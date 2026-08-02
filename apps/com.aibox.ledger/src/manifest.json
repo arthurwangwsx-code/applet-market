@@ -6,15 +6,25 @@
   "icon": "book.closed",
   "iconTintHex": "2A9D63",
   "summary": "多账户复式记账与预算",
+  "localizedSummaries": {
+    "en": "Multi-account ledger with budgets, projects and shared-expense settlement"
+  },
   "template": "react",
   "entry": "index.html",
   "securityMode": "secure",
   "permissions": {
-    "network": false,
+    "network": true,
     "storage": true,
-    "ai": false,
-    "networkAllowed": [],
-    "capabilities": []
+    "ai": true,
+    "networkAllowed": [
+      "open.er-api.com"
+    ],
+    "capabilities": [
+      "picker",
+      "share",
+      "ui",
+      "haptics"
+    ]
   },
   "presentation": {
     "default": "page",
@@ -22,5 +32,282 @@
       "page",
       "fullscreen"
     ]
-  }
+  },
+  "scene": {
+    "tabBar": {
+      "style": "glass",
+      "items": [
+        {
+          "id": "transactions",
+          "title": "明细",
+          "localizedTitles": {
+            "en": "Entries"
+          },
+          "icon": "list.bullet.rectangle"
+        },
+        {
+          "id": "reports",
+          "title": "报表",
+          "localizedTitles": {
+            "en": "Reports"
+          },
+          "icon": "chart.pie"
+        },
+        {
+          "id": "accounts",
+          "title": "资产",
+          "localizedTitles": {
+            "en": "Assets"
+          },
+          "icon": "wallet.pass",
+          "selectedIcon": "wallet.pass.fill"
+        },
+        {
+          "id": "budget",
+          "title": "预算",
+          "localizedTitles": {
+            "en": "Budget"
+          },
+          "icon": "target"
+        },
+        {
+          "id": "projects",
+          "title": "项目",
+          "localizedTitles": {
+            "en": "Projects"
+          },
+          "icon": "folder",
+          "selectedIcon": "folder.fill"
+        }
+      ]
+    },
+    "toolbar": {
+      "trailing": [
+        {
+          "id": "more",
+          "icon": "ellipsis",
+          "role": "hostMenu"
+        }
+      ],
+      "search": {
+        "enabled": true,
+        "placeholder": "搜索记录",
+        "localizedPlaceholders": {
+          "en": "Search entries"
+        }
+      }
+    },
+    "menu": {
+      "mergePolicy": "appletFirst",
+      "sections": [
+        {
+          "id": "analysis",
+          "items": [
+            {
+              "id": "openAI",
+              "title": "AI 分析",
+              "localizedTitles": {
+                "en": "AI analysis"
+              },
+              "icon": "sparkles",
+              "actionID": "ledger.openAI"
+            }
+          ]
+        },
+        {
+          "id": "data",
+          "items": [
+            {
+              "id": "exportCSV",
+              "title": "导出 CSV",
+              "localizedTitles": {
+                "en": "Export CSV"
+              },
+              "icon": "square.and.arrow.up",
+              "actionID": "ledger.exportCSV"
+            },
+            {
+              "id": "importCSV",
+              "title": "导入 CSV",
+              "localizedTitles": {
+                "en": "Import CSV"
+              },
+              "icon": "square.and.arrow.down",
+              "actionID": "ledger.importCSV"
+            },
+            {
+              "id": "openRecentlyDeleted",
+              "title": "最近删除",
+              "localizedTitles": {
+                "en": "Recently deleted"
+              },
+              "icon": "trash",
+              "actionID": "ledger.openRecentlyDeleted"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "id": "ledger.record",
+      "name": "record",
+      "displayName": "记一笔",
+      "summary": "Record, edit or delete one ledger entry: an expense, an income, or a transfer between two accounts. Only `amount` is required for a new expense — category, account and date all have sensible defaults, so do NOT stop and ask the user for them. Pass a stable `request_id` (a UUID) on every add so a retry can never double-post. Use the ledger account tool to create accounts; this tool never creates one from scratch.",
+      "keywords": ["ledger", "expense", "income", "transfer", "spend", "记账", "支出", "收入", "转账", "花了"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"add\",\"update\",\"delete\"],\"description\":\"Defaults to add. Never guess delete.\"},\"type\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"transfer\"],\"description\":\"Defaults to expense.\"},\"amount\":{\"type\":\"number\",\"description\":\"Required for add and always positive, in major units (12.50). Direction comes from `type`, never from a sign.\"},\"currency\":{\"type\":\"string\",\"description\":\"ISO code or a colloquial name (ringgit, 马币). If given without an account, routes to a same-currency account. A currency with no configured rate is refused outright.\"},\"category\":{\"type\":\"string\",\"description\":\"Category name, or a two-level path 'Parent/Child'. Ignored for transfers.\"},\"account\":{\"type\":\"string\",\"description\":\"Which account the money came from. Defaults to the default account. Kind words (cash, 信用卡, 电子钱包) and brand names (支付宝, WeChat) resolve automatically.\"},\"to_account\":{\"type\":\"string\",\"description\":\"Destination account; required for transfers.\"},\"to_amount\":{\"type\":\"number\",\"description\":\"Cross-currency transfers: the amount that lands, in the destination account's currency. Omit to convert at the current rate.\"},\"date\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, or natural language such as yesterday / 3天前. Defaults to today.\"},\"merchant\":{\"type\":\"string\"},\"note\":{\"type\":\"string\"},\"tags\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"project\":{\"type\":\"string\",\"description\":\"Group into a project; created if missing. 'none' means no project. Omitting it means NO project even when one is currently active.\"},\"payer\":{\"type\":\"string\",\"description\":\"Shared expenses: who paid ('me' for the user). Only meaningful when the project has members.\"},\"split_mode\":{\"type\":\"string\",\"enum\":[\"equal\",\"exact\",\"shares\",\"percent\"],\"description\":\"Omit for no split (the payer bears the whole cost).\"},\"split_with\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Member names taking part; omit for everyone.\"},\"split_values\":{\"type\":\"array\",\"items\":{\"type\":\"number\"},\"description\":\"Aligned with split_with: exact amounts, weights, or percentages. Not needed for equal.\"},\"reimbursable\":{\"type\":\"boolean\"},\"refund_of\":{\"type\":\"string\",\"description\":\"transaction_id of the expense this income refunds; 'none' unlinks on update.\"},\"request_id\":{\"type\":\"string\",\"description\":\"Idempotency key (use a UUID). The same key never posts twice — reuse it when retrying.\"},\"batch_id\":{\"type\":\"string\"},\"source_fingerprint\":{\"type\":\"string\"},\"transaction_id\":{\"type\":\"string\",\"description\":\"Required for update and delete.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"amountMinor\":{\"type\":\"integer\"},\"currency\":{\"type\":\"string\"},\"duplicate\":{\"type\":\"boolean\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation", "shortcut"],
+      "effect": "write",
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.query",
+      "name": "query",
+      "displayName": "查流水",
+      "summary": "List individual ledger entries matching filters. Returns the count, the expense total in the base currency, and one line per entry ending in [id: …] so it can be updated or deleted afterwards. An unresolvable category/account/project name comes back as a candidate list rather than being silently ignored.",
+      "keywords": ["ledger", "entries", "transactions", "history", "流水", "明细", "查账"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"transfer\"]},\"category\":{\"type\":\"string\"},\"account\":{\"type\":\"string\"},\"project\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"keyword\":{\"type\":\"string\",\"description\":\"Matches merchant, note and tags.\"},\"reimbursable\":{\"type\":\"boolean\"},\"period\":{\"type\":\"string\",\"enum\":[\"today\",\"this_week\",\"last_7_days\",\"last_30_days\",\"this_month\",\"last_month\",\"this_year\",\"all\"],\"description\":\"Defaults to this_month. Ignored when date_from/date_to are given.\"},\"date_from\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, inclusive.\"},\"date_to\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, inclusive.\"},\"min_amount\":{\"type\":\"number\"},\"max_amount\":{\"type\":\"number\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100,\"description\":\"Defaults to 20.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"totalExpenseMinor\":{\"type\":\"integer\"},\"baseCurrency\":{\"type\":\"string\"},\"entries\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "ledger.stats",
+      "name": "stats",
+      "displayName": "消费统计",
+      "summary": "Aggregate spending or income into buckets by category, subcategory, day, month, account, tag or project. Shares one implementation with the in-app Reports screen, so quoted numbers always match what the user sees. Amounts are in the base currency at the exchange rate frozen when each entry was posted. Transfers and balance adjustments are excluded.",
+      "keywords": ["ledger", "stats", "breakdown", "trend", "统计", "报表", "占比", "花在哪"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"dimension\":{\"type\":\"string\",\"enum\":[\"by_category\",\"by_subcategory\",\"by_day\",\"by_month\",\"by_account\",\"by_tag\",\"by_project\"],\"description\":\"Defaults to by_category.\"},\"metric\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"net\"],\"description\":\"Defaults to expense.\"},\"project\":{\"type\":\"string\"},\"period\":{\"type\":\"string\",\"enum\":[\"today\",\"this_week\",\"last_7_days\",\"last_30_days\",\"this_month\",\"last_month\",\"this_year\",\"all\"]},\"date_from\":{\"type\":\"string\"},\"date_to\":{\"type\":\"string\"},\"top_n\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"Time dimensions are never truncated.\"},\"compare_previous\":{\"type\":\"boolean\",\"description\":\"Also compute the immediately preceding window of equal length.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"totalMinor\":{\"type\":\"integer\"},\"previousTotalMinor\":{\"type\":[\"integer\",\"null\"]},\"baseCurrency\":{\"type\":\"string\"},\"buckets\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "ledger.budget",
+      "name": "budget",
+      "displayName": "预算",
+      "summary": "Read budget status or set a monthly limit. Status shares one implementation with the in-app Budget screen and reports the total limit, spent, remaining, days left and the daily allowance, plus each category line (flagged when over, annotated when it carries a rollover). Setting a limit of 0 deletes that budget.",
+      "keywords": ["ledger", "budget", "limit", "预算", "限额", "还能花"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"status\",\"set\"],\"description\":\"Defaults to status.\"},\"category\":{\"type\":\"string\",\"description\":\"Omit for the overall monthly budget.\"},\"limit\":{\"type\":\"number\",\"description\":\"Major units. 0 removes the budget.\"},\"month\":{\"type\":\"string\",\"description\":\"YYYY-MM (also accepts YYYYMM or YYYY/MM). Defaults to the current month.\"},\"carryover\":{\"type\":\"boolean\",\"description\":\"Roll this month's unspent amount into next month. Overspending never carries a negative.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"payload\":{\"type\":\"object\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "idempotent": true,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.account",
+      "name": "account",
+      "displayName": "账户",
+      "summary": "List accounts with balances and net worth, create an account, set an account's balance (a Beancount-style balance assertion that posts a visible calibration entry), archive one, or rename one. This is the ONLY way to create an account — the record tool never creates one. For credit accounts a positive initial_balance is stored as the amount owed.",
+      "keywords": ["ledger", "account", "balance", "net worth", "账户", "余额", "净资产", "银行卡"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"set_balance\",\"archive\",\"update\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"kind\":{\"type\":\"string\",\"enum\":[\"cash\",\"debit\",\"credit\",\"ewallet\",\"prepaid\",\"investment\"]},\"currency\":{\"type\":\"string\"},\"initial_balance\":{\"type\":\"number\"},\"credit_limit\":{\"type\":\"number\"},\"include_in_net_worth\":{\"type\":\"boolean\"},\"account\":{\"type\":\"string\",\"description\":\"Which existing account to act on.\"},\"balance\":{\"type\":\"number\",\"description\":\"Target balance for set_balance. Pass a negative number for what is owed on a credit account.\"},\"archived\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"netWorthMinor\":{\"type\":\"integer\"},\"assetsMinor\":{\"type\":\"integer\"},\"liabilitiesMinor\":{\"type\":\"integer\"},\"baseCurrency\":{\"type\":\"string\"},\"deltaMinor\":{\"type\":\"integer\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "idempotent": false,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.category",
+      "name": "category",
+      "displayName": "分类",
+      "summary": "List, create, rename or archive spending and income categories. Categories are two levels deep at most. When the user wants a category that does not exist yet, create it rather than forcing the entry into an existing one. Archiving only removes it from pickers; existing entries keep it.",
+      "keywords": ["ledger", "category", "分类", "类别"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"rename\",\"archive\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"kind\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\"],\"description\":\"Defaults to expense.\"},\"parent\":{\"type\":\"string\",\"description\":\"Attach under a top-level category to make it a subcategory.\"},\"archived\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"categories\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "idempotent": false,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.currency",
+      "name": "currency",
+      "displayName": "币种与汇率",
+      "summary": "Manage currencies and exchange rates: list them, add one, set a rate manually, change the base currency all statistics are priced in, or refresh rates online. A currency with no configured rate is EXCLUDED from converted totals rather than being faked at 1:1, so add the rate before recording in it. Setting a rate marks it manual and online refreshes will not overwrite it.",
+      "keywords": ["ledger", "currency", "exchange rate", "fx", "币种", "汇率", "外币"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"set_rate\",\"set_preferred\",\"refresh\"],\"description\":\"Defaults to list.\"},\"code\":{\"type\":\"string\",\"description\":\"ISO code or a colloquial name; normalised to a 3-letter code.\"},\"rate\":{\"type\":\"number\",\"description\":\"How many units of the BASE currency one unit of `code` is worth.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"baseCurrency\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "idempotent": false,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.project",
+      "name": "project",
+      "displayName": "项目与分摊",
+      "summary": "Projects group a trip or event's spending, and carry shared-expense settlement. Actions: list, create, activate (pass 'none' to clear), update, archive, summary, members, add_member, remove_member, settle (member balances plus the fewest transfers that zero them out), record_settlement. Adding the first member auto-creates a 'Me' member. A settlement involving the user also posts a matching ledger entry.",
+      "keywords": ["ledger", "project", "trip", "split", "settle", "AA", "项目", "旅行", "分摊", "结算"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"activate\",\"update\",\"archive\",\"summary\",\"members\",\"add_member\",\"remove_member\",\"settle\",\"record_settlement\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"budget\":{\"type\":\"number\",\"description\":\"Optional total budget in the base currency.\"},\"start\":{\"type\":\"string\"},\"end\":{\"type\":\"string\"},\"activate\":{\"type\":\"boolean\"},\"archived\":{\"type\":\"boolean\"},\"member\":{\"type\":\"string\"},\"is_me\":{\"type\":\"boolean\"},\"from\":{\"type\":\"string\",\"description\":\"record_settlement: who pays.\"},\"to\":{\"type\":\"string\",\"description\":\"record_settlement: who gets paid.\"},\"amount\":{\"type\":\"number\",\"description\":\"record_settlement: amount in the base currency, major units.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"spentMinor\":{\"type\":\"integer\"},\"incomeMinor\":{\"type\":\"integer\"},\"budgetMinor\":{\"type\":\"integer\"},\"buckets\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}},\"balances\":{\"type\":\"object\"},\"plan\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "idempotent": false,
+      "execution": { "mode": "sequential" }
+    },
+    {
+      "id": "ledger.openAI",
+      "name": "openAI",
+      "displayName": "AI 分析",
+      "summary": "Open the in-app AI analysis panel.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    },
+    {
+      "id": "ledger.exportCSV",
+      "name": "exportCSV",
+      "displayName": "导出 CSV",
+      "summary": "Export every ledger entry as a CSV file and hand it to the share sheet.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    },
+    {
+      "id": "ledger.importCSV",
+      "name": "importCSV",
+      "displayName": "导入 CSV",
+      "summary": "Pick a ledger CSV file and open the import preview. Selecting a file never writes anything on its own.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    },
+    {
+      "id": "ledger.openRecentlyDeleted",
+      "name": "openRecentlyDeleted",
+      "displayName": "最近删除",
+      "summary": "Open the recently deleted entries screen, where entries can be restored or permanently removed.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    }
+  ]
 }

@@ -5,9 +5,22 @@
     "en": "Ledger"
   },
   "summary": "多账户复式记账与预算",
+  "localizedSummaries": {
+    "en": "Multi-account ledger with budgets, projects and shared-expense settlement"
+  },
   "icon": "book.closed",
   "iconTintHex": "2A9D63",
   "category": "productivity",
   "author": "AiBox",
-  "tags": []
+  "minHostVersion": "1.0.0",
+  "tags": [
+    "ledger",
+    "budget",
+    "expense",
+    "multi-currency",
+    "split",
+    "记账",
+    "预算",
+    "AA"
+  ]
 }

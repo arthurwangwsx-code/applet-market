@@ -1,0 +1,17 @@
+{
+  "appId": "com.aibox.timer",
+  "name": "计时器",
+  "localizedNames": {
+    "en": "Timer"
+  },
+  "summary": "番茄钟与秒表，本地记录",
+  "localizedSummaries": {
+    "en": "Pomodoro timer and stopwatch with local history"
+  },
+  "icon": "timer",
+  "iconTintHex": "3A86C8",
+  "category": "productivity",
+  "author": "AiBox",
+  "minHostVersion": "1.0.0",
+  "tags": ["timer", "pomodoro", "stopwatch", "typescript", "vite"]
+}

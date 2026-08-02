@@ -38,10 +38,20 @@ export const CATEGORIES = new Set([
 ])
 
 // 宿主已知的 aibox.* 扩展能力命名空间（manifest.permissions.capabilities 的取值域）。
+// 真值是 Swift 侧 `AppletCapabilityCatalog.declarableExtensionNamespaces`（有序数组，同时决定
+// AI 工具 schema 的 enum）。这里必须与它逐字一致——多了会放过装不上的包，少了会误拒合法包。
+// 注意 `tts` 不叫 `speech`；`browser` 是 2026-08 新增（浏览器桥）。
 export const KNOWN_CAPABILITIES = new Set([
-  'clipboard', 'haptics', 'share', 'toast', 'speech', 'media', 'device', 'open', 'browser',
-  'ui', 'picker', 'health', 'notifications', 'location', 'calendar', 'reminders', 'contacts',
-  'photos', 'files', 'music', 'voiceMemos', 'shortcuts', 'tools',
+  'browser', 'calendar', 'clipboard', 'contacts', 'device', 'files', 'haptics', 'health',
+  'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
+  'share', 'shortcuts', 'toast', 'tools', 'tts', 'ui', 'voiceMemos',
+])
+
+// 容器协议自身的命名空间：恒可用，**不需要**也不应该写进 permissions.capabilities。
+// 写进去不算错（宿主忽略），但会让用户以为这个应用要了更多权限，所以 validate 给一条提醒。
+export const CONTAINER_NAMESPACES = new Set([
+  'access', 'action', 'apps', 'chat', 'db', 'jobs', 'lifecycle', 'menu', 'navigation',
+  'resource', 'scene', 'tabs', 'toolbar',
 ])
 
 // 二进制扩展名 → base64；其余按 utf8 存。

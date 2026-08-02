@@ -9,7 +9,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  APPS_DIR, BARE_IMPORT_ALLOWLIST, CATEGORIES, KNOWN_CAPABILITIES, LIMITS,
+  APPS_DIR, BARE_IMPORT_ALLOWLIST, CATEGORIES, CONTAINER_NAMESPACES, KNOWN_CAPABILITIES, LIMITS,
   appPaths, encodingFor, fail, info, isValidAppID, listAppIDs, listReleaseVersions,
   listSourceFiles, ok, parseSemver, readJSON, relativePathError, sha256, warn,
 } from './lib/market.mjs'
@@ -56,8 +56,10 @@ function validateManifest(appId, manifest, meta) {
   }
   const permissions = manifest.permissions ?? {}
   for (const capability of permissions.capabilities ?? []) {
-    if (!KNOWN_CAPABILITIES.has(capability)) {
-      err(appId, `manifest.permissions.capabilities 含未知能力 '${capability}'`)
+    if (CONTAINER_NAMESPACES.has(capability)) {
+      wrn(appId, `'${capability}' 是容器内建能力，恒可用、无需声明；写在这里只会让用户以为要了更多权限`)
+    } else if (!KNOWN_CAPABILITIES.has(capability)) {
+      err(appId, `manifest.permissions.capabilities 含未知能力 '${capability}'（可选：${[...KNOWN_CAPABILITIES].join(', ')}）`)
     }
   }
   if (permissions.network && (permissions.networkAllowed ?? []).length === 0) {

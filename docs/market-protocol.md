@@ -24,6 +24,22 @@
 
 所有响应都是 UTF-8 JSON。所有路径大小写敏感。
 
+### 1.1 ⚠️ CDN 缓存：推送后不会立刻可见
+
+`raw.githubusercontent.com` 对文件做 **CDN 缓存（约 5 分钟）**，且**带 `Cache-Control: no-cache`
+或查询串 cache-buster 都绕不过**（实测：`git push` 后 HEAD 里 `appCount=5`，线上仍返回 3）。
+
+含义：
+
+- 「提交 → 在 App 市场里看到新应用」有**分钟级延迟**，这是正常的，不是 bug。
+  客户端不要因此重试风暴，也不要把它诊断成推送失败。
+- 客户端用 ETag / `If-None-Match` 能省流量，但**省不掉这个延迟**——缓存的是内容本身。
+- 急需立刻可见时，只能等缓存过期。若这个延迟长期不可接受，选项是换托管
+  （GitHub Pages 的缓存策略不同，或自建 CDN 并控制 `Cache-Control`），
+  但那会失去「Git 就是数据库、零服务端」这个核心简洁性——**当前判断是不值得**。
+
+**验证发布是否成功，看 `git log` / GitHub 网页版，不要看 raw 端点**——后者会在几分钟内骗你。
+
 ---
 
 ## 2. registry.json

@@ -48,3 +48,48 @@ jobs:
         # 能抓住「有人手改了生成内容」和「漏提交 snapshot」。
         # 「宿主改了能力却没重新生成」要靠本地跑同一条命令（那时宿主源码在场，会走完整链路）。
         run: node scripts/gen-api-docs.mjs --check
+
+  build-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 workspace 依赖
+        run: npm ci
+
+      - name: SDK 必须能编译并产出类型
+        run: npm run build --workspace @aibox/applet-sdk
+
+      - name: 构建型应用必须能 typecheck + 构建
+        # 逐个跑，而不是 `npm run build --workspaces`：后者会静默跳过没有该脚本的包，
+        # 于是「构建脚本坏了」和「这个包本来就没有构建」在输出里长得一模一样。
+        run: |
+          set -e
+          for dir in apps/*/; do
+            [ -f "$dir/package.json" ] || continue
+            echo "== $dir =="
+            npm run typecheck --prefix "$dir" --if-present
+            npm run build --prefix "$dir"
+          done
+
+      - name: 发布脚本冒烟
+        # 现有两个 job 验的都是**产物**；没有任何一条会执行 release.mjs，于是
+        # 「发布脚本坏了但最近没人发版」可以一路绿着躺在 main 上，直到下一个人发版才炸
+        # （2026-08-03 真实发生过一次：切换打包路径时漏改一处调用，无参运行看起来正常）。
+        # 这里拿已发布应用做一次 --dry-run：跑完整条构建 → 校验 → 组包，但不写盘。
+        run: node scripts/release.mjs --dry-run-latest
+
+      - name: 构建产物必须与仓库里的一致
+        # dist/ 是签入仓库的（发布包的真值）。重新构建后有 diff = 有人改了源码没重新构建，
+        # 或者构建不可复现。两种都必须当场拦下。
+        run: |
+          if [ -n "$(git status --porcelain apps)" ]; then
+            echo "::error::重新构建后 apps/ 有 diff —— 源码与 dist/ 不同步，或构建不可复现。"
+            git status --porcelain apps
+            git diff --stat apps
+            exit 1
+          fi

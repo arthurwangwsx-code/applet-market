@@ -300,26 +300,30 @@ export function useLongPress(onLongPress, { delay = 500 } = {}) {
   const clear = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null }
   }
+  // 返回 { bind, consumed } 而不是把 consumedClick 混在事件处理器里——
+  // 后者会被 `{...press}` 原样铺到 DOM 节点上，React 会告警「无法识别的属性」。
   return {
-    onPointerDown: (event) => {
-      fired.current = false
-      origin.current = { x: event.clientX, y: event.clientY }
-      clear()
-      timer.current = setTimeout(() => {
-        fired.current = true
-        onLongPress()
-      }, delay)
+    bind: {
+      onPointerDown: (event) => {
+        fired.current = false
+        origin.current = { x: event.clientX, y: event.clientY }
+        clear()
+        timer.current = setTimeout(() => {
+          fired.current = true
+          onLongPress()
+        }, delay)
+      },
+      onPointerMove: (event) => {
+        if (!origin.current) return
+        const dx = Math.abs(event.clientX - origin.current.x)
+        const dy = Math.abs(event.clientY - origin.current.y)
+        if (dx > 10 || dy > 10) clear()
+      },
+      onPointerUp: clear,
+      onPointerCancel: clear,
+      onPointerLeave: clear,
     },
-    onPointerMove: (event) => {
-      if (!origin.current) return
-      const dx = Math.abs(event.clientX - origin.current.x)
-      const dy = Math.abs(event.clientY - origin.current.y)
-      if (dx > 10 || dy > 10) clear()
-    },
-    onPointerUp: clear,
-    onPointerCancel: clear,
-    onPointerLeave: clear,
-    consumedClick: () => fired.current,
+    consumed: () => fired.current,
   }
 }
 

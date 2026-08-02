@@ -90,7 +90,9 @@ Delete an imported resource owned by this applet.
 ## 接下来的规划
 
 <!-- MANUAL:BEGIN roadmap -->
-- **图片走宿主两级缓存（`applet://image/…`）—— P0，未落地**：宿主侧已有图片缓存，但还没对 applet 开放，目前每个应用各自重复下载解码。见 主仓库 `docs/capabilities/applet/framework-capabilities.md` §3.3。
+- **图片走宿主两级缓存 —— P0，落地中**：远端图片经 `applet://localhost/image/<b64url>` 回字节，复用宿主已有的两级图片缓存，省掉每个应用各自重复下载解码。见 主仓库 `docs/capabilities/applet/framework-capabilities.md` §3.3。
+
+  注意这条是 **URL 路由，不是 JSAPI 方法**——它没有 descriptor，所以**不会出现在本目录的生成内容里**。用法以主仓库文档与 `.aibox/aibox.d.ts` 为准。
 <!-- MANUAL:END roadmap -->
 
 ---

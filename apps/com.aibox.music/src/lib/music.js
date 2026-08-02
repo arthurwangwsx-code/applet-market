@@ -45,7 +45,9 @@ export class MusicController {
     this.trackKey = null
     this.timeline = 0
     this.scrub = null
+    // 松手后 0.3 秒内锁定显示的位置（防 seek 生效前回跳闪烁）；两者必须成对初始化。
     this.scrubHoldUntil = 0
+    this.heldTime = 0
     this.availability = 'unknown'
     this.sleepTimer = { active: false, text: null }
     this.effects = null

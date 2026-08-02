@@ -14,8 +14,8 @@ export function QueueRow({ track, isCurrent, isPlaying, onClick, onLongPress, tr
     <div
       className="mu-press"
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `6px ${SPACE.s4}px` }}
-      {...press}
-      onClick={() => { if (!press.consumedClick() && onClick) onClick() }}
+      {...press.bind}
+      onClick={() => { if (!press.consumed() && onClick) onClick() }}
     >
       <div style={{ position: 'relative' }}>
         <Artwork
@@ -63,8 +63,8 @@ export function SongRow({ track, onClick, onLongPress, trailing, artworkSize = 4
       className="mu-press"
       aria-label="audioSongRow"
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `6px ${SPACE.s4}px` }}
-      {...press}
-      onClick={() => { if (!press.consumedClick() && onClick) onClick() }}
+      {...press.bind}
+      onClick={() => { if (!press.consumed() && onClick) onClick() }}
     >
       <Artwork url={track.artworkUrl} size={artworkSize} radius={6} iconSize={16} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0, flex: '1 1 auto' }}>
@@ -85,8 +85,8 @@ export function CollectionRow({ item, onClick, onLongPress }) {
       className="mu-press"
       aria-label="audioCollectionRow"
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `8px ${SPACE.s4}px` }}
-      {...press}
-      onClick={() => { if (!press.consumedClick() && onClick) onClick() }}
+      {...press.bind}
+      onClick={() => { if (!press.consumed() && onClick) onClick() }}
     >
       <Artwork url={item.artworkUrl} size={44} radius={circular ? 22 : 6} iconSize={18} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0, flex: '1 1 auto' }}>
@@ -110,8 +110,8 @@ export function LocalTrackRow({ track, onClick, onLongPress }) {
     <div
       className="mu-press"
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `6px ${SPACE.s4}px`, height: 60 }}
-      {...press}
-      onClick={() => { if (!press.consumedClick() && onClick) onClick() }}
+      {...press.bind}
+      onClick={() => { if (!press.consumed() && onClick) onClick() }}
     >
       <Artwork url={track.artworkUrl} size={44} radius={8} iconSize={14} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: '1 1 auto' }}>
@@ -138,8 +138,8 @@ export function NumberedTrackRow({ index, track, onClick, onLongPress, numberWid
     <div
       className="mu-press"
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `10px ${SPACE.s4}px` }}
-      {...press}
-      onClick={() => { if (!press.consumedClick() && onClick) onClick() }}
+      {...press.bind}
+      onClick={() => { if (!press.consumed() && onClick) onClick() }}
     >
       <span className="mu-mono" style={{ fontSize: 13, color: C.muted, width: numberWidth, textAlign: 'right' }}>
         {index + 1}

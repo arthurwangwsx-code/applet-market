@@ -1,9 +1,47 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T19:54:33Z",
-  "appCount": 1,
+  "updatedAt": "2026-08-02T20:06:12Z",
+  "appCount": 2,
   "apps": [
+    {
+      "appId": "com.aibox.music",
+      "name": "音乐",
+      "summary": "本地与 Apple Music 播放器",
+      "icon": "music.note",
+      "category": "media",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-02T20:06:12Z",
+      "versionCount": 1,
+      "capabilities": [
+        "haptics",
+        "music",
+        "net",
+        "open",
+        "share",
+        "storage",
+        "tabs",
+        "toolbar",
+        "ui"
+      ],
+      "path": "apps/com.aibox.music",
+      "localizedNames": {
+        "en": "Music"
+      },
+      "localizedSummaries": {
+        "en": "Local and Apple Music player — remote-controls the native playback engine"
+      },
+      "iconTintHex": "FF6B6B",
+      "tags": [
+        "music",
+        "player",
+        "apple-music",
+        "lyrics",
+        "queue"
+      ],
+      "minHostVersion": "1.0.0"
+    },
     {
       "appId": "com.aibox.news",
       "name": "资讯",

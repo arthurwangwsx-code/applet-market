@@ -131,6 +131,17 @@ src/
   不是同一条门——语义等价（都会确认），但门的位置不同。
 - **`news_source` 的 test / add 受域名白名单限制**：不在 `networkAllowed` 里的 host 会被宿主拒绝，
   AI 添加的新域名源抓不到。错误信息里已如实提示这一点。
+- ⚠️ **manifest 的键名必须用 camelCase，且这件事没有任何闸门会替你查。**
+  市场安装路径（`AppletMarketInstaller.decodeManifest`）用的是裸 `JSONDecoder()`，
+  只设了 `dateDecodingStrategy`、**没有 `keyDecodingStrategy`**；而
+  `AppletActionExecutionPolicy` 等结构体没有自定义 `CodingKeys`，于是 JSON 键 = Swift 属性名。
+  同一个结构体在 `applet_manage` 工具路径上读的却是 snake_case（`timeout_ms` / `requires_network` …），
+  **照着那套写会被 Codable 当未知键静默丢弃**：安装不报错、`validate.mjs` 也不报错
+  （它校验的是市场自己的 schema，不是宿主的解码器），只有对应字段悄悄变成 nil。
+  本包用的是 camelCase（`timeoutMilliseconds` / `requiresNetworkConnectivity`），
+  已用「逐键比对 Swift 属性名 + CodingKeys 重映射」的脚本机械核过 21 个对象、全部被接受。
+  改这份 manifest 时请以 **Swift 结构体的属性名**为准，不要抄工具 schema 的写法。
+  （已建议市场脚本加一条通用闸门，见 `applet-market` 侧。）
 - **`outputSchemaJSON` 在这条路径上不产生任何效果**：延迟工具投影只读 `inputSchemaJSON`。
   本包仍然写了输出 schema（作为契约文档、也为将来可能的用途），但**别指望模型据它校验返回值**。
 - **只有已发布版本里的 action 会被投影**（宿主读 Active/LKG 快照，Draft 合同不进目录）。

@@ -97,12 +97,11 @@ export default function QueuePage({ ctx }) {
                         })
                       }}
                       onPointerUp={() => {
-                        setDrag((state) => {
-                          if (state && state.from !== state.to) {
-                            actions.moveQueue(index + 1 + state.from, index + 1 + state.to)
-                          }
-                          return null
-                        })
+                        // 副作用不放进 setState 更新函数里（StrictMode 会跑两次）——直接读闭包里的 drag。
+                        if (drag && drag.from !== drag.to) {
+                          actions.moveQueue(index + 1 + drag.from, index + 1 + drag.to)
+                        }
+                        setDrag(null)
                       }}
                       onPointerCancel={() => setDrag(null)}
                     >

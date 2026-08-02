@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.music",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-02T20:06:12Z",
+      "notes": "首个版本：1:1 复刻原生音乐播放器",
+      "fileCount": 32,
+      "totalBytes": 250424,
+      "path": "apps/com.aibox.music/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "2ed84bb545bbfe9512d5b8b20bcfacf554626c3c5515337cb77efb54e117d965"
+    }
+  ]
+}

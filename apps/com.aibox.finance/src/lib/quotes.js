@@ -48,10 +48,17 @@ export class QuoteService {
     return entry ? entry.quote : null
   }
 
-  /** 全部缓存的快照（写盘用）。 */
+  /** 全部缓存的快照（写盘用，带 `at` 时间戳）。 */
   snapshot() {
     const out = {}
     for (const [canonical, entry] of this.cache) out[canonical] = entry
+    return out
+  }
+
+  /** canonical → quote 的扁平字典（估值与上下文构造用）。 */
+  quoteMap() {
+    const out = {}
+    for (const [canonical, entry] of this.cache) out[canonical] = entry.quote
     return out
   }
 

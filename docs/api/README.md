@@ -129,5 +129,18 @@ node scripts/gen-api-docs.mjs --check   # 校验漂移（CI 跑的就是这条�
 `capabilities.snapshot.json` 是这两段之间的中间产物，**必须跟文档一起提交**。
 
 <!-- MANUAL:BEGIN notes -->
-<!-- 额外的索引级说明写在这里；生成器不会覆盖。 -->
+### 本目录**不**覆盖什么
+
+descriptor 只描述 `aibox.<namespace>.<method>()` 这一种形状的桥调用。以下几类能力没有 descriptor，
+因此**永远不会出现在生成内容里**，查它们请去主仓库文档或应用内的 `.aibox/aibox.d.ts`：
+
+| 不在这里的东西 | 去哪查 |
+|---|---|
+| 事件总线（`aibox.tabs.on(...)`、`aibox.events.*`、生命周期回调） | `docs/capabilities/applet/platform-protocol.md` §5.6 |
+| `applet://` URL 路由（虚拟文件系统、图片走宿主缓存） | `docs/capabilities/applet/framework-capabilities.md` §3.3 |
+| `manifest.json` 的静态声明（`scene.tabBar` / `toolbar` / `menu` / `presentation`） | `docs/capabilities/applet/app-shell-and-market.md` §1–§3 |
+| 运行时约束（可用 npm 包、CSP、白屏排查） | [入门指南](../authoring-guide.md) |
+
+一条经验：**外壳类能力都是「manifest 静态声明身份 + JSAPI 运行时改显示状态」的两段式**。
+本目录只讲后一半；只读本目录会以为 Tab 可以凭空创建出来。
 <!-- MANUAL:END notes -->

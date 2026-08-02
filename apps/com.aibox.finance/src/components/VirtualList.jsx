@@ -57,12 +57,18 @@ export function VirtualList({
   className,
   style,
   rowStyle,
+  scrollParentRef,
 }) {
   const list = Array.isArray(items) ? items : []
   const count = list.length
   const estimate = estimatedRowHeight > 0 ? estimatedRowHeight : 64
 
-  const scrollRef = React.useRef(null)
+  const ownRef = React.useRef(null)
+  const regionRef = React.useRef(null)
+  // 列表**不一定是自己滚**：包在 PullRefresh 里时真正滚动的是外层容器。
+  // 那种情况下必须监听外层的 scroll，否则 viewport 永远是 0 高，
+  // 只渲染 overscan 那几行 —— 列表看起来「被截断了」。
+  const scrollRef = scrollParentRef || ownRef
   const measured = React.useRef(null)
   if (measured.current === null) measured.current = new Map()
   const endArmed = React.useRef(true)
@@ -89,10 +95,18 @@ export function VirtualList({
   while (end < count && offsets[end] < endOffset) end += 1
   end = Math.min(count, end + overscan)
 
-  const onScrollEvent = React.useCallback((event) => {
-    const node = event.currentTarget
-    setViewport({ top: node.scrollTop, height: node.clientHeight })
-    if (onScroll) onScroll(event)
+  /** 虚拟区顶端相对滚动容器内容原点的偏移（header 高度、外层 padding 都算在内）。 */
+  const regionOffset = React.useCallback(() => {
+    const scroller = scrollRef.current
+    const region = regionRef.current
+    if (!scroller || !region) return 0
+    return region.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
+  }, [scrollRef])
+
+  const sync = React.useCallback(() => {
+    const node = scrollRef.current
+    if (!node) return
+    setViewport({ top: node.scrollTop - regionOffset(), height: node.clientHeight })
     if (restoreKey) {
       try { window.sessionStorage.setItem(RESTORE_PREFIX + restoreKey, String(node.scrollTop)) } catch (error) { /* 配额满不影响列表 */ }
     }
@@ -104,13 +118,31 @@ export function VirtualList({
         endArmed.current = true
       }
     }
-  }, [onScroll, onEndReached, endReachedThreshold, restoreKey])
+  }, [scrollRef, regionOffset, restoreKey, onEndReached, endReachedThreshold])
 
-  React.useLayoutEffect(() => {
-    const node = scrollRef.current
-    if (!node) return
-    setViewport({ top: node.scrollTop, height: node.clientHeight })
-  }, [])
+  const onScrollEvent = React.useCallback((event) => {
+    sync()
+    if (onScroll) onScroll(event)
+  }, [sync, onScroll])
+
+  // 自己不是滚动容器时，事件要挂到外层；同时用 RO 跟踪容器尺寸变化（键盘弹起、下拉刷新头展开）。
+  React.useEffect(() => {
+    if (!scrollParentRef) return undefined
+    const node = scrollParentRef.current
+    if (!node) return undefined
+    node.addEventListener('scroll', sync, { passive: true })
+    let observer = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(sync)
+      observer.observe(node)
+    }
+    return () => {
+      node.removeEventListener('scroll', sync)
+      if (observer) observer.disconnect()
+    }
+  }, [scrollParentRef, sync])
+
+  React.useLayoutEffect(() => { sync() }, [sync, count])
 
   // 滚动位置恢复（等首屏行挂载完再还原）。
   React.useEffect(() => {
@@ -181,9 +213,14 @@ export function VirtualList({
     onVisibleRowsChange(rows)
   }, [start, end, count, list, offsets, estimate, onVisibleRowsChange])
 
+  // 自己是滚动容器时才挂 ref / onScroll；否则监听已经挂在外层（见上面的 effect）。
+  const shellProps = scrollParentRef
+    ? { className, style }
+    : { ref: ownRef, className, style, onScroll: onScrollEvent }
+
   if (count === 0 && empty) {
     return (
-      <div ref={scrollRef} className={className} style={style} onScroll={onScrollEvent}>
+      <div {...shellProps}>
         {header}
         {empty}
         {footer}
@@ -206,9 +243,9 @@ export function VirtualList({
   }
 
   return (
-    <div ref={scrollRef} className={className} style={style} onScroll={onScrollEvent}>
+    <div {...shellProps}>
       {header}
-      <div style={{ position: 'relative', height: total }}>{slice}</div>
+      <div ref={regionRef} style={{ position: 'relative', height: total }}>{slice}</div>
       {footer}
     </div>
   )

@@ -249,6 +249,7 @@ export default function WatchlistPage({ ctx }) {
         items={rows}
         estimatedRowHeight={52}
         restoreKey="watchlist"
+        scrollParentRef={scrollRef}
         header={header}
         footer={(quotes.lastUpdated || ctx.refreshing || quotes.lastFailed)
           ? <Footer ctx={ctx} state={dataState} /> : <div style={{ height: SPACE.s6 }} />}

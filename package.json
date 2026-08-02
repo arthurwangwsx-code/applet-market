@@ -7,10 +7,20 @@
   "engines": {
     "node": ">=18"
   },
+  "workspaces": [
+    "packages/*",
+    "apps/com.aibox.timer"
+  ],
   "scripts": {
     "validate": "node scripts/validate.mjs",
     "registry": "node scripts/build-registry.mjs",
     "new": "node scripts/new-app.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "sdk:types": "node scripts/gen-sdk-types.mjs",
+    "sdk:types:check": "node scripts/gen-sdk-types.mjs --check",
+    "sdk:build": "npm run build --workspace @aibox/applet-sdk"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

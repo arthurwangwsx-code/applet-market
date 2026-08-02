@@ -1,0 +1,16 @@
+{
+  "name": "aibox-applet-market",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AiBox 小应用市场：静态 JSON 分发仓库。源码是单一真值，发布产物由 scripts/ 生成。",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "registry": "node scripts/build-registry.mjs",
+    "new": "node scripts/new-app.mjs",
+    "release": "node scripts/release.mjs"
+  }
+}

@@ -3,6 +3,7 @@
 这是 AiBox「小应用（Applet）」的**分发仓库**。它是一个纯静态的 Git 仓库：源码是单一真值，
 发布产物由脚本生成，iOS 端通过 HTTP 直接读取仓库里的 JSON 文件完成浏览、下载、安装与更新。
 
+- **写新应用先读**：[docs/authoring-guide.md](docs/authoring-guide.md)
 - 协议规范：[docs/market-protocol.md](docs/market-protocol.md)
 - 宿主实现：`AiBox/Packages/AppletPluginKit/Sources/AppletPluginKit/Market/`
 - 宿主方案文档：`AiBox/docs/capabilities/applet/market.md`

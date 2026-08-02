@@ -1,0 +1,23 @@
+{
+  "appId": "com.aibox.news",
+  "name": "资讯",
+  "localizedNames": {
+    "en": "News"
+  },
+  "summary": "RSS 聚合阅读器",
+  "localizedSummaries": {
+    "en": "RSS reader with on-device dedup and event grouping"
+  },
+  "icon": "newspaper.fill",
+  "iconTintHex": "E8552D",
+  "category": "information",
+  "author": "AiBox",
+  "minHostVersion": "1.0.0",
+  "tags": [
+    "rss",
+    "atom",
+    "rsshub",
+    "reader",
+    "news"
+  ]
+}

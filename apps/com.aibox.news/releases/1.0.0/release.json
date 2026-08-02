@@ -1,0 +1,507 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.news",
+  "version": "1.0.0",
+  "releasedAt": "2026-08-02T19:37:58Z",
+  "notes": "首个版本：1:1 复刻原生资讯模块（含 4 个对外 AI 工具）",
+  "localizedNotes": {
+    "en": "First release"
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "资讯",
+    "localizedNames": {
+      "en": "News"
+    },
+    "icon": "newspaper.fill",
+    "iconTintHex": "E8552D",
+    "summary": "RSS 聚合阅读器",
+    "localizedSummaries": {
+      "en": "RSS reader"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": true,
+      "capabilities": [
+        "browser",
+        "tts",
+        "tools",
+        "open"
+      ],
+      "networkAllowed": [
+        "news.google.com",
+        "feedx.net",
+        "www.sixthtone.com",
+        "www.bbc.co.uk",
+        "feeds.bbci.co.uk",
+        "cn.nytimes.com",
+        "rss.nytimes.com",
+        "rss.dw.com",
+        "www.theguardian.com",
+        "sspai.com",
+        "www.ithome.com",
+        "www.solidot.org",
+        "www.ifanr.com",
+        "rss.sina.com.cn",
+        "www.infoq.cn",
+        "www.ruanyifeng.com",
+        "techcrunch.com",
+        "www.theverge.com",
+        "feeds.arstechnica.com",
+        "news.ycombinator.com",
+        "dedicated.wallstreetcn.com",
+        "36kr.com",
+        "www.tmtpost.com",
+        "feeds.a.dj.com",
+        "www.cnbc.com",
+        "feeds.marketwatch.com",
+        "www.forbes.com",
+        "www.nature.com",
+        "rss.sciam.com",
+        "phys.org",
+        "www.nasa.gov",
+        "www.quantamagazine.org",
+        "www.espn.com",
+        "www.who.int",
+        "rsshub.app",
+        "newsdata.io"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "news.search",
+        "name": "search",
+        "displayName": "搜索资讯",
+        "summary": "Searches aggregated news from the user's subscribed sources (RSS / RSSHub / optional News API). Omit \"query\" to get the latest headlines. Filter by \"topic\". Set \"cluster\"=true to group multiple reports about the same event. Each result includes the article URL — pass it to the read action to fetch full text. News may be delayed; for reference only.",
+        "keywords": [
+          "news",
+          "rss",
+          "search",
+          "headlines",
+          "feed",
+          "资讯",
+          "新闻",
+          "订阅",
+          "检索"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Keywords to search titles/summaries/sources. Omit for latest headlines.\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Optional topic filter.\"},\"cluster\":{\"type\":\"boolean\",\"description\":\"Group same-event reports into clusters. Default false.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30,\"description\":\"Max results (1-30). Default 15.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"query\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"topic\":{\"type\":\"string\"},\"image\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}}}},\"clusters\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "news.read",
+        "name": "read",
+        "displayName": "读取正文",
+        "summary": "Fetches the readable full text of one news article for analysis or summarization. Pass the article \"url\" (from a search result) or its \"id\". Returns cleaned article text (truncated to 6000 characters) plus metadata. If the site blocks extraction or is outside this applet's network allowlist, returns the available summary — suggest opening the original.",
+        "keywords": [
+          "news",
+          "article",
+          "read",
+          "full text",
+          "extract",
+          "正文",
+          "阅读",
+          "全文"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The article URL (from a search result).\"},\"id\":{\"type\":\"string\",\"description\":\"The article stable id (alternative to url).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"article\":{\"type\":\"object\"},\"excerpt\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "news.source",
+        "name": "source",
+        "displayName": "管理订阅源",
+        "summary": "Manages the user's news subscriptions. \"action\": \"list\" = show sources; \"add\" = subscribe (set \"url\" to an RSS/Atom URL, or an RSSHub route starting with \"/\" like \"/zhihu/hotlist\"; optional \"title\"/\"topic\"/\"kind\"); \"remove\" = unsubscribe (match by \"title\" or \"url\"); \"test\" = fetch a URL/route once and report how many articles came back. RSSHub routes need an instance configured in settings. Hosts outside this applet's network allowlist cannot be fetched.",
+        "keywords": [
+          "news",
+          "subscription",
+          "rss",
+          "feed",
+          "source",
+          "订阅",
+          "订阅源",
+          "添加",
+          "删除"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"remove\",\"test\"],\"description\":\"list / add / remove / test.\"},\"url\":{\"type\":\"string\",\"description\":\"RSS/Atom URL, or RSSHub route ('/...'). Required for add/test; add or remove key.\"},\"title\":{\"type\":\"string\",\"description\":\"Display name (add), or match key (remove).\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Topic for add.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"rss\",\"atom\",\"rsshub\",\"api\"],\"description\":\"Source kind for add (inferred if omitted).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"feeds\":{\"type\":\"array\"},\"count\":{\"type\":\"integer\"},\"sample\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": false
+      },
+      {
+        "id": "news.save",
+        "name": "save",
+        "displayName": "收藏文章",
+        "summary": "Saves or removes articles in the user's read-later list. \"action\": \"save\" (set \"url\" or \"id\" from a search result), \"unsave\" (by \"id\" or \"url\"), or \"list\" to show saved articles.",
+        "keywords": [
+          "news",
+          "save",
+          "bookmark",
+          "read later",
+          "收藏",
+          "稍后读"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"save\",\"unsave\",\"list\"],\"description\":\"save / unsave / list.\"},\"url\":{\"type\":\"string\",\"description\":\"Article URL (save/unsave).\"},\"id\":{\"type\":\"string\",\"description\":\"Article stable id (save/unsave).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"articles\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": false
+      },
+      {
+        "id": "news.toggleBroadcast",
+        "name": "toggleBroadcast",
+        "displayName": "朗读",
+        "summary": "Start or stop reading the current news list aloud. Drives the in-app broadcast bar; needs the visible list, so it is a UI action rather than an agent tool.",
+        "headless": false,
+        "visibility": [
+          "userInterface",
+          "applet"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "feed",
+            "title": "资讯",
+            "localizedTitles": {
+              "en": "Feed"
+            },
+            "icon": "newspaper",
+            "selectedIcon": "newspaper.fill"
+          },
+          {
+            "id": "subs",
+            "title": "订阅",
+            "localizedTitles": {
+              "en": "Sources"
+            },
+            "icon": "dot.radiowaves.up.forward"
+          },
+          {
+            "id": "saved",
+            "title": "收藏",
+            "localizedTitles": {
+              "en": "Saved"
+            },
+            "icon": "bookmark",
+            "selectedIcon": "bookmark.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "ai",
+            "icon": "sparkles",
+            "tint": "accent"
+          },
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ],
+        "search": {
+          "enabled": true,
+          "placeholder": "搜索标题、摘要或来源",
+          "localizedPlaceholders": {
+            "en": "Search headlines, summaries, or sources"
+          }
+        }
+      },
+      "menu": {
+        "mergePolicy": "appletFirst",
+        "sections": [
+          {
+            "id": "broadcast",
+            "items": [
+              {
+                "id": "listen",
+                "title": "朗读",
+                "localizedTitles": {
+                  "en": "Listen"
+                },
+                "icon": "speaker.wave.2",
+                "actionID": "news.toggleBroadcast"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "totalBytes": 239970,
+  "files": [
+    {
+      "path": "app.jsx",
+      "bytes": 15371,
+      "sha256": "ea1da1caab634958af18312c6f65f36e9d60f75e8edb607ffd3126039af87d54",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AddSourcePage.jsx",
+      "bytes": 5329,
+      "sha256": "e829d23f6269d95e7a3ee8005bd979ed3b4c41c3a68cdbe41e79a861b67fca0a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AIPanel.jsx",
+      "bytes": 6892,
+      "sha256": "8a37b1e8ab5a9dfb4f9d0199050875e2f34e16b9c14c8ac43ee9b46ba496cf90",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ArticleList.jsx",
+      "bytes": 4138,
+      "sha256": "18b432dd9098eb6aaf30aef69828667972eb2a71edaefc564b6e005d2a1545d8",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ArticleRow.jsx",
+      "bytes": 4048,
+      "sha256": "37316294ea6511dd39becacb9a0a05c12abe8d195b8d70f560963cd3bc6e7b50",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/BroadcastBar.jsx",
+      "bytes": 4218,
+      "sha256": "85ab96f6b9da149f071dd812ee1e6378ce018f141a771ce6ed375cda8b673c91",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ClusterDetail.jsx",
+      "bytes": 1893,
+      "sha256": "b6f794c94a2c1d999e8e787df385346d2eef0e6c9d79cdca3b2c91140a1b78b7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/DiagnosticsPage.jsx",
+      "bytes": 5654,
+      "sha256": "b2b2b404cfc6e5d1d37f3c9cdd46dd97e33c7902de83a4639994ae3c5dacf8f4",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/FeedPage.jsx",
+      "bytes": 9077,
+      "sha256": "f8ca893c2218f51e6f0328e1b69eaa2395d3048113c302ee36d08b0b6b5acadc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.jsx",
+      "bytes": 13022,
+      "sha256": "9983d65e836a253b42fe73ce4b0bd6375006e143a0a2637f6cb26fc929cc0679",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/OptionPicker.jsx",
+      "bytes": 2148,
+      "sha256": "ac25f970909898c76da184b87afbb663b4eea32fde54e906111e843afc78e65e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Pager.jsx",
+      "bytes": 3820,
+      "sha256": "14cd344a831da6a6191eeed356c18adc7110a816ea6bd2287c94df5cac3ad3d9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.jsx",
+      "bytes": 13249,
+      "sha256": "cf6f00a9c157a1536a11c3cbe2e7b4d3e6381a6effc1e1a6cf2261a7865c27f6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SavedPage.jsx",
+      "bytes": 6592,
+      "sha256": "d36aff01ea978755792a56cde975d9e6561e2520a73e9e372442030965308ad3",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SettingsPage.jsx",
+      "bytes": 7255,
+      "sha256": "12d67716bd8e5bed040c1de815ab7cb2e9be7302381601bb6a2230e7f67ffea8",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Shell.jsx",
+      "bytes": 5244,
+      "sha256": "74bb59a93284e68139b5ffa666d7c4a3dea106f47fe82bcee2a5d67cfa9f4574",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SourcesPage.jsx",
+      "bytes": 5731,
+      "sha256": "1adf55c5dabbf35dbf23bbc56d68a5f02039d41892ebb67cff87fe1c907b8f97",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 4564,
+      "sha256": "2eb63363f0bd4eeba29af3df48c4419a1f42618064682f5edb21849716b5dbb9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/index.js",
+      "bytes": 2176,
+      "sha256": "5c2012cf4c2633e1514bdefa07d42ccae3e55c70ddb031264395ebafd46fe251",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.js",
+      "bytes": 17381,
+      "sha256": "ef332fbad58d81e9d436941a1d7b6b4641e12d0dc8a3fdbee3761bae95c5e18c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 11675,
+      "sha256": "fd946b05ed67d9908c66bb6dd3f1815814ac58becd78a485d23c14d63b5aee79",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aggregator.js",
+      "bytes": 11546,
+      "sha256": "ebe510c28fba75e9efc8b9643d59a338b273443476c499adec6b083514b3a087",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/broadcast.js",
+      "bytes": 5994,
+      "sha256": "9a70c09324cbb8771181ecb229983879044e5d4100a0c3dc0d3d5b87344381a2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/catalog.js",
+      "bytes": 7393,
+      "sha256": "ba7e48c401cf2428114c8905a1d426b1d63e7f28ad86ef69eed150dfd398e6f7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/cluster.js",
+      "bytes": 3454,
+      "sha256": "e79e634392dd6aa78db9f4a5c50c76d3e2b709c7ee16623e3245ab0b00feb9f5",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/dates.js",
+      "bytes": 2196,
+      "sha256": "6238a221b79e7e42425b73b67d1be1d40e40a856c948691e56a4302add39277f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/dedup.js",
+      "bytes": 973,
+      "sha256": "13a84779f5f5a88a8f12f4167588eb055db4634437e463192cf9b207a231df28",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/extractor.js",
+      "bytes": 1008,
+      "sha256": "69d9291d0978e931c3f74ddf961cfdbeb97acda89060cf15f8578e1ffb88e694",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/feedParser.js",
+      "bytes": 6869,
+      "sha256": "de0a9ef18ba01e1af03e4b0e4084db3b8862b85c74da4dd689e6545a77b1252e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 2360,
+      "sha256": "80078c95c3b7ef958cd3f21398b78ff27a6a9bf9aaa0b17c87bbf99c8c524b3c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 8356,
+      "sha256": "f73160d8db2dd78e679e9360413fae3a02864de314cf081feed54f01b1988479",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/projection.js",
+      "bytes": 2647,
+      "sha256": "bf5163470b40a0d504d8a578f36d5f95dabccf5b5b358cea0d8cd28da7d2298c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers.js",
+      "bytes": 4862,
+      "sha256": "7e38c4e24b6dd253b428cd7ada413f21554af99b1618e5417ab649b6c00e9d68",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/reading.js",
+      "bytes": 2503,
+      "sha256": "787bcce59a90a3f13c4617932daa775dcad4e64f9994c8b035af24c219da51c0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/session.js",
+      "bytes": 1285,
+      "sha256": "9267e76d6ba6a5589d981e3ad7ad1860102aa02cb838ee8d43e0409b8bafda59",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 10820,
+      "sha256": "6cf0f84030e952bc0b2fdac8c4cb0c1435b64bab7cd5f51763762afb3610841e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/text.js",
+      "bytes": 8386,
+      "sha256": "111564cfa486e446c195b159031d17b7935f11870cb0d9c5af81a5ed80f65a95",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 9841,
+      "sha256": "e571fb51abb55ec1dca6c861f69b7e6445e159eff8bfc7a5748ad9f56760de8b",
+      "encoding": "utf8"
+    }
+  ]
+}

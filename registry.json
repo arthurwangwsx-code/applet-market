@@ -1,7 +1,46 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "1970-01-01T00:00:00Z",
-  "appCount": 0,
-  "apps": []
+  "updatedAt": "2026-08-02T19:37:58Z",
+  "appCount": 1,
+  "apps": [
+    {
+      "appId": "com.aibox.news",
+      "name": "资讯",
+      "summary": "RSS 聚合阅读器",
+      "icon": "newspaper.fill",
+      "category": "information",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-02T19:37:58Z",
+      "versionCount": 1,
+      "capabilities": [
+        "ai",
+        "browser",
+        "net",
+        "open",
+        "storage",
+        "tabs",
+        "toolbar",
+        "tools",
+        "tts"
+      ],
+      "path": "apps/com.aibox.news",
+      "localizedNames": {
+        "en": "News"
+      },
+      "localizedSummaries": {
+        "en": "RSS reader with on-device dedup and event grouping"
+      },
+      "iconTintHex": "E8552D",
+      "tags": [
+        "rss",
+        "atom",
+        "rsshub",
+        "reader",
+        "news"
+      ],
+      "minHostVersion": "1.0.0"
+    }
+  ]
 }

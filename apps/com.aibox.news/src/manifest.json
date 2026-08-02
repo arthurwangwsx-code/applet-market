@@ -1,0 +1,214 @@
+{
+  "name": "资讯",
+  "localizedNames": {
+    "en": "News"
+  },
+  "icon": "newspaper.fill",
+  "iconTintHex": "E8552D",
+  "summary": "RSS 聚合阅读器",
+  "localizedSummaries": {
+    "en": "RSS reader"
+  },
+  "template": "react",
+  "entry": "index.html",
+  "securityMode": "secure",
+  "permissions": {
+    "network": true,
+    "storage": true,
+    "ai": true,
+    "capabilities": [
+      "browser",
+      "tts",
+      "tools",
+      "open"
+    ],
+    "networkAllowed": [
+      "news.google.com",
+      "feedx.net",
+      "www.sixthtone.com",
+      "www.bbc.co.uk",
+      "feeds.bbci.co.uk",
+      "cn.nytimes.com",
+      "rss.nytimes.com",
+      "rss.dw.com",
+      "www.theguardian.com",
+      "sspai.com",
+      "www.ithome.com",
+      "www.solidot.org",
+      "www.ifanr.com",
+      "rss.sina.com.cn",
+      "www.infoq.cn",
+      "www.ruanyifeng.com",
+      "techcrunch.com",
+      "www.theverge.com",
+      "feeds.arstechnica.com",
+      "news.ycombinator.com",
+      "dedicated.wallstreetcn.com",
+      "36kr.com",
+      "www.tmtpost.com",
+      "feeds.a.dj.com",
+      "www.cnbc.com",
+      "feeds.marketwatch.com",
+      "www.forbes.com",
+      "www.nature.com",
+      "rss.sciam.com",
+      "phys.org",
+      "www.nasa.gov",
+      "www.quantamagazine.org",
+      "www.espn.com",
+      "www.who.int",
+      "rsshub.app",
+      "newsdata.io"
+    ]
+  },
+  "presentation": {
+    "default": "page",
+    "surfaces": [
+      "page",
+      "fullscreen"
+    ]
+  },
+  "actions": [
+    {
+      "id": "news.search",
+      "name": "search",
+      "displayName": "搜索资讯",
+      "summary": "Searches aggregated news from the user's subscribed sources (RSS / RSSHub / optional News API). Omit \"query\" to get the latest headlines. Filter by \"topic\". Set \"cluster\"=true to group multiple reports about the same event. Each result includes the article URL — pass it to the read action to fetch full text. News may be delayed; for reference only.",
+      "keywords": ["news", "rss", "search", "headlines", "feed", "资讯", "新闻", "订阅", "检索"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Keywords to search titles/summaries/sources. Omit for latest headlines.\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Optional topic filter.\"},\"cluster\":{\"type\":\"boolean\",\"description\":\"Group same-event reports into clusters. Default false.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30,\"description\":\"Max results (1-30). Default 15.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"query\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"topic\":{\"type\":\"string\"},\"image\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}}}},\"clusters\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "news.read",
+      "name": "read",
+      "displayName": "读取正文",
+      "summary": "Fetches the readable full text of one news article for analysis or summarization. Pass the article \"url\" (from a search result) or its \"id\". Returns cleaned article text (truncated to 6000 characters) plus metadata. If the site blocks extraction or is outside this applet's network allowlist, returns the available summary — suggest opening the original.",
+      "keywords": ["news", "article", "read", "full text", "extract", "正文", "阅读", "全文"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The article URL (from a search result).\"},\"id\":{\"type\":\"string\",\"description\":\"The article stable id (alternative to url).\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"article\":{\"type\":\"object\"},\"excerpt\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "news.source",
+      "name": "source",
+      "displayName": "管理订阅源",
+      "summary": "Manages the user's news subscriptions. \"action\": \"list\" = show sources; \"add\" = subscribe (set \"url\" to an RSS/Atom URL, or an RSSHub route starting with \"/\" like \"/zhihu/hotlist\"; optional \"title\"/\"topic\"/\"kind\"); \"remove\" = unsubscribe (match by \"title\" or \"url\"); \"test\" = fetch a URL/route once and report how many articles came back. RSSHub routes need an instance configured in settings. Hosts outside this applet's network allowlist cannot be fetched.",
+      "keywords": ["news", "subscription", "rss", "feed", "source", "订阅", "订阅源", "添加", "删除"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"remove\",\"test\"],\"description\":\"list / add / remove / test.\"},\"url\":{\"type\":\"string\",\"description\":\"RSS/Atom URL, or RSSHub route ('/...'). Required for add/test; add or remove key.\"},\"title\":{\"type\":\"string\",\"description\":\"Display name (add), or match key (remove).\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Topic for add.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"rss\",\"atom\",\"rsshub\",\"api\"],\"description\":\"Source kind for add (inferred if omitted).\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"feeds\":{\"type\":\"array\"},\"count\":{\"type\":\"integer\"},\"sample\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false
+    },
+    {
+      "id": "news.save",
+      "name": "save",
+      "displayName": "收藏文章",
+      "summary": "Saves or removes articles in the user's read-later list. \"action\": \"save\" (set \"url\" or \"id\" from a search result), \"unsave\" (by \"id\" or \"url\"), or \"list\" to show saved articles.",
+      "keywords": ["news", "save", "bookmark", "read later", "收藏", "稍后读"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"save\",\"unsave\",\"list\"],\"description\":\"save / unsave / list.\"},\"url\":{\"type\":\"string\",\"description\":\"Article URL (save/unsave).\"},\"id\":{\"type\":\"string\",\"description\":\"Article stable id (save/unsave).\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"articles\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "write",
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false
+    },
+    {
+      "id": "news.toggleBroadcast",
+      "name": "toggleBroadcast",
+      "displayName": "朗读",
+      "summary": "Start or stop reading the current news list aloud. Drives the in-app broadcast bar; needs the visible list, so it is a UI action rather than an agent tool.",
+      "headless": false,
+      "visibility": ["userInterface", "applet"],
+      "effect": "mediaPlayback",
+      "readOnly": false
+    }
+  ],
+  "scene": {
+    "tabBar": {
+      "style": "glass",
+      "items": [
+        {
+          "id": "feed",
+          "title": "资讯",
+          "localizedTitles": {
+            "en": "Feed"
+          },
+          "icon": "newspaper",
+          "selectedIcon": "newspaper.fill"
+        },
+        {
+          "id": "subs",
+          "title": "订阅",
+          "localizedTitles": {
+            "en": "Sources"
+          },
+          "icon": "dot.radiowaves.up.forward"
+        },
+        {
+          "id": "saved",
+          "title": "收藏",
+          "localizedTitles": {
+            "en": "Saved"
+          },
+          "icon": "bookmark",
+          "selectedIcon": "bookmark.fill"
+        }
+      ]
+    },
+    "toolbar": {
+      "trailing": [
+        {
+          "id": "ai",
+          "icon": "sparkles",
+          "tint": "accent"
+        },
+        {
+          "id": "more",
+          "icon": "ellipsis",
+          "role": "hostMenu"
+        }
+      ],
+      "search": {
+        "enabled": true,
+        "placeholder": "搜索标题、摘要或来源",
+        "localizedPlaceholders": {
+          "en": "Search headlines, summaries, or sources"
+        }
+      }
+    },
+    "menu": {
+      "mergePolicy": "appletFirst",
+      "sections": [
+        {
+          "id": "broadcast",
+          "items": [
+            {
+              "id": "listen",
+              "title": "朗读",
+              "localizedTitles": {
+                "en": "Listen"
+              },
+              "icon": "speaker.wave.2",
+              "actionID": "news.toggleBroadcast"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

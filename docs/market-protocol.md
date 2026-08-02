@@ -33,6 +33,7 @@
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
   "updatedAt": "2026-08-03T00:00:00Z",
+  "appCount": 1,
   "apps": [
     {
       "appId": "com.aibox.news",
@@ -58,7 +59,23 @@
 
 - `schemaVersion` 只在破坏性变更时 +1；新增字段一律 optional、不改类型（与 manifest 同纪律）。
 - `capabilities` 是**给用户看的能力摘要**，不是授权；真实授权仍由宿主 consent 决定。
+  外壳能力从 manifest 的**静态声明键**推导：`scene.tabBar` → `tabs`、`scene.toolbar` → `toolbar`
+  （`aibox.tabs` 只是运行时 API 的命名空间，manifest 里没有这个键）。
 - `category` 取值：`information` / `productivity` / `tools` / `media` / `developer` / `lifestyle` / `game` / `other`。
+- `appCount` 是 `apps` 的长度，冗余但便于客户端不解析全表就显示数量。
+- `path` 是该应用在仓库里的相对路径，客户端据此拼后续两个端点，不要自己按 `appId` 硬拼。
+- `homepage` 可选，指向应用的说明页。
+
+### 2.1 版本号解析：两侧规则不同
+
+| 侧 | 对象 | 规则 |
+|---|---|---|
+| **包侧（严格）** | `latestVersion` / `minHostVersion` / `releases[].version` | 必须严格三段 `major.minor.patch`。非法值按 `0.0.0`，且发布脚本会直接拒绝 |
+| **宿主侧（宽松）** | App 自己的 `MARKETING_VERSION` | **必须补齐到三段**：`"1.0"` → `1.0.0`、`"2"` → `2.0.0`、超三段取前三 |
+
+这条分叉是必需的，不是随意：iOS 的 `MARKETING_VERSION` 惯例上是**两段**（当前就是 `1.0`）。
+如果宿主版本也按严格三段解析，`"1.0"` 会解析失败并回落 `0.0.0`，导致**任何声明了
+`minHostVersion` 的应用都被判为不兼容**。放宽必须只放宽宿主侧——放宽包侧会让写错的版本号静默通过。
 
 ## 3. releases.json
 

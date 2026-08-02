@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T19:37:58Z",
+  "updatedAt": "2026-08-02T19:54:33Z",
   "appCount": 1,
   "apps": [
     {
@@ -12,7 +12,7 @@
       "category": "information",
       "author": "AiBox",
       "latestVersion": "1.0.0",
-      "latestReleasedAt": "2026-08-02T19:37:58Z",
+      "latestReleasedAt": "2026-08-02T19:54:33Z",
       "versionCount": 1,
       "capabilities": [
         "ai",

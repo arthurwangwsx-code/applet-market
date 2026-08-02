@@ -1,0 +1,2140 @@
+{
+  "generator": 2,
+  "namespaces": [
+    {
+      "namespace": "access",
+      "summary": "Explain the effective permission decision for a native capability or host tool.",
+      "methods": [
+        {
+          "name": "summary",
+          "summary": "Return this applet's effective permission profile and bridge protocol version.",
+          "parametersJSON": "{}",
+          "resultSummary": "{protocol, tier, developerFullAccess, declaredCapabilities, toolRequirements}",
+          "effect": "read",
+          "example": "await aibox.access.summary()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "explain",
+          "summary": "Explain exactly which permission gate allows or blocks a capability or host tool.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"tool\":{\"type\":\"string\"},\"capability\":{\"type\":\"string\"},\"method\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{target, allowed, code, failedGate, gates, remedies}",
+          "effect": "read",
+          "example": "await aibox.access.explain({ tool: 'health_metric' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "action",
+      "summary": "Expose or return applet actions to the host.",
+      "methods": [
+        {
+          "name": "result",
+          "summary": "Return structured data to the current caller.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"data\":{}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "meta",
+          "example": "await aibox.action.result({ ok: true })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "ai",
+      "summary": "The app's language model: prose (generate), typed objects (decide), and constrained choices (chooseAction). Needs permissions.ai; metered per applet; every call can fail, so keep a deterministic fallback.",
+      "methods": [
+        {
+          "name": "availability",
+          "summary": "Probe whether the model is usable right now (no consent prompt, no quota spent).",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean, reason?:string, intents:string[]}",
+          "effect": "read",
+          "example": "const a = await aibox.ai.availability(); if (!a.available) useOfflineUI()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "complete",
+          "summary": "Legacy one-liner; same as generate({prompt}).",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"prompt\"],\"properties\":{\"prompt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "external",
+          "example": "await aibox.ai.complete('Summarize this')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "generate",
+          "summary": "L1 — free-form text. Use when a human reads the answer.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"system\":{\"type\":\"string\",\"description\":\"Instructions/persona; keep byte-identical across turns for prefix caching.\"},\"prompt\":{\"type\":\"string\",\"description\":\"Single-turn shorthand; use this or messages.\"},\"messages\":{\"type\":\"array\",\"description\":\"Multi-turn transcript.\",\"items\":{\"type\":\"object\",\"required\":[\"role\",\"content\"],\"properties\":{\"role\":{\"type\":\"string\",\"enum\":[\"system\",\"user\",\"assistant\"]},\"content\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"],\"description\":\"Model tier hint; applets never name a model id.\"},\"maxTokens\":{\"type\":\"integer\"},\"temperature\":{\"type\":\"number\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "external",
+          "example": "await aibox.ai.generate({ system: 'You are terse.', prompt: draft, intent: 'fast', maxTokens: 300 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "decide",
+          "summary": "L2 — a typed object shaped by a JSON Schema, already parsed (no JSON.parse). Use when your code consumes the answer.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"prompt\",\"schema\"],\"properties\":{\"system\":{\"type\":\"string\"},\"prompt\":{\"type\":\"string\"},\"schema\":{\"type\":\"object\",\"description\":\"JSON Schema object for the answer; enum on a property makes an illegal value unrepresentable.\"},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"maxTokens\":{\"type\":\"integer\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "object matching schema",
+          "effect": "external",
+          "example": "const r = await aibox.ai.decide({ prompt: receipt, schema: { type:'object', properties:{ amount:{type:'number'}, merchant:{type:'string'} }, required:['amount'] } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "chooseAction",
+          "summary": "L2 — pick one of the candidates your code computed. Required for move/option decisions: candidates become an enum, so an out-of-range answer cannot occur, and it degrades to fallback:true instead of failing.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"rules\",\"state\",\"candidates\"],\"properties\":{\"rules\":{\"type\":\"string\",\"description\":\"Invariant rules; keep byte-identical across turns (prefix-cache boundary).\"},\"state\":{\"type\":\"string\",\"description\":\"What changed this turn. Never include information the model is not entitled to see.\"},\"candidates\":{\"type\":\"array\",\"description\":\"Legal options computed by the applet.\",\"items\":{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"},\"label\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "{actionId:string, reason?:string, fallback:boolean}",
+          "effect": "external",
+          "example": "const d = await aibox.ai.chooseAction({ rules: RULES, state: renderState(), candidates: legal.map(m => ({ id: m.id, label: m.label })), intent: 'fast', timeoutMs: 8000 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "generateStream",
+          "summary": "L1 streaming — same input as generate, but returns an async-iterable you can render as it arrives. Use for anything long enough that a spinner would feel slow. Structured output (decide/chooseAction) is never streamed.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"system\":{\"type\":\"string\"},\"prompt\":{\"type\":\"string\"},\"messages\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"role\",\"content\"],\"properties\":{\"role\":{\"type\":\"string\",\"enum\":[\"system\",\"user\",\"assistant\"]},\"content\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"maxTokens\":{\"type\":\"integer\"},\"temperature\":{\"type\":\"number\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "async-iterable of string deltas, with .cancel()",
+          "effect": "external",
+          "example": "const s = aibox.ai.generateStream({ prompt }); for await (const d of s) out.textContent += d",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "usage",
+          "summary": "This applet's AI spend so far; gate expensive features before hitting aibox/quota-exceeded.",
+          "parametersJSON": "{}",
+          "resultSummary": "{usedToday, dailyLimit, usedSession, sessionLimit}",
+          "effect": "read",
+          "example": "const u = await aibox.ai.usage()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "summarize",
+          "summary": "L3 sugar over generate: condense text.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"style\":{\"type\":\"string\",\"description\":\"e.g. bullets, paragraph, tldr\"},\"maxWords\":{\"type\":\"integer\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "external",
+          "example": "await aibox.ai.summarize(article, { style: 'bullets', maxWords: 120 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "rewrite",
+          "summary": "L3 sugar over generate: restyle text.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"tone\":{\"type\":\"string\",\"description\":\"e.g. polite, concise\"},\"purpose\":{\"type\":\"string\",\"description\":\"e.g. email, chat\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "external",
+          "example": "await aibox.ai.rewrite(text, { tone: 'polite', purpose: 'email' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "translate",
+          "summary": "L3 sugar over generate: translate text.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"options\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"required\":[\"to\"],\"properties\":{\"to\":{\"type\":\"string\",\"description\":\"BCP-47 tag or plain language name.\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "external",
+          "example": "await aibox.ai.translate(text, { to: 'en' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "classify",
+          "summary": "L3 sugar over decide: return exactly one of the given labels (enum-constrained).",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"labels\"],\"properties\":{\"text\":{\"type\":\"string\"},\"labels\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}",
+          "resultSummary": "one of labels",
+          "effect": "external",
+          "example": "await aibox.ai.classify(note, ['work', 'life', 'study'])",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "extract",
+          "summary": "L3 sugar over decide: pull named fields out of text into an object.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"fieldsSpec\"],\"properties\":{\"text\":{\"type\":\"string\"},\"fieldsSpec\":{\"type\":\"object\",\"description\":\"Field name to type hint, e.g. {amount:'number', merchant:'string'}.\"}},\"additionalProperties\":false}",
+          "resultSummary": "object with the requested fields",
+          "effect": "external",
+          "example": "await aibox.ai.extract(receipt, { amount: 'number', merchant: 'string', date: 'string' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "apps",
+      "summary": "Discover and invoke declared actions on installed applets without changing the host tool registry.",
+      "methods": [
+        {
+          "name": "list",
+          "summary": "List installed applets and their declared action names.",
+          "parametersJSON": "{}",
+          "resultSummary": "{id,name,icon,summary,actions:string[]}[]",
+          "effect": "read",
+          "example": "await aibox.apps.list()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
+        },
+        {
+          "name": "describe",
+          "summary": "Read one applet's action/event contract.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"app\"],\"properties\":{\"app\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{id,name,summary,actions,events}",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
+        },
+        {
+          "name": "invoke",
+          "summary": "Headlessly invoke a registered action on another applet.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"app\",\"action\"],\"properties\":{\"app\":{\"type\":\"string\",\"description\":\"Applet id or name.\"},\"action\":{\"type\":\"string\"},\"input\":{},\"waitMs\":{\"type\":\"integer\",\"minimum\":300,\"maximum\":6000}},\"additionalProperties\":false}",
+          "resultSummary": "{appId,action,result}",
+          "effect": "localWrite",
+          "example": "await aibox.apps.invoke({ app:'expense-manager', action:'addExpense', input:{amount:35} })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
+        },
+        {
+          "name": "emit",
+          "summary": "Publish one event declared by the current applet and run matching event automations.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"event\"],\"properties\":{\"event\":{\"type\":\"string\"},\"payload\":{}},\"additionalProperties\":false}",
+          "resultSummary": "{event,accepted,automationsRun}",
+          "effect": "localWrite",
+          "example": "await aibox.apps.emit({ event:'expenseAdded', payload:{id} })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "browser",
+      "summary": "Open a link in the in-app browser, the system browser, or an external browser app — and come back. Prefer this over open.url for anything the user should read and return from.",
+      "methods": [
+        {
+          "name": "open",
+          "summary": "Open an http/https URL. mode inApp keeps the user inside the app (default); system uses SFSafari so Safari logins/passkeys apply; external hands off to the default browser app. Unavailable modes degrade inApp → system → external instead of failing.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"inApp\",\"system\",\"external\"]}},\"additionalProperties\":false}",
+          "resultSummary": "{opened:boolean, mode:string}",
+          "effect": "external",
+          "example": "await aibox.browser.open({ url, mode: 'inApp' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
+        },
+        {
+          "name": "openArticle",
+          "summary": "Open a link straight into Reader with content you already extracted, so the host does not fetch and parse it a second time.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"publishedAt\":{\"type\":\"string\"},\"content\":{\"type\":\"string\",\"description\":\"Pre-extracted article HTML; omit to let the host extract on arrival.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{opened:boolean, mode:string, reader:boolean}",
+          "effect": "external",
+          "example": "await aibox.browser.openArticle({ url, title, content: extractedHTML })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "Which modes this host can actually serve right now, and whether Reader exists. Hide entry points the host cannot honor instead of letting a tap do nothing.",
+          "parametersJSON": "{}",
+          "resultSummary": "{modes:string[], reader:boolean}",
+          "effect": "read",
+          "example": "const info = await aibox.browser.availability()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "calendar",
+      "summary": "Read and manage calendar events and calendar subscriptions.",
+      "methods": [
+        {
+          "name": "events",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": "await aibox.calendar.events({ action: 'list' })",
+          "toolName": "schedule_events",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "subscribe",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "schedule_subscribe",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "chat",
+      "summary": "Bind the current applet to its docked AI conversation and share compact, user-approved page context.",
+      "methods": [
+        {
+          "name": "bind",
+          "summary": "Set the collaboration mode for this applet.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]}},\"additionalProperties\":false}",
+          "resultSummary": "ConversationBinding",
+          "effect": "localWrite",
+          "example": "await aibox.chat.bind({ mode:'diagnose' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "snapshot",
+          "summary": "Update the compact current-page snapshot without sending a chat message.",
+          "parametersJSON": "Self.snapshotSchema",
+          "resultSummary": "ContextSnapshot",
+          "effect": "localWrite",
+          "example": "await aibox.chat.snapshot({ route:location.hash, pageTitle:document.title, visibleText:document.body.innerText.slice(0,1200) })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "context",
+          "summary": "Read the current collaboration binding and compact snapshot.",
+          "parametersJSON": "{}",
+          "resultSummary": "ConversationBinding",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "selectElement",
+          "summary": "Record a user-selected DOM element for precise AI edits.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"element\"],\"properties\":{\"element\":{\"type\":\"object\"}},\"additionalProperties\":false}",
+          "resultSummary": "SelectedElement",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "report",
+          "summary": "Report build/diagnostic progress for the chat card and Studio.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"phase\"],\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"phase\":{\"type\":\"string\",\"enum\":[\"idle\",\"planning\",\"editing\",\"running\",\"testing\",\"completed\",\"failed\"]},\"progress\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"message\":{\"type\":\"string\"},\"changedFiles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"errors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}",
+          "resultSummary": "CollaborationEnvelope",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "progress",
+          "summary": "Read the latest collaboration progress envelope.",
+          "parametersJSON": "{}",
+          "resultSummary": "CollaborationEnvelope|null",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        },
+        {
+          "name": "shareContext",
+          "summary": "Explicitly hand the current compact snapshot to the docked AI conversation; optionally send a visible suggested prompt.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"suggestedPrompt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "external",
+          "example": "await aibox.chat.shareContext({ suggestedPrompt:'Analyze the selected component and improve its layout.' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "clipboard",
+      "summary": "Read or replace the system text clipboard.",
+      "methods": [
+        {
+          "name": "read",
+          "summary": "Read clipboard text.",
+          "parametersJSON": "{}",
+          "resultSummary": "string",
+          "effect": "read",
+          "example": "await aibox.clipboard.read()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ClipboardCapabilityAdapter.swift"
+        },
+        {
+          "name": "write",
+          "summary": "Replace clipboard text.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.clipboard.write({ text: 'Copied' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ClipboardCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ClipboardCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "contacts",
+      "summary": "Find or create contacts through the host Contacts tools.",
+      "methods": [
+        {
+          "name": "find",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": "await aibox.contacts.find({ query: 'Arthur' })",
+          "toolName": "people_find",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "create",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "people_create",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "db",
+      "summary": "Per-applet structured document collections with atomic persistence and exact-match queries.",
+      "methods": [
+        {
+          "name": "collections",
+          "summary": "List collection names.",
+          "parametersJSON": "{}",
+          "resultSummary": "string[]",
+          "effect": "read",
+          "example": "await aibox.db.collections()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "insert",
+          "summary": "Insert or replace one JSON object; returns metadata including _id.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"document\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"document\":{\"type\":\"object\"}},\"additionalProperties\":false}",
+          "resultSummary": "stored document",
+          "effect": "localWrite",
+          "example": "await aibox.db.insert({ collection:'tasks', document:{ title:'Ship', done:false } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "get",
+          "summary": "Read one document by _id.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "document|null",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "update",
+          "summary": "Patch one document; JSON null removes a field.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\",\"patch\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"patch\":{\"type\":\"object\"},\"merge\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+          "resultSummary": "updated document",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Delete one document by _id.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "query",
+          "summary": "Query by exact field equality, with stable sorting and pagination.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"},\"sortBy\":{\"type\":\"string\"},\"descending\":{\"type\":\"boolean\"},\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":500}},\"additionalProperties\":false}",
+          "resultSummary": "document[]",
+          "effect": "read",
+          "example": "await aibox.db.query({ collection:'tasks', where:{done:false}, sortBy:'_updatedAt', descending:true })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "count",
+          "summary": "Count documents matching exact field equality.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"}},\"additionalProperties\":false}",
+          "resultSummary": "number",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "clear",
+          "summary": "Delete every document in one collection.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "device",
+      "summary": "Read non-identifying device, locale, battery, and free-storage information.",
+      "methods": [
+        {
+          "name": "info",
+          "summary": "Read the current device state.",
+          "parametersJSON": "{}",
+          "resultSummary": "{model, systemName, systemVersion, idiom, locale, timeZone, batteryLevel?, batteryState, freeDiskBytes?}",
+          "effect": "read",
+          "example": "await aibox.device.info()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DeviceInfoCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DeviceInfoCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "files",
+      "summary": "Browse and modify the host file-box workspace through stable file tools.",
+      "methods": [
+        {
+          "name": "boxes",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_boxes",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "list",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_list",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "read",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_read",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "readBinary",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_read_binary",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "stat",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_stat",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "search",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_search",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "tree",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_tree",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "glob",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_glob",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "write",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_write",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "writeBinary",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_write_binary",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "append",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_append",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "createDirectory",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_create_dir",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "transfer",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_transfer",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "delete",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_delete",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "createBox",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_create_box",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "renameBox",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "fs_rename_box",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "describeBox",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "fs_describe_box",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "haptics",
+      "summary": "Trigger native haptic feedback on a physical device.",
+      "methods": [
+        {
+          "name": "impact",
+          "summary": "Play an impact haptic.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"style\":{\"type\":\"string\",\"enum\":[\"light\",\"medium\",\"heavy\",\"soft\",\"rigid\"]}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.haptics.impact({ style: 'light' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
+        },
+        {
+          "name": "selection",
+          "summary": "Play a selection tick.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.haptics.selection()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
+        },
+        {
+          "name": "notify",
+          "summary": "Play a success, warning, or error pattern.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"success\",\"warning\",\"error\"]}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.haptics.notify({ type: 'success' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "health",
+      "summary": "Read Apple Health metrics, motion activity and workouts through the host health tools.",
+      "methods": [
+        {
+          "name": "metric",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": "await aibox.health.metric({ metric: 'steps', range: 'today' })",
+          "toolName": "health_metric",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "summary",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": "await aibox.health.summary({ range: 'today' })",
+          "toolName": "health_summary",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "activity",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "media_activity",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "workouts",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "media_workouts",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "jobs",
+      "summary": "Persistent applet automations executed through short-lived headless action runtimes.",
+      "methods": [
+        {
+          "name": "list",
+          "summary": "List this applet's automations and last run status.",
+          "parametersJSON": "{}",
+          "resultSummary": "Automation[]",
+          "effect": "read",
+          "example": "await aibox.jobs.list()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        },
+        {
+          "name": "register",
+          "summary": "Create or update an automation.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"action\",\"trigger\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"action\":{\"type\":\"string\"},\"input\":{},\"enabled\":{\"type\":\"boolean\"},\"trigger\":{\"type\":\"object\",\"required\":[\"kind\"],\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"once\",\"interval\",\"daily\",\"event\",\"appLaunch\",\"appForeground\",\"appletOpen\"]},\"at\":{\"type\":\"string\",\"description\":\"ISO8601 for once.\"},\"intervalSeconds\":{\"type\":\"integer\",\"minimum\":60},\"hour\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":23},\"minute\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":59},\"event\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
+          "resultSummary": "Automation",
+          "effect": "localWrite",
+          "example": "await aibox.jobs.register({ name:'Nightly summary', action:'summarizeDay', trigger:{kind:'daily',hour:20,minute:0} })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Remove one automation.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        },
+        {
+          "name": "run",
+          "summary": "Run one automation immediately.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        },
+        {
+          "name": "runDue",
+          "summary": "Run every currently due automation for this applet.",
+          "parametersJSON": "{}",
+          "resultSummary": "{count:number}",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        },
+        {
+          "name": "next",
+          "summary": "Read the next calculable due time for every enabled automation.",
+          "parametersJSON": "{}",
+          "resultSummary": "{id,nextAt:string|null}[]",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "lifecycle",
+      "summary": "Read host lifecycle state and subscribe to foreground, background, memory, locale and text-size events.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read the current application lifecycle and environment state.",
+          "parametersJSON": "{}",
+          "resultSummary": "{state,locale,contentSizeCategory,lowPowerMode}",
+          "effect": "read",
+          "example": "await aibox.lifecycle.getState()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "location",
+      "summary": "Read location, geocode places and manage geofences through the host location module.",
+      "methods": [
+        {
+          "name": "current",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": "await aibox.location.current({})",
+          "toolName": "whereabouts_current",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "placemark",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "whereabouts_placemark",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "permission",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "whereabouts_permission",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "geocode",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "whereabouts_geocode",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "places",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "whereabouts_places",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "geofence",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "whereabouts_geofence",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "media",
+      "summary": "Play applet-scoped audio assets with channel-aware controls.",
+      "methods": [
+        {
+          "name": "play",
+          "summary": "Play an audio file from this applet's assets/data/cache directories.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"path\"],\"properties\":{\"path\":{\"type\":\"string\"},\"channel\":{\"type\":\"string\",\"enum\":[\"music\",\"voice\",\"sfx\",\"ambient\"]},\"volume\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"loop\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+          "resultSummary": "{id,channel,state}",
+          "effect": "presentation",
+          "example": "await aibox.media.play({path:'assets/audio/welcome.m4a',channel:'voice'})",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        },
+        {
+          "name": "pause",
+          "summary": "Pause one playback handle.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        },
+        {
+          "name": "resume",
+          "summary": "Resume one playback handle.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        },
+        {
+          "name": "stop",
+          "summary": "Stop one playback handle.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        },
+        {
+          "name": "stopAll",
+          "summary": "Stop all audio, optionally limited to one channel.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"channel\":{\"type\":\"string\",\"enum\":[\"music\",\"voice\",\"sfx\",\"ambient\"]}},\"additionalProperties\":false}",
+          "resultSummary": "integer",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        },
+        {
+          "name": "getState",
+          "summary": "Read playback state for one handle.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{id,state,currentTime,duration,channel}",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "menu",
+      "summary": "Read or update the display state of business menu items declared by manifest.scene.menu.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read the effective business menu and host-menu policy.",
+          "parametersJSON": "{}",
+          "resultSummary": "{declared,mergePolicy,hostPlacement,hostItems,items}",
+          "effect": "read",
+          "example": "await aibox.menu.getState()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "update",
+          "summary": "Update title, icon, enabled or hidden for declared item ids; action identity cannot change.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "menu state",
+          "effect": "presentation",
+          "example": "await aibox.menu.update({ items:{ save:{ enabled:hasChanges, title:hasChanges?'Save':'Saved' } } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "reset",
+          "summary": "Clear all runtime menu overrides and restore manifest values.",
+          "parametersJSON": "{}",
+          "resultSummary": "menu state",
+          "effect": "presentation",
+          "example": "await aibox.menu.reset()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "music",
+      "summary": "Search, browse and control Apple Music or local playback through the host music engine.",
+      "methods": [
+        {
+          "name": "search",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_search",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "play",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_play",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "transport",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_transport",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "status",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_status",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "queue",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "music_queue",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "album",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_album",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "get",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_get",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "library",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "music_library",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "local",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_local",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "lyrics",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_lyrics",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "seek",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_seek",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "volume",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_set_volume",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "repeat",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_set_repeat",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "shuffle",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_set_shuffle",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "sleepTimer",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_sleep_timer",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "recommendations",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "music_recommendations",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "effects",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "music_effects",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "playlist",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "music_playlist",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "deletePlaylist",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "music_playlist_delete",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "navigation",
+      "summary": "Coordinate web history, native title, exit confirmation and edge-swipe behavior with the applet container.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read route depth, native title, confirmation copy and swipe-back policy.",
+          "parametersJSON": "{}",
+          "resultSummary": "{depth,url,title,closeConfirmation,closeConfirmationTitle,closeConfirmationMessage,swipeBack}",
+          "effect": "read",
+          "example": "await aibox.navigation.getState()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "push",
+          "summary": "Push one Web History route and optionally update the native title.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"},\"title\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "navigation state",
+          "effect": "meta",
+          "example": "await aibox.navigation.push({ route:'#/match', title:'Match' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "replace",
+          "summary": "Replace the current Web History route without increasing depth.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"},\"title\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "navigation state",
+          "effect": "meta",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "back",
+          "summary": "Go back one or more applet Web History entries.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"steps\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "meta",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "popToRoot",
+          "summary": "Return to the applet's Web History root.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "meta",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "stateChanged",
+          "summary": "Synchronize browser history state with the native container.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"depth\"],\"properties\":{\"depth\":{\"type\":\"integer\",\"minimum\":0},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "meta",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "setTitle",
+          "summary": "Set the native navigation title.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"title\"],\"properties\":{\"title\":{\"type\":\"string\",\"maxLength\":120}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": "await aibox.navigation.setTitle('3D Arena')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "setCloseConfirmation",
+          "summary": "Configure a retention confirmation shown by native back/close controls.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"enabled\"],\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"title\":{\"type\":\"string\",\"maxLength\":120},\"message\":{\"type\":\"string\",\"maxLength\":500}},\"additionalProperties\":false}",
+          "resultSummary": "navigation state",
+          "effect": "presentation",
+          "example": "await aibox.navigation.setCloseConfirmation({ enabled:true, title:'Leave match?', message:'Current progress will be lost.' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "setSwipeBack",
+          "summary": "Allow automatic swipe-back behavior or disable all left-edge/back-forward swipe gestures.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"policy\"],\"properties\":{\"policy\":{\"type\":\"string\",\"enum\":[\"automatic\",\"disabled\"]}},\"additionalProperties\":false}",
+          "resultSummary": "navigation state",
+          "effect": "presentation",
+          "example": "await aibox.navigation.setSwipeBack('disabled')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "close",
+          "summary": "Ask the native container to close this visible applet, honoring its configured retention confirmation.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": "await aibox.navigation.close()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "net",
+      "summary": "Native HTTP proxy with a per-host allowlist. Unlike browser fetch it can set Referer/User-Agent and read any charset, so use it for endpoints that reject browser requests or answer in GBK/Big5.",
+      "methods": [
+        {
+          "name": "fetch",
+          "summary": "Perform an HTTP request. Defaults to UTF-8 text truncated at 200KB; set responseType 'base64' for binary or non-UTF-8 payloads and decode with TextDecoder, and raise maxBytes for large ones. Always check the returned truncated flag.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"HEAD\"]},\"headers\":{\"type\":\"object\",\"description\":\"Passed through verbatim, including Referer and User-Agent which browser fetch forbids.\"},\"body\":{\"type\":\"string\"},\"responseType\":{\"type\":\"string\",\"enum\":[\"text\",\"base64\",\"json\"],\"description\":\"text (default) decodes UTF-8 and yields '' for other charsets; base64 returns raw bytes; json parses for you.\"},\"maxBytes\":{\"type\":\"integer\",\"description\":\"Response cap; default 200000, maximum 10485760.\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
+          "resultSummary": "{status, headers, body, contentType, truncated, bytes}",
+          "effect": "external",
+          "example": "const r = await aibox.net.fetch(url, { headers: { Referer: 'https://finance.sina.com.cn' }, responseType: 'base64' }); const gbk = new TextDecoder('gb18030').decode(Uint8Array.from(atob(r.body), c => c.charCodeAt(0)))",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "notifications",
+      "summary": "Schedule local device notifications.",
+      "methods": [
+        {
+          "name": "schedule",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": "await aibox.notifications.schedule({ title: 'Break', afterMinutes: 25 })",
+          "toolName": "notify_schedule",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "open",
+      "summary": "Open a safe external URL or system handler.",
+      "methods": [
+        {
+          "name": "url",
+          "summary": "Open an http, https, mailto, or tel URL.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "external",
+          "example": "await aibox.open.url('https://example.com')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/OpenURLCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/OpenURLCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "photos",
+      "summary": "Search, inspect, OCR, save and explicitly mutate photos through the host media tools.",
+      "methods": [
+        {
+          "name": "search",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "media_photo_search",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "view",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "media_photo_view",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "ocr",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "media_ocr",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "save",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "media_save_image",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "act",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "presentation",
+          "example": null,
+          "toolName": "media_photo_act",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "picker",
+      "summary": "Let the user choose files or photos and return applet-scoped resource handles instead of Base64 payloads.",
+      "methods": [
+        {
+          "name": "file",
+          "summary": "Present the system document picker.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"types\":{\"type\":\"array\",\"maxItems\":20,\"items\":{\"type\":\"string\"}},\"multiple\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+          "resultSummary": "{items:ResourceRef[],cancelled:boolean}",
+          "effect": "presentation",
+          "example": "await aibox.picker.file({ types:['text/plain','.md'], multiple:false })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "photo",
+          "summary": "Present the system photo picker without granting broad photo-library access.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10}},\"additionalProperties\":false}",
+          "resultSummary": "{items:ResourceRef[],cancelled:boolean}",
+          "effect": "presentation",
+          "example": "await aibox.picker.photo({ limit:1 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "reminders",
+      "summary": "Read and manage reminders through the host reminders module.",
+      "methods": [
+        {
+          "name": "items",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": "await aibox.reminders.items({ action: 'list' })",
+          "toolName": "schedule_reminders",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "resource",
+      "summary": "Inspect, read or remove applet-scoped resources returned by native pickers.",
+      "methods": [
+        {
+          "name": "list",
+          "summary": "List imported resource handles owned by this applet.",
+          "parametersJSON": "{}",
+          "resultSummary": "ResourceRef[]",
+          "effect": "read",
+          "example": "await aibox.resource.list()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "info",
+          "summary": "Read metadata for an applet resource handle.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "ResourceRef",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "readText",
+          "summary": "Read a UTF-8 resource up to 1 MB; use the applet URL for larger/binary data.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "string",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Delete an imported resource owned by this applet.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "scene",
+      "summary": "Inspect native presentation, appearance, safe areas and orientation, and request declared changes.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read effective presentation, appearance, safe areas and orientation.",
+          "parametersJSON": "{}",
+          "resultSummary": "{requested,effective,current,allowed,requestable,appearance,orientation,safeArea}",
+          "effect": "read",
+          "example": "await aibox.scene.getState()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "requestPresentation",
+          "summary": "Switch this visible applet to an allowed page, fullscreen, sheet or drawer surface.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"surface\"],\"properties\":{\"surface\":{\"type\":\"string\",\"enum\":[\"page\",\"fullscreen\",\"sheet\",\"drawer\"]}},\"additionalProperties\":false}",
+          "resultSummary": "{requested,effective,current,allowed,requestable}",
+          "effect": "presentation",
+          "example": "await aibox.scene.requestPresentation({ surface:'fullscreen' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "requestOrientation",
+          "summary": "Request one orientation declared by manifest.scene.orientation on a visible page/fullscreen surface.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"orientation\"],\"properties\":{\"orientation\":{\"type\":\"string\",\"enum\":[\"portrait\",\"landscapeLeft\",\"landscapeRight\"]}},\"additionalProperties\":false}",
+          "resultSummary": "scene state",
+          "effect": "presentation",
+          "example": "await aibox.scene.requestOrientation('landscapeRight')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "share",
+      "summary": "Present the native system share sheet, as plain text or as a real file the user can save to Files or AirDrop.",
+      "methods": [
+        {
+          "name": "text",
+          "summary": "Share text with an optional URL.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": "await aibox.share.text({ text: 'Look at this', url: 'https://example.com' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ShareCapabilityAdapter.swift"
+        },
+        {
+          "name": "file",
+          "summary": "Export content as a real named file and hand it to the share sheet. Use this for CSV/JSON/OPML exports — text shares the content as a message body, not as a file. Max 10MB; filename must be a bare name.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"filename\",\"content\"],\"properties\":{\"filename\":{\"type\":\"string\",\"description\":\"Bare file name with extension, e.g. ledger-2026-08.csv. No slashes, no .., no leading dot.\"},\"content\":{\"type\":\"string\",\"description\":\"utf8 text, or base64 bytes when encoding is base64.\"},\"mimeType\":{\"type\":\"string\",\"description\":\"Advisory; the file extension wins when they disagree.\"},\"encoding\":{\"type\":\"string\",\"enum\":[\"utf8\",\"base64\"],\"description\":\"Default utf8. Use base64 for binary.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{shared:boolean, filename:string, bytes:number, warning?:string}",
+          "effect": "presentation",
+          "example": "await aibox.share.file({ filename: 'ledger-2026-08.csv', content: csvText, mimeType: 'text/csv' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ShareCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ShareCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "shortcuts",
+      "summary": "Run or open Apple Shortcuts from a visible applet.",
+      "methods": [
+        {
+          "name": "run",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "presentation",
+          "example": null,
+          "toolName": "shortcut_run",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "open",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "presentation",
+          "example": null,
+          "toolName": "shortcut_open",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    },
+    {
+      "namespace": "storage",
+      "summary": "Per-applet persistent JSON key-value storage.",
+      "methods": [
+        {
+          "name": "get",
+          "summary": "Read one value.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "JSON value or null",
+          "effect": "read",
+          "example": "await aibox.storage.get('theme')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "set",
+          "summary": "Persist one JSON value.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\",\"value\"],\"properties\":{\"key\":{\"type\":\"string\"},\"value\":{}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.storage.set('theme', 'dark')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "list",
+          "summary": "List stored keys.",
+          "parametersJSON": "{}",
+          "resultSummary": "string[]",
+          "effect": "read",
+          "example": "await aibox.storage.list()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Remove one stored key.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.storage.remove('theme')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
+    },
+    {
+      "namespace": "tabs",
+      "summary": "The applet's own bottom tab bar, declared by manifest.scene.tabBar. The host renders it; switching tabs never reloads the WebView, so scroll position and in-memory state survive.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read the effective tab items, the selected id, and whether the host actually rendered the bar (card/sheet/drawer surfaces do not).",
+          "parametersJSON": "{}",
+          "resultSummary": "{declared, style, items:[{id,title,icon,selectedIcon,badge,enabled,hidden}], selected, rendered}",
+          "effect": "read",
+          "example": "const state = await aibox.tabs.getState(); if (!state.rendered) useInlineSegmentedControl()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "select",
+          "summary": "Switch tabs from code; identical to a user tap, including the changed event.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "tabs state",
+          "effect": "presentation",
+          "example": "await aibox.tabs.select('saved')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "update",
+          "summary": "Update title, icon, badge, enabled or hidden for declared tab ids. Tabs cannot be added, removed or renamed by id.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"badge\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "tabs state",
+          "effect": "presentation",
+          "example": "await aibox.tabs.update({ items: { subs: { badge: '3' }, saved: { hidden: true } } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "reset",
+          "summary": "Clear all runtime tab overrides and restore manifest values.",
+          "parametersJSON": "{}",
+          "resultSummary": "tabs state",
+          "effect": "presentation",
+          "example": "await aibox.tabs.reset()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "toast",
+      "summary": "Show a short native in-app message.",
+      "methods": [
+        {
+          "name": "show",
+          "summary": "Show a transient message.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"message\"],\"properties\":{\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": "await aibox.toast.show({ message: 'Saved' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ToastCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ToastCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "toolbar",
+      "summary": "Navigation-bar buttons and the search field declared by manifest.scene.toolbar. The host back/close control and the ⋯ menu always remain.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read the effective toolbar items and search state, including whether the host actually rendered them (fullscreen has no navigation bar).",
+          "parametersJSON": "{}",
+          "resultSummary": "{declared, rendered, leading, trailing, items, search:{declared,rendered,placeholder,scopes,query,scope,active}}",
+          "effect": "read",
+          "example": "const state = await aibox.toolbar.getState()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "update",
+          "summary": "Update title, icon, badge, enabled or hidden for declared item ids; action identity, role and placement cannot change.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"badge\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "toolbar state",
+          "effect": "presentation",
+          "example": "await aibox.toolbar.update({ items: { ai: { enabled: hasSelection, badge: '2' } } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "reset",
+          "summary": "Clear all runtime toolbar overrides and restore manifest values.",
+          "parametersJSON": "{}",
+          "resultSummary": "toolbar state",
+          "effect": "presentation",
+          "example": "await aibox.toolbar.reset()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "setSearch",
+          "summary": "Clear, prefill or dismiss the declared search field from code.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":[\"string\",\"null\"]},\"scope\":{\"type\":\"string\"},\"active\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+          "resultSummary": "search state",
+          "effect": "presentation",
+          "example": "await aibox.toolbar.setSearch({ query: '', active: false })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "tools",
+      "summary": "Discover and call the app's active AI tools through the same permission and audit pipeline used by the assistant.",
+      "methods": [
+        {
+          "name": "list",
+          "summary": "List the tools this applet may call.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "ToolSummary[]",
+          "effect": "read",
+          "example": "await aibox.tools.list({ limit: 50 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
+        },
+        {
+          "name": "search",
+          "summary": "Search allowed tools by capability or task.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"query\"],\"properties\":{\"query\":{\"type\":\"string\"},\"limit\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
+          "resultSummary": "ToolSummary[]",
+          "effect": "read",
+          "example": "await aibox.tools.search({ query: 'calendar create' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
+        },
+        {
+          "name": "describe",
+          "summary": "Get one tool's full description and JSON Schema.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "ToolDefinition",
+          "effect": "read",
+          "example": "await aibox.tools.describe({ name: 'calendar_create' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
+        },
+        {
+          "name": "call",
+          "summary": "Call one allowed active tool.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"},\"argumentsJSON\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "ToolCallResult",
+          "effect": "meta",
+          "example": "await aibox.tools.call({ name: 'calendar_create', arguments: { title: 'Review', start: '2026-07-21T10:00:00+08:00', end: '2026-07-21T10:30:00+08:00' } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
+        },
+        {
+          "name": "callBatch",
+          "summary": "Call up to eight tools and return results in order.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"calls\"],\"properties\":{\"calls\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "ToolCallResult[]",
+          "effect": "meta",
+          "example": "await aibox.tools.callBatch({ calls: [{ name: 'weather_current', arguments: {} }] })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "gateway"
+    },
+    {
+      "namespace": "tts",
+      "summary": "Speak text with the device's speech synthesizer. Audible even when the ring switch is silent; other audio is ducked, not stopped.",
+      "methods": [
+        {
+          "name": "speak",
+          "summary": "Speak text aloud. Returns as soon as speaking starts (it does not wait for the end).",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"lang\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN. Omit to auto-detect from the text — do not pass the wrong one, a mismatched voice reads nothing.\"},\"rate\":{\"type\":\"number\",\"description\":\"0…1, default 0.5 (system default speed).\"},\"pitch\":{\"type\":\"number\",\"description\":\"0.5…2.0, default 1.\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": "await aibox.tts.speak({ text: 'Hello', lang: 'en-US' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechCapabilityAdapter.swift"
+        },
+        {
+          "name": "stop",
+          "summary": "Stop what this applet is currently speaking.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.tts.stop()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
+      "namespace": "ui",
+      "summary": "Present native alerts, confirmations, prompts and action sheets from a visible applet.",
+      "methods": [
+        {
+          "name": "alert",
+          "summary": "Show a native alert and resolve when the user dismisses it.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{actionId, value, cancelled}",
+          "effect": "presentation",
+          "example": "await aibox.ui.alert({ title: 'Saved', message: 'Your changes were stored.' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "confirm",
+          "summary": "Show a native confirmation dialog.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"default\",\"cancel\",\"destructive\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "{actionId, value, cancelled}",
+          "effect": "presentation",
+          "example": "await aibox.ui.confirm({ title: 'Delete?', actions: [{id:'cancel',title:'Cancel',role:'cancel'},{id:'delete',title:'Delete',role:'destructive'}] })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "prompt",
+          "summary": "Show a native text prompt.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"placeholder\":{\"type\":\"string\"},\"defaultValue\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{actionId, value:string|null, cancelled}",
+          "effect": "presentation",
+          "example": "await aibox.ui.prompt({ title: 'Name', placeholder: 'Project name' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "actionSheet",
+          "summary": "Show a native action sheet with up to eight actions.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"actions\"],\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"default\",\"cancel\",\"destructive\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "{actionId, value, cancelled}",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
+      "namespace": "voiceMemos",
+      "summary": "Record, browse, transcribe and analyze voice memos through the host memo engine.",
+      "methods": [
+        {
+          "name": "list",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "memo_list",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "get",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "memo_get",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordStart",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "presentation",
+          "example": null,
+          "toolName": "memo_record_start",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordControl",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_record_control",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordStatus",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "memo_record_status",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "transcribe",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "meta",
+          "example": null,
+          "toolName": "memo_transcribe",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "transcript",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "memo_get_transcript",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "play",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_play",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "stop",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_stop_playback",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "seek",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_seek",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "import",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_import",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "rename",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_rename",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "delete",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_delete",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "move",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_move",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "favourite",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "localWrite",
+          "example": null,
+          "toolName": "memo_toggle_favourite",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "summarize",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "memo_summarize",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "actionItems",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "memo_get_action_items",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "ask",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "memo_ask",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "cleanTranscript",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "memo_clean_transcript",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
+          "name": "chapters",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "external",
+          "example": null,
+          "toolName": "memo_get_chapters",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
+      "kind": "projection",
+      "group": "system"
+    }
+  ],
+  "declarable": [
+    "browser",
+    "calendar",
+    "clipboard",
+    "contacts",
+    "device",
+    "files",
+    "haptics",
+    "health",
+    "location",
+    "media",
+    "music",
+    "notifications",
+    "open",
+    "photos",
+    "picker",
+    "reminders",
+    "share",
+    "shortcuts",
+    "toast",
+    "tools",
+    "tts",
+    "ui",
+    "voiceMemos"
+  ],
+  "alwaysAvailable": [
+    "access",
+    "action",
+    "apps",
+    "chat",
+    "db",
+    "jobs",
+    "lifecycle",
+    "menu",
+    "navigation",
+    "resource",
+    "scene",
+    "tabs",
+    "toolbar"
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "name": "音乐",
+  "localizedNames": {
+    "en": "Music"
+  },
+  "icon": "music.note",
+  "iconTintHex": "FF6B6B",
+  "summary": "本地与 Apple Music 播放器",
+  "localizedSummaries": {
+    "en": "Local and Apple Music player"
+  },
+  "template": "react",
+  "entry": "index.html",
+  "securityMode": "secure",
+  "permissions": {
+    "network": true,
+    "storage": true,
+    "ai": false,
+    "networkAllowed": [
+      "mzstatic.com"
+    ],
+    "capabilities": [
+      "music",
+      "haptics",
+      "share",
+      "open",
+      "ui"
+    ]
+  },
+  "presentation": {
+    "default": "page",
+    "surfaces": [
+      "page",
+      "fullscreen"
+    ]
+  },
+  "actions": [
+    {
+      "id": "music.nowPlayingSummary",
+      "name": "nowPlayingSummary",
+      "displayName": "当前播放摘要",
+      "summary": "Return the current track, queue summary, sleep timer and lyrics availability in one call, instead of chaining music_status + music_queue + music_lyrics.",
+      "keywords": ["music", "now playing", "queue", "音乐", "正在播放", "队列"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"isPlaying\":{\"type\":\"boolean\"},\"playbackState\":{\"type\":\"string\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"durationSeconds\":{\"type\":\"integer\"},\"queueCount\":{\"type\":\"integer\"},\"currentIndex\":{\"type\":\"integer\"},\"upNext\":{\"type\":\"array\"},\"repeatMode\":{\"type\":\"string\"},\"isShuffled\":{\"type\":\"boolean\"},\"sleepTimer\":{\"type\":[\"string\",\"null\"]},\"lyrics\":{\"type\":\"object\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation", "applet"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "music.playMostPlayed",
+      "name": "playMostPlayed",
+      "displayName": "播放最常听的歌",
+      "summary": "Play the user's most-played tracks, ranked by this app's own play history (the host music tools do not expose play history).",
+      "keywords": ["music", "most played", "history", "音乐", "最常播放", "播放历史"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"How many tracks to queue (default 20).\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"queued\":{\"type\":\"integer\"},\"startedWith\":{\"type\":[\"string\",\"null\"]},\"message\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation", "shortcut"],
+      "effect": "mediaPlayback",
+      "readOnly": false,
+      "idempotent": false
+    },
+    {
+      "id": "music.resumeLast",
+      "name": "resumeLast",
+      "displayName": "接着上次继续听",
+      "summary": "Resume the last track this app played, seeking back to the stored position (this app's own restore point; no host tool persists it).",
+      "keywords": ["music", "resume", "continue", "音乐", "继续播放", "接着听"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"message\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation", "shortcut"],
+      "effect": "mediaPlayback",
+      "readOnly": false,
+      "idempotent": false
+    }
+  ],
+  "scene": {
+    "tabBar": {
+      "style": "glass",
+      "items": [
+        {
+          "id": "forYou",
+          "title": "为你推荐",
+          "localizedTitles": { "en": "For You" },
+          "icon": "sparkles"
+        },
+        {
+          "id": "search",
+          "title": "搜索",
+          "localizedTitles": { "en": "Search" },
+          "icon": "magnifyingglass"
+        },
+        {
+          "id": "player",
+          "title": "正在播放",
+          "localizedTitles": { "en": "Playing" },
+          "icon": "play.circle",
+          "selectedIcon": "play.circle.fill"
+        },
+        {
+          "id": "queue",
+          "title": "队列",
+          "localizedTitles": { "en": "Queue" },
+          "icon": "list.bullet"
+        },
+        {
+          "id": "albums",
+          "title": "资料库",
+          "localizedTitles": { "en": "Library" },
+          "icon": "square.stack",
+          "selectedIcon": "square.stack.fill"
+        }
+      ]
+    },
+    "toolbar": {
+      "trailing": [
+        { "id": "more", "icon": "ellipsis" }
+      ],
+      "search": {
+        "enabled": true,
+        "placeholder": "艺人、歌曲、歌词等",
+        "localizedPlaceholders": { "en": "Artists, Songs, Lyrics, and More" },
+        "scopes": [
+          { "id": "catalog", "title": "Apple Music" },
+          { "id": "library", "title": "资料库" }
+        ]
+      }
+    }
+  }
+}

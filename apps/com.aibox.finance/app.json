@@ -1,0 +1,23 @@
+{
+  "appId": "com.aibox.finance",
+  "name": "理财",
+  "localizedNames": {
+    "en": "Finance"
+  },
+  "summary": "行情、自选与模拟持仓",
+  "localizedSummaries": {
+    "en": "Quotes, watchlist, and paper-trading portfolio"
+  },
+  "icon": "chart.line.uptrend.xyaxis",
+  "iconTintHex": "E64340",
+  "category": "information",
+  "author": "AiBox",
+  "minHostVersion": "1.0.0",
+  "tags": [
+    "stocks",
+    "quotes",
+    "watchlist",
+    "portfolio",
+    "fund"
+  ]
+}

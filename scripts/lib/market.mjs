@@ -31,6 +31,9 @@ export const BARE_IMPORT_ALLOWLIST = new Set([
   'antd-mobile',
   'chart.js',
   'chart.js/auto',
+  // 框架级 UI 原语（VirtualList / useKeyboardInset / useListGestures / imageURL）——
+  // 随运行时资产内置，不是 npm 包。见 docs/capabilities/applet/framework-capabilities.md §3.2/§3.3。
+  'aibox/ui',
 ])
 
 export const CATEGORIES = new Set([

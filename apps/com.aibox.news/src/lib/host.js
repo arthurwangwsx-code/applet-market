@@ -89,6 +89,10 @@ export const FAILURE = {
 
 const USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AiBox/1.0'
 export const HTTP_TIMEOUT_MS = 8000
+/** feed 抓取的响应体上限。桥默认 200KB，全文 RSS 很容易超；显式放宽到 1MB。 */
+export const FEED_MAX_BYTES = 1000 * 1000
+/** 整页抓取（正文抽取）的上限：抽完只留 8000 字符，不必把整页都搬过桥。 */
+export const PAGE_MAX_BYTES = 512 * 1000
 
 function classifyError(message) {
   const text = String(message || '').toLowerCase()
@@ -103,11 +107,20 @@ function classifyError(message) {
 }
 
 /**
- * GET 一个 URL，返回 `{ ok, body, status, failure, httpStatus }`。
- * 8 秒软超时：桥不接受 per-request timeout，故用 Promise.race 在页面侧封顶
- * （原生请求本身会继续跑到 30s，但页面不再等它）。
+ * GET 一个 URL，返回 `{ ok, body, status, truncated, failure, httpStatus }`。
+ *
+ * · 8 秒软超时：桥不接受 per-request timeout，故用 Promise.race 在页面侧封顶
+ *   （原生请求本身会继续跑到 30s，但页面不再等它）。
+ * · `maxBytes` 是新版桥的可选项。`handleNet` 对 options **不做未知键校验**（只挑自己认识的键读），
+ *   所以新 option 在老宿主被忽略、未知 option 在新宿主也被忽略，两个方向都安全，不需要探测。
+ *   不传时桥按 200KB 截断。
+ * · **老宿主判据 = 响应里有没有 `truncated` 字段**（不是读它的值）。老宿主既不认 `maxBytes`
+ *   也不回 `truncated`，且它对 >200KB 的多字节正文是**按字节切断** → UTF-8 解码失败 → 回空串。
+ *   所以在老宿主上「200 + 空 body」几乎必然是被截爆了，这里升级成 `responseTooLarge`：
+ *   诊断页会显示「响应过大」而不是把这个源静静记成「暂无内容」。
+ *   新宿主按字符边界截断并回 `truncated:true`，空 body 就照实是空 body（＝原生的「空来源」语义）。
  */
-export async function httpGet(url, { timeoutMs = HTTP_TIMEOUT_MS } = {}) {
+export async function httpGet(url, { timeoutMs = HTTP_TIMEOUT_MS, maxBytes } = {}) {
   const api = bridge()
   if (!api || !api.net || typeof api.net.fetch !== 'function') {
     return { ok: false, failure: FAILURE.configuration }
@@ -116,21 +129,32 @@ export async function httpGet(url, { timeoutMs = HTTP_TIMEOUT_MS } = {}) {
     return { ok: false, failure: FAILURE.invalidURL }
   }
 
+  const options = { method: 'GET', headers: { 'User-Agent': USER_AGENT } }
+  if (maxBytes) options.maxBytes = maxBytes
+
   let timer = null
   const timeout = new Promise((resolve) => {
     timer = setTimeout(() => resolve({ __timeout: true }), timeoutMs)
   })
   try {
-    const response = await Promise.race([
-      api.net.fetch(url, { method: 'GET', headers: { 'User-Agent': USER_AGENT } }),
-      timeout,
-    ])
+    const response = await Promise.race([api.net.fetch(url, options), timeout])
     if (response && response.__timeout) return { ok: false, failure: FAILURE.timeout }
     const status = Number((response && response.status) || 0)
     if (status < 200 || status >= 300) {
       return { ok: false, failure: FAILURE.http, httpStatus: status }
     }
-    return { ok: true, status, body: String((response && response.body) || '') }
+    const body = String((response && response.body) || '')
+    const legacyBridge = !(response && typeof response === 'object' && 'truncated' in response)
+    if (legacyBridge && body === '') {
+      return { ok: false, failure: FAILURE.responseTooLarge, httpStatus: status, legacyBridge }
+    }
+    return {
+      ok: true,
+      status,
+      body,
+      truncated: !!(response && response.truncated),
+      legacyBridge,
+    }
   } catch (error) {
     return { ok: false, failure: classifyError(error && error.message) }
   } finally {

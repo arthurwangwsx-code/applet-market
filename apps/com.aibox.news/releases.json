@@ -5,16 +5,16 @@
   "releases": [
     {
       "version": "1.0.0",
-      "releasedAt": "2026-08-02T19:37:58Z",
+      "releasedAt": "2026-08-02T19:54:33Z",
       "notes": "首个版本：1:1 复刻原生资讯模块（含 4 个对外 AI 工具）",
       "fileCount": 38,
-      "totalBytes": 239970,
+      "totalBytes": 243490,
       "path": "apps/com.aibox.news/releases/1.0.0",
       "localizedNotes": {
         "en": "First release"
       },
       "minHostVersion": "1.0.0",
-      "bundleSha256": "9abcecc4bc0ff66427b54db82a6a4fec37947b23aab1c83314af546765f7618b"
+      "bundleSha256": "0b5035d1e8129ca6512ba21f711fe9de3496cbc65fd6d4e200f97a87b8aa36e8"
     }
   ]
 }

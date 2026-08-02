@@ -65,7 +65,12 @@ function buildRegistryEntry(appId) {
     ...(permissions.storage ? ['storage'] : []),
     ...(permissions.ai ? ['ai'] : []),
     ...(permissions.capabilities ?? []),
-    ...(manifest.scene?.tabs ? ['tabs'] : []),
+    // 外壳能力：manifest 里的**静态声明门**是 `scene.tabBar` / `scene.toolbar`
+    // （app-shell-and-market.md §1.1 / §2.1，Swift 侧 `AppletSceneDeclaration` 的 CodingKeys 同名）。
+    // `aibox.tabs` 只是运行时 API 的命名空间，manifest 里没有这个键——曾经写成 `scene.tabs`，
+    // 结果是「声明了底部 Tab 的应用在市场列表里看不出来」。
+    ...(manifest.scene?.tabBar ? ['tabs'] : []),
+    ...(manifest.scene?.toolbar ? ['toolbar'] : []),
   ])].sort()
 
   const entry = {

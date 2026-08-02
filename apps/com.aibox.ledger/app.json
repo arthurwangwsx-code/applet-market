@@ -1,0 +1,13 @@
+{
+  "appId": "com.aibox.ledger",
+  "name": "记账",
+  "localizedNames": {
+    "en": "Ledger"
+  },
+  "summary": "多账户复式记账与预算",
+  "icon": "book.closed",
+  "iconTintHex": "2A9D63",
+  "category": "productivity",
+  "author": "AiBox",
+  "tags": []
+}

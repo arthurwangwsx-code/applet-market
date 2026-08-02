@@ -201,7 +201,10 @@ export default function App() {
     document.title = title
     if (api && api.navigation && typeof api.navigation.setTitle === 'function') api.navigation.setTitle(title)
     if (api && api.toolbar && typeof api.toolbar.update === 'function') {
-      api.toolbar.update({ items: { ai: { hidden: !caps.hasAI }, more: { hidden: !showBroadcast } } }).catch(() => {})
+      // 只改 ✨。`more` 是 `role:hostMenu` 的位置标记、不是自己的按钮，而宿主 ⋯ 菜单是保留出口、
+      // 声不声明都在（platform 合同 §2.1）——所以"没有可播报内容时右上角只剩 ✨"这一态改由
+      // **隐藏菜单项本身**表达（见下面的 menu.update），而不是去藏宿主菜单。
+      api.toolbar.update({ items: { ai: { hidden: !caps.hasAI } } }).catch(() => {})
     }
     if (api && api.menu && typeof api.menu.update === 'function') {
       api.menu.update({

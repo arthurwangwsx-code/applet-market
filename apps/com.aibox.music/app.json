@@ -1,0 +1,23 @@
+{
+  "appId": "com.aibox.music",
+  "name": "音乐",
+  "localizedNames": {
+    "en": "Music"
+  },
+  "summary": "本地与 Apple Music 播放器",
+  "localizedSummaries": {
+    "en": "Local and Apple Music player — remote-controls the native playback engine"
+  },
+  "icon": "music.note",
+  "iconTintHex": "FF6B6B",
+  "category": "media",
+  "author": "AiBox",
+  "minHostVersion": "1.0.0",
+  "tags": [
+    "music",
+    "player",
+    "apple-music",
+    "lyrics",
+    "queue"
+  ]
+}

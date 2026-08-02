@@ -2,7 +2,7 @@
 // 正文四级回退：正文缓存 → feed 自带 contentHTML（长度 > summary.length + 40 才采用）→
 // 抓页抽取 → 回落 feed summary。
 
-import { openArticle as hostOpenArticle, openURL, httpGet } from './host.js'
+import { openArticle as hostOpenArticle, openURL, httpGet, PAGE_MAX_BYTES } from './host.js'
 import { extract } from './extractor.js'
 
 /** 四级回退取正文；命中网络时顺手写缓存。 */
@@ -19,7 +19,7 @@ export async function resolveContent(article, store, { allowNetwork = true } = {
     }
   }
   if (allowNetwork && article.url) {
-    const page = await httpGet(article.url)
+    const page = await httpGet(article.url, { maxBytes: PAGE_MAX_BYTES })
     if (page.ok) {
       const text = extract(page.body)
       if (text) {

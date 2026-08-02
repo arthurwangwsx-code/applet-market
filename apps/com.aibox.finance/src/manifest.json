@@ -1,0 +1,78 @@
+{
+  "name": "理财",
+  "localizedNames": {
+    "en": "Finance"
+  },
+  "icon": "chart.line.uptrend.xyaxis",
+  "iconTintHex": "E64340",
+  "summary": "行情、自选与模拟持仓",
+  "localizedSummaries": {
+    "en": "Quotes, watchlist, and paper-trading portfolio"
+  },
+  "template": "react",
+  "entry": "index.html",
+  "securityMode": "secure",
+  "permissions": {
+    "network": true,
+    "storage": true,
+    "ai": true,
+    "capabilities": [
+      "notifications",
+      "share"
+    ],
+    "networkAllowed": [
+      "gtimg.cn",
+      "sinajs.cn",
+      "sina.com.cn",
+      "eastmoney.com",
+      "1234567.com.cn"
+    ]
+  },
+  "presentation": {
+    "default": "page",
+    "surfaces": [
+      "page",
+      "fullscreen"
+    ]
+  },
+  "scene": {
+    "tabBar": {
+      "style": "glass",
+      "items": [
+        {
+          "id": "markets",
+          "title": "行情",
+          "localizedTitles": { "en": "Markets" },
+          "icon": "chart.line.uptrend.xyaxis"
+        },
+        {
+          "id": "industry",
+          "title": "行业",
+          "localizedTitles": { "en": "Industry" },
+          "icon": "square.grid.2x2",
+          "selectedIcon": "square.grid.2x2.fill"
+        },
+        {
+          "id": "portfolio",
+          "title": "持仓",
+          "localizedTitles": { "en": "Portfolio" },
+          "icon": "wallet.pass",
+          "selectedIcon": "wallet.pass.fill"
+        },
+        {
+          "id": "settings",
+          "title": "设置",
+          "localizedTitles": { "en": "Settings" },
+          "icon": "gearshape",
+          "selectedIcon": "gearshape.fill"
+        }
+      ]
+    },
+    "toolbar": {
+      "trailing": [
+        { "id": "ai", "icon": "sparkles", "tint": "accent" },
+        { "id": "search", "icon": "magnifyingglass" }
+      ]
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // 三个数据源 Provider 的移植：RSS/Atom（原样 GET）、RSSHub（实例基址 + 路由 + limit）、
 // NewsAPI（NewsData.io JSON）。统一返回 `{ articles, failure, httpStatus }`，失败不抛。
 
-import { httpGet, FAILURE } from './host.js'
+import { httpGet, FAILURE, FEED_MAX_BYTES } from './host.js'
 import { parseFeed } from './feedParser.js'
 import { plain, stableKey } from './text.js'
 import { parseDate } from './dates.js'
@@ -19,7 +19,7 @@ function refOf(feed) {
 
 /** 原生 RSS / Atom：完整 URL 原样 GET，一次 40 条。 */
 export async function fetchRSS(feed, { now = Date.now(), limit = FEED_LIMIT } = {}) {
-  const response = await httpGet(feed.endpoint)
+  const response = await httpGet(feed.endpoint, { maxBytes: FEED_MAX_BYTES })
   if (!response.ok) return failed(response.failure || FAILURE.unknown, response.httpStatus)
   return success(parseFeed(response.body, refOf(feed), now).slice(0, limit))
 }
@@ -36,7 +36,7 @@ export async function fetchRSSHub(feed, { instance, now = Date.now(), limit = FE
   const route = feed.endpoint.startsWith('/') ? feed.endpoint : `/${feed.endpoint}`
   const separator = feed.endpoint.includes('?') ? '&' : '?'
   const url = `${base}${route}${separator}limit=${limit}`
-  const response = await httpGet(url)
+  const response = await httpGet(url, { maxBytes: FEED_MAX_BYTES })
   if (!response.ok) return failed(response.failure || FAILURE.unknown, response.httpStatus)
   return success(parseFeed(response.body, refOf(feed), now).slice(0, limit))
 }
@@ -71,7 +71,7 @@ export async function fetchNewsAPI(feed, { apiKey, language = 'zh', now = Date.n
   if (language) params.set('language', language)
   const url = `https://newsdata.io/api/1/latest?${params.toString()}`
 
-  const response = await httpGet(url)
+  const response = await httpGet(url, { maxBytes: FEED_MAX_BYTES })
   if (!response.ok) return failed(response.failure || FAILURE.unknown, response.httpStatus)
 
   let payload

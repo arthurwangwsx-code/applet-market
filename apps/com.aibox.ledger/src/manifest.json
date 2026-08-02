@@ -1,0 +1,26 @@
+{
+  "name": "记账",
+  "localizedNames": {
+    "en": "Ledger"
+  },
+  "icon": "book.closed",
+  "iconTintHex": "2A9D63",
+  "summary": "多账户复式记账与预算",
+  "template": "react",
+  "entry": "index.html",
+  "securityMode": "secure",
+  "permissions": {
+    "network": false,
+    "storage": true,
+    "ai": false,
+    "networkAllowed": [],
+    "capabilities": []
+  },
+  "presentation": {
+    "default": "page",
+    "surfaces": [
+      "page",
+      "fullscreen"
+    ]
+  }
+}

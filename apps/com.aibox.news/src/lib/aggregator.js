@@ -10,7 +10,7 @@ import { dedupe } from './dedup.js'
 import { normalizeURL } from './text.js'
 import { cluster } from './cluster.js'
 import { extract } from './extractor.js'
-import { httpGet } from './host.js'
+import { httpGet, PAGE_MAX_BYTES } from './host.js'
 
 export const FOREGROUND_TTL_MS = 300 * 1000
 export const SNAPSHOT_THROTTLE_MS = 15 * 1000
@@ -205,7 +205,7 @@ export class NewsAggregator {
       if (cached) continue
       let text = article.contentHTML ? extract(article.contentHTML) : ''
       if (text.length < 200) {
-        const page = await httpGet(article.url)
+        const page = await httpGet(article.url, { maxBytes: PAGE_MAX_BYTES })
         if (page.ok) text = extract(page.body)
       }
       if (text) await this.store.writeContent(article.url, text)

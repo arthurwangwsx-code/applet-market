@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "appId": "com.aibox.news",
   "version": "1.0.0",
-  "releasedAt": "2026-08-02T19:37:58Z",
+  "releasedAt": "2026-08-02T19:54:33Z",
   "notes": "首个版本：1:1 复刻原生资讯模块（含 4 个对外 AI 工具）",
   "localizedNotes": {
     "en": "First release"
@@ -87,13 +87,19 @@
         "keywords": [
           "news",
           "rss",
+          "atom",
+          "rsshub",
           "search",
           "headlines",
+          "latest news",
           "feed",
+          "subscribed news",
           "资讯",
           "新闻",
+          "头条",
           "订阅",
-          "检索"
+          "检索",
+          "搜索新闻"
         ],
         "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Keywords to search titles/summaries/sources. Omit for latest headlines.\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Optional topic filter.\"},\"cluster\":{\"type\":\"boolean\",\"description\":\"Group same-event reports into clusters. Default false.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30,\"description\":\"Max results (1-30). Default 15.\"}},\"additionalProperties\":false}",
         "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"query\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"topic\":{\"type\":\"string\"},\"image\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}}}},\"clusters\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"}}}",
@@ -104,7 +110,12 @@
         ],
         "effect": "read",
         "readOnly": true,
-        "idempotent": true
+        "idempotent": true,
+        "execution": {
+          "mode": "concurrent",
+          "timeoutMilliseconds": 45000,
+          "requiresNetworkConnectivity": true
+        }
       },
       {
         "id": "news.read",
@@ -116,10 +127,13 @@
           "article",
           "read",
           "full text",
+          "article text",
           "extract",
+          "summarize article",
           "正文",
           "阅读",
-          "全文"
+          "全文",
+          "读文章"
         ],
         "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The article URL (from a search result).\"},\"id\":{\"type\":\"string\",\"description\":\"The article stable id (alternative to url).\"}},\"additionalProperties\":false}",
         "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"article\":{\"type\":\"object\"},\"excerpt\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
@@ -130,7 +144,12 @@
         ],
         "effect": "read",
         "readOnly": true,
-        "idempotent": true
+        "idempotent": true,
+        "execution": {
+          "mode": "concurrent",
+          "timeoutMilliseconds": 20000,
+          "requiresNetworkConnectivity": true
+        }
       },
       {
         "id": "news.source",
@@ -140,13 +159,17 @@
         "keywords": [
           "news",
           "subscription",
-          "rss",
-          "feed",
+          "subscribe",
+          "unsubscribe",
+          "rss feed",
+          "feed url",
+          "rsshub route",
           "source",
           "订阅",
           "订阅源",
-          "添加",
-          "删除"
+          "添加订阅",
+          "删除订阅",
+          "测试订阅"
         ],
         "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"remove\",\"test\"],\"description\":\"list / add / remove / test.\"},\"url\":{\"type\":\"string\",\"description\":\"RSS/Atom URL, or RSSHub route ('/...'). Required for add/test; add or remove key.\"},\"title\":{\"type\":\"string\",\"description\":\"Display name (add), or match key (remove).\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Topic for add.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"rss\",\"atom\",\"rsshub\",\"api\"],\"description\":\"Source kind for add (inferred if omitted).\"}},\"additionalProperties\":false}",
         "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"feeds\":{\"type\":\"array\"},\"count\":{\"type\":\"integer\"},\"sample\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
@@ -158,7 +181,12 @@
         "effect": "write",
         "readOnly": false,
         "destructive": true,
-        "idempotent": false
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 20000,
+          "requiresNetworkConnectivity": true
+        }
       },
       {
         "id": "news.save",
@@ -170,8 +198,12 @@
           "save",
           "bookmark",
           "read later",
+          "saved articles",
+          "unsave",
           "收藏",
-          "稍后读"
+          "稍后读",
+          "取消收藏",
+          "收藏列表"
         ],
         "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"save\",\"unsave\",\"list\"],\"description\":\"save / unsave / list.\"},\"url\":{\"type\":\"string\",\"description\":\"Article URL (save/unsave).\"},\"id\":{\"type\":\"string\",\"description\":\"Article stable id (save/unsave).\"}},\"additionalProperties\":false}",
         "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"articles\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
@@ -183,7 +215,11 @@
         "effect": "write",
         "readOnly": false,
         "destructive": true,
-        "idempotent": false
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 15000
+        }
       },
       {
         "id": "news.toggleBroadcast",
@@ -273,12 +309,12 @@
       }
     }
   },
-  "totalBytes": 239970,
+  "totalBytes": 243490,
   "files": [
     {
       "path": "app.jsx",
-      "bytes": 15371,
-      "sha256": "ea1da1caab634958af18312c6f65f36e9d60f75e8edb607ffd3126039af87d54",
+      "bytes": 15698,
+      "sha256": "0e0d4a1f397177d7b90ec08d6cda6a7e79064f5fd22c62de9b738441a5124b76",
       "encoding": "utf8"
     },
     {
@@ -403,8 +439,8 @@
     },
     {
       "path": "lib/aggregator.js",
-      "bytes": 11546,
-      "sha256": "ebe510c28fba75e9efc8b9643d59a338b273443476c499adec6b083514b3a087",
+      "bytes": 11592,
+      "sha256": "47d7bd2444774fd1a143b0fddae6333dff9501eedb2d8637e7f26aa9fb5bb871",
       "encoding": "utf8"
     },
     {
@@ -445,8 +481,8 @@
     },
     {
       "path": "lib/feedParser.js",
-      "bytes": 6869,
-      "sha256": "de0a9ef18ba01e1af03e4b0e4084db3b8862b85c74da4dd689e6545a77b1252e",
+      "bytes": 6913,
+      "sha256": "ab9184b270acf7effcedd39a490da8ba852fe6ab44417dd7cf43ea0ae2143c4e",
       "encoding": "utf8"
     },
     {
@@ -457,8 +493,8 @@
     },
     {
       "path": "lib/host.js",
-      "bytes": 8356,
-      "sha256": "f73160d8db2dd78e679e9360413fae3a02864de314cf081feed54f01b1988479",
+      "bytes": 9971,
+      "sha256": "f0ae72bfdbd0a169719991337eeea2724a43a7fd349f7c5202a79376063ec79d",
       "encoding": "utf8"
     },
     {
@@ -469,14 +505,14 @@
     },
     {
       "path": "lib/providers.js",
-      "bytes": 4862,
-      "sha256": "7e38c4e24b6dd253b428cd7ada413f21554af99b1618e5417ab649b6c00e9d68",
+      "bytes": 4968,
+      "sha256": "d5a737de063bb634bd7148f9651a9cdbb76102f09cad33cb0a12f7744c262cca",
       "encoding": "utf8"
     },
     {
       "path": "lib/reading.js",
-      "bytes": 2503,
-      "sha256": "787bcce59a90a3f13c4617932daa775dcad4e64f9994c8b035af24c219da51c0",
+      "bytes": 2549,
+      "sha256": "58b7cf16d314be0522b7ec3b8538af9aa3e6bd2296443ad11a4371fb89c2b0e6",
       "encoding": "utf8"
     },
     {
@@ -499,8 +535,8 @@
     },
     {
       "path": "manifest.json",
-      "bytes": 9841,
-      "sha256": "e571fb51abb55ec1dca6c861f69b7e6445e159eff8bfc7a5748ad9f56760de8b",
+      "bytes": 11177,
+      "sha256": "342686603518878f8a5a589a55769dd9f8468fa9dd077d687c2489440d900caf",
       "encoding": "utf8"
     }
   ]

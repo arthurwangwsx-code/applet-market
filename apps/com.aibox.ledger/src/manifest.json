@@ -111,7 +111,7 @@
                 "en": "AI analysis"
               },
               "icon": "sparkles",
-              "actionID": "ledger.openAI"
+              "actionID": "ledger_open_ai"
             }
           ]
         },
@@ -125,7 +125,7 @@
                 "en": "Export CSV"
               },
               "icon": "square.and.arrow.up",
-              "actionID": "ledger.exportCSV"
+              "actionID": "ledger_export_csv"
             },
             {
               "id": "importCSV",
@@ -134,7 +134,7 @@
                 "en": "Import CSV"
               },
               "icon": "square.and.arrow.down",
-              "actionID": "ledger.importCSV"
+              "actionID": "ledger_import_csv"
             },
             {
               "id": "openRecentlyDeleted",
@@ -143,7 +143,7 @@
                 "en": "Recently deleted"
               },
               "icon": "trash",
-              "actionID": "ledger.openRecentlyDeleted"
+              "actionID": "ledger_open_recently_deleted"
             }
           ]
         }
@@ -152,7 +152,7 @@
   },
   "actions": [
     {
-      "id": "ledger.record",
+      "id": "ledger_record",
       "name": "record",
       "displayName": "记一笔",
       "summary": "Record, edit or delete one ledger entry: an expense, an income, or a transfer between two accounts. Only `amount` is required for a new expense — category, account and date all have sensible defaults, so do NOT stop and ask the user for them. Pass a stable `request_id` (a UUID) on every add so a retry can never double-post. Use the ledger account tool to create accounts; this tool never creates one from scratch.",
@@ -168,7 +168,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.query",
+      "id": "ledger_query",
       "name": "query",
       "displayName": "查流水",
       "summary": "List individual ledger entries matching filters. Returns the count, the expense total in the base currency, and one line per entry ending in [id: …] so it can be updated or deleted afterwards. An unresolvable category/account/project name comes back as a candidate list rather than being silently ignored.",
@@ -182,7 +182,7 @@
       "idempotent": true
     },
     {
-      "id": "ledger.stats",
+      "id": "ledger_stats",
       "name": "stats",
       "displayName": "消费统计",
       "summary": "Aggregate spending or income into buckets by category, subcategory, day, month, account, tag or project. Shares one implementation with the in-app Reports screen, so quoted numbers always match what the user sees. Amounts are in the base currency at the exchange rate frozen when each entry was posted. Transfers and balance adjustments are excluded.",
@@ -196,7 +196,7 @@
       "idempotent": true
     },
     {
-      "id": "ledger.budget",
+      "id": "ledger_budget",
       "name": "budget",
       "displayName": "预算",
       "summary": "Read budget status or set a monthly limit. Status shares one implementation with the in-app Budget screen and reports the total limit, spent, remaining, days left and the daily allowance, plus each category line (flagged when over, annotated when it carries a rollover). Setting a limit of 0 deletes that budget.",
@@ -211,7 +211,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.account",
+      "id": "ledger_account",
       "name": "account",
       "displayName": "账户",
       "summary": "List accounts with balances and net worth, create an account, set an account's balance (a Beancount-style balance assertion that posts a visible calibration entry), archive one, or rename one. This is the ONLY way to create an account — the record tool never creates one. For credit accounts a positive initial_balance is stored as the amount owed.",
@@ -226,7 +226,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.category",
+      "id": "ledger_category",
       "name": "category",
       "displayName": "分类",
       "summary": "List, create, rename or archive spending and income categories. Categories are two levels deep at most. When the user wants a category that does not exist yet, create it rather than forcing the entry into an existing one. Archiving only removes it from pickers; existing entries keep it.",
@@ -241,7 +241,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.currency",
+      "id": "ledger_currency",
       "name": "currency",
       "displayName": "币种与汇率",
       "summary": "Manage currencies and exchange rates: list them, add one, set a rate manually, change the base currency all statistics are priced in, or refresh rates online. A currency with no configured rate is EXCLUDED from converted totals rather than being faked at 1:1, so add the rate before recording in it. Setting a rate marks it manual and online refreshes will not overwrite it.",
@@ -256,7 +256,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.project",
+      "id": "ledger_project",
       "name": "project",
       "displayName": "项目与分摊",
       "summary": "Projects group a trip or event's spending, and carry shared-expense settlement. Actions: list, create, activate (pass 'none' to clear), update, archive, summary, members, add_member, remove_member, settle (member balances plus the fewest transfers that zero them out), record_settlement. Adding the first member auto-creates a 'Me' member. A settlement involving the user also posts a matching ledger entry.",
@@ -271,7 +271,7 @@
       "execution": { "mode": "sequential" }
     },
     {
-      "id": "ledger.openAI",
+      "id": "ledger_open_ai",
       "name": "openAI",
       "displayName": "AI 分析",
       "summary": "Open the in-app AI analysis panel.",
@@ -281,7 +281,7 @@
       "readOnly": true
     },
     {
-      "id": "ledger.exportCSV",
+      "id": "ledger_export_csv",
       "name": "exportCSV",
       "displayName": "导出 CSV",
       "summary": "Export every ledger entry as a CSV file and hand it to the share sheet.",
@@ -291,7 +291,7 @@
       "readOnly": true
     },
     {
-      "id": "ledger.importCSV",
+      "id": "ledger_import_csv",
       "name": "importCSV",
       "displayName": "导入 CSV",
       "summary": "Pick a ledger CSV file and open the import preview. Selecting a file never writes anything on its own.",
@@ -301,7 +301,7 @@
       "readOnly": true
     },
     {
-      "id": "ledger.openRecentlyDeleted",
+      "id": "ledger_open_recently_deleted",
       "name": "openRecentlyDeleted",
       "displayName": "最近删除",
       "summary": "Open the recently deleted entries screen, where entries can be restored or permanently removed.",

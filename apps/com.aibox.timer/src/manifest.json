@@ -30,7 +30,7 @@
   },
   "actions": [
     {
-      "id": "timer.start",
+      "id": "timer_start",
       "name": "start",
       "displayName": "开始计时",
       "summary": "Starts a countdown. Pass \"minutes\" (1-180) or \"seconds\" for a precise duration; omit both for the default 25-minute focus block. Optional \"label\" names the session so it is recognisable in history.",
@@ -44,7 +44,7 @@
       "idempotent": false
     },
     {
-      "id": "timer.status",
+      "id": "timer_status",
       "name": "status",
       "displayName": "查看状态",
       "summary": "Reports whether a timer is running and how much time is left. Read-only.",
@@ -58,7 +58,7 @@
       "idempotent": true
     },
     {
-      "id": "timer.stop",
+      "id": "timer_stop",
       "name": "stop",
       "displayName": "停止计时",
       "summary": "Stops the running timer. Set \"record\" to true to still write it into history as an interrupted session.",

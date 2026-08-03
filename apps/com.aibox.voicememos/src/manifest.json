@@ -97,7 +97,7 @@
   },
   "actions": [
     {
-      "id": "memo.list",
+      "id": "memo_list",
       "name": "memo_list",
       "displayName": "列出录音",
       "summary": "Lists this app's voice recordings, newest first. Filter by a text query or favourites only. Read-only.",
@@ -122,7 +122,7 @@
       "idempotent": true
     },
     {
-      "id": "memo.transcribe",
+      "id": "memo_transcribe",
       "name": "memo_transcribe",
       "displayName": "转写录音",
       "summary": "Transcribes one recording with Apple speech recognition and returns the text. It waits for completion, so a long recording can take minutes. Already-transcribed recordings return immediately; read them with memo_transcript.",
@@ -146,7 +146,7 @@
       "idempotent": true
     },
     {
-      "id": "memo.transcript",
+      "id": "memo_transcript",
       "name": "memo_transcript",
       "displayName": "读取转写",
       "summary": "Returns the transcript of one recording: status and the full text. Prefers the speaker-corrected version when one exists. Read-only.",
@@ -170,7 +170,7 @@
       "idempotent": true
     },
     {
-      "id": "memo.summarize",
+      "id": "memo_summarize",
       "name": "memo_summarize",
       "displayName": "生成摘要",
       "summary": "Summarizes a recording's transcript and returns the summary text. Takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
@@ -195,7 +195,7 @@
       "idempotent": false
     },
     {
-      "id": "memo.actionItems",
+      "id": "memo_action_items",
       "name": "memo_action_items",
       "displayName": "提取待办",
       "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker actually stated one. Nothing is invented. Needs a completed transcript.",
@@ -221,7 +221,7 @@
       "idempotent": false
     },
     {
-      "id": "memo.ask",
+      "id": "memo_ask",
       "name": "memo_ask",
       "displayName": "询问录音",
       "summary": "Answers a question about one recording using only its transcript — nothing else. Use it instead of pulling the whole transcript when the user asks something specific about a long recording.",
@@ -245,7 +245,7 @@
       "idempotent": true
     },
     {
-      "id": "memo.export",
+      "id": "memo_export",
       "name": "memo_export",
       "displayName": "导出文稿",
       "summary": "Renders one recording as structured Markdown, plain text or SRT subtitles — title, created time, duration, summary, transcript, chapters, action items and translation, whichever exist. Returns the rendered text; it does not write a file.",

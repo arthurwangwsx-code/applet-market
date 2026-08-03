@@ -77,7 +77,7 @@
   },
   "actions": [
     {
-      "id": "news.search",
+      "id": "news_search",
       "name": "search",
       "displayName": "搜索资讯",
       "summary": "Searches aggregated news from the user's subscribed sources (RSS / RSSHub / optional News API). Omit \"query\" to get the latest headlines. Filter by \"topic\". Set \"cluster\"=true to group multiple reports about the same event. Each result includes the article URL — pass it to the read action to fetch full text. News may be delayed; for reference only.",
@@ -115,7 +115,7 @@
       }
     },
     {
-      "id": "news.read",
+      "id": "news_read",
       "name": "read",
       "displayName": "读取正文",
       "summary": "Fetches the readable full text of one news article for analysis or summarization. Pass the article \"url\" (from a search result) or its \"id\". Returns cleaned article text (truncated to 6000 characters) plus metadata. If the site blocks extraction or is outside this applet's network allowlist, returns the available summary — suggest opening the original.",
@@ -149,7 +149,7 @@
       }
     },
     {
-      "id": "news.source",
+      "id": "news_source",
       "name": "source",
       "displayName": "管理订阅源",
       "summary": "Manages the user's news subscriptions. \"action\": \"list\" = show sources; \"add\" = subscribe (set \"url\" to an RSS/Atom URL, or an RSSHub route starting with \"/\" like \"/zhihu/hotlist\"; optional \"title\"/\"topic\"/\"kind\"); \"remove\" = unsubscribe (match by \"title\" or \"url\"); \"test\" = fetch a URL/route once and report how many articles came back. RSSHub routes need an instance configured in settings. Hosts outside this applet's network allowlist cannot be fetched.",
@@ -186,7 +186,7 @@
       }
     },
     {
-      "id": "news.save",
+      "id": "news_save",
       "name": "save",
       "displayName": "收藏文章",
       "summary": "Saves or removes articles in the user's read-later list. \"action\": \"save\" (set \"url\" or \"id\" from a search result), \"unsave\" (by \"id\" or \"url\"), or \"list\" to show saved articles.",
@@ -219,7 +219,7 @@
       }
     },
     {
-      "id": "news.toggleBroadcast",
+      "id": "news_toggle_broadcast",
       "name": "toggleBroadcast",
       "displayName": "朗读",
       "summary": "Start or stop reading the current news list aloud. Drives the in-app broadcast bar; needs the visible list, so it is a UI action rather than an agent tool.",
@@ -298,7 +298,7 @@
                 "en": "Listen"
               },
               "icon": "speaker.wave.2",
-              "actionID": "news.toggleBroadcast"
+              "actionID": "news_toggle_broadcast"
             }
           ]
         }

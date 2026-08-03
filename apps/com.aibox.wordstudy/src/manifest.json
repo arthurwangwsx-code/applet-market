@@ -74,7 +74,7 @@
   },
   "actions": [
     {
-      "id": "word.lookup",
+      "id": "word_lookup",
       "name": "word_lookup",
       "displayName": "查词",
       "summary": "Looks up an English word or short phrase: phonetics (UK/US IPA), part-of-speech senses, inflected forms, example sentences, exam tags (CET-4/6, postgrad, etc.), synonyms/antonyms, and a memory tip. Cached lookups return instantly; a new word is scraped from a dictionary site and falls back to a one-shot AI generation (may take a few seconds). Accepts a spelling-corrected suggestion if the input looks misspelled.",
@@ -104,7 +104,7 @@
       "idempotent": true
     },
     {
-      "id": "word.translate",
+      "id": "word_translate",
       "name": "word_translate",
       "displayName": "翻译",
       "summary": "Translates text between Chinese and English (auto-detects direction by default: CJK input → Chinese-to-English, otherwise English-to-Chinese). Returns translation only, no explanation. Pass 'direction' to force a specific direction instead of auto-detection.",
@@ -129,7 +129,7 @@
       "idempotent": true
     },
     {
-      "id": "word.listVocab",
+      "id": "word_list_vocab",
       "name": "word_list_vocab",
       "displayName": "列出生词本",
       "summary": "Lists the user's saved vocabulary (words and saved sentences), most recently added first. Filter by kind or mastered status, and/or search by a text fragment matched against the term and its brief gloss. Read-only, local data — no AI call, no network.",
@@ -153,7 +153,7 @@
       "idempotent": true
     },
     {
-      "id": "word.vocabUpsert",
+      "id": "word_vocab_upsert",
       "name": "word_vocab_upsert",
       "displayName": "收进生词本",
       "summary": "Adds a word or sentence to the user's saved vocabulary, or updates its mastered flag if it's already saved. Non-destructive — never deletes existing data. Use word_lookup first if you need the word's brief gloss cached alongside it.",
@@ -180,7 +180,7 @@
       }
     },
     {
-      "id": "word.vocabRemove",
+      "id": "word_vocab_remove",
       "name": "word_vocab_remove",
       "displayName": "移出生词本",
       "summary": "Permanently removes a word or sentence from the user's saved vocabulary. This cannot be undone — confirm with the user before calling unless they explicitly asked to delete it.",

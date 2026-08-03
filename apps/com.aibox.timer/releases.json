@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.timer",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T04:25:12Z",
+      "notes": "回归套件：停止后多等一拍再断言归位（历史列表重渲与倒计时归零有竞态，实测偶发假红）",
+      "fileCount": 4,
+      "totalBytes": 28664,
+      "path": "apps/com.aibox.timer/releases/1.0.2",
+      "localizedNotes": {
+        "en": "Regression suite: wait a beat longer after stop before asserting the reset, the history re-render races the countdown reset"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "60d0634777e75e5e00966bc6eee6b16dc04a301a126cd8099e74f2617c979f03"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T04:04:57Z",

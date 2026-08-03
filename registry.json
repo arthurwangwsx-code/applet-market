@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T04:08:43Z",
+  "updatedAt": "2026-08-03T04:25:12Z",
   "appCount": 7,
   "apps": [
     {
@@ -164,9 +164,9 @@
       "icon": "timer",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.0.1",
-      "latestReleasedAt": "2026-08-03T04:04:57Z",
-      "versionCount": 2,
+      "latestVersion": "1.0.2",
+      "latestReleasedAt": "2026-08-03T04:25:12Z",
+      "versionCount": 3,
       "capabilities": [
         "haptics",
         "storage",

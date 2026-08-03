@@ -32,7 +32,7 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '停止'); if (!b) throw new Error('停止 not found'); b.click(); return 'stopped' })()"
       },
-      { "action": "wait", "ms": 1500 },
+      { "action": "wait", "ms": 2500 },
       {
         "action": "assert",
         "expr": "!document.body.innerText.includes('还没有记录')",

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T21:40:21Z",
-  "appCount": 10,
+  "updatedAt": "2026-08-03T22:52:51Z",
+  "appCount": 11,
   "apps": [
     {
       "appId": "com.aibox.bilibili",
@@ -377,6 +377,35 @@
         "en": "Word Study"
       },
       "iconTintHex": "2D6AE0"
+    },
+    {
+      "appId": "com.aibox.youtube",
+      "name": "YouTube",
+      "summary": "搜索并播放 YouTube 视频",
+      "icon": "play.rectangle.fill",
+      "category": "media",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-03T22:52:51Z",
+      "versionCount": 1,
+      "capabilities": [
+        "browser",
+        "clipboard",
+        "haptics",
+        "net",
+        "share",
+        "storage",
+        "toast",
+        "video"
+      ],
+      "latestTotalBytes": 49290,
+      "latestFileCount": 12,
+      "runtimeKind": "source",
+      "path": "apps/com.aibox.youtube",
+      "localizedNames": {
+        "en": "YouTube"
+      },
+      "iconTintHex": "FF0033"
     }
   ]
 }

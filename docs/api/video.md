@@ -2,7 +2,7 @@
 
 > Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background.
 
-**分组** 系统能力投影 ｜ **方法数** 12 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"video"`。**声明 ≠ 授权**，用户仍会被逐项询问。
+**分组** 系统能力投影 ｜ **方法数** 13 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"video"`。**声明 ≠ 授权**，用户仍会被逐项询问。
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 从宿主 descriptor 生成，请勿手改 -->
 
@@ -10,7 +10,7 @@
 
 ### `aibox.video.play()`
 
-Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8), not a web page. resumeFrom continues from a saved position in seconds. presentation 'immersive' (default) takes over the screen; 'embedded' plays without taking over.
+Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not.
 
 **副作用档位** `presentation`（呈现）— 弹出原生界面或播放；需要可见的 applet 运行时。
 
@@ -18,7 +18,9 @@ Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|:--:|---|
-| `url` | string | ✓ |  |
+| `sourceURL` | string |  | The page url you passed to video.resolve. Preferred. |
+| `formatID` | string |  | id of the chosen format from resolve; omit to let the host pick the best playable one. |
+| `url` | string |  | A direct media URL. Only for streams you did not get from resolve. |
 | `title` | string |  |  |
 | `subtitleURL` | string |  | Optional .srt sidecar subtitle URL. |
 | `resumeFrom` | number |  | Seconds to resume from. （最小 0） |
@@ -29,7 +31,9 @@ Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8
 **返回** `{playing:boolean}`
 
 ```js
-await aibox.video.play({ url: streamURL, title: video.title, resumeFrom: 120 })
+const r = await aibox.video.resolve({ url: pageURL })
+const best = r.formats.filter(f => f.playable)[0]
+await aibox.video.play({ sourceURL: pageURL, formatID: best.id, resumeFrom: 120 })
 ```
 
 ### `aibox.video.playQueue()`
@@ -178,9 +182,31 @@ Stop the progress event stream.
 
 **返回** `boolean`
 
+### `aibox.video.resolve()`
+
+Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play.
+
+**副作用档位** `external`（外发）— 发往网络或模型；有配额与失败分支，必须有兜底。
+
+**参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|:--:|---|
+| `url` | string | ✓ | The page or media URL to resolve. |
+
+未列出的字段会被拒绝（`additionalProperties: false`）。
+
+**返回** `{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error}`
+
+```js
+const r = await aibox.video.resolve({ url: pageURL })
+const best = r.formats.filter(f => f.playable)[0]
+if (best) await aibox.video.play({ url: best.url, title: r.title })
+```
+
 ### `aibox.video.availability()`
 
-Whether this build has a video engine at all. Hide your play buttons instead of letting a tap do nothing.
+What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing.
 
 **副作用档位** `read`（读取）— 只读，不改任何状态；不触发用户确认。
 
@@ -188,7 +214,7 @@ Whether this build has a video engine at all. Hide your play buttons instead of 
 
 无参数。
 
-**返回** `{available:boolean}`
+**返回** `{available:boolean, resolve:boolean, dash:boolean}`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift`
 

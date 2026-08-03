@@ -1,0 +1,188 @@
+// 宿主能力封装。**所有** `window.aibox` 访问收敛在这里。
+//
+// 这个应用与「自己解析取流」的写法有一处本质区别：**播放地址不由它拿**。
+// 页面把视频页 URL 交给 `aibox.video.resolve`，宿主的 extractor 栈（含客户端选型、
+// visitorData 握手这些每周都在变的东西）负责解析，再由 `aibox.video.play` 带着必需的请求头去播。
+//
+// 这样做的收益不只是省代码：YouTube 的取流是**持续对抗**，把它放在宿主里，
+// 一次升级所有小应用同时受益；放在小应用里，每个应用各自烂掉。
+
+import { imageURL as uiImageURL } from 'aibox/ui'
+
+const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+
+const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，'
+  + '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）'
+
+function isPermissionError(message) {
+  return /aibox\/(not-granted|denied|not-visible)/.test(String(message || ''))
+}
+
+/** 「发了就不管」的桥调用：桥回的是 Promise，能力不可用时是 reject 而不是 throw。 */
+function fireAndForget(thunk) {
+  try {
+    const result = thunk()
+    if (result && typeof result.catch === 'function') result.catch(() => {})
+  } catch { /* 连命名空间都不在 */ }
+}
+
+// —— 网络 ——————————————————————————————————————————————
+
+export async function fetchJSON(url, options = {}) {
+  const api = bridge()
+  if (!api?.net?.fetch) throw new Error('宿主没有开放网络能力')
+  const {
+    method = 'GET', headers = {}, body,
+    responseType = 'json', maxBytes = 2 * 1024 * 1024,
+  } = options
+  let res
+  try {
+    const payload = { method, headers, responseType, maxBytes }
+    if (body !== undefined) payload.body = body
+    res = await api.net.fetch(url, payload)
+  } catch (cause) {
+    const raw = String(cause?.message || cause)
+    if (isPermissionError(raw)) {
+      const denied = new Error(PERMISSION_HINT)
+      denied.permission = true
+      throw denied
+    }
+    const err = new Error(raw)
+    err.retryable = true
+    throw err
+  }
+  // InnerTube 的响应有 450KB+，默认 200KB 会**静默截断**成解不出来的半截 JSON。
+  // 这条判定不能省：截断与「服务器就返回这么多」在 body 上看不出区别。
+  if (res?.truncated) throw new Error('响应过大被截断（请提高 maxBytes）')
+  if (typeof res?.status === 'number' && (res.status < 200 || res.status >= 300)) {
+    const err = new Error(`HTTP ${res.status}`)
+    err.retryable = res.status >= 500 || res.status === 429
+    throw err
+  }
+  return res?.body
+}
+
+// —— 图片 ——————————————————————————————————————————————
+
+/** 缩略图必须走这条：secure CSP 会把裸 https 的 `<img>` 拦成空白。 */
+export function imageURL(url, width) {
+  if (!url) return ''
+  return uiImageURL(url, width ? { width } : undefined)
+}
+
+// —— 视频：解析 + 播放 ——————————————————————————————
+
+/**
+ * 宿主这个构建能干什么。三条独立：
+ *  · `available` 有播放引擎
+ *  · `resolve`   有解析栈（没有就整个应用没意义，页面要明说）
+ *  · `dash`      能播分离流（没有就只剩低清；YouTube 的高清全是 dash）
+ */
+export async function capabilities() {
+  const api = bridge()
+  if (!api?.video?.availability) return { available: false, resolve: false, dash: false }
+  try {
+    const res = await api.video.availability()
+    return {
+      available: !!res?.available,
+      resolve: !!res?.resolve,
+      dash: !!res?.dash,
+    }
+  } catch {
+    return { available: false, resolve: false, dash: false }
+  }
+}
+
+/** 解析一个视频页，回可播格式。 */
+export async function resolve(url) {
+  const api = bridge()
+  if (!api?.video?.resolve) throw new Error('这个版本没有媒体解析能力')
+  return api.video.resolve({ url })
+}
+
+/**
+ * 播放。**必须传 sourceURL + formatID**，不能拿 resolve 回的裸 url 去播——
+ * 那条会丢掉取流请求头与分轨信息（宿主刻意不把它们透给页面）。
+ */
+export async function play({ sourceURL, formatID, resumeFrom = 0 }) {
+  const api = bridge()
+  if (!api?.video?.play) throw new Error('宿主没有视频播放能力')
+  return api.video.play({ sourceURL, formatID, resumeFrom, presentation: 'immersive' })
+}
+
+export function onVideoProgress(handler) {
+  const api = bridge()
+  if (!api?.video?.subscribe || !api?.events?.on) return () => {}
+  let off = () => {}
+  try {
+    off = api.events.on('video.progress', handler) || (() => {})
+  } catch {
+    return () => {}
+  }
+  fireAndForget(() => api.video.subscribe())
+  return () => {
+    fireAndForget(() => api.video.unsubscribe?.())
+    try { off() } catch { /* 已退订 */ }
+  }
+}
+
+// —— 存储与交互 ——————————————————————————————————
+
+export async function loadPref(key, fallback = null) {
+  const api = bridge()
+  if (!api?.storage?.get) return fallback
+  try {
+    const value = await api.storage.get(key)
+    return value == null ? fallback : value
+  } catch {
+    return fallback
+  }
+}
+
+export async function savePref(key, value) {
+  try { await bridge()?.storage?.set?.(key, value) } catch { /* 偏好存不住不影响主流程 */ }
+}
+
+export function haptic(kind = 'light') {
+  fireAndForget(() => bridge()?.haptics?.impact?.({ style: kind }))
+}
+
+export function toast(message) {
+  fireAndForget(() => bridge()?.toast?.show?.({ message }))
+}
+
+export async function copyText(text) {
+  try {
+    await bridge()?.clipboard?.write?.({ text })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function share(text, url) {
+  const api = bridge()
+  if (!api?.share?.text) return false
+  try {
+    return await api.share.text(url ? { text, url } : { text })
+  } catch {
+    return false
+  }
+}
+
+/** 本应用没做的页面（频道、评论）交给宿主浏览器，而不是留死路。 */
+export async function openInBrowser(url) {
+  const api = bridge()
+  if (api?.browser?.open) {
+    try {
+      await api.browser.open({ url, mode: 'inApp' })
+      return true
+    } catch { /* 落到下面 */ }
+  }
+  try {
+    await api?.open?.url?.({ url })
+    return true
+  } catch {
+    return false
+  }
+}

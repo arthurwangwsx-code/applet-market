@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      { "action": "wait", "ms": 2500 },
+      {
+        "action": "assert",
+        "expr": "!!document.querySelector('input')",
+        "matcher": "truthy",
+        "note": "搜索框在（这个应用以搜索为主页）"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const i = document.querySelector('input'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(i, 'blender open movie'); i.dispatchEvent(new Event('input', { bubbles: true })); const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '搜索'); if (!b) throw new Error('搜索按钮未找到'); b.click(); return 'ok' })()",
+        "note": "受控 input 必须用原生 setter 再派发 input 事件，直接改 .value 不触发 React 的 onChange"
+      },
+      { "action": "wait", "ms": 5000 },
+      { "action": "wait", "ms": 4000, "note": "单步 wait 上限 5000ms，长等待要拆成多段" },
+      {
+        "action": "assert",
+        "expr": "!/搜索失败|联网权限/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "InnerTube 通了。注意响应有 450KB+，默认 200KB 上限会静默截断成解不出的半截 JSON"
+      },
+      {
+        "action": "assert",
+        "expr": "document.querySelectorAll('[data-row-id]').length >= 3",
+        "matcher": "truthy",
+        "note": "出结果（虚拟列表只渲可见区，故不检查全量条数）"
+      },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('img')].some(i => i.src.startsWith('applet://localhost/image/'))",
+        "matcher": "truthy",
+        "note": "缩略图走 applet://image/ —— 裸 https 会被 CSP 静默拦成空白，这是唯一能自动逮到的地方"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const r = document.querySelector('[data-row-id]'); if (!r) throw new Error('无结果行'); r.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 5000 },
+      { "action": "wait", "ms": 5000 },
+      { "action": "wait", "ms": 4000, "note": "解析要走宿主 extractor + 网络握手，给足时间" },
+      {
+        "action": "assert",
+        "expr": "/清晰度|解析不了|没有可播放/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "播放页有明确结论：要么列出清晰度，要么说清为什么播不了 —— 不允许停在空白"
+      }
+    ]
+  }
+}

@@ -923,8 +923,8 @@ declare namespace aibox {
   }
 
   namespace video {
-    /** Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8), not a web page. resumeFrom continues from a saved position in seconds. presentation 'immersive' (default) takes over the screen; 'embedded' plays without taking over. Result: {playing:boolean} */
-    function play(input: { presentation?: "immersive" | "embedded"; resumeFrom?: number; subtitleURL?: string; title?: string; url: string }): Promise<unknown>
+    /** Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not. Result: {playing:boolean} */
+    function play(input?: { formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<unknown>
     /** Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part. Result: {playing:boolean, count:integer} */
     function playQueue(input: { items: Array<{ subtitleURL?: string; title?: string; url: string }>; presentation?: "immersive" | "embedded"; resumeFrom?: number; startAt?: number }): Promise<unknown>
     /** Pause playback. Does nothing if what is playing was not started by your applet. Result: boolean */
@@ -945,7 +945,9 @@ declare namespace aibox {
     function subscribe(input?: Record<string, never>): Promise<unknown>
     /** Stop the progress event stream. Result: boolean */
     function unsubscribe(input?: Record<string, never>): Promise<unknown>
-    /** Whether this build has a video engine at all. Hide your play buttons instead of letting a tap do nothing. Result: {available:boolean} */
+    /** Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play. Result: {ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error} */
+    function resolve(input: { url: string }): Promise<unknown>
+    /** What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing. Result: {available:boolean, resolve:boolean, dash:boolean} */
     function availability(input?: Record<string, never>): Promise<unknown>
   }
 

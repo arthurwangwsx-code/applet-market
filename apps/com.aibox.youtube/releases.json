@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.youtube",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T22:52:51Z",
+      "notes": "首个版本：InnerTube 搜索、播放页选清晰度、经宿主解析栈取流（支持 DASH 合流，最高 1080p）、最近搜索与观看历史",
+      "fileCount": 12,
+      "totalBytes": 49290,
+      "path": "apps/com.aibox.youtube/releases/1.0.0",
+      "bundleSha256": "212ab64703a850296f5bd130540ccd55d123b54a729f3078cae98b5c10fc9e01"
+    }
+  ]
+}

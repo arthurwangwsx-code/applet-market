@@ -9,7 +9,7 @@
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 生成，请勿手改 -->
 
-当前宿主共 **47** 个命名空间、**249** 个方法。
+当前宿主共 **47** 个命名空间、**250** 个方法。
 
 ## 容器内建
 
@@ -75,7 +75,7 @@
 | [`aibox.shortcuts`](shortcuts.md) | Run or open Apple Shortcuts from a visible applet. | 2 | 需声明 `shortcuts` |
 | [`aibox.speech`](speech.md) | "On-device speech-to-text. This is the ONLY way an applet can take voice input — "                 + "getUserMedia and webkitSpeechRecognition do not work inside the applet WebView. "                 + "Audio never leaves the device." | 5 | 需声明 `speech` |
 | [`aibox.tts`](tts.md) | Speak text with the device's speech synthesizer. Audible even when the ring switch is silent; other audio is ducked, not stopped. | 2 | 需声明 `tts` |
-| [`aibox.video`](video.md) | Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background. | 12 | 需声明 `video` |
+| [`aibox.video`](video.md) | Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background. | 13 | 需声明 `video` |
 | [`aibox.voiceMemos`](voiceMemos.md) | Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present. | 21 | 需声明 `voiceMemos` |
 
 ## 长尾工具网关

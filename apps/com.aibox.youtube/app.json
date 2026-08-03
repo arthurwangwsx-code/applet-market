@@ -1,0 +1,13 @@
+{
+  "appId": "com.aibox.youtube",
+  "name": "YouTube",
+  "localizedNames": {
+    "en": "YouTube"
+  },
+  "summary": "搜索并播放 YouTube 视频",
+  "icon": "play.rectangle.fill",
+  "iconTintHex": "FF0033",
+  "category": "media",
+  "author": "AiBox",
+  "tags": []
+}

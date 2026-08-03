@@ -2415,11 +2415,11 @@
       "methods": [
         {
           "name": "play",
-          "summary": "Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8), not a web page. resumeFrom continues from a saved position in seconds. presentation 'immersive' (default) takes over the screen; 'embedded' plays without taking over.",
-          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\",\"description\":\"Optional .srt sidecar subtitle URL.\"},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Seconds to resume from.\"},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
+          "summary": "Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"sourceURL\":{\"type\":\"string\",\"description\":\"The page url you passed to video.resolve. Preferred.\"},\"formatID\":{\"type\":\"string\",\"description\":\"id of the chosen format from resolve; omit to let the host pick the best playable one.\"},\"url\":{\"type\":\"string\",\"description\":\"A direct media URL. Only for streams you did not get from resolve.\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\",\"description\":\"Optional .srt sidecar subtitle URL.\"},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Seconds to resume from.\"},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
           "resultSummary": "{playing:boolean}",
           "effect": "presentation",
-          "example": "await aibox.video.play({ url: streamURL, title: video.title, resumeFrom: 120 })",
+          "example": "const r = await aibox.video.resolve({ url: pageURL })\nconst best = r.formats.filter(f => f.playable)[0]\nawait aibox.video.play({ sourceURL: pageURL, formatID: best.id, resumeFrom: 120 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
         },
         {
@@ -2513,10 +2513,19 @@
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
         },
         {
+          "name": "resolve",
+          "summary": "Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The page or media URL to resolve.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error}",
+          "effect": "external",
+          "example": "const r = await aibox.video.resolve({ url: pageURL })\nconst best = r.formats.filter(f => f.playable)[0]\nif (best) await aibox.video.play({ url: best.url, title: r.title })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
           "name": "availability",
-          "summary": "Whether this build has a video engine at all. Hide your play buttons instead of letting a tap do nothing.",
+          "summary": "What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing.",
           "parametersJSON": "{}",
-          "resultSummary": "{available:boolean}",
+          "resultSummary": "{available:boolean, resolve:boolean, dash:boolean}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"

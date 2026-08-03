@@ -64,6 +64,7 @@ const NAMESPACE_GROUP = {
   apps: 'container', jobs: 'container', chat: 'container', data: 'container',
   // 应用级外壳
   scene: 'shell', navigation: 'shell', menu: 'shell', tabs: 'shell', toolbar: 'shell',
+  overlay: 'shell',
   ui: 'shell', picker: 'shell', toast: 'shell', haptics: 'shell', list: 'shell',
   // 系统能力投影
   browser: 'system', clipboard: 'system', device: 'system', media: 'system',

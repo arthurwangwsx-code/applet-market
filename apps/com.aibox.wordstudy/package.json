@@ -1,0 +1,26 @@
+{
+  "name": "@aibox-app/wordstudy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "单词学习 —— WordStudyKit 的 1:1 小应用复刻（TypeScript + Vite）。",
+  "type": "module",
+  "scripts": {
+    "gen:actions": "node -e \"import('@aibox/applet-vite').then(async m=>{const fs=await import('node:fs');fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\"",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "build:ci": "vite build --mode production"
+  },
+  "dependencies": {
+    "@aibox/applet-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@aibox/applet-vite": "^1.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "antd-mobile": "^5.38.1"
+  }
+}

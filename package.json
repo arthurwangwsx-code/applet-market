@@ -9,7 +9,9 @@
   },
   "workspaces": [
     "packages/*",
-    "apps/com.aibox.timer"
+    "apps/com.aibox.timer",
+    "apps/com.aibox.wordstudy",
+    "apps/com.aibox.voicememos"
   ],
   "scripts": {
     "validate": "node scripts/validate.mjs",

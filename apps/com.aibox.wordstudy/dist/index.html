@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Word Study</title>
+
+  <!--
+    预构建外壳（runtimeKind: bundle）。与源码型外壳的唯一差别：这里用原生 importmap +
+    原生 module 脚本，不加载 es-module-shims、不加载 Sucrase —— 产物已经是纯 ESM，
+    运行时一行都不用转译。
+
+    注意：本注释里不能出现字面的 script 起始标签，Vite 的 HTML 解析会把它当成真标签，
+    然后把 importmap 挪到注释中间去（实测踩过一次，结果是注释被劈开、页面照样能跑但源码不可读）。
+
+    import map 的目标是宿主随运行时资产提供的那几个模块（与 Swift AppletImportRules.bareToFile
+    逐条一致）。React 必须只有一份实例：产物里 external 掉它、这里映射到宿主那份，是唯一正确解。
+    iOS 17 = Safari 17，原生 import map 自 Safari 16.4 起可用。
+  -->
+
+
+  <link rel="stylesheet" href="applet://localhost/runtime/aibox-ui.css" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; }
+    #__err {
+      position: fixed; left: 0; right: 0; bottom: 0; max-height: 55%; overflow: auto;
+      margin: 0; padding: 12px 14px; background: #b00020; color: #fff;
+      font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; z-index: 2147483647;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "applet://localhost/runtime/react.mjs",
+      "react-dom": "applet://localhost/runtime/react.mjs",
+      "react-dom/client": "applet://localhost/runtime/react.mjs",
+      "react/jsx-runtime": "applet://localhost/runtime/react.mjs",
+      "chart.js": "applet://localhost/runtime/chart.mjs",
+      "antd-mobile": "applet://localhost/runtime/antd-mobile.mjs",
+      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs"
+    }
+  }
+  </script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <pre id="__err" style="display:none"></pre>
+  <script>
+    // 可见错误浮层：WKWebView 里没有控制台，没有这一层的话「白屏」就是全部信息。
+    function __showErr(m) {
+      var e = document.getElementById('__err');
+      if (e) { e.style.display = 'block'; e.textContent = String(m); }
+      try { console.error(String(m)); } catch (_) {}
+    }
+    window.addEventListener('error', function (ev) {
+      if (ev && ev.target && (ev.target.src || ev.target.href)) {
+        __showErr('Failed to load: ' + (ev.target.src || ev.target.href));
+        return;
+      }
+      __showErr((ev && ev.error && ev.error.stack) || (ev && ev.message) || 'Error');
+    }, true);
+    window.addEventListener('unhandledrejection', function (ev) {
+      var r = ev && ev.reason;
+      __showErr('Unhandled rejection: ' + ((r && r.stack) || (r && r.message) || r));
+    });
+  </script>
+</body>
+</html>

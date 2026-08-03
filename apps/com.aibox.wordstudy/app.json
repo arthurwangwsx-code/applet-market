@@ -1,0 +1,13 @@
+{
+  "appId": "com.aibox.wordstudy",
+  "name": "单词学习",
+  "localizedNames": {
+    "en": "Word Study"
+  },
+  "summary": "查词、翻译、生词本与 Leitner 复习",
+  "icon": "character.book.closed",
+  "iconTintHex": "2D6AE0",
+  "category": "productivity",
+  "author": "AiBox",
+  "tags": []
+}

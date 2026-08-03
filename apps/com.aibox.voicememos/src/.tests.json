@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      { "action": "wait", "ms": 2500 },
+      {
+        "action": "assert",
+        "expr": "['录音', '文件夹', '设置'].every(label => [...document.querySelectorAll('nav button')].some(b => b.textContent.includes(label)))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!!document.querySelector('#root input[placeholder]')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('暂无录音') || !!document.querySelector('#root [role=button]')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('nav button')].find(x => x.textContent.includes('文件夹')); if (!b) throw new Error('folders tab not found'); b.click(); return 'switched' })()"
+      },
+      { "action": "wait", "ms": 700 },
+      {
+        "action": "assert",
+        "expr": "['全部录音', '收藏', '本机剪辑', '最近删除'].every(label => document.body.innerText.includes(label))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('nav button')].find(x => x.textContent.includes('设置')); if (!b) throw new Error('settings tab not found'); b.click(); return 'switched' })()"
+      },
+      { "action": "wait", "ms": 700 },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('转录语言') && document.body.innerText.includes('录音质量')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.querySelectorAll('#root select').length >= 3",
+        "matcher": "truthy"
+      }
+    ]
+  }
+}

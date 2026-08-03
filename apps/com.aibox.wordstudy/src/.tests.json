@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      {
+        "action": "wait",
+        "ms": 1500
+      },
+      {
+        "action": "assert",
+        "expr": "['翻译', '搜索', '生词本'].every(label => [...document.querySelectorAll('nav button')].some(b => b.textContent.includes(label)))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('每日一句')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const input = document.querySelector('#root input'); if (!input) throw new Error('search input not found'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(input, 'verdict'); input.dispatchEvent(new Event('input', { bubbles: true })); return 'typed' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 900
+      },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('#root [role=button]')].some(r => r.innerText.trim().startsWith('verdict'))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('作为句子翻译')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const row = [...document.querySelectorAll('#root [role=button]')].find(r => r.innerText.trim().startsWith('verdict')); if (!row) throw new Error('suggestion row not found'); row.click(); return 'opened' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 5000
+      },
+      {
+        "action": "wait",
+        "ms": 4000
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('释义')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "/UK \\/|US \\//.test(document.body.innerText) || document.body.innerText.includes('加载失败')",
+        "matcher": "truthy"
+      }
+    ]
+  }
+}

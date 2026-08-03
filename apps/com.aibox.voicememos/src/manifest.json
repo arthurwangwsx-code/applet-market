@@ -1,0 +1,161 @@
+{
+  "name": "语音备忘录",
+  "localizedNames": {
+    "en": "Voice Memos"
+  },
+  "icon": "waveform",
+  "iconTintHex": "FF6B35",
+  "summary": "录音、转写与 AI 分析",
+  "localizedSummaries": {
+    "en": "Record, transcribe and analyze voice memos"
+  },
+  "template": "react",
+  "entry": "index.html",
+  "runtimeKind": "bundle",
+  "securityMode": "secure",
+  "permissions": {
+    "network": false,
+    "networkAllowed": [],
+    "storage": true,
+    "ai": true,
+    "capabilities": [
+      "voiceMemos",
+      "audio",
+      "share",
+      "clipboard",
+      "ui",
+      "haptics"
+    ]
+  },
+  "presentation": {
+    "default": "page",
+    "surfaces": ["page", "sheet", "fullscreen"]
+  },
+  "scene": {
+    "tabBar": {
+      "items": [
+        {
+          "id": "record",
+          "title": "录音",
+          "localizedTitles": { "en": "Record" },
+          "icon": "mic",
+          "selectedIcon": "mic.fill"
+        },
+        {
+          "id": "library",
+          "title": "文件夹",
+          "localizedTitles": { "en": "Folders" },
+          "icon": "folder",
+          "selectedIcon": "folder.fill"
+        },
+        {
+          "id": "settings",
+          "title": "设置",
+          "localizedTitles": { "en": "Settings" },
+          "icon": "gearshape",
+          "selectedIcon": "gearshape.fill"
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "id": "memo.list",
+      "name": "memo_list",
+      "displayName": "列出录音",
+      "summary": "Lists voice recordings, newest first. Covers both the host recordings library and this app's own in-app clips (which the built-in memo tools cannot see). Filter by a text query, favourites only, or source. Read-only.",
+      "keywords": ["voice memo", "recording", "audio note", "list recordings", "录音", "语音备忘录", "录音列表"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Match against the recording title.\"},\"favOnly\":{\"type\":\"boolean\",\"description\":\"Only favourited recordings.\"},\"source\":{\"type\":\"string\",\"enum\":[\"all\",\"library\",\"local\"],\"description\":\"'library' = host recordings library, 'local' = clips recorded inside this app. Defaults to 'all'.\"}},\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "memo.transcribe",
+      "name": "memo_transcribe",
+      "displayName": "转写录音",
+      "summary": "Starts Apple speech transcription for one recording and returns immediately — it does not wait for completion. Poll memo_transcript to read the result. Only recordings in the host library can be transcribed; in-app clips cannot.",
+      "keywords": ["transcribe", "speech to text", "transcript", "转写", "转录", "语音转文字"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 locale such as en_US or zh_CN. Defaults to the configured transcription language. Pass the language actually spoken — a mismatch produces garbage.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "localWrite",
+      "readOnly": false,
+      "idempotent": true
+    },
+    {
+      "id": "memo.transcript",
+      "name": "memo_transcript",
+      "displayName": "读取转写",
+      "summary": "Returns the transcript of one recording: status, language, and the full text. Prefers this app's speaker-corrected version when one exists. Read-only.",
+      "keywords": ["transcript", "read transcript", "what was said", "转写文本", "转录内容", "文稿"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"status\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "memo.summarize",
+      "name": "memo_summarize",
+      "displayName": "生成摘要",
+      "summary": "Summarizes a recording's transcript and returns the summary text. Unlike the built-in summary this one takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
+      "keywords": ["summary", "summarize", "meeting notes", "minutes", "摘要", "会议纪要", "总结"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"template\":{\"type\":\"string\",\"enum\":[\"general\",\"meeting\",\"interview\",\"oneOnOne\",\"lecture\",\"podcast\"],\"description\":\"Summary shape; defaults to 'general'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"template\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "external",
+      "readOnly": false,
+      "idempotent": false
+    },
+    {
+      "id": "memo.actionItems",
+      "name": "memo_action_items",
+      "displayName": "提取待办",
+      "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker stated one. Needs a completed transcript.",
+      "keywords": ["action items", "todo", "tasks", "decisions", "follow up", "待办", "任务", "决定"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"force\":{\"type\":\"boolean\",\"description\":\"Re-extract instead of returning the cached result.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "external",
+      "readOnly": false,
+      "idempotent": false
+    },
+    {
+      "id": "memo.ask",
+      "name": "memo_ask",
+      "displayName": "询问录音",
+      "summary": "Answers a question about one recording using only its transcript — nothing else. Use it instead of pulling the whole transcript when the user asks something specific about a long recording.",
+      "keywords": ["ask", "question", "what did they say", "询问录音", "问答", "录音里说了什么"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"question\":{\"type\":\"string\",\"description\":\"The question to answer from the transcript.\"}},\"required\":[\"id\",\"question\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "external",
+      "readOnly": true,
+      "idempotent": true
+    },
+    {
+      "id": "memo.export",
+      "name": "memo_export",
+      "displayName": "导出文稿",
+      "summary": "Renders one recording as structured Markdown, plain text or SRT subtitles — title, created time, duration, summary, transcript, chapters, action items and translation, whichever exist. Returns the rendered text; it does not write a file.",
+      "keywords": ["export", "markdown", "srt", "subtitles", "导出", "字幕", "文稿导出"],
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"format\":{\"type\":\"string\",\"enum\":[\"markdown\",\"text\",\"srt\"],\"description\":\"Output format; defaults to 'markdown'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+      "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"format\":{\"type\":\"string\"}}}",
+      "headless": true,
+      "visibility": ["agent", "automation"],
+      "effect": "read",
+      "readOnly": true,
+      "idempotent": true
+    }
+  ]
+}

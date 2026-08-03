@@ -1,0 +1,264 @@
+// 文案表 —— 取自原生 `VoiceMemosKit/Resources/Localizable.xcstrings`（419 键里本复刻用到的那部分）。
+
+export type Lang = 'zh' | 'en'
+
+type Entry = { zh: string; en: string }
+
+const TABLE = {
+  tabRecord: { zh: '录音', en: 'Record' },
+  tabFolders: { zh: '文件夹', en: 'Folders' },
+  tabSettings: { zh: '设置', en: 'Settings' },
+  titleRecordings: { zh: '录音', en: 'Recordings' },
+  titleVoiceMemos: { zh: '语音备忘录', en: 'Voice Memos' },
+  titleSettings: { zh: '设置', en: 'Settings' },
+
+  // 列表
+  searchPlaceholder: { zh: '搜索录音', en: 'Search recordings' },
+  newRecording: { zh: '新录音', en: 'New Recording' },
+  emptyTitle: { zh: '暂无录音', en: 'No recordings' },
+  emptyBody: { zh: '点按下方录音按钮开始录音', en: 'Tap the record button below to start' },
+  emptyScopedBody: { zh: '这里还没有录音', en: 'Nothing here yet' },
+  noMatchTitle: { zh: '无匹配的录音', en: 'No matching recordings' },
+  noMatchBody: { zh: '换个关键词试试', en: 'Try a different keyword' },
+  clearFilter: { zh: '清除筛选', en: 'Clear filters' },
+  transcriptOnly: { zh: '仅保留文稿', en: 'Transcript only' },
+  transcribing: { zh: '转录中…', en: 'Transcribing…' },
+  summarizing: { zh: '摘要中…', en: 'Summarizing…' },
+  correcting: { zh: '校正中…', en: 'Correcting…' },
+  translating: { zh: '翻译中…', en: 'Translating…' },
+  sourceLocal: { zh: '本机', en: 'On device' },
+  sourceLibrary: { zh: '录音库', en: 'Library' },
+
+  // 筛选
+  filter: { zh: '筛选', en: 'Filter' },
+  filterDuration: { zh: '时长', en: 'Duration' },
+  durationAny: { zh: '任意时长', en: 'Any duration' },
+  durationUnder1m: { zh: '1 分钟内', en: 'Under 1 minute' },
+  duration1to5m: { zh: '1–5 分钟', en: '1–5 minutes' },
+  durationOver5m: { zh: '超过 5 分钟', en: 'Over 5 minutes' },
+  filterDate: { zh: '日期', en: 'Date' },
+  dateAll: { zh: '全部时间', en: 'All time' },
+  dateToday: { zh: '今天', en: 'Today' },
+  dateWeek: { zh: '最近 7 天', en: 'Last 7 days' },
+  dateMonth: { zh: '最近 30 天', en: 'Last 30 days' },
+  dateYear: { zh: '最近一年', en: 'Last year' },
+  filterSort: { zh: '排序', en: 'Sort By' },
+  sortNewest: { zh: '最新优先', en: 'Newest first' },
+  sortOldest: { zh: '最早优先', en: 'Oldest first' },
+  sortLongest: { zh: '最长优先', en: 'Longest first' },
+  sortShortest: { zh: '最短优先', en: 'Shortest first' },
+  sortName: { zh: '名称', en: 'Name' },
+  favOnly: { zh: '仅收藏', en: 'Favourites only' },
+  withTranscript: { zh: '仅含转录', en: 'With transcript' },
+  filterSource: { zh: '来源', en: 'Source' },
+  sourceAll: { zh: '全部来源', en: 'All sources' },
+  reset: { zh: '重置', en: 'Reset' },
+  done: { zh: '完成', en: 'Done' },
+  cancel: { zh: '取消', en: 'Cancel' },
+
+  // 行菜单
+  shareAudio: { zh: '分享音频', en: 'Share audio' },
+  rename: { zh: '重命名', en: 'Rename' },
+  viewTranscript: { zh: '查看转录', en: 'View transcript' },
+  copyTranscript: { zh: '复制转录', en: 'Copy transcript' },
+  startTranscription: { zh: '发起转录', en: 'Transcribe' },
+  favourite: { zh: '收藏', en: 'Favourite' },
+  unfavourite: { zh: '取消收藏', en: 'Unfavourite' },
+  moveToTrash: { zh: '移到最近删除', en: 'Move to Recently Deleted' },
+  deletePermanently: { zh: '永久删除', en: 'Delete permanently' },
+  restore: { zh: '恢复', en: 'Restore' },
+  trashConfirmTitle: { zh: '要将这段录音移到"最近删除"吗？', en: 'Move this recording to Recently Deleted?' },
+  deleteConfirmTitle: { zh: '要永久删除这段录音吗？', en: 'Permanently delete this recording?' },
+  emptyTrashConfirmTitle: { zh: '要永久删除所有录音吗？', en: 'Permanently delete all recordings?' },
+  renamePrompt: { zh: '重命名录音', en: 'Rename recording' },
+  renameField: { zh: '名称', en: 'Name' },
+
+  // 录音面板
+  recordTitlePlaceholder: { zh: '录音标题（可选）', en: 'Recording title (optional)' },
+  paused: { zh: '已暂停', en: 'Paused' },
+  record: { zh: '录制', en: 'Record' },
+  pause: { zh: '暂停', en: 'Pause' },
+  resume: { zh: '继续', en: 'Resume' },
+  stop: { zh: '停止', en: 'Stop' },
+  recordFailedTitle: { zh: '无法录音', en: "Can't record" },
+  micDenied: { zh: '需要麦克风权限，请在系统设置中允许。', en: 'Microphone access is required. Allow it in Settings.' },
+  micBusy: { zh: '麦克风正被其它功能占用。', en: 'The microphone is in use by something else.' },
+  recorderUnavailable: { zh: '此设备暂时无法录音。', en: 'Recording is unavailable on this device.' },
+  recordIntoLibrary: { zh: '录到录音库（可转写）', en: 'Record into library (transcribable)' },
+  hostRecording: { zh: '宿主录音进行中', en: 'Host recording in progress' },
+  localClipNote: {
+    zh: '本机剪辑保存在小应用内：可播放、可分享，但**无法转写** —— 容器没有把 applet 私有音频送进转写的通路。',
+    en: 'On-device clips live inside this app: playable and shareable, but they cannot be transcribed — '
+      + 'the container has no path from applet-private audio into transcription.',
+  },
+
+  // 详情页
+  tabSummary: { zh: '摘要', en: 'Summary' },
+  tabOriginal: { zh: '原文', en: 'Original' },
+  tabCorrected: { zh: '校正后', en: 'Corrected' },
+  tabTranslation: { zh: '翻译', en: 'Translation' },
+  transcribingTitle: { zh: '转录中…', en: 'Transcribing…' },
+  transcribingBody: { zh: '转写由 Apple 语音识别处理。', en: 'Transcription is handled by Apple speech recognition.' },
+  noTranscriptTitle: { zh: '尚无转录', en: 'No transcript yet' },
+  noTranscriptBody: { zh: '为这段录音生成转写。', en: 'Generate a transcript for this recording.' },
+  transcribeFailedTitle: { zh: '转录失败', en: 'Transcription failed' },
+  transcribeFailedBody: { zh: '出了点问题，请重新转录。', en: 'Something went wrong. Try transcribing again.' },
+  transcribeAction: { zh: '转录', en: 'Transcribe' },
+  retry: { zh: '重试', en: 'Retry' },
+  audioRemovedTitle: { zh: '音频文件已移除', en: 'Audio file removed' },
+  audioRemovedBody: {
+    zh: '播放、编辑和重新转写已不可用，但文稿仍会保留。',
+    en: 'Playback, editing and re-transcription are unavailable, but the transcript is kept.',
+  },
+  edited: { zh: '已编辑', en: 'Edited' },
+  stale: { zh: '已过期', en: 'Out of date' },
+  staleTranscriptChanged: { zh: '转录稿已改动', en: 'the transcript changed' },
+  chapters: { zh: '章节', en: 'Chapters' },
+  findingChapters: { zh: '查找章节中…', en: 'Finding chapters…' },
+
+  // 摘要 Tab
+  noSummaryTitle: { zh: '暂无摘要', en: 'No summary yet' },
+  noSummaryBody: { zh: '选择上方模板以生成摘要。', en: 'Pick a template above to generate one.' },
+  summaryFailed: { zh: '无法生成摘要。请检查 AI 模型后重试。', en: 'Could not generate a summary. Check the AI model and retry.' },
+  templateGeneral: { zh: '通用', en: 'General' },
+  templateMeeting: { zh: '会议纪要', en: 'Meeting' },
+  templateInterview: { zh: '面试', en: 'Interview' },
+  templateOneOnOne: { zh: '一对一', en: '1:1' },
+  templateLecture: { zh: '讲座', en: 'Lecture' },
+  templatePodcast: { zh: '播客', en: 'Podcast' },
+
+  // 校正 Tab
+  speakerModeNone: { zh: '不区分说话人', en: 'No speaker labels' },
+  speakerModeAuto: { zh: '自动识别', en: 'Detect automatically' },
+  speakerModeNamed: { zh: '指定', en: 'Named' },
+  speakerName: { zh: '说话人 {n}', en: 'Speaker {n}' },
+  correctAction: { zh: '校正', en: 'Correct' },
+  recorrectAction: { zh: '重新校正', en: 'Correct again' },
+  noCorrectionTitle: { zh: '尚未校正', en: 'Not corrected yet' },
+  noCorrectionBody: {
+    zh: '用上方按钮修正识别错误、整理排版并标注说话人。',
+    en: 'Use the button above to fix recognition errors, tidy the layout and label speakers.',
+  },
+  correctionFailed: { zh: '校正失败。请检查 AI 模型后重试。', en: 'Correction failed. Check the AI model and retry.' },
+  correctionNoTimestamps: {
+    zh: '容器拿不到逐词时间戳，校正段不带时间回查。',
+    en: 'Word-level timestamps are unavailable in the container, so corrected turns carry no seek times.',
+  },
+
+  // 翻译 Tab
+  translateAction: { zh: '翻译', en: 'Translate' },
+  retranslateAction: { zh: '重新翻译', en: 'Translate again' },
+  translationOnly: { zh: '仅译文', en: 'Translation only' },
+  bilingual: { zh: '双语对照', en: 'Bilingual' },
+  noTranslationTitle: { zh: '尚未翻译', en: 'Not translated yet' },
+  noTranslationBody: {
+    zh: '选择语言后翻译，即可用你的语言阅读转录稿。',
+    en: 'Pick a language and translate to read the transcript in your own language.',
+  },
+
+  // AI 抽屉
+  cleanUp: { zh: '整理文本', en: 'Clean Up' },
+  cleanUpKeep: { zh: '保留', en: 'Keep' },
+  cleanUpFailed: { zh: '无法整理文本。', en: 'Could not clean up the text.' },
+  cleanUpWarning: {
+    zh: '整理会直接改写转录原文并作废全部 AI 产物（原文可撤销）。',
+    en: 'Clean Up rewrites the transcript in place and invalidates every AI artifact (the original is recoverable).',
+  },
+  actionItems: { zh: '待办事项', en: 'Action Items' },
+  groupTasks: { zh: '任务', en: 'Tasks' },
+  groupDecisions: { zh: '决定', en: 'Decisions' },
+  groupCommitments: { zh: '你的承诺', en: 'Your Commitments' },
+  noActionItems: { zh: '未找到待办事项。', en: 'No action items found.' },
+  actionItemsFailed: { zh: '无法找到待办事项。', en: 'Could not extract action items.' },
+  askTitle: { zh: '询问这段录音', en: 'Ask this recording' },
+  askHint: { zh: '就这段录音随便问。回答只来自它的转录文本。', en: 'Ask anything. Answers come only from its transcript.' },
+  askPlaceholder: { zh: '就这段录音提问…', en: 'Ask about this recording…' },
+  askThinking: { zh: '思考中…', en: 'Thinking…' },
+  askFailed: { zh: '无法回答这个问题。', en: 'Could not answer that question.' },
+  askStarter1: { zh: '总结这些决定', en: 'Summarize the decisions' },
+  askStarter2: { zh: '列出待办事项', en: 'List the action items' },
+  askStarter3: { zh: '我承诺了什么？', en: 'What did I commit to?' },
+
+  // 分享 / 导出
+  share: { zh: '分享', en: 'Share' },
+  shareSummary: { zh: '分享摘要', en: 'Share summary' },
+  shareTranscript: { zh: '分享原文', en: 'Share transcript' },
+  shareCorrected: { zh: '分享校正稿', en: 'Share corrected text' },
+  shareTranslation: { zh: '分享翻译', en: 'Share translation' },
+  exportGroup: { zh: '导出', en: 'Export' },
+  exportMarkdown: { zh: '导出为 Markdown', en: 'Export as Markdown' },
+  exportText: { zh: '导出为文本', en: 'Export as text' },
+  exportSRT: { zh: '导出为字幕', en: 'Export as subtitles' },
+  copy: { zh: '复制', en: 'Copy' },
+  labelCreatedAt: { zh: '创建时间', en: 'Created' },
+  labelDuration: { zh: '时长', en: 'Duration' },
+
+  // 文件夹页
+  smartAllRecordings: { zh: '全部录音', en: 'All Recordings' },
+  smartFavourites: { zh: '收藏', en: 'Favourites' },
+  smartLocalClips: { zh: '本机剪辑', en: 'On-device clips' },
+  recentlyDeleted: { zh: '最近删除', en: 'Recently Deleted' },
+  trashEmptyTitle: { zh: '最近删除为空', en: 'Recently Deleted is empty' },
+  trashEmptyBody: { zh: '已删除的录音会显示在这里，方便恢复。', en: 'Deleted recordings appear here so you can restore them.' },
+  trashFooter: { zh: '录音会保留在这里，直到你恢复或永久删除。', en: 'Recordings stay here until you restore or permanently delete them.' },
+  emptyTrash: { zh: '清空', en: 'Empty' },
+  foldersUnavailable: {
+    zh: '用户文件夹需要宿主投影 memo_folder_* 工具，当前容器还没有 —— 所以这里只有智能列表。',
+    en: 'User folders need the host to project the memo_folder_* tools, which it does not yet — '
+      + 'so only smart lists are shown here.',
+  },
+
+  // 设置页
+  settingsAI: { zh: 'AI 与自动化', en: 'AI & Automation' },
+  settingsRecording: { zh: '录音与转写', en: 'Recording & Transcription' },
+  settingsStorage: { zh: '存储', en: 'Storage' },
+  transcribeLanguage: { zh: '转录语言', en: 'Transcription language' },
+  transcribeLanguageHint: {
+    zh: '用于转录录音的语言。「自动」跟随 App 语言。如果某条录音转录出来是乱码（例如中文音频被当成英文转录），在此设为实际所说的语言后重新转录。',
+    en: 'The language used to transcribe. "Automatic" follows the app language. If a recording comes out as '
+      + 'gibberish (for example Chinese audio transcribed as English), set the language actually spoken and transcribe again.',
+  },
+  localeAuto: { zh: '自动', en: 'Automatic' },
+  localeZh: { zh: '中文', en: 'Chinese' },
+  localeEn: { zh: '英语', en: 'English' },
+  autoTranscribe: { zh: '录音后自动转录', en: 'Transcribe after recording' },
+  autoSummarize: { zh: '自动生成摘要', en: 'Summarize automatically' },
+  autoSummarizeHint: { zh: '转录后自动生成摘要（只补空，不覆盖已有结果）。', en: 'Summarize after transcription — fills gaps only, never overwrites.' },
+  defaultTemplate: { zh: '默认摘要模板', en: 'Default summary template' },
+  quality: { zh: '录音质量', en: 'Recording quality' },
+  qualityHigh: { zh: '高', en: 'High' },
+  qualityMedium: { zh: '中', en: 'Medium' },
+  qualityLow: { zh: '低', en: 'Low' },
+  qualityHint: {
+    zh: '录音统一使用 AAC/M4A，以保证播放与分享的一致性。更高质量会占用更多空间，修改仅影响新录音。',
+    en: 'Recordings always use AAC/M4A for consistent playback and sharing. Higher quality uses more space; '
+      + 'changes affect new recordings only.',
+  },
+  clipCount: { zh: '本机剪辑', en: 'On-device clips' },
+  clipBytes: { zh: '占用空间', en: 'Space used' },
+  hostSettingsNote: {
+    zh: '存储位置、音频预算、麦克风选择与完整性扫描属于宿主级设置，留在「设置 ▸ 语音备忘录」里。',
+    en: 'Storage location, audio budget, microphone choice and integrity scans are host-level settings and stay '
+      + 'in Settings ▸ Voice Memos.',
+  },
+  libraryUnavailable: {
+    zh: '宿主没有装语音备忘录模块，录音库不可用 —— 只能用本机剪辑。',
+    en: 'The host has no Voice Memos module, so the recordings library is unavailable — only on-device clips work.',
+  },
+} satisfies Record<string, Entry>
+
+export type StringKey = keyof typeof TABLE
+
+export function makeT(lang: Lang) {
+  return (key: StringKey, params?: Record<string, string | number>): string => {
+    let value: string = TABLE[key][lang]
+    if (params) {
+      for (const [name, replacement] of Object.entries(params)) {
+        value = value.split(`{${name}}`).join(String(replacement))
+      }
+    }
+    return value
+  }
+}
+
+export type T = ReturnType<typeof makeT>

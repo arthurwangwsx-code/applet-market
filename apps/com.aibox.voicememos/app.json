@@ -1,0 +1,13 @@
+{
+  "appId": "com.aibox.voicememos",
+  "name": "语音备忘录",
+  "localizedNames": {
+    "en": "Voice Memos"
+  },
+  "summary": "录音、转写与 AI 分析",
+  "icon": "waveform",
+  "iconTintHex": "FF6B35",
+  "category": "productivity",
+  "author": "AiBox",
+  "tags": []
+}

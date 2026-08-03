@@ -33,14 +33,28 @@
 // 宿主改什么这里自动跟随，零维护。**桥词汇的对照表也一样是提取的**（宿主
 // `AppletActionEffect.bridgeSideEffectEquivalents`），不在这里抄第二份。
 //
-// 四条必须处理的细节（漏一条就误报）：
-//  1. `enum CodingKeys` 的重映射是权威 —— `AppletPresentation` 是 `primary = "default"`、
-//     `AppletActionDescriptor` 是 `actionID = "id"`。按属性名判就会把合法的 `default` / `id` 判成非法。
-//  2. **计算属性不是 wire 字段** —— `public var id: String { name }`、`effectivePresentation` 之类
+// 三条必须处理的细节（漏一条就误报），外加 `CodingKeys` 那个两面坑：
+//  1. **计算属性不是 wire 字段** —— `public var id: String { name }`、`effectivePresentation` 之类
 //     不参与编解码，混进来会把非法键放行。
-//  3. 枚举只认**顶格**声明的 `enum X: String`：嵌在 struct 里的 `enum CodingKeys: String, CodingKey`
-//     缩进 4 格，混进来会把 CodingKeys 的 case 当成合法取值。
-//  4. 宿主源码不在场时（有人单独 clone 市场仓库）**跳过并 warn，不 fail**。
+//  2. 宿主源码不在场时（有人单独 clone 市场仓库）**跳过并 warn，不 fail**。
+//  3. 桥词汇对照表只从 `AppletActionEffect` 取，不在本文件里抄第二份（抄了就是又一处会漂的真值）。
+//
+// ## `enum CodingKeys` 是同一个坑的两面 —— 改这个文件前先读这一段
+//
+// 同一句 `enum CodingKeys: String, CodingKey` 声明，在两个维度上的角色**正好相反**：
+//
+//  · **键名维度：它是权威真值。** 重映射只写在这里 —— `AppletPresentation` 是
+//    `primary = "default"`、`AppletActionDescriptor` 是 `actionID = "id"`。
+//    按属性名判，就会把合法的 `default` / `id` 判成非法。所以 `loadHostSchema` 里
+//    「CodingKeys 存在 ⇒ 它就是完整键集」，属性表只用来补类型。
+//
+//  · **取值维度：它是污染源。** 它也是个 `String` 原始值枚举，`parseEnums` 若不加区分地收下，
+//    每个枚举的合法域都会被 CodingKeys 的 case 名悄悄撑大 —— 结果是一道**什么都放行**的闸门，
+//    那比没有闸门更糟（它会让人以为这一项已经有人检查了）。
+//    所以 `parseEnums` 只认**顶格**声明的 `enum X: String`：嵌在 struct 里的 CodingKeys 缩进 4 格。
+//
+// 两条纪律方向相反，很容易在「统一一下」的念头下互相破坏：把 CodingKeys 从键名侧摘掉，
+// 重映射就丢了；把顶格限制从取值侧放开，取值域就废了。要改先分清自己在哪个维度。
 
 import fs from 'node:fs'
 import path from 'node:path'

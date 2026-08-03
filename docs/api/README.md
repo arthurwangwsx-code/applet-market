@@ -9,7 +9,7 @@
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 生成，请勿手改 -->
 
-当前宿主共 **44** 个命名空间、**211** 个方法。
+当前宿主共 **45** 个命名空间、**227** 个方法。
 
 ## 容器内建
 
@@ -60,6 +60,7 @@
 | [`aibox.clipboard`](clipboard.md) | Read or replace the system text clipboard. | 2 | 需声明 `clipboard` |
 | [`aibox.contacts`](contacts.md) | Find or create contacts through the host Contacts tools. | 2 | 需声明 `contacts` |
 | [`aibox.device`](device.md) | Read non-identifying device, locale, battery, and free-storage information. | 1 | 需声明 `device` |
+| [`aibox.download`](download.md) | The host download engine, remote-controlled. Files land on the host (never in your applet sandbox) and keep downloading after your applet closes or the app is killed — a background URLSession does the transfer. You only ever handle taskIds and read-only metadata. Every method is automatically scoped to YOUR downloads: list/pauseAll/cancelAll can never see or touch another app's tasks. | 16 | 需声明 `download` |
 | [`aibox.files`](files.md) | Browse and modify the host file-box workspace through stable file tools. | 17 | 需声明 `files` |
 | [`aibox.health`](health.md) | Read Apple Health metrics, motion activity and workouts through the host health tools. | 4 | 需声明 `health` |
 | [`aibox.location`](location.md) | Read location, geocode places and manage geofences through the host location module. | 6 | 需声明 `location` |

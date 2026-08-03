@@ -1,9 +1,49 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T13:51:59Z",
-  "appCount": 7,
+  "updatedAt": "2026-08-03T15:08:09Z",
+  "appCount": 9,
   "apps": [
+    {
+      "appId": "com.aibox.downloads",
+      "name": "下载",
+      "summary": "通用下载器：任意链接、队列、断点续传",
+      "icon": "arrow.down.circle.fill",
+      "category": "tools",
+      "author": "AiBox",
+      "latestVersion": "1.0.3",
+      "latestReleasedAt": "2026-08-03T15:04:26Z",
+      "versionCount": 4,
+      "capabilities": [
+        "clipboard",
+        "download",
+        "haptics",
+        "open",
+        "share",
+        "storage",
+        "tabs",
+        "toolbar"
+      ],
+      "latestTotalBytes": 61456,
+      "latestFileCount": 10,
+      "runtimeKind": "source",
+      "path": "apps/com.aibox.downloads",
+      "localizedNames": {
+        "en": "Downloads"
+      },
+      "localizedSummaries": {
+        "en": "Any link, queued, resumable — the host engine keeps downloading in the background"
+      },
+      "iconTintHex": "3A83D0",
+      "tags": [
+        "download",
+        "downloader",
+        "queue",
+        "resume",
+        "files"
+      ],
+      "minHostVersion": "1.0.0"
+    },
     {
       "appId": "com.aibox.finance",
       "name": "理财",
@@ -201,6 +241,47 @@
         "stopwatch",
         "typescript",
         "vite"
+      ],
+      "minHostVersion": "1.0.0"
+    },
+    {
+      "appId": "com.aibox.viddl",
+      "name": "视频下载",
+      "summary": "解析视频页、选画质、离线资料库",
+      "icon": "arrow.down.to.line",
+      "category": "media",
+      "author": "AiBox",
+      "latestVersion": "1.0.2",
+      "latestReleasedAt": "2026-08-03T15:08:09Z",
+      "versionCount": 3,
+      "capabilities": [
+        "clipboard",
+        "download",
+        "haptics",
+        "share",
+        "storage",
+        "tabs",
+        "toolbar",
+        "tools"
+      ],
+      "latestTotalBytes": 55661,
+      "latestFileCount": 9,
+      "runtimeKind": "source",
+      "path": "apps/com.aibox.viddl",
+      "localizedNames": {
+        "en": "Video Downloads"
+      },
+      "localizedSummaries": {
+        "en": "Parse a video page, pick a quality, keep an offline library"
+      },
+      "iconTintHex": "E64340",
+      "tags": [
+        "video",
+        "downloader",
+        "bilibili",
+        "youtube",
+        "hls",
+        "offline"
       ],
       "minHostVersion": "1.0.0"
     },

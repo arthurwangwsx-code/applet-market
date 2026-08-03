@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.downloads",
+  "latestVersion": "1.0.3",
+  "releases": [
+    {
+      "version": "1.0.3",
+      "releasedAt": "2026-08-03T15:04:26Z",
+      "notes": "isolation 套件：归属断言改按 applet: 前缀判（真实 owner 是安装 id 而非 appId，写死 appId 会永远假绿）",
+      "fileCount": 10,
+      "totalBytes": 61456,
+      "path": "apps/com.aibox.downloads/releases/1.0.3",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "29bc679bcbf882a9d3ab79a27fc1113f601d20a6058e1600a6c4cd36edf7305d"
+    },
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T14:53:06Z",
+      "notes": "smoke 套件：单步 wait 拆到 5s 上限内",
+      "fileCount": 10,
+      "totalBytes": 61285,
+      "path": "apps/com.aibox.downloads/releases/1.0.2",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "aee44254efe0648b2d16b1d7656801d110e8d9bbcff156d914bcb5695b932872"
+    },
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T14:52:42Z",
+      "notes": "修 navigation.setTitle 传对象导致原生标题变 [object Object]；外壳 update 只在宿主真渲染时下发",
+      "fileCount": 10,
+      "totalBytes": 61157,
+      "path": "apps/com.aibox.downloads/releases/1.0.1",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "be03c0be68c9be7cab49fc68d97e5185575d3265c02d41b72818338f05802fae"
+    },
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T14:47:52Z",
+      "notes": "首个版本：通用下载器（任意 http(s) 链接 / 批量粘贴 / 四种落点 / 断点续传 / 事件驱动进度）",
+      "fileCount": 10,
+      "totalBytes": 60876,
+      "path": "apps/com.aibox.downloads/releases/1.0.0",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "77b254f826f36ac2a88b1268ec61b604727da469e901671115c5841eb2151d81"
+    }
+  ]
+}

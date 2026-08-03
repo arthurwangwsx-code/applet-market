@@ -1,0 +1,23 @@
+{
+  "appId": "com.aibox.downloads",
+  "name": "下载",
+  "localizedNames": {
+    "en": "Downloads"
+  },
+  "summary": "通用下载器：任意链接、队列、断点续传",
+  "icon": "arrow.down.circle.fill",
+  "iconTintHex": "3A83D0",
+  "category": "tools",
+  "author": "AiBox",
+  "tags": [
+    "download",
+    "downloader",
+    "queue",
+    "resume",
+    "files"
+  ],
+  "localizedSummaries": {
+    "en": "Any link, queued, resumable — the host engine keeps downloading in the background"
+  },
+  "minHostVersion": "1.0.0"
+}

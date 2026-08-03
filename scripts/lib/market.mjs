@@ -56,10 +56,10 @@ export const CATEGORIES = new Set([
 // 真值是 Swift 侧 `AppletCapabilityCatalog.declarableExtensionNamespaces`（有序数组，同时决定
 // AI 工具 schema 的 enum）。这里必须与它逐字一致——多了会放过装不上的包，少了会误拒合法包。
 // 注意 `tts`（语音**输出**）与 `speech`（语音**识别**）是两条能力，别混；`browser` 是 2026-08
-// 新增（浏览器桥）；`audio`（应用内录音）/ `speech`（端侧 STT）是 2026-08 新增的麦克风两条。
+// 新增（浏览器桥）；`download` 是 2026-08 新增（宿主下载引擎的遥控面）；`audio`（应用内录音）/ `speech`（端侧 STT）是 2026-08 新增的麦克风两条。
 export const KNOWN_CAPABILITIES = new Set([
-  'audio', 'browser', 'calendar', 'clipboard', 'contacts', 'device', 'files', 'haptics', 'health',
-  'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
+  'audio', 'browser', 'calendar', 'clipboard', 'contacts', 'device', 'download', 'files', 'haptics',
+  'health', 'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
   'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'voiceMemos',
 ])
 

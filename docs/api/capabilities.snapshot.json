@@ -636,6 +636,159 @@
       "group": "system"
     },
     {
+      "namespace": "download",
+      "summary": "The host download engine, remote-controlled. Files land on the host (never in your applet sandbox) and keep downloading after your applet closes or the app is killed — a background URLSession does the transfer. You only ever handle taskIds and read-only metadata. Every method is automatically scoped to YOUR downloads: list/pauseAll/cancelAll can never see or touch another app's tasks.",
+      "methods": [
+        {
+          "name": "enqueue",
+          "summary": "Queue one download and get its taskId back immediately. Resumable, survives app termination. headers are passed through verbatim (Referer/Cookie/User-Agent for sites that reject plain requests).",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\",\"description\":\"Saved name including extension. Defaults to the last path component of the URL.\"},\"destination\":{\"type\":\"object\",\"description\":\"Where the file lands. Omit for the app sandbox Downloads folder, which always works and needs no permission.\",\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"sandbox\",\"externalFiles\",\"iCloud\",\"vault\"]},\"path\":{\"type\":\"string\",\"description\":\"Relative folder inside the chosen root.\"},\"vault\":{\"type\":\"string\",\"description\":\"Vault name for kind 'vault'; omit for the active vault.\"}},\"additionalProperties\":false},\"headers\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"priority\":{\"type\":\"string\",\"enum\":[\"low\",\"normal\",\"high\"]},\"groupId\":{\"type\":\"string\",\"description\":\"Tie several downloads into one logical task so cancelAll of that group works.\"},\"expectedBytes\":{\"type\":\"integer\",\"description\":\"Size hint so the progress bar is meaningful before the first byte arrives.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{taskId, artifactRef}",
+          "effect": "external",
+          "example": "const { taskId } = await aibox.download.enqueue({ url, filename: 'lecture.mp4', destination: { kind:'sandbox', path:'Lectures' } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "list",
+          "summary": "Your downloads, newest state first-hand. Never includes other apps' tasks.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\",\"active\",\"finished\"]},\"groupId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "DownloadTask[] — {taskId,url,filename,state,bytesReceived,totalBytes,fraction,speed,eta,outputPath,artifactRef,groupId,error}",
+          "effect": "read",
+          "example": "const tasks = await aibox.download.list({ state: 'active' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "status",
+          "summary": "One task's snapshot; null when the id is not yours or no longer exists.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "DownloadTask|null",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "pause",
+          "summary": "Pause one download; resume data is written to disk so it continues from where it stopped.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "resume",
+          "summary": "Resume a paused or failed download.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "cancel",
+          "summary": "Cancel one download; the record stays in the list as cancelled.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Drop one record from the list entirely (cancels it first if running).",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "pauseAll",
+          "summary": "Pause every download of YOURS. Other apps and the host queue are untouched.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "resumeAll",
+          "summary": "Resume every paused/failed download of yours.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "cancelAll",
+          "summary": "Cancel every active download of yours.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "clearFinished",
+          "summary": "Remove your completed/failed/cancelled records. Does NOT delete downloaded files.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "subscribe",
+          "summary": "Start pushing 'download.progress' events for your tasks to aibox.events. Strongly preferred over polling: a 10-download queue polled once a second is dozens of bridge round-trips per second. Events stop automatically when your applet closes.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.download.subscribe(); aibox.events.on('download.progress', t => update(t))",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "unsubscribe",
+          "summary": "Stop the progress event stream.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "openIn",
+          "summary": "Hand a finished file to the host's opener (Quick Look / the system app for that type). The file never enters your sandbox.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "share",
+          "summary": "Present the native share sheet for a finished file.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "Probe whether the download engine is usable right now. No consent prompt.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean, reason?:string}",
+          "effect": "read",
+          "example": "const a = await aibox.download.availability(); if (!a.available) hideDownloadUI()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "files",
       "summary": "Browse and modify the host file-box workspace through stable file tools.",
       "methods": [
@@ -2384,6 +2537,7 @@
     "clipboard",
     "contacts",
     "device",
+    "download",
     "files",
     "haptics",
     "health",

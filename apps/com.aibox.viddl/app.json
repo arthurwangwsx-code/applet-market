@@ -1,0 +1,24 @@
+{
+  "appId": "com.aibox.viddl",
+  "name": "视频下载",
+  "localizedNames": {
+    "en": "Video Downloads"
+  },
+  "summary": "解析视频页、选画质、离线资料库",
+  "icon": "arrow.down.to.line",
+  "iconTintHex": "E64340",
+  "category": "media",
+  "author": "AiBox",
+  "tags": [
+    "video",
+    "downloader",
+    "bilibili",
+    "youtube",
+    "hls",
+    "offline"
+  ],
+  "localizedSummaries": {
+    "en": "Parse a video page, pick a quality, keep an offline library"
+  },
+  "minHostVersion": "1.0.0"
+}

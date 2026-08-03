@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.downloads",
+  "version": "1.0.1",
+  "releasedAt": "2026-08-03T14:52:42Z",
+  "notes": "修 navigation.setTitle 传对象导致原生标题变 [object Object]；外壳 update 只在宿主真渲染时下发",
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "下载",
+    "localizedNames": {
+      "en": "Downloads"
+    },
+    "icon": "arrow.down.circle.fill",
+    "iconTintHex": "3A83D0",
+    "summary": "通用下载器：任意链接、队列、断点续传",
+    "localizedSummaries": {
+      "en": "Any link, queued, resumable"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": false,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [],
+      "capabilities": [
+        "download",
+        "clipboard",
+        "share",
+        "open",
+        "haptics"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "downloads_add",
+        "name": "add",
+        "displayName": "下载链接",
+        "summary": "Downloads one or more files from http(s) URLs using the host download engine. Transfers keep running when the app is backgrounded or killed, and resume after interruptions. Choose where the file lands with \"destination\": \"sandbox\" (default, always works), \"iCloud\", \"externalFiles\" (a folder the user authorized in Settings), or \"vault\" (the notes vault). Returns task ids — poll with the list action for progress. Large files are fine; there is no size cap.",
+        "keywords": [
+          "download",
+          "download file",
+          "save link",
+          "fetch file",
+          "grab url",
+          "download to icloud",
+          "save to vault",
+          "下载",
+          "下载文件",
+          "保存链接",
+          "存到 iCloud"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"urls\"],\"properties\":{\"urls\":{\"type\":\"array\",\"maxItems\":30,\"items\":{\"type\":\"string\"},\"description\":\"One or more absolute http(s) URLs.\"},\"filename\":{\"type\":\"string\",\"description\":\"Saved name for a single URL. Ignored when several urls are given.\"},\"destination\":{\"type\":\"string\",\"enum\":[\"sandbox\",\"iCloud\",\"externalFiles\",\"vault\"],\"description\":\"Where files land. Default sandbox.\"},\"folder\":{\"type\":\"string\",\"description\":\"Relative subfolder inside the destination root.\"},\"priority\":{\"type\":\"string\",\"enum\":[\"low\",\"normal\",\"high\"]}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"count\":{\"type\":\"integer\"},\"tasks\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"taskId\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\"},\"artifactRef\":{\"type\":\"string\"}}}},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 20000,
+          "requiresNetworkConnectivity": true
+        }
+      },
+      {
+        "id": "downloads_list",
+        "name": "list",
+        "displayName": "查看下载",
+        "summary": "Lists this app's downloads with live progress: state, bytes received, percentage, speed, and the saved path once finished. Filter with \"state\" (active / finished / running / queued / paused / completed / failed / cancelled). Only shows downloads started from this app — the host's own downloads and other apps' downloads are never included.",
+        "keywords": [
+          "downloads",
+          "download progress",
+          "download status",
+          "queue",
+          "how far along",
+          "下载进度",
+          "下载列表",
+          "队列"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"active\",\"finished\",\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\"]},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"count\":{\"type\":\"integer\"},\"tasks\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true,
+        "execution": {
+          "mode": "concurrent",
+          "timeoutMilliseconds": 10000
+        }
+      },
+      {
+        "id": "downloads_control",
+        "name": "control",
+        "displayName": "控制下载",
+        "summary": "Pauses, resumes, cancels or removes downloads. Give \"taskId\" for one task, or omit it to act on all of this app's downloads. \"clearFinished\" drops finished records from the list without deleting any downloaded file. Paused downloads keep their resume data, so resuming continues instead of restarting.",
+        "keywords": [
+          "pause download",
+          "resume download",
+          "cancel download",
+          "stop downloading",
+          "clear downloads",
+          "暂停下载",
+          "继续下载",
+          "取消下载",
+          "清空已完成"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"pause\",\"resume\",\"cancel\",\"remove\",\"clearFinished\"]},\"taskId\":{\"type\":\"string\",\"description\":\"Omit to act on every download of this app.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 10000
+        }
+      },
+      {
+        "id": "downloads_pause_all",
+        "name": "pauseAll",
+        "displayName": "全部暂停",
+        "summary": "Pause every download of this app from the ⋯ menu. Drives the visible queue, so it is a UI action rather than an agent tool — the agent uses the control action instead.",
+        "headless": false,
+        "visibility": [
+          "userInterface",
+          "applet"
+        ],
+        "effect": "write",
+        "readOnly": false
+      },
+      {
+        "id": "downloads_resume_all",
+        "name": "resumeAll",
+        "displayName": "全部继续",
+        "summary": "Resume every paused download of this app from the ⋯ menu.",
+        "headless": false,
+        "visibility": [
+          "userInterface",
+          "applet"
+        ],
+        "effect": "write",
+        "readOnly": false
+      },
+      {
+        "id": "downloads_clear_finished",
+        "name": "clearFinished",
+        "displayName": "清空已完成",
+        "summary": "Remove finished records from the visible list. Downloaded files are not deleted.",
+        "headless": false,
+        "visibility": [
+          "userInterface",
+          "applet"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": true
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "active",
+            "title": "进行中",
+            "localizedTitles": {
+              "en": "Active"
+            },
+            "icon": "arrow.down.circle",
+            "selectedIcon": "arrow.down.circle.fill"
+          },
+          {
+            "id": "done",
+            "title": "已完成",
+            "localizedTitles": {
+              "en": "Finished"
+            },
+            "icon": "checkmark.circle",
+            "selectedIcon": "checkmark.circle.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "add",
+            "icon": "plus",
+            "tint": "accent"
+          },
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ]
+      },
+      "menu": {
+        "mergePolicy": "appletFirst",
+        "sections": [
+          {
+            "id": "queue",
+            "items": [
+              {
+                "id": "pauseAll",
+                "title": "全部暂停",
+                "localizedTitles": {
+                  "en": "Pause all"
+                },
+                "icon": "pause.circle",
+                "actionID": "downloads_pause_all"
+              },
+              {
+                "id": "resumeAll",
+                "title": "全部继续",
+                "localizedTitles": {
+                  "en": "Resume all"
+                },
+                "icon": "play.circle",
+                "actionID": "downloads_resume_all"
+              },
+              {
+                "id": "clearFinished",
+                "title": "清空已完成",
+                "localizedTitles": {
+                  "en": "Clear finished"
+                },
+                "icon": "trash",
+                "actionID": "downloads_clear_finished"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "totalBytes": 61157,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 2983,
+      "sha256": "dfe81f63f5c8f5ac5d266b5a47db0f1e76626cd773a6e5ba5b84117f6daa72fc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.jsx",
+      "bytes": 14133,
+      "sha256": "3c8364910676cd3421e6d3ee9e90cc48f5a827411f933fe939ae70aabdafd7a1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AddSheet.jsx",
+      "bytes": 5520,
+      "sha256": "a5df144a59e3dde53b2dbfcbbdd1d5692a6826d7ee4257ede95590f290f39ba1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.jsx",
+      "bytes": 2902,
+      "sha256": "6366464a494b618ddaaff176cc9de32f808e4d94336edff87412d2dea75b2a0e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.jsx",
+      "bytes": 6395,
+      "sha256": "608d88060e294fedd06f2ab5d183e5d8dfe2895dbf33794ae7a6750eb0880850",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/TaskRow.jsx",
+      "bytes": 4141,
+      "sha256": "dc9e3c5d20938030f26f36a773cc7cdbbe169d3f628926f5bffc37ce2957f46b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 3240,
+      "sha256": "5bfd030bed94d18e1768fc48c8bbc88d4c51d0a165a61056e5b0e120f7f1ae1a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 4214,
+      "sha256": "8fe74f64f12bbafe1c9daca37babc42ae34266542965da073d4dcfff0dce0139",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 8658,
+      "sha256": "396f8789ca57828dafcdcf8254c37bebc012204a1a99f86262e5215dcc3bfa6a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 8971,
+      "sha256": "04c8b1f1a47ac92fb4e693f66510925d40c03d3f1a5fb7ce8a08b8f834d04b96",
+      "encoding": "utf8"
+    }
+  ]
+}

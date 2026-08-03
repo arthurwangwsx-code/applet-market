@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.viddl",
+  "latestVersion": "1.0.2",
+  "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T15:08:09Z",
+      "notes": "声明 toolRequirements(viddl 前缀)；工具被拒后熔断轮询——此前未授权时每 2.5s 打一条 console 错误（4 秒 20 条），会把真错误埋掉",
+      "fileCount": 9,
+      "totalBytes": 55661,
+      "path": "apps/com.aibox.viddl/releases/1.0.2",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "e64acc4aa8ac823f1dbf959bef1af52196c1d0180061b5b31540dad1216be6e9"
+    },
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T14:52:42Z",
+      "notes": "同上：setTitle 传字符串；外壳 update 只在宿主真渲染时下发",
+      "fileCount": 9,
+      "totalBytes": 54125,
+      "path": "apps/com.aibox.viddl/releases/1.0.1",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "dedf9dc0ffa030e1c8c6348efe2c1583eb7ff8cc194acbaf01982d2864125a0e"
+    },
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T14:47:56Z",
+      "notes": "首个版本：视频下载（来源解析 / 画质选择 / 仅音频 / 离线资料库；无私密视频）",
+      "fileCount": 9,
+      "totalBytes": 53913,
+      "path": "apps/com.aibox.viddl/releases/1.0.0",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "e903daca491b3ecf29f3f1138cef64e4504e09399f0fe342c35dec07ced103b5"
+    }
+  ]
+}

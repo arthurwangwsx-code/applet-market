@@ -71,7 +71,7 @@ const NAMESPACE_GROUP = {
   open: 'system', share: 'system', tts: 'system', audio: 'system', speech: 'system',
   health: 'system', notifications: 'system', location: 'system', calendar: 'system',
   reminders: 'system', contacts: 'system', photos: 'system', files: 'system',
-  music: 'system', voiceMemos: 'system', shortcuts: 'system',
+  music: 'system', voiceMemos: 'system', shortcuts: 'system', download: 'system',
   // 长尾工具网关
   tools: 'gateway',
 };

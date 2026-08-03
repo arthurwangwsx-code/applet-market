@@ -1,18 +1,14 @@
 // 领域类型 —— 对齐 VoiceMemosDomain 的值类型（规格 §14）。日期一律存 epoch 毫秒。
 
-/** 一条录音来自哪里。两个来源的能力档位不同，UI 必须按来源分档渲染入口。 */
-export type MemoSource =
-  /** 宿主录音库（`aibox.voiceMemos.*`）—— 有转写与全部 AI 能力，但拿不到音频字节与播放位置。 */
-  | 'library'
-  /** 应用内录音（`aibox.audio.*`）—— 有音频字节、精确播放与波形，但**没有转写路径**。 */
-  | 'local'
+// 2.0.0 起只剩一个来源。1.x 曾经有两个（宿主录音库 `aibox.voiceMemos.*` + 应用内录音
+// `aibox.audio.*`），因为**转写只有宿主那条线有**。宿主补上 `aibox.audio.transcribe` 之后
+// 这个理由消失了，两条线合并成一条：录音、转写、AI 全部长在本应用自己的数据上。
 
 export type TranscriptStatus = 'none' | 'pending' | 'inProgress' | 'completed' | 'failed'
 
 /** 列表行 / 详情页共用的录音视图模型。 */
 export interface Memo {
   id: string
-  source: MemoSource
   title: string
   /** 秒。 */
   duration: number
@@ -22,9 +18,9 @@ export interface Memo {
   hasAudio: boolean
   isAudioProtected: boolean
   folder?: string
-  /** 仅 `local`：applet 资源 URL，可直接 `<audio src>`。 */
+  /** applet 资源 URL，可直接 `<audio src>`。 */
   url?: string
-  /** 仅 `local`：applet 资源句柄。 */
+  /** applet 资源句柄；转写就是把它交给 `aibox.audio.transcribe`。 */
   handle?: string
   /** 搜索命中时的行内摘录。 */
   snippet?: string
@@ -108,6 +104,21 @@ export interface LocalClip {
   isTrashed: boolean
   trashedAt: number | null
   interrupted: boolean
+  /** 转写全文。空 = 还没转写过。 */
+  transcriptText?: string
+  /** 转写用的 BCP-47 标签（回显给用户，也是重转的默认值）。 */
+  transcriptLocale?: string
+  transcriptStatus?: TranscriptStatus
+  /** 带时间戳的分段（卡拉OK 高亮 / 章节定位 / SRT 导出都靠它）。 */
+  transcriptSegments?: TranscriptSegment[]
+}
+
+/** 一段带时间戳的转写（对齐宿主 `aibox.audio.transcribe` 的返回形状，秒）。 */
+export interface TranscriptSegment {
+  text: string
+  start: number
+  duration: number
+  end: number
 }
 
 /** 应用设置（可实现的子集，见 §设置页）。 */
@@ -141,7 +152,6 @@ export interface MemoFilter {
   sort: 'newest' | 'oldest' | 'longest' | 'shortest' | 'name'
   favOnly: boolean
   withTranscript: boolean
-  source: 'all' | MemoSource
 }
 
 export const DEFAULT_FILTER: MemoFilter = {
@@ -150,7 +160,6 @@ export const DEFAULT_FILTER: MemoFilter = {
   sort: 'newest',
   favOnly: false,
   withTranscript: false,
-  source: 'all',
 }
 
 /** `isActive` = 任一收窄条件生效（**排序不算**）—— 决定筛选图标是否填充。 */
@@ -159,5 +168,4 @@ export function filterIsActive(filter: MemoFilter): boolean {
     || filter.date !== 'all'
     || filter.favOnly
     || filter.withTranscript
-    || filter.source !== 'all'
 }

@@ -210,7 +210,7 @@
     },
     {
       "namespace": "audio",
-      "summary": "\"Record audio inside your own UI. This is the ONLY way an applet can capture audio — \"\n                + \"getUserMedia and MediaRecorder do not work inside the applet WebView. \"\n                + \"The recording becomes an applet-private resource handle; it is never added to the user's voice-memo library.\"",
+      "summary": "Record audio inside your own UI and turn your own audio into text. This is the ONLY way an applet can capture audio — getUserMedia and MediaRecorder do not work inside the applet WebView. Everything here works on applet-private resource handles and stays permanently available, independent of any host module. CHOOSING BETWEEN aibox.audio AND aibox.voiceMemos — ask one question: should the result show up in the user's own Voice Memos library? If yes, use aibox.voiceMemos (it drives the host module, opens host UI, and disappears when that module is not installed). If no, use aibox.audio: the product belongs to you, nothing is written to the user's library, and nothing here can vanish with a module.",
       "methods": [
         {
           "name": "availability",
@@ -273,6 +273,24 @@
           "resultSummary": "{state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb}",
           "effect": "read",
           "example": "const s = await aibox.audio.recordStatus(); drawWaveform(s.levels)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "transcribeAvailability",
+          "summary": "Probe whether transcribe() can run for a locale. Never prompts and never transcribes — call it before showing a transcribe button. state tells you WHY it is unavailable: engine-missing (this build has no transcription engine), not-authorized, unsupported-locale, unsupported-os, needs-model-download (transcribe() will download it on first use, so this state is still worth offering).",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN. Defaults to the device locale.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing",
+          "effect": "read",
+          "example": "const a = await aibox.audio.transcribeAvailability({ locale:'zh-CN' }); if (!a.available && a.state !== 'needs-model-download') hideTranscribeButton(a.state)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "transcribe",
+          "summary": "Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pass the handle from recordStop() or picker.file() — never a file path (you do not have one, and the host resolves the handle itself). Long files take minutes; one transcription per applet at a time. First use may prompt for speech recognition and may download the locale model.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"handle\":{\"type\":\"string\",\"description\":\"A resource:// handle belonging to this applet (from aibox.audio.recordStop or aibox.picker.file).\"},\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag. Always pass it when you know the spoken language — a mismatched recognizer transcribes look-alike words in the wrong language.\"},\"segments\":{\"type\":\"boolean\",\"description\":\"Include timestamped segments. Default true; pass false when you only need the text and want a smaller payload.\"}},\"required\":[\"handle\"],\"additionalProperties\":false}",
+          "resultSummary": "{text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds",
+          "effect": "external",
+          "example": "const r = await aibox.audio.recordStop(); const t = await aibox.audio.transcribe({ handle:r.handle, locale:'zh-CN' }); show(t.text)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
         }
       ],
@@ -1529,6 +1547,42 @@
       "group": "system"
     },
     {
+      "namespace": "overlay",
+      "summary": "A persistent control layer the host draws ABOVE the bottom tab bar, declared by manifest.scene.overlay. Use it for controls that must always be reachable — a record button, a mini player, a batch-action bar. Do NOT hand-draw these with position:fixed: the host layer gets real Liquid Glass, correct safe-area and keyboard behaviour, and structural stacking with the tab bar. It reserves its own height, so it never covers the last row of your content.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read the effective overlay items and whether the host actually rendered them (card/sheet/drawer surfaces do not). Always readable — this is the degradation probe.",
+          "parametersJSON": "{}",
+          "resultSummary": "{declared, rendered, items:[{id,kind,icon,activeIcon,title,subtitle,tint,progress,active,enabled,hidden,controls:[{id,icon,activeIcon,tint,active,enabled}]}]}",
+          "effect": "read",
+          "example": "const s = await aibox.overlay.getState(); if (!s.rendered) renderInlineControlsAtEndOfContent()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "update",
+          "summary": "Update the display state of declared overlay ids: icon, activeIcon, title, subtitle, tint, progress, active, enabled, hidden, and the same fields on declared controls. Layers and controls cannot be added, removed or renamed by id.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"icon\":{\"type\":[\"string\",\"null\"]},\"activeIcon\":{\"type\":[\"string\",\"null\"]},\"title\":{\"type\":[\"string\",\"null\"]},\"subtitle\":{\"type\":[\"string\",\"null\"]},\"tint\":{\"type\":[\"string\",\"null\"],\"enum\":[\"default\",\"accent\",\"danger\",null]},\"progress\":{\"type\":[\"number\",\"null\"],\"minimum\":0,\"maximum\":1},\"active\":{\"type\":[\"boolean\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]},\"controls\":{\"type\":[\"object\",\"null\"],\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"icon\":{\"type\":[\"string\",\"null\"]},\"activeIcon\":{\"type\":[\"string\",\"null\"]},\"tint\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"active\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "overlay state",
+          "effect": "presentation",
+          "example": "await aibox.overlay.update({ items: { record: { active: true, title: '00:12' }, player: { title: song.name, progress: 0.42, controls: { toggle: { active: true } } } } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "reset",
+          "summary": "Clear all runtime overlay overrides and restore manifest values.",
+          "parametersJSON": "{}",
+          "resultSummary": "overlay state",
+          "effect": "presentation",
+          "example": "await aibox.overlay.reset()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
+    },
+    {
       "namespace": "photos",
       "summary": "Search, inspect, OCR, save and explicitly mutate photos through the host media tools.",
       "methods": [
@@ -2105,7 +2159,7 @@
     },
     {
       "namespace": "voiceMemos",
-      "summary": "Record, browse, transcribe and analyze voice memos through the host memo engine.",
+      "summary": "Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present.",
       "methods": [
         {
           "name": "list",
@@ -2362,6 +2416,7 @@
     "list",
     "menu",
     "navigation",
+    "overlay",
     "resource",
     "scene",
     "tabs",

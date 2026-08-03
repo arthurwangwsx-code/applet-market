@@ -58,12 +58,12 @@ export function MemoList(props: {
     <div>
       {rows.map((memo) => (
         <MemoRow
-          key={`${memo.source}:${memo.id}`}
+          key={memo.id}
           palette={palette}
           t={t}
           dark={props.dark}
           memo={memo}
-          busy={props.busyIDs[`${memo.source}:${memo.id}`]}
+          busy={props.busyIDs[memo.id]}
           onOpen={() => props.onOpen(memo)}
           onMenu={() => props.onMenu(memo)}
         />
@@ -137,7 +137,7 @@ function MemoRow(props: {
           <span>{shortDate(memo.createdAt, 'default')}</span>
           <span>{clockString(memo.duration)}</span>
           {!memo.hasAudio ? <span><Icon name="waveform.slash" size={11} /> {t('transcriptOnly')}</span> : null}
-          <span style={{ opacity: 0.8 }}>{memo.source === 'local' ? t('sourceLocal') : t('sourceLibrary')}</span>
+          {memo.hasTranscript ? <span style={{ opacity: 0.8 }}><Icon name="bubble" size={11} /> {t('hasTranscript')}</span> : null}
         </div>
         {memo.snippet ? (
           <div style={{ fontSize: 12, color: palette.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -159,7 +159,6 @@ export function applyFilter(memos: Memo[], filter: MemoFilter, query: string): M
     }
     if (filter.favOnly && !memo.isFavourite) return false
     if (filter.withTranscript && !memo.hasTranscript) return false
-    if (filter.source !== 'all' && memo.source !== filter.source) return false
     if (filter.duration === 'under1m' && !(memo.duration < 60)) return false
     if (filter.duration === '1to5m' && !(memo.duration >= 60 && memo.duration <= 300)) return false
     if (filter.duration === 'over5m' && !(memo.duration >= 300)) return false
@@ -256,11 +255,6 @@ export function FilterSheet(props: {
         { value: 'week', label: t('dateWeek') },
         { value: 'month', label: t('dateMonth') },
         { value: 'year', label: t('dateYear') },
-      ])}
-      {section(t('filterSource'), 'source', [
-        { value: 'all', label: t('sourceAll') },
-        { value: 'library', label: t('sourceLibrary') },
-        { value: 'local', label: t('sourceLocal') },
       ])}
       {section(t('filterSort'), 'sort', [
         { value: 'newest', label: t('sortNewest') },

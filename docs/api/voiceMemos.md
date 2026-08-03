@@ -1,6 +1,6 @@
 # `aibox.voiceMemos`
 
-> Record, browse, transcribe and analyze voice memos through the host memo engine.
+> Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present.
 
 **分组** 系统能力投影 ｜ **方法数** 21 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"voiceMemos"`。**声明 ≠ 授权**，用户仍会被逐项询问。
 

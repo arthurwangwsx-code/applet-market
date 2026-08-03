@@ -1,8 +1,13 @@
 // 三个 AI 抽屉（规格 §4.11）：待办事项 / 询问这段录音 / 整理文本。
+//
+// 2.0.0 起三样全部走 `aibox.ai`（1.x 是宿主的 `memo_get_action_items` / `memo_ask` /
+// `memo_clean_transcript`）。它们要的输入只有一样：**转写全文**——所以抽屉收的是 `transcript`
+// 文本而不是一个 memoID。少一层「宿主按 id 去自己的库里找那段文字」的间接，也就少一条会断的线。
 
 import { useEffect, useState } from 'react'
 import { clockString } from '../lib/format'
-import { askMemo, cleanTranscript, fetchActionItems, saveArtifacts } from '../lib/memos'
+import { actionItems as extractActionItems, ask as askAI, cleanTranscript as cleanUpAI } from '../lib/ai'
+import { listClips, saveArtifacts, saveClip } from '../lib/memos'
 import type { T } from '../lib/strings'
 import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
 import type { ActionItem, ActionItemKind, MemoArtifacts } from '../lib/types'
@@ -13,6 +18,8 @@ export function ActionItemsSheet(props: {
   t: T
   open: boolean
   memoID: string
+  /** 转写全文。空 = 还没转写，抽屉直接走空态。 */
+  transcript: string
   artifacts: MemoArtifacts | null
   onArtifacts: (value: MemoArtifacts) => void
   onSeek: (seconds: number) => void
@@ -24,10 +31,10 @@ export function ActionItemsSheet(props: {
   const items = props.artifacts?.actionItems ?? []
 
   const run = async (force: boolean) => {
-    if (!props.artifacts) return
+    if (!props.artifacts || !props.transcript.trim()) return
     setBusy(true)
     setFailed(false)
-    const next = await fetchActionItems(props.memoID, force)
+    const next = await extractActionItems(props.transcript).catch(() => [] as ActionItem[])
     setBusy(false)
     if (next.length === 0 && force) setFailed(true)
     const merged: MemoArtifacts = { ...props.artifacts, actionItems: next }
@@ -152,7 +159,7 @@ export function AskSheet(props: {
   palette: Palette
   t: T
   open: boolean
-  memoID: string
+  transcript: string
   onClose: () => void
 }) {
   const { palette, t } = props
@@ -171,9 +178,9 @@ export function AskSheet(props: {
     if (!value || busy) return
     setBusy(true)
     setAnswer('')
-    const result = await askMemo(props.memoID, value)
+    const result = await askAI(props.transcript, value).catch(() => '')
     setBusy(false)
-    setAnswer(result.ok && result.text ? result.text : t('askFailed'))
+    setAnswer(result || t('askFailed'))
   }
 
   const starters = [t('askStarter1'), t('askStarter2'), t('askStarter3')]
@@ -234,6 +241,7 @@ export function CleanUpSheet(props: {
   t: T
   open: boolean
   memoID: string
+  transcript: string
   onClose: () => void
   onApplied: () => void
 }) {
@@ -245,7 +253,8 @@ export function CleanUpSheet(props: {
     <Sheet palette={palette} open={props.open} onClose={props.onClose}>
       <SheetHeader palette={palette} title={t('cleanUp')} onDone={props.onClose} doneLabel={t('cancel')} />
       <div style={{ padding: `0 ${SPACE.s4}px ${SPACE.s6}px` }}>
-        {/* ⚠️ Clean Up 是**破坏性**的：直接改写宿主的 fullText 并作废全部 AI 产物。 */}
+        {/* 2.0.0 起 Clean Up **不再是破坏性的**：整理结果写回本条剪辑的转写，原文可随时重转拿回；
+            1.x 走的宿主 `memo_clean_transcript` 是直接改写宿主库里的 fullText 且不可逆。 */}
         <div style={{ background: alpha(palette.orange, 0.1), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 13, color: palette.orange }}>
           <Icon name="warning" size={13} /> {t('cleanUpWarning')}
         </div>
@@ -259,12 +268,15 @@ export function CleanUpSheet(props: {
             onClick={async () => {
               setBusy(true)
               setFailed(false)
-              const result = await cleanTranscript(props.memoID)
-              setBusy(false)
-              if (!result.ok) {
+              const cleaned = await cleanUpAI(props.transcript).catch(() => '')
+              if (!cleaned) {
+                setBusy(false)
                 setFailed(true)
                 return
               }
+              const clip = (await listClips()).find((item) => item.id === props.memoID)
+              if (clip) await saveClip({ ...clip, transcriptText: cleaned })
+              setBusy(false)
               props.onApplied()
               props.onClose()
             }}

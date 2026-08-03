@@ -1,10 +1,8 @@
 # `aibox.audio`
 
-> "Record audio inside your own UI. This is the ONLY way an applet can capture audio — "
-                + "getUserMedia and MediaRecorder do not work inside the applet WebView. "
-                + "The recording becomes an applet-private resource handle; it is never added to the user's voice-memo library."
+> Record audio inside your own UI and turn your own audio into text. This is the ONLY way an applet can capture audio — getUserMedia and MediaRecorder do not work inside the applet WebView. Everything here works on applet-private resource handles and stays permanently available, independent of any host module. CHOOSING BETWEEN aibox.audio AND aibox.voiceMemos — ask one question: should the result show up in the user's own Voice Memos library? If yes, use aibox.voiceMemos (it drives the host module, opens host UI, and disappears when that module is not installed). If no, use aibox.audio: the product belongs to you, nothing is written to the user's library, and nothing here can vanish with a module.
 
-**分组** 系统能力投影 ｜ **方法数** 7 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"audio"`。**声明 ≠ 授权**，用户仍会被逐项询问。
+**分组** 系统能力投影 ｜ **方法数** 9 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"audio"`。**声明 ≠ 授权**，用户仍会被逐项询问。
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 从宿主 descriptor 生成，请勿手改 -->
 
@@ -127,6 +125,48 @@ Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) alre
 
 ```js
 const s = await aibox.audio.recordStatus(); drawWaveform(s.levels)
+```
+
+### `aibox.audio.transcribeAvailability()`
+
+Probe whether transcribe() can run for a locale. Never prompts and never transcribes — call it before showing a transcribe button. state tells you WHY it is unavailable: engine-missing (this build has no transcription engine), not-authorized, unsupported-locale, unsupported-os, needs-model-download (transcribe() will download it on first use, so this state is still worth offering).
+
+**副作用档位** `read`（读取）— 只读，不改任何状态；不触发用户确认。
+
+**参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|:--:|---|
+| `locale` | string |  | BCP-47 tag such as en-US or zh-CN. Defaults to the device locale. |
+
+未列出的字段会被拒绝（`additionalProperties: false`）。
+
+**返回** `{available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing`
+
+```js
+const a = await aibox.audio.transcribeAvailability({ locale:'zh-CN' }); if (!a.available && a.state !== 'needs-model-download') hideTranscribeButton(a.state)
+```
+
+### `aibox.audio.transcribe()`
+
+Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pass the handle from recordStop() or picker.file() — never a file path (you do not have one, and the host resolves the handle itself). Long files take minutes; one transcription per applet at a time. First use may prompt for speech recognition and may download the locale model.
+
+**副作用档位** `external`（外发）— 发往网络或模型；有配额与失败分支，必须有兜底。
+
+**参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|:--:|---|
+| `handle` | string | ✓ | A resource:// handle belonging to this applet (from aibox.audio.recordStop or aibox.picker.file). |
+| `locale` | string |  | BCP-47 tag. Always pass it when you know the spoken language — a mismatched recognizer transcribes look-alike words in the wrong language. |
+| `segments` | boolean |  | Include timestamped segments. Default true; pass false when you only need the text and want a smaller payload. |
+
+未列出的字段会被拒绝（`additionalProperties: false`）。
+
+**返回** `{text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds`
+
+```js
+const r = await aibox.audio.recordStop(); const t = await aibox.audio.transcribe({ handle:r.handle, locale:'zh-CN' }); show(t.text)
 ```
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift`

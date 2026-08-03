@@ -9,13 +9,12 @@ import { ActionItemsSheet, AskSheet, CleanUpSheet } from './components/AiSheets'
 import { FilterSheet, MemoList, Toggle, applyFilter } from './components/MemoList'
 import { MemoDetail, type DetailContext } from './components/MemoDetail'
 import { RecordSheet } from './components/RecordSheet'
-import { Icon, PushPage, SecondaryButton } from './components/primitives'
+import { Icon, PushPage } from './components/primitives'
 import { registerMemoActions } from './lib/actions'
 import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format'
 import {
-  capabilities, deleteClip, deleteMemo, fetchTranscript, haptic, hostRecordStart, listClips,
-  loadArtifacts, newID, recordStart, recorderAvailability, renameMemo, saveClip, seekMemo,
-  startTranscription, toggleFavourite,
+  capabilities, deleteClip, haptic, listClips, loadArtifacts, localeTag, newID, recordStart,
+  recorderAvailability, saveClip, transcribeAvailability, transcribeClip,
 } from './lib/memos'
 import { makeT, type Lang } from './lib/strings'
 import { useMemoStore } from './lib/store'
@@ -30,7 +29,7 @@ type TabID = 'record' | 'library' | 'settings'
 type Route =
   | { kind: 'root' }
   | { kind: 'detail'; memo: Memo }
-  | { kind: 'scoped'; scope: 'all' | 'fav' | 'local' }
+  | { kind: 'scoped'; scope: 'all' | 'fav' }
   | { kind: 'trash' }
 
 export default function App() {
@@ -57,6 +56,13 @@ export default function App() {
   const [draftTitle, setDraftTitle] = useState('')
   const [recorder, setRecorder] = useState<{ available: boolean; reason: string; background: boolean } | null>(null)
   /**
+   * 转写能力探测。`null` = 还没探完。
+   * **`engine-missing` 与 `needs-model-download` 的正确 UI 完全相反**：前者要把整个转写入口藏掉
+   * （这个壳里没有转写引擎，点了只会失败），后者要照常显示（第一次点会下模型再转）。
+   * 所以这里存的是整个结构而不是一个布尔。
+   */
+  const [transcription, setTranscription] = useState<{ available: boolean; state: string; engine: boolean } | null>(null)
+  /**
    * 起录在飞。**首次使用必然要等几秒** —— `recordStart` 要等 iOS 的麦克风授权框被回答才 resolve，
    * 这期间不锁按钮的话，第二下点击会拿到 `aibox/busy` 并弹一个假的失败提示。
    */
@@ -71,10 +77,51 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.selected, tabs.rendered])
 
-  // 能力探测：录音不可用就把 FAB 整个藏掉，不留一个点了报错的按钮。
+  // 能力探测：录音不可用就把 FAB 整个藏掉，不留一个点了报错的按钮。转写同理。
   useEffect(() => {
     void (async () => setRecorder(await recorderAvailability()))()
   }, [])
+
+  useEffect(() => {
+    void (async () => setTranscription(await transcribeAvailability(localeTag(store.settings.transcribeLocale))))()
+  }, [store.settings.transcribeLocale])
+
+  /** 入口该不该出现：引擎在场就出现，哪怕此刻还要下模型。引擎不在场（或宿主太老）一律不渲染。 */
+  const transcribable = Boolean(transcription?.engine)
+
+  /**
+   * 转一段录音，落进它自己的 clip 记录。
+   * 转写是分钟级重活且宿主侧每个 applet 同时只允许一条，所以这里**不并发**、行上转圈到结束为止。
+   */
+  const runTranscription = useCallback(async (memo: Memo) => {
+    const clip = (await listClips()).find((item) => item.id === memo.id)
+    if (!clip?.handle) return
+    setBusyIDs((current) => ({ ...current, [memo.id]: t('transcribing') }))
+    await saveClip({ ...clip, transcriptStatus: 'inProgress' })
+    store.refresh()
+    const outcome = await transcribeClip(clip.handle, localeTag(store.settings.transcribeLocale))
+    const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip
+    if (outcome.ok) {
+      await saveClip({
+        ...latest,
+        transcriptText: outcome.text,
+        transcriptLocale: outcome.locale,
+        transcriptSegments: outcome.segments,
+        transcriptStatus: 'completed',
+      })
+    } else {
+      await saveClip({ ...latest, transcriptStatus: 'failed' })
+      await confirmAlert(t('transcribeFailedTitle'), errorText(t, outcome.error))
+      // 失败可能是「授权刚被拒」或「模型装不上」——重新探一次，别让入口一直摆在那儿。
+      setTranscription(await transcribeAvailability(localeTag(store.settings.transcribeLocale)))
+    }
+    setBusyIDs((current) => {
+      const next = { ...current }
+      delete next[memo.id]
+      return next
+    })
+    store.refresh()
+  }, [store, t])
 
   const exportLabels = useMemo(() => ({
     createdAt: t('labelCreatedAt'),
@@ -117,77 +164,54 @@ export default function App() {
       { id: 'rename', title: t('rename') },
       { id: 'fav', title: memo.isFavourite ? t('unfavourite') : t('favourite') },
     ]
-    if (memo.source === 'library' && !memo.hasTranscript && memo.hasAudio) {
-      actions.push({ id: 'transcribe', title: t('startTranscription') })
-    }
-    if (memo.source === 'library' && memo.hasTranscript) actions.push({ id: 'copy', title: t('copyTranscript') })
-    if (memo.source === 'local') actions.push({ id: 'share', title: t('shareAudio') })
-    actions.push({ id: 'delete', title: memo.source === 'local' ? t('moveToTrash') : t('deletePermanently'), destructive: true })
+    // 转写入口只在**能转**的时候出现。`engine-missing` 那一档整条不渲染——
+    // 一个点了只会弹「这个构建没有转写引擎」的菜单项，比没有这一项更糟。
+    if (!memo.hasTranscript && transcribable) actions.push({ id: 'transcribe', title: t('startTranscription') })
+    if (memo.hasTranscript) actions.push({ id: 'copy', title: t('copyTranscript') })
+    actions.push({ id: 'share', title: t('shareAudio') })
+    actions.push({ id: 'delete', title: t('moveToTrash'), destructive: true })
 
     const picked = await actionSheet(actions)
     if (!picked) return
-    const key = `${memo.source}:${memo.id}`
 
     if (picked === 'rename') {
       const next = await promptText(t('renamePrompt'), memo.title)
       if (!next) return
-      if (memo.source === 'library') await renameMemo(memo.id, next)
-      else {
-        const clip = (await listClips()).find((item) => item.id === memo.id)
-        if (clip) await saveClip({ ...clip, title: next })
-      }
+      const clip = (await listClips()).find((item) => item.id === memo.id)
+      if (clip) await saveClip({ ...clip, title: next })
       store.refresh()
       return
     }
     if (picked === 'fav') {
-      if (memo.source === 'library') await toggleFavourite(memo.id)
-      else {
-        const clip = (await listClips()).find((item) => item.id === memo.id)
-        if (clip) await saveClip({ ...clip, isFavourite: !clip.isFavourite })
-      }
+      const clip = (await listClips()).find((item) => item.id === memo.id)
+      if (clip) await saveClip({ ...clip, isFavourite: !clip.isFavourite })
       store.refresh()
       return
     }
     if (picked === 'transcribe') {
-      setBusyIDs((current) => ({ ...current, [key]: t('transcribing') }))
-      await startTranscription(memo.id, store.settings.transcribeLocale === 'auto' ? undefined : store.settings.transcribeLocale)
-      setRoute({ kind: 'detail', memo })
-      setBusyIDs((current) => {
-        const next = { ...current }
-        delete next[key]
-        return next
-      })
+      await runTranscription(memo)
       return
     }
     if (picked === 'copy') {
-      const transcript = await fetchTranscript(memo.id)
-      if (transcript?.fullText) await copyText(transcript.fullText)
+      const clip = (await listClips()).find((item) => item.id === memo.id)
+      if (clip?.transcriptText) await copyText(clip.transcriptText)
       return
     }
     if (picked === 'share') {
-      // 本机剪辑分享的是**音频文件本身**（`share.file` 收 base64）。
+      // 分享的是**音频文件本身**（`share.file` 收 base64）。
       await shareClipAudio(memo)
       return
     }
     if (picked === 'delete') {
-      const ok = await confirmDestructive(
-        memo.source === 'local' ? t('trashConfirmTitle') : t('deleteConfirmTitle'),
-        memo.source === 'local' ? t('moveToTrash') : t('deletePermanently'),
-        t('cancel'),
-      )
+      const ok = await confirmDestructive(t('trashConfirmTitle'), t('moveToTrash'), t('cancel'))
       if (!ok) return
-      if (memo.source === 'local') {
-        const clip = (await listClips()).find((item) => item.id === memo.id)
-        // 本机剪辑走**软删**（可恢复），与原生「移到最近删除」同语义。
-        if (clip) await saveClip({ ...clip, isTrashed: true, trashedAt: Date.now() })
-      } else {
-        // ⚠️ 宿主只有硬删（`memo_delete`）—— 没有 `memo_trash` 工具投影，所以录音库条目不可恢复。
-        await deleteMemo(memo.id)
-      }
+      const clip = (await listClips()).find((item) => item.id === memo.id)
+      // 软删（可恢复），与原生「移到最近删除」同语义。
+      if (clip) await saveClip({ ...clip, isTrashed: true, trashedAt: Date.now() })
       store.refresh()
       if (route.kind === 'detail') setRoute({ kind: 'root' })
     }
-  }, [t, store, route.kind])
+  }, [t, store, route.kind, transcribable, runTranscription])
 
   const openDetailMenu = useCallback(async (context: DetailContext) => {
     detailContext.current = context
@@ -237,12 +261,9 @@ export default function App() {
   }, [t, locale.locale, exportLabels, openMenu])
 
   const rootMemos = store.memos
+  // 2.0.0 只剩一个来源，「本机剪辑」这一段等同于「全部」，故智能列表只留 全部 / 收藏。
   const scopedMemos = route.kind === 'scoped'
-    ? route.scope === 'fav'
-      ? rootMemos.filter((memo) => memo.isFavourite)
-      : route.scope === 'local'
-        ? rootMemos.filter((memo) => memo.source === 'local')
-        : rootMemos
+    ? route.scope === 'fav' ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos
     : []
 
   return (
@@ -279,9 +300,9 @@ export default function App() {
             </button>
           </div>
 
-          {!store.libraryAvailable ? (
+          {transcription && !transcription.engine ? (
             <div style={{ margin: `${SPACE.s3}px ${SPACE.s4}px 0`, background: alpha(palette.orange, 0.12), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 12, color: palette.orange }}>
-              <Icon name="warning" size={12} /> {t('libraryUnavailable')}
+              <Icon name="warning" size={12} /> {t('transcribeUnavailable')}
             </div>
           ) : null}
 
@@ -340,13 +361,6 @@ export default function App() {
             trashCount={store.clips.filter((clip) => clip.isTrashed).length}
             onScope={(scope) => setRoute({ kind: 'scoped', scope })}
             onTrash={() => setRoute({ kind: 'trash' })}
-            onHostRecord={async () => {
-              // 宿主录音**会把全屏录音页顶到前台盖住小应用** —— 这是它 effect 为 presentation 的后果，
-              // 也是本应用另外自带一套应用内录音的原因。
-              await hostRecordStart(defaultTitle(t('newRecording'), locale.locale))
-              store.refresh()
-            }}
-            libraryAvailable={store.libraryAvailable}
           />
         </main>
       ) : null}
@@ -454,20 +468,22 @@ export default function App() {
         t={t}
         open={sheet === 'actionItems'}
         memoID={detailContext.current?.memo.id ?? ''}
+        transcript={detailContext.current?.text ?? ''}
         artifacts={detailArtifacts}
         onArtifacts={(value) => {
           setDetailArtifacts(value)
           detailContext.current?.setArtifacts(value)
         }}
-        onSeek={(seconds) => void seekMemo({ seconds })}
+        onSeek={(seconds) => detailContext.current?.seek?.(seconds)}
         onClose={() => setSheet(null)}
       />
-      <AskSheet palette={palette} t={t} open={sheet === 'ask'} memoID={detailContext.current?.memo.id ?? ''} onClose={() => setSheet(null)} />
+      <AskSheet palette={palette} t={t} open={sheet === 'ask'} transcript={detailContext.current?.text ?? ''} onClose={() => setSheet(null)} />
       <CleanUpSheet
         palette={palette}
         t={t}
         open={sheet === 'cleanUp'}
         memoID={detailContext.current?.memo.id ?? ''}
+        transcript={detailContext.current?.text ?? ''}
         onClose={() => setSheet(null)}
         onApplied={store.refresh}
       />
@@ -482,16 +498,13 @@ function LibraryTab(props: {
   t: T
   memos: Memo[]
   trashCount: number
-  libraryAvailable: boolean
-  onScope: (scope: 'all' | 'fav' | 'local') => void
+  onScope: (scope: 'all' | 'fav') => void
   onTrash: () => void
-  onHostRecord: () => void
 }) {
   const { palette, t } = props
-  const rows: { id: 'all' | 'fav' | 'local'; icon: string; label: string; badge: number }[] = [
+  const rows: { id: 'all' | 'fav'; icon: string; label: string; badge: number }[] = [
     { id: 'all', icon: 'waveform', label: t('smartAllRecordings'), badge: props.memos.length },
     { id: 'fav', icon: 'star.fill', label: t('smartFavourites'), badge: props.memos.filter((memo) => memo.isFavourite).length },
-    { id: 'local', icon: 'mic', label: t('smartLocalClips'), badge: props.memos.filter((memo) => memo.source === 'local').length },
   ]
   return (
     <div style={{ padding: `${SPACE.s4}px 0` }}>
@@ -527,12 +540,6 @@ function LibraryTab(props: {
         <span style={{ fontSize: 14, color: palette.muted }}>{props.trashCount}</span>
         <Icon name="chevron" size={14} color={palette.muted} />
       </button>
-
-      {props.libraryAvailable ? (
-        <div style={{ padding: `${SPACE.s5}px ${SPACE.s4}px 0` }}>
-          <SecondaryButton palette={palette} title={t('recordIntoLibrary')} icon="mic" onClick={props.onHostRecord} />
-        </div>
-      ) : null}
 
       <div style={{ padding: `${SPACE.s4}px ${SPACE.s4}px`, fontSize: 12, color: palette.muted }}>
         {t('foldersUnavailable')}

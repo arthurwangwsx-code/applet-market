@@ -1,50 +1,50 @@
 // 7 个对 AI 提供的工具。
 //
-// 与宿主自带的 24 个 `memo_*` 的关系：**这一组不是复制，是补齐**。它们经 applet action 通道投影成
-// 延迟工具（`appact_<hash>`，模型经 `tool_search / tool_describe / tool_call` 三步发现），
-// 每一条都做宿主工具做不到的事：
-//  · `memo_list` —— 合并**本机剪辑**（宿主工具完全看不到 applet 私有录音）
-//  · `memo_summarize` —— 带**模板**（宿主 `memo_summarize` 只有通用摘要，没有模板参数）
-//  · `memo_export` —— 结构化 Markdown / 文本 / SRT（宿主没有导出工具）
-//  · `memo_transcript` —— 优先返回本应用的**校正稿**（宿主没有校正工具）
-//  · 其余三条是直通宿主工具的稳定入口，让模型只认一套工具名。
+// **2.0.0：这一组现在是这些能力的唯一提供者**，而不是宿主 `memo_*` 的补齐层。
+// 它们经 applet action 通道投影成延迟工具（`appact_<hash>`，模型经
+// `tool_search / tool_describe / tool_call` 三步发现），全部长在本应用自己的数据上。
+//
+// ⚠️ **代价要说清楚**：延迟工具不进常驻 tools 前缀，模型的可发现性比常驻 `memo_*` 低一档
+//（从"一直看得见"变成"搜得到"）。这是「原生模块可退役」的真实代价，不是实现细节——
+// 所以每条 action 的 `keywords` 必须写足中英双语，`tool_search` 全靠它命中。
 
 import { registerActions } from '@aibox/applet-sdk'
-import { summarize } from './ai'
+import { actionItems as extractActionItems, ask as askAI, summarize } from './ai'
 import { clockString, exportMarkdown, exportSRT, exportText, hashText, shortDate } from './format'
 import {
-  askMemo, clipToMemo, fetchActionItems, fetchTranscript, listClips, listLibrary, loadArtifacts,
-  saveArtifacts, startTranscription,
+  clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
 } from './memos'
-import type { Memo, SummaryTemplate } from './types'
+import type { LocalClip, Memo, SummaryTemplate } from './types'
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+async function liveClips(): Promise<LocalClip[]> {
+  return (await listClips()).filter((clip) => !clip.isTrashed)
+}
+
 async function allMemos(): Promise<Memo[]> {
-  const [library, clips] = await Promise.all([listLibrary(), listClips()])
-  return [...library, ...clips.filter((clip) => !clip.isTrashed).map(clipToMemo)]
-    .sort((a, b) => b.createdAt - a.createdAt)
+  return (await liveClips()).map(clipToMemo).sort((a, b) => b.createdAt - a.createdAt)
 }
 
-async function findMemo(id: string): Promise<Memo | null> {
-  return (await allMemos()).find((memo) => memo.id === id) ?? null
+async function findClip(id: string): Promise<LocalClip | null> {
+  return (await liveClips()).find((clip) => clip.id === id) ?? null
 }
 
-/** 取一条录音的可读文稿：优先本应用的校正稿，否则宿主转写。 */
-async function readableTranscript(memo: Memo): Promise<{ text: string; status: string; corrected: boolean }> {
-  if (memo.source === 'local') return { text: '', status: 'none', corrected: false }
-  const transcript = await fetchTranscript(memo.id)
-  const artifacts = await loadArtifacts(memo.id, transcript?.fullText ?? '')
+/** 取一条录音的可读文稿：优先本应用的校正稿，否则原始转写。 */
+async function readableTranscript(clip: LocalClip): Promise<{ text: string; status: string; corrected: boolean }> {
+  const raw = clip.transcriptText ?? ''
+  const status = clip.transcriptStatus ?? (raw ? 'completed' : 'none')
+  const artifacts = await loadArtifacts(clip.id, raw)
   if (artifacts.correctionTurns.length) {
     return {
       text: artifacts.correctionTurns.map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text)).join('\n\n'),
-      status: transcript?.status ?? 'none',
+      status,
       corrected: true,
     }
   }
-  return { text: transcript?.fullText ?? '', status: transcript?.status ?? 'none', corrected: false }
+  return { text: raw, status, corrected: false }
 }
 
 export function registerMemoActions(refresh: () => void, locale: string, labels: {
@@ -60,16 +60,13 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
   registerActions({
     async memo_list(input) {
       const query = text(input?.query).toLowerCase()
-      const source = text(input?.source) || 'all'
       const favOnly = input?.favOnly === true
       let rows = await allMemos()
-      if (source !== 'all') rows = rows.filter((memo) => memo.source === source)
       if (favOnly) rows = rows.filter((memo) => memo.isFavourite)
       if (query) rows = rows.filter((memo) => memo.title.toLowerCase().includes(query))
       if (rows.length === 0) return { ok: true, text: 'No recordings match.', count: 0 }
       const lines = rows.map((memo, index) => {
         const flags = [
-          memo.source === 'local' ? 'on-device' : 'library',
           memo.isFavourite ? 'favourite' : '',
           memo.hasTranscript ? 'transcribed' : '',
           memo.hasAudio ? '' : 'transcript-only',
@@ -83,27 +80,33 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
     async memo_transcribe(input) {
       const id = text(input?.id)
       if (!id) return { ok: false, text: 'Provide the recording id.' }
-      const memo = await findMemo(id)
-      if (!memo) return { ok: false, text: 'Recording not found.' }
-      if (memo.source === 'local') {
-        return {
-          ok: false,
-          text: 'On-device clips cannot be transcribed: the container has no path from applet-private audio '
-            + 'into transcription. Record into the host library instead.',
-        }
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
+      if (clip.transcriptText) {
+        return { ok: true, text: `'${clip.title}' is already transcribed. Read it with memo_transcript.` }
       }
-      const locale = text(input?.locale)
-      const result = await startTranscription(id, locale || undefined)
+      // 2.0.0 起这是**同步**的：`aibox.audio.transcribe` 转完才 resolve，所以不再有
+      // 「排进队列了，请稍后轮询」那一套（1.x 的宿主 `memo_transcribe` 是异步排队）。
+      const wanted = text(input?.locale)
+      const outcome = await transcribeClip(clip.handle, wanted ? wanted.replace('_', '-') : localeTag('auto'))
+      if (!outcome.ok) return { ok: false, text: `Could not transcribe: ${outcome.error}` }
+      await saveClip({
+        ...clip,
+        transcriptText: outcome.text,
+        transcriptLocale: outcome.locale,
+        transcriptSegments: outcome.segments,
+        transcriptStatus: 'completed',
+      })
       refresh()
-      return { ok: result.ok, text: result.ok ? result.text || `Transcription queued for '${memo.title}'.` : (result.error ?? 'Failed.') }
+      return { ok: true, text: outcome.text || `Transcribed '${clip.title}' (no speech detected).` }
     },
 
     async memo_transcript(input) {
       const id = text(input?.id)
       if (!id) return { ok: false, text: 'Provide the recording id.' }
-      const memo = await findMemo(id)
-      if (!memo) return { ok: false, text: 'Recording not found.' }
-      const readable = await readableTranscript(memo)
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
+      const readable = await readableTranscript(clip)
       if (!readable.text) {
         return { ok: true, text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`, status: readable.status }
       }
@@ -114,14 +117,14 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
     async memo_summarize(input) {
       const id = text(input?.id)
       if (!id) return { ok: false, text: 'Provide the recording id.' }
-      const memo = await findMemo(id)
-      if (!memo) return { ok: false, text: 'Recording not found.' }
-      const readable = await readableTranscript(memo)
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
+      const readable = await readableTranscript(clip)
       if (!readable.text.trim()) return { ok: false, text: 'No transcript — run memo_transcribe first.' }
       const template = (text(input?.template) || 'general') as SummaryTemplate
       try {
         const result = await summarize(readable.text, template)
-        const artifacts = await loadArtifacts(memo.id, readable.text)
+        const artifacts = await loadArtifacts(clip.id, readable.text)
         await saveArtifacts({
           ...artifacts,
           summaryText: result.text,
@@ -143,9 +146,16 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
     async memo_action_items(input) {
       const id = text(input?.id)
       if (!id) return { ok: false, text: 'Provide the recording id.' }
-      const memo = await findMemo(id)
-      if (!memo || memo.source === 'local') return { ok: false, text: 'Recording not found in the host library.' }
-      const items = await fetchActionItems(id, input?.force === true)
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
+      const readable = await readableTranscript(clip)
+      if (!readable.text.trim()) return { ok: false, text: 'No transcript — run memo_transcribe first.' }
+      const artifacts = await loadArtifacts(clip.id, readable.text)
+      const cached = artifacts.actionItems
+      const items = (!cached.length || input?.force === true)
+        ? await extractActionItems(readable.text).catch(() => [])
+        : cached
+      if (items !== cached) await saveArtifacts({ ...artifacts, actionItems: items, sourceHash: hashText(readable.text) })
       if (items.length === 0) return { ok: true, text: 'No action items found.', count: 0 }
       const lines = items.map((item) => {
         const tail = [item.owner, item.dueHint, item.sourceTime !== undefined ? clockString(item.sourceTime) : '']
@@ -160,26 +170,27 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
       const id = text(input?.id)
       const question = text(input?.question)
       if (!id || !question) return { ok: false, text: 'Provide both the recording id and a question.' }
-      const memo = await findMemo(id)
-      if (!memo || memo.source === 'local') return { ok: false, text: 'Recording not found in the host library.' }
-      const result = await askMemo(id, question)
-      if (!result.ok || !result.text.trim()) return { ok: false, text: result.error ?? 'No answer.' }
-      return { ok: true, text: result.text }
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
+      const readable = await readableTranscript(clip)
+      if (!readable.text.trim()) return { ok: false, text: 'No transcript — run memo_transcribe first.' }
+      const answer = await askAI(readable.text, question).catch(() => '')
+      if (!answer.trim()) return { ok: false, text: 'No answer.' }
+      return { ok: true, text: answer }
     },
 
     async memo_export(input) {
       const id = text(input?.id)
       if (!id) return { ok: false, text: 'Provide the recording id.' }
-      const memo = await findMemo(id)
-      if (!memo) return { ok: false, text: 'Recording not found.' }
+      const clip = await findClip(id)
+      if (!clip) return { ok: false, text: 'Recording not found.' }
       const format = (text(input?.format) || 'markdown') as 'markdown' | 'text' | 'srt'
-      const transcript = memo.source === 'library' ? await fetchTranscript(memo.id) : null
-      const artifacts = await loadArtifacts(memo.id, transcript?.fullText ?? '')
+      const artifacts = await loadArtifacts(clip.id, clip.transcriptText ?? '')
       const payload = {
-        memo,
+        memo: clipToMemo(clip),
         locale,
         summary: artifacts.summaryText,
-        transcript: transcript?.fullText ?? '',
+        transcript: clip.transcriptText ?? '',
         correctionTurns: artifacts.correctionTurns,
         chapters: artifacts.chapters,
         actionItems: artifacts.actionItems,

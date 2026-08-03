@@ -8,15 +8,13 @@ import '@aibox/applet-sdk';
 
 declare module '@aibox/applet-sdk' {
   interface AppletActionMap {
-    /** Lists voice recordings, newest first. Covers both the host recordings library and this app's own in-app clips (which the built-in memo tools cannot see). Filter by a text query, favourites only, or source. Read-only. */
+    /** Lists this app's voice recordings, newest first. Filter by a text query or favourites only. Read-only. */
     "memo_list": {
       input: {
         /** Only favourited recordings. */
         favOnly?: boolean;
         /** Match against the recording title. */
         query?: string;
-        /** 'library' = host recordings library, 'local' = clips recorded inside this app. Defaults to 'all'. */
-        source?: "all" | "library" | "local";
       };
       output: {
         count?: number;
@@ -24,7 +22,7 @@ declare module '@aibox/applet-sdk' {
         text: string;
       };
     };
-    /** Starts Apple speech transcription for one recording and returns immediately — it does not wait for completion. Poll memo_transcript to read the result. Only recordings in the host library can be transcribed; in-app clips cannot. */
+    /** Transcribes one recording with Apple speech recognition and returns the text. It waits for completion, so a long recording can take minutes. Already-transcribed recordings return immediately; read them with memo_transcript. */
     "memo_transcribe": {
       input: {
         /** The recording id from memo_list. */
@@ -37,7 +35,7 @@ declare module '@aibox/applet-sdk' {
         text: string;
       };
     };
-    /** Returns the transcript of one recording: status, language, and the full text. Prefers this app's speaker-corrected version when one exists. Read-only. */
+    /** Returns the transcript of one recording: status and the full text. Prefers the speaker-corrected version when one exists. Read-only. */
     "memo_transcript": {
       input: {
         /** The recording id from memo_list. */
@@ -49,7 +47,7 @@ declare module '@aibox/applet-sdk' {
         text: string;
       };
     };
-    /** Summarizes a recording's transcript and returns the summary text. Unlike the built-in summary this one takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first. */
+    /** Summarizes a recording's transcript and returns the summary text. Takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first. */
     "memo_summarize": {
       input: {
         /** The recording id from memo_list. */
@@ -63,7 +61,7 @@ declare module '@aibox/applet-sdk' {
         text: string;
       };
     };
-    /** Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker stated one. Needs a completed transcript. */
+    /** Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker actually stated one. Nothing is invented. Needs a completed transcript. */
     "memo_action_items": {
       input: {
         /** Re-extract instead of returning the cached result. */

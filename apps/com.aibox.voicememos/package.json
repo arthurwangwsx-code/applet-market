@@ -1,8 +1,8 @@
 {
   "name": "@aibox-app/voicememos",
   "private": true,
-  "version": "1.0.0",
-  "description": "语音备忘录 —— VoiceMemosKit 的小应用复刻（TypeScript + Vite）。",
+  "version": "2.0.0",
+  "description": "语音备忘录 —— 录音 / 转写 / AI 全部长在 aibox.audio + aibox.ai 上，不依赖任何宿主模块（TypeScript + Vite）。",
   "type": "module",
   "scripts": {
     "gen:actions": "node -e \"import('@aibox/applet-vite').then(async m=>{const fs=await import('node:fs');fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\"",

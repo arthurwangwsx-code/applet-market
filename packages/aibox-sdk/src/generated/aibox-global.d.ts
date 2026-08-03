@@ -4,7 +4,7 @@
 //   · Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletDeveloperSDK.swift（aiTypeScript）
 //   · applet-market/docs/api/capabilities.snapshot.json（descriptor 快照，由 gen-api-docs.mjs 抽取）
 // 重新生成： npm run sdk:types      漂移检查： npm run sdk:types:check
-// 命名空间：43 个（宿主恒有 15 个、可声明 25 个）
+// 命名空间：44 个（宿主恒有 16 个、可声明 25 个）
 
 /* eslint-disable */
 declare namespace aibox {
@@ -199,6 +199,69 @@ declare namespace aibox {
     /** Tabs cannot be added, removed or re-identified at runtime. */
     function update(input: { items: Record<string, ItemPatch> }): Promise<State>
     function reset(): Promise<State>
+    function on(event: "changed", handler: (state: State) => void): () => void
+  }
+
+  /**
+   * 悬浮层：宿主画在底栏之上的**常驻控制层**（录音键、迷你播放器、批量操作条）。
+   * 不要用 position:fixed 自绘 —— 自绘补不齐材质、安全区、键盘避让与和底栏的层叠。
+   * 它自己占掉那份高度，所以永远不会盖住内容的最后一行。
+   */
+  namespace overlay {
+    interface ControlState {
+      id: string
+      icon: string | null
+      activeIcon: string | null
+      tint: "default" | "accent" | "danger"
+      active: boolean
+      enabled: boolean
+    }
+    interface ItemState {
+      id: string
+      kind: "bar" | "button"
+      icon: string | null
+      activeIcon: string | null
+      title: string | null
+      subtitle: string | null
+      tint: "default" | "accent" | "danger"
+      progress: number | null
+      active: boolean
+      enabled: boolean
+      hidden: boolean
+      controls: ControlState[]
+    }
+    interface State {
+      declared: boolean
+      /** false on card/sheet/drawer surfaces — put the controls back into your content flow. */
+      rendered: boolean
+      items: ItemState[]
+    }
+    interface ControlPatch {
+      icon?: string | null
+      activeIcon?: string | null
+      tint?: "default" | "accent" | "danger" | null
+      enabled?: boolean | null
+      active?: boolean | null
+    }
+    interface ItemPatch {
+      icon?: string | null
+      activeIcon?: string | null
+      title?: string | null
+      subtitle?: string | null
+      tint?: "default" | "accent" | "danger" | null
+      progress?: number | null
+      active?: boolean | null
+      enabled?: boolean | null
+      hidden?: boolean | null
+      controls?: Record<string, ControlPatch> | null
+    }
+    /** controlId is present only when the user tapped a control inside a `bar`. */
+    interface InvokeEvent { id: string; controlId?: string }
+    function getState(): Promise<State>
+    /** Layers and controls cannot be added, removed or re-identified at runtime. */
+    function update(input: { items: Record<string, ItemPatch> }): Promise<State>
+    function reset(): Promise<State>
+    function on(event: "invoke", handler: (event: InvokeEvent) => void): () => void
     function on(event: "changed", handler: (state: State) => void): () => void
   }
 
@@ -433,6 +496,10 @@ declare namespace aibox {
     function recordCancel(input?: Record<string, never>): Promise<unknown>
     /** Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) already normalized to 0…1 with the same curve the native recorder uses, oldest first — pad the left with zeros and draw the newest at the right edge. Result: {state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb} */
     function recordStatus(input?: Record<string, never>): Promise<unknown>
+    /** Probe whether transcribe() can run for a locale. Never prompts and never transcribes — call it before showing a transcribe button. state tells you WHY it is unavailable: engine-missing (this build has no transcription engine), not-authorized, unsupported-locale, unsupported-os, needs-model-download (transcribe() will download it on first use, so this state is still worth offering). Result: {available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing */
+    function transcribeAvailability(input?: { locale?: string }): Promise<unknown>
+    /** Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pass the handle from recordStop() or picker.file() — never a file path (you do not have one, and the host resolves the handle itself). Long files take minutes; one transcription per applet at a time. First use may prompt for speech recognition and may download the locale model. Result: {text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds */
+    function transcribe(input: { handle: string; locale?: string; segments?: boolean }): Promise<unknown>
   }
 
   namespace browser {
@@ -690,6 +757,15 @@ declare namespace aibox {
   namespace open {
     /** Open an http, https, mailto, or tel URL. Result: boolean */
     function url(input: { url: string }): Promise<unknown>
+  }
+
+  namespace overlay {
+    /** Read the effective overlay items and whether the host actually rendered them (card/sheet/drawer surfaces do not). Always readable — this is the degradation probe. Result: {declared, rendered, items:[{id,kind,icon,activeIcon,title,subtitle,tint,progress,active,enabled,hidden,controls:[{id,icon,activeIcon,tint,active,enabled}]}]} */
+    function getState(input?: Record<string, never>): Promise<unknown>
+    /** Update the display state of declared overlay ids: icon, activeIcon, title, subtitle, tint, progress, active, enabled, hidden, and the same fields on declared controls. Layers and controls cannot be added, removed or renamed by id. Result: overlay state */
+    function update(input: { items: Record<string, unknown> }): Promise<unknown>
+    /** Clear all runtime overlay overrides and restore manifest values. Result: overlay state */
+    function reset(input?: Record<string, never>): Promise<unknown>
   }
 
   namespace photos {
@@ -1008,7 +1084,7 @@ interface Window {
 declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "voiceMemos"
 
 /** 容器恒可用命名空间：无需也不该写进 manifest.permissions.capabilities。 */
-declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "data" | "db" | "jobs" | "lifecycle" | "list" | "menu" | "navigation" | "resource" | "scene" | "tabs" | "toolbar"
+declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "data" | "db" | "jobs" | "lifecycle" | "list" | "menu" | "navigation" | "overlay" | "resource" | "scene" | "tabs" | "toolbar"
 
 // 本文件**必须**保持为 global script（没有顶层 import/export）——加一行 `export {}` 就会把它变成
 // 模块，`declare namespace aibox` 随即只在该模块内可见，全仓的 `aibox.*` 类型一起失效。

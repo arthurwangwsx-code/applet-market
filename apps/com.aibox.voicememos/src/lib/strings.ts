@@ -27,6 +27,8 @@ const TABLE = {
   correcting: { zh: '校正中…', en: 'Correcting…' },
   translating: { zh: '翻译中…', en: 'Translating…' },
   sourceLocal: { zh: '本机', en: 'On device' },
+  hasTranscript: { zh: '已转写', en: 'Transcribed' },
+  transcribeUnavailable: { zh: '此设备暂时无法转写', en: 'Transcription is unavailable on this device' },
   sourceLibrary: { zh: '录音库', en: 'Library' },
 
   // 筛选

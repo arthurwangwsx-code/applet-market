@@ -1,10 +1,13 @@
-// applet 侧的 AI 产物：模板摘要 / 说话人校正 / 翻译。
+// applet 侧的全部 AI 产物：模板摘要 / 待办 / 章节 / 问答 / 转写整理 / 说话人校正 / 翻译。
 //
-// 为什么这三样在这里做而不是调宿主工具（规格 §17.2 缺口⑫）：
-//  · **摘要**：宿主 `memo_summarize` 没有模板参数，只出通用摘要；6 个模板是原生详情页的一等交互，
-//    所以模板那 5 个走 `aibox.ai.generate` + 原生同一套 outputGuide。
-//  · **校正**：宿主**没有**校正工具（`cleanTranscript` 是破坏性 Clean Up，不是非破坏的 correctedText）。
-//  · **翻译**：宿主也没有；结果存进 applet 自己的 db。
+// **2.0.0 起这里是唯一一条 AI 路径**（1.x 有一半走宿主 `memo_*` 工具）。这不是为了"自己造轮子"，
+// 判据很清楚：模型路由、配额、并发闸、超时、结构化输出是**机制**，两个应用只可能有同一个正确答案
+// ——那已经在 `aibox.ai` 里了；而"摘要用哪个模板、待办抽到多细、章节切多长、什么语气"是**策略**，
+// 两个应用可以有不同的、都对的答案 —— 那就该归应用。
+//
+// 1.x 的现场记录本身就是证据：即便宿主工具在场，摘要 / 校正 / 翻译三样也早就绕开它们了，
+// 因为「宿主 `memo_summarize` 没有模板参数」「宿主没有非破坏的校正」「宿主没有翻译」。
+// 2.0.0 只是把剩下的待办 / 章节 / 问答 / 整理也搬到同一条路上，顺带让整个应用不再依赖任何宿主模块。
 //
 // 两条从原生照搬的纪律：
 //  · **JSON 提取器必须用半开区间** —— 闭区间会在「模型返回纯 JSON、结尾就是 `}`」时越界，
@@ -14,7 +17,7 @@
 //    所以复刻版的校正段**不带时间戳**，而不是把模型编的秒数当真显示出来。
 
 import { normalizeError } from '@aibox/applet-sdk'
-import type { CorrectionTurn, SpeakerMode, SummaryTemplate } from './types'
+import type { ActionItem, ActionItemKind, Chapter, CorrectionTurn, SpeakerMode, SummaryTemplate } from './types'
 
 /** 长文本截断口径，与原生一致（8000 字符）。 */
 const MAX_CHARS = 8000
@@ -143,6 +146,114 @@ export async function summarize(transcript: string, template: SummaryTemplate): 
     temperature: 0.3,
   })
   return { text: body.trim(), points: [] }
+}
+
+
+// —— 待办 / 章节 / 问答 / 转写整理（2.0.0 从宿主 memo_* 工具搬过来） ——
+
+/**
+ * 抽待办。**只抽真的被说出口的**——模型最爱干的事就是把"我们应该考虑一下"升格成一条任务，
+ * 于是列表里全是没人认领的幻觉条目。提示词里把这条写死，并要求 owner/due 只在原话里出现时才填。
+ */
+export async function actionItems(transcript: string): Promise<ActionItem[]> {
+  const text = clip(transcript.trim())
+  if (!text) throw new AiError('empty-transcript')
+  const raw = await generate({
+    system: 'You extract commitments from spoken recordings. You never invent tasks that were not actually stated.',
+    prompt: 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n'
+      + '[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\n'
+      + 'Rules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. '
+      + 'Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. '
+      + 'Use the language of the transcript.\n\nTranscript:\n' + text,
+    maxTokens: 900,
+    temperature: 0.2,
+  })
+  const parsed = extractJSON<Record<string, unknown>[]>(raw)
+  if (!Array.isArray(parsed)) return []
+  const kinds: ActionItemKind[] = ['task', 'decision', 'commitment']
+  return parsed
+    .map((item, index) => {
+      const kind = String(item.kind ?? 'task') as ActionItemKind
+      return {
+        id: `item-${index}`,
+        text: String(item.text ?? '').trim(),
+        kind: kinds.includes(kind) ? kind : 'task',
+        isDone: false,
+        owner: item.owner ? String(item.owner) : undefined,
+        dueHint: item.dueHint ? String(item.dueHint) : undefined,
+      }
+    })
+    .filter((item) => item.text)
+}
+
+/**
+ * 切章节。秒数用**转写分段**校准而不是信模型：模型报的时间戳几乎总是编的
+ * （原生实现靠 startPhrase 回查原始 segments，这里同理）。没有分段时退回模型给的秒数，
+ * 但那时章节只用于阅读定位，点击跳转本来也不可用。
+ */
+export async function chapters(transcript: string, segments: { text: string; start: number }[]): Promise<Chapter[]> {
+  const text = clip(transcript.trim())
+  if (!text) throw new AiError('empty-transcript')
+  const raw = await generate({
+    system: 'You segment spoken recordings into chapters.',
+    prompt: 'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n'
+      + '[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\n'
+      + 'Rules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim '
+      + 'from the transcript. Use the language of the transcript.\n\nTranscript:\n' + text,
+    maxTokens: 700,
+    temperature: 0.3,
+  })
+  const parsed = extractJSON<Record<string, unknown>[]>(raw)
+  if (!Array.isArray(parsed)) return []
+  return parsed
+    .map((item) => ({
+      title: String(item.title ?? '').trim(),
+      start: locateStart(String(item.startPhrase ?? ''), segments),
+    }))
+    .filter((chapter) => chapter.title)
+}
+
+/** 用 startPhrase 在分段里回查真实秒数；查不到回 0（章节仍可读，只是点了不跳）。 */
+function locateStart(phrase: string, segments: { text: string; start: number }[]): number {
+  const needle = phrase.trim().toLowerCase()
+  if (!needle || segments.length === 0) return 0
+  const hit = segments.find((segment) => segment.text.toLowerCase().includes(needle.slice(0, 24)))
+  return hit ? Math.max(0, Math.floor(hit.start)) : 0
+}
+
+/** 只用转录内容回答；转录里没有就明说没有，不要去别处找答案。 */
+export async function ask(transcript: string, question: string): Promise<string> {
+  const text = clip(transcript.trim())
+  if (!text) throw new AiError('empty-transcript')
+  if (!question.trim()) throw new AiError('empty-question')
+  const answer = await generate({
+    system: 'You answer questions about one recording using ONLY its transcript. '
+      + 'If the transcript does not contain the answer, say so plainly instead of guessing.',
+    prompt: `Question: ${question.trim()}\n\nTranscript:\n${text}`,
+    maxTokens: 700,
+    temperature: 0.2,
+  })
+  return answer.trim()
+}
+
+/**
+ * 转写整理：去口水词、补标点、分段。
+ * ⚠️ 与宿主的 `memo_clean_transcript` 有一处**关键差别**：宿主那条是破坏性的（直接改写 fullText
+ * 并置 isEdited，之后所有 AI 产物作废）。这里产出的是**另一份文本**，原始转写一个字都不动——
+ * 用户随时可以切回去看原文。
+ */
+export async function cleanTranscript(transcript: string): Promise<string> {
+  const text = clip(transcript.trim())
+  if (!text) throw new AiError('empty-transcript')
+  const cleaned = await generate({
+    system: 'You clean up raw speech-to-text output.',
+    prompt: 'Remove filler words and false starts, fix punctuation and capitalization, and break the text into '
+      + 'paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. '
+      + 'Output only the cleaned text.\n\nTranscript:\n' + text,
+    maxTokens: 2000,
+    temperature: 0.2,
+  })
+  return cleaned.trim()
 }
 
 // —— 说话人校正（规格 §4.9） ——

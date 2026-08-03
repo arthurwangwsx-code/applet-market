@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "1.0.1",
+  "latestVersion": "2.0.0",
   "releases": [
+    {
+      "version": "2.0.0",
+      "releasedAt": "2026-08-03T12:20:39Z",
+      "notes": "只用通用能力：录音、转写与 AI 全部走 aibox.audio + aibox.ai，本应用不再依赖宿主录音模块。转写改由 aibox.audio.transcribe 直接处理应用内录音并返回带时间戳的分段，于是原文可以点句跳转、章节能定位到真实秒数；待办 / 问答 / 文本整理也一并搬到本地模型调用，整理不再破坏原始转写。",
+      "fileCount": 4,
+      "totalBytes": 188182,
+      "path": "apps/com.aibox.voicememos/releases/2.0.0",
+      "localizedNotes": {
+        "en": "Now built on general capabilities only: recording, transcription and AI all run on aibox.audio + aibox.ai, so the app no longer depends on the host Voice Memos module. Transcription goes through aibox.audio.transcribe and returns timestamped segments, so the transcript is tap-to-seek and chapters land on real timecodes. Action items, Q&A and clean-up moved to on-device model calls too, and clean-up no longer destroys the original transcript."
+      },
+      "bundleSha256": "e06b878ae07b464f36b8354eecc075be7bc04f05ce9152e4cbfcbca5da368068"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T04:08:43Z",

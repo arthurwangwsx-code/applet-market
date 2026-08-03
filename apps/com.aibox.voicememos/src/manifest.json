@@ -19,7 +19,6 @@
     "storage": true,
     "ai": true,
     "capabilities": [
-      "voiceMemos",
       "audio",
       "share",
       "clipboard",
@@ -73,7 +72,7 @@
       "id": "memo.list",
       "name": "memo_list",
       "displayName": "列出录音",
-      "summary": "Lists voice recordings, newest first. Covers both the host recordings library and this app's own in-app clips (which the built-in memo tools cannot see). Filter by a text query, favourites only, or source. Read-only.",
+      "summary": "Lists this app's voice recordings, newest first. Filter by a text query or favourites only. Read-only.",
       "keywords": [
         "voice memo",
         "recording",
@@ -83,7 +82,7 @@
         "语音备忘录",
         "录音列表"
       ],
-      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Match against the recording title.\"},\"favOnly\":{\"type\":\"boolean\",\"description\":\"Only favourited recordings.\"},\"source\":{\"type\":\"string\",\"enum\":[\"all\",\"library\",\"local\"],\"description\":\"'library' = host recordings library, 'local' = clips recorded inside this app. Defaults to 'all'.\"}},\"additionalProperties\":false}",
+      "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Match against the recording title.\"},\"favOnly\":{\"type\":\"boolean\",\"description\":\"Only favourited recordings.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
       "headless": true,
       "visibility": [
@@ -98,7 +97,7 @@
       "id": "memo.transcribe",
       "name": "memo_transcribe",
       "displayName": "转写录音",
-      "summary": "Starts Apple speech transcription for one recording and returns immediately — it does not wait for completion. Poll memo_transcript to read the result. Only recordings in the host library can be transcribed; in-app clips cannot.",
+      "summary": "Transcribes one recording with Apple speech recognition and returns the text. It waits for completion, so a long recording can take minutes. Already-transcribed recordings return immediately; read them with memo_transcript.",
       "keywords": [
         "transcribe",
         "speech to text",
@@ -122,7 +121,7 @@
       "id": "memo.transcript",
       "name": "memo_transcript",
       "displayName": "读取转写",
-      "summary": "Returns the transcript of one recording: status, language, and the full text. Prefers this app's speaker-corrected version when one exists. Read-only.",
+      "summary": "Returns the transcript of one recording: status and the full text. Prefers the speaker-corrected version when one exists. Read-only.",
       "keywords": [
         "transcript",
         "read transcript",
@@ -146,7 +145,7 @@
       "id": "memo.summarize",
       "name": "memo_summarize",
       "displayName": "生成摘要",
-      "summary": "Summarizes a recording's transcript and returns the summary text. Unlike the built-in summary this one takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
+      "summary": "Summarizes a recording's transcript and returns the summary text. Takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
       "keywords": [
         "summary",
         "summarize",
@@ -171,7 +170,7 @@
       "id": "memo.actionItems",
       "name": "memo_action_items",
       "displayName": "提取待办",
-      "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker stated one. Needs a completed transcript.",
+      "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker actually stated one. Nothing is invented. Needs a completed transcript.",
       "keywords": [
         "action items",
         "todo",

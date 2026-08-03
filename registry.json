@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T05:09:44Z",
+  "updatedAt": "2026-08-03T12:20:39Z",
   "appCount": 7,
   "apps": [
     {
@@ -211,9 +211,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.0.1",
-      "latestReleasedAt": "2026-08-03T04:08:43Z",
-      "versionCount": 2,
+      "latestVersion": "2.0.0",
+      "latestReleasedAt": "2026-08-03T12:20:39Z",
+      "versionCount": 3,
       "capabilities": [
         "ai",
         "audio",
@@ -222,10 +222,9 @@
         "share",
         "storage",
         "tabs",
-        "ui",
-        "voiceMemos"
+        "ui"
       ],
-      "latestTotalBytes": 186503,
+      "latestTotalBytes": 188182,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",

@@ -317,139 +317,271 @@ function registerActions(handlers) {
   }
 }
 __name(registerActions, "registerActions");
-const api = /* @__PURE__ */ __name(() => typeof window !== "undefined" ? window.aibox : void 0, "api");
-const capabilities = {
-  get library() {
-    return Boolean(api()?.voiceMemos);
-  },
-  get shareFile() {
-    return typeof api()?.share?.file === "function";
-  }
-};
-async function memoCall(method, args = {}) {
-  const bridge2 = api();
-  const namespace = bridge2?.voiceMemos;
-  if (!namespace || typeof namespace[method] !== "function") {
-    return { ok: false, text: "", json: null, error: "aibox/voicememos-unavailable" };
-  }
-  try {
-    const raw = await namespace[method](args);
-    const text2 = String(raw?.text ?? "");
-    const ok = !(raw?.ok === false || raw?.isError === true);
-    return { ok, text: text2, json: parseJSON(text2), error: ok ? null : text2 };
-  } catch (error) {
-    return { ok: false, text: "", json: null, error: normalizeError(error).message };
+const MAX_CHARS = 8e3;
+const ai = /* @__PURE__ */ __name(() => {
+  const bridge2 = typeof window !== "undefined" ? window.aibox : void 0;
+  return bridge2?.ai && typeof bridge2.ai.generate === "function" ? bridge2.ai : void 0;
+}, "ai");
+class AiError extends Error {
+  static {
+    __name(this, "AiError");
   }
 }
-__name(memoCall, "memoCall");
-function parseJSON(text2) {
-  const trimmed = String(text2 ?? "").trim();
-  if (!trimmed || trimmed[0] !== "{" && trimmed[0] !== "[") return null;
+function clip(text2) {
+  return text2.length > MAX_CHARS ? text2.slice(0, MAX_CHARS) : text2;
+}
+__name(clip, "clip");
+function extractJSON(raw) {
+  let text2 = String(raw ?? "").trim();
+  if (text2.startsWith("```")) {
+    const lines = text2.split("\n");
+    if (lines[0]?.startsWith("```")) lines.shift();
+    if (lines[lines.length - 1]?.startsWith("```")) lines.pop();
+    text2 = lines.join("\n");
+  }
+  const objectStart = text2.indexOf("{");
+  const objectEnd = text2.lastIndexOf("}");
+  const arrayStart = text2.indexOf("[");
+  const arrayEnd = text2.lastIndexOf("]");
+  let slice = text2;
+  if (arrayStart >= 0 && arrayEnd > arrayStart && (objectStart < 0 || arrayStart < objectStart)) {
+    slice = text2.slice(arrayStart, arrayEnd + 1);
+  } else if (objectStart >= 0 && objectEnd > objectStart) {
+    slice = text2.slice(objectStart, objectEnd + 1);
+  }
   try {
-    return JSON.parse(trimmed);
+    return JSON.parse(slice);
   } catch {
     return null;
   }
 }
-__name(parseJSON, "parseJSON");
-async function listLibrary(input = {}) {
-  const args = {};
-  if (input.query) args.query = input.query;
-  if (input.favOnly) args.favOnly = true;
-  const result = await memoCall("list", args);
-  if (!Array.isArray(result.json)) return [];
-  return result.json.map(toMemo);
+__name(extractJSON, "extractJSON");
+async function generate(input) {
+  const api2 = ai();
+  if (!api2) throw new AiError("aibox/ai-unavailable");
+  try {
+    return await api2.generate({ ...input, intent: "balanced" });
+  } catch (error) {
+    throw new AiError(normalizeError(error).message);
+  }
 }
-__name(listLibrary, "listLibrary");
-function toMemo(raw) {
-  return {
-    id: String(raw.id ?? ""),
-    source: "library",
-    title: String(raw.title ?? ""),
-    duration: Number(raw.duration ?? 0),
-    // 宿主给的是 unix **秒**，本地统一用毫秒。
-    createdAt: Number(raw.createdAt ?? 0) * 1e3,
-    isFavourite: Boolean(raw.isFavourite),
-    hasTranscript: Boolean(raw.hasTranscript),
-    hasAudio: raw.hasAudio !== false,
-    isAudioProtected: Boolean(raw.isAudioProtected),
-    folder: raw.folder
-  };
+__name(generate, "generate");
+const COMMON_GUIDE = 'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.';
+const TEMPLATE_GUIDE = {
+  general: {
+    system: "You summarize spoken recordings faithfully.",
+    guide: 'Write a 2-3 sentence overview paragraph, then a "## Key Points" section with short bullets.'
+  },
+  meeting: {
+    system: "You write meeting minutes.",
+    guide: 'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" (only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".'
+  },
+  interview: {
+    system: "You write interview debriefs.",
+    guide: 'Sections: "## Candidate", "## Strengths", "## Concerns", "## Notable Q&A", "## Overall".'
+  },
+  oneOnOne: {
+    system: "You write 1:1 notes.",
+    guide: 'Sections: "## Context", "## Feedback & Asks", "## Agreements", "## Next Steps".'
+  },
+  lecture: {
+    system: "You write lecture notes.",
+    guide: 'Sections: "## Overview", "## Key Concepts", "## Conclusions", "## To Review".'
+  },
+  podcast: {
+    system: "You write podcast show notes.",
+    guide: 'Sections: "## Overview", "## Topics", "## Quotes", "## Takeaways".'
+  }
+};
+async function summarize(transcript, template) {
+  const text2 = clip(transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  if (template === "general") {
+    const raw = await generate({
+      system: TEMPLATE_GUIDE.general.system,
+      prompt: 'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\nAnswer in the language of the transcript.\n\nTranscript:\n' + text2,
+      maxTokens: 900,
+      temperature: 0.3
+    });
+    const parsed = extractJSON(raw);
+    if (parsed && typeof parsed.abstract === "string" && parsed.abstract.trim()) {
+      return {
+        text: parsed.abstract.trim(),
+        points: Array.isArray(parsed.points) ? parsed.points.map((item) => String(item)).filter(Boolean) : []
+      };
+    }
+    return { text: raw.trim(), points: [] };
+  }
+  const spec = TEMPLATE_GUIDE[template];
+  const body = await generate({
+    system: spec.system,
+    prompt: `${COMMON_GUIDE}
+${spec.guide}
+
+Transcript:
+${text2}`,
+    maxTokens: 1400,
+    temperature: 0.3
+  });
+  return { text: body.trim(), points: [] };
 }
-__name(toMemo, "toMemo");
-async function fetchTranscript(id) {
-  const result = await memoCall("transcript", { id });
-  const json = result.json;
-  if (!json) return null;
-  return {
-    status: String(json.status ?? "none") ?? "none",
-    fullText: String(json.fullText ?? ""),
-    locale: String(json.locale ?? ""),
-    isEdited: Boolean(json.isEdited),
-    segmentCount: Number(json.segmentCount ?? 0)
-  };
+__name(summarize, "summarize");
+async function actionItems(transcript) {
+  const text2 = clip(transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  const raw = await generate({
+    system: "You extract commitments from spoken recordings. You never invent tasks that were not actually stated.",
+    prompt: 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\nRules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. Use the language of the transcript.\n\nTranscript:\n' + text2,
+    maxTokens: 900,
+    temperature: 0.2
+  });
+  const parsed = extractJSON(raw);
+  if (!Array.isArray(parsed)) return [];
+  const kinds = ["task", "decision", "commitment"];
+  return parsed.map((item, index) => {
+    const kind = String(item.kind ?? "task");
+    return {
+      id: `item-${index}`,
+      text: String(item.text ?? "").trim(),
+      kind: kinds.includes(kind) ? kind : "task",
+      isDone: false,
+      owner: item.owner ? String(item.owner) : void 0,
+      dueHint: item.dueHint ? String(item.dueHint) : void 0
+    };
+  }).filter((item) => item.text);
 }
-__name(fetchTranscript, "fetchTranscript");
-async function startTranscription(id, locale) {
-  return memoCall("transcribe", locale ? { id, locale } : { id });
+__name(actionItems, "actionItems");
+async function chapters(transcript, segments) {
+  const text2 = clip(transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  const raw = await generate({
+    system: "You segment spoken recordings into chapters.",
+    prompt: 'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\nRules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim from the transcript. Use the language of the transcript.\n\nTranscript:\n' + text2,
+    maxTokens: 700,
+    temperature: 0.3
+  });
+  const parsed = extractJSON(raw);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((item) => ({
+    title: String(item.title ?? "").trim(),
+    start: locateStart(String(item.startPhrase ?? ""), segments)
+  })).filter((chapter) => chapter.title);
 }
-__name(startTranscription, "startTranscription");
-async function renameMemo(id, title) {
-  return memoCall("rename", { id, title });
+__name(chapters, "chapters");
+function locateStart(phrase, segments) {
+  const needle = phrase.trim().toLowerCase();
+  if (!needle || segments.length === 0) return 0;
+  const hit = segments.find((segment) => segment.text.toLowerCase().includes(needle.slice(0, 24)));
+  return hit ? Math.max(0, Math.floor(hit.start)) : 0;
 }
-__name(renameMemo, "renameMemo");
-async function deleteMemo(id) {
-  return memoCall("delete", { id });
+__name(locateStart, "locateStart");
+async function ask(transcript, question) {
+  const text2 = clip(transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  if (!question.trim()) throw new AiError("empty-question");
+  const answer = await generate({
+    system: "You answer questions about one recording using ONLY its transcript. If the transcript does not contain the answer, say so plainly instead of guessing.",
+    prompt: `Question: ${question.trim()}
+
+Transcript:
+${text2}`,
+    maxTokens: 700,
+    temperature: 0.2
+  });
+  return answer.trim();
 }
-__name(deleteMemo, "deleteMemo");
-async function toggleFavourite(id) {
-  return memoCall("favourite", { id });
-}
-__name(toggleFavourite, "toggleFavourite");
-async function playMemo(id) {
-  return memoCall("play", { id });
-}
-__name(playMemo, "playMemo");
-async function stopPlayback() {
-  return memoCall("stop", {});
-}
-__name(stopPlayback, "stopPlayback");
-async function seekMemo(input) {
-  return memoCall("seek", input);
-}
-__name(seekMemo, "seekMemo");
-async function fetchActionItems(id, force = false) {
-  const result = await memoCall("actionItems", force ? { id, force: true } : { id });
-  if (!Array.isArray(result.json)) return [];
-  return result.json.map((raw, index) => ({
-    id: String(raw.id ?? `item-${index}`),
-    text: String(raw.text ?? ""),
-    kind: String(raw.kind ?? "task") ?? "task",
-    isDone: Boolean(raw.isDone),
-    owner: raw.owner ? String(raw.owner) : void 0,
-    dueHint: raw.dueHint ? String(raw.dueHint) : void 0,
-    sourceTime: typeof raw.sourceTime === "number" ? raw.sourceTime : void 0
-  })).filter((item) => item.text);
-}
-__name(fetchActionItems, "fetchActionItems");
-async function fetchChapters(id, force = false) {
-  const result = await memoCall("chapters", force ? { id, force: true } : { id });
-  if (!Array.isArray(result.json)) return [];
-  return result.json.map((raw) => ({ title: String(raw.title ?? ""), start: Number(raw.start ?? 0) })).filter((chapter) => chapter.title);
-}
-__name(fetchChapters, "fetchChapters");
-async function askMemo(id, question) {
-  return memoCall("ask", { id, question });
-}
-__name(askMemo, "askMemo");
-async function cleanTranscript(id) {
-  return memoCall("cleanTranscript", { id });
+__name(ask, "ask");
+async function cleanTranscript(transcript) {
+  const text2 = clip(transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  const cleaned = await generate({
+    system: "You clean up raw speech-to-text output.",
+    prompt: "Remove filler words and false starts, fix punctuation and capitalization, and break the text into paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. Output only the cleaned text.\n\nTranscript:\n" + text2,
+    maxTokens: 2e3,
+    temperature: 0.2
+  });
+  return cleaned.trim();
 }
 __name(cleanTranscript, "cleanTranscript");
-async function hostRecordStart(title) {
-  return memoCall("recordStart", title ? { title } : {});
+const SPEAKER_COLOR_COUNT = 6;
+async function correct(input) {
+  const text2 = clip(input.transcript.trim());
+  if (!text2) throw new AiError("empty-transcript");
+  const speakerRule = input.mode === "none" ? 'Do NOT attribute speakers; return a single turn per paragraph with an empty "speaker".' : input.mode === "named" ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(", ")}. Use those exact names.` : 'Identify how many distinct speakers there are and label them "S1", "S2", … in order of first appearance.';
+  const raw = await generate({
+    system: "You clean up raw speech-recognition transcripts.",
+    prompt: `Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. Preserve meaning and language exactly — do not summarize, do not add or remove content. ${speakerRule}
+Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:
+[{"speaker":"S1","text":"..."}]
+
+Transcript:
+` + text2,
+    maxTokens: 2400,
+    temperature: 0.2
+  });
+  const parsed = extractJSON(raw);
+  if (!Array.isArray(parsed)) throw new AiError("unparseable");
+  const order = [];
+  const turns = [];
+  for (const item of parsed) {
+    const body = String(item?.text ?? "").trim();
+    if (!body) continue;
+    const speaker = String(item?.speaker ?? "").trim();
+    if (speaker && !order.includes(speaker)) order.push(speaker);
+    turns.push({
+      speaker,
+      colorIndex: speaker ? order.indexOf(speaker) % SPEAKER_COLOR_COUNT : 0,
+      text: body
+    });
+  }
+  if (turns.length === 0) throw new AiError("empty-result");
+  return turns;
 }
-__name(hostRecordStart, "hostRecordStart");
+__name(correct, "correct");
+function speakerDisplayName(label, index, template) {
+  const trimmed = label.trim();
+  if (!trimmed) return template.replace("{n}", String(index + 1));
+  const match = /^S(\d+)$/i.exec(trimmed);
+  if (match) return template.replace("{n}", match[1]);
+  return trimmed;
+}
+__name(speakerDisplayName, "speakerDisplayName");
+const TRANSLATION_LANGS = ["zh", "en", "ja", "ko", "fr", "de", "es", "ru"];
+const LANG_NAME = {
+  zh: "Chinese",
+  en: "English",
+  ja: "Japanese",
+  ko: "Korean",
+  fr: "French",
+  de: "German",
+  es: "Spanish",
+  ru: "Russian"
+};
+const TRANSLATE_CHUNK = 4e3;
+async function translate(input) {
+  const source = input.text.trim();
+  if (!source) throw new AiError("empty-transcript");
+  const name = LANG_NAME[input.lang];
+  const guide = input.bilingual ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation on the next line, then a blank line. Do not add any other commentary.` : `Output ONLY the ${name} translation, preserving paragraph breaks.`;
+  const chunks = [];
+  for (let index = 0; index < source.length; index += TRANSLATE_CHUNK) {
+    chunks.push(source.slice(index, index + TRANSLATE_CHUNK));
+  }
+  const parts = [];
+  for (const chunk of chunks) {
+    parts.push((await generate({ prompt: `${guide}
+
+${chunk}`, maxTokens: 2400, temperature: 0.2 })).trim());
+  }
+  return parts.join("\n\n");
+}
+__name(translate, "translate");
+const api = /* @__PURE__ */ __name(() => typeof window !== "undefined" ? window.aibox : void 0, "api");
+const capabilities = {
+  get shareFile() {
+    return typeof api()?.share?.file === "function";
+  }
+};
 async function recorderAvailability() {
   const bridge2 = api();
   if (!bridge2?.audio) return { available: false, reason: "unavailable", background: false };
@@ -542,6 +674,56 @@ async function recordStop() {
   }
 }
 __name(recordStop, "recordStop");
+async function transcribeAvailability(locale) {
+  const bridge2 = api();
+  if (typeof bridge2?.audio?.transcribeAvailability !== "function") {
+    return { available: false, state: "host-too-old", locale: locale ?? "", engine: false };
+  }
+  try {
+    const value = await bridge2.audio.transcribeAvailability(locale ? { locale } : {});
+    return {
+      available: Boolean(value.available),
+      state: String(value.state ?? ""),
+      locale: String(value.locale ?? locale ?? ""),
+      engine: Boolean(value.engine)
+    };
+  } catch (error) {
+    return { available: false, state: normalizeError(error).message, locale: locale ?? "", engine: false };
+  }
+}
+__name(transcribeAvailability, "transcribeAvailability");
+async function transcribeClip(handle, locale) {
+  const bridge2 = api();
+  const empty = { ok: false, text: "", locale: locale ?? "", segments: [] };
+  if (typeof bridge2?.audio?.transcribe !== "function") {
+    return { ...empty, error: "aibox/unavailable: host-too-old" };
+  }
+  if (!handle) return { ...empty, error: "aibox/invalid-args: missing handle" };
+  try {
+    const value = await bridge2.audio.transcribe(locale ? { handle, locale } : { handle });
+    const segments = Array.isArray(value.segments) ? value.segments.map((raw) => ({
+      text: String(raw.text ?? ""),
+      start: Number(raw.start ?? 0),
+      duration: Number(raw.duration ?? 0),
+      end: Number(raw.end ?? 0)
+    })).filter((segment) => segment.text) : [];
+    return {
+      ok: true,
+      text: String(value.text ?? ""),
+      locale: String(value.locale ?? locale ?? ""),
+      segments,
+      error: ""
+    };
+  } catch (error) {
+    return { ...empty, error: normalizeError(error).message };
+  }
+}
+__name(transcribeClip, "transcribeClip");
+function localeTag(preference) {
+  if (preference === "auto") return void 0;
+  return preference.replace("_", "-");
+}
+__name(localeTag, "localeTag");
 const COLLECTIONS = { clips: "localClips", artifacts: "memoArtifacts" };
 function db() {
   const bridge2 = api();
@@ -707,13 +889,12 @@ __name(saveSetting, "saveSetting");
 function clipToMemo(clip2) {
   return {
     id: clip2.id,
-    source: "local",
     title: clip2.title,
     duration: clip2.durationMs / 1e3,
     createdAt: clip2.createdAt,
     isFavourite: clip2.isFavourite,
-    // 本机剪辑**没有转写路径**：容器里没有任何工具能转写一个 applet 私有资源。
-    hasTranscript: false,
+    // 2.0.0：转写就长在剪辑自己身上（`aibox.audio.transcribe` 的产物直接存进 `aibox.db`）。
+    hasTranscript: Boolean(clip2.transcriptText),
     hasAudio: true,
     isAudioProtected: false,
     url: clip2.url,
@@ -976,10 +1157,10 @@ function ActionItemsSheet(props) {
   const [failed, setFailed] = useState(false);
   const items = props.artifacts?.actionItems ?? [];
   const run = /* @__PURE__ */ __name(async (force) => {
-    if (!props.artifacts) return;
+    if (!props.artifacts || !props.transcript.trim()) return;
     setBusy(true);
     setFailed(false);
-    const next = await fetchActionItems(props.memoID, force);
+    const next = await actionItems(props.transcript).catch(() => []);
     setBusy(false);
     if (next.length === 0 && force) setFailed(true);
     const merged = { ...props.artifacts, actionItems: next };
@@ -1094,9 +1275,9 @@ function AskSheet(props) {
     if (!value || busy) return;
     setBusy(true);
     setAnswer("");
-    const result = await askMemo(props.memoID, value);
+    const result = await ask(props.transcript, value).catch(() => "");
     setBusy(false);
-    setAnswer(result.ok && result.text ? result.text : t("askFailed"));
+    setAnswer(result || t("askFailed"));
   }, "send");
   const starters = [t("askStarter1"), t("askStarter2"), t("askStarter3")];
   return /* @__PURE__ */ jsxs(Sheet, { palette: palette2, open: props.open, onClose: props.onClose, children: [
@@ -1175,12 +1356,15 @@ function CleanUpSheet(props) {
           onClick: /* @__PURE__ */ __name(async () => {
             setBusy(true);
             setFailed(false);
-            const result = await cleanTranscript(props.memoID);
-            setBusy(false);
-            if (!result.ok) {
+            const cleaned = await cleanTranscript(props.transcript).catch(() => "");
+            if (!cleaned) {
+              setBusy(false);
               setFailed(true);
               return;
             }
+            const clip2 = (await listClips()).find((item) => item.id === props.memoID);
+            if (clip2) await saveClip({ ...clip2, transcriptText: cleaned });
+            setBusy(false);
             props.onApplied();
             props.onClose();
           }, "onClick")
@@ -1223,11 +1407,10 @@ const DEFAULT_FILTER = {
   date: "all",
   sort: "newest",
   favOnly: false,
-  withTranscript: false,
-  source: "all"
+  withTranscript: false
 };
 function filterIsActive(filter) {
-  return filter.duration !== "any" || filter.date !== "all" || filter.favOnly || filter.withTranscript || filter.source !== "all";
+  return filter.duration !== "any" || filter.date !== "all" || filter.favOnly || filter.withTranscript;
 }
 __name(filterIsActive, "filterIsActive");
 function MemoList(props) {
@@ -1256,11 +1439,11 @@ function MemoList(props) {
       t,
       dark: props.dark,
       memo,
-      busy: props.busyIDs[`${memo.source}:${memo.id}`],
+      busy: props.busyIDs[memo.id],
       onOpen: /* @__PURE__ */ __name(() => props.onOpen(memo), "onOpen"),
       onMenu: /* @__PURE__ */ __name(() => props.onMenu(memo), "onMenu")
     },
-    `${memo.source}:${memo.id}`
+    memo.id
   )) });
 }
 __name(MemoList, "MemoList");
@@ -1358,7 +1541,11 @@ function MemoRow(props) {
               " ",
               t("transcriptOnly")
             ] }) : null,
-            /* @__PURE__ */ jsx("span", { style: { opacity: 0.8 }, children: memo.source === "local" ? t("sourceLocal") : t("sourceLibrary") })
+            memo.hasTranscript ? /* @__PURE__ */ jsxs("span", { style: { opacity: 0.8 }, children: [
+              /* @__PURE__ */ jsx(Icon, { name: "bubble", size: 11 }),
+              " ",
+              t("hasTranscript")
+            ] }) : null
           ] }),
           memo.snippet ? /* @__PURE__ */ jsxs("div", { style: { fontSize: 12, color: palette2.accent, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
             /* @__PURE__ */ jsx(Icon, { name: "bubble", size: 11 }),
@@ -1380,7 +1567,6 @@ function applyFilter(memos, filter, query) {
     }
     if (filter.favOnly && !memo.isFavourite) return false;
     if (filter.withTranscript && !memo.hasTranscript) return false;
-    if (filter.source !== "all" && memo.source !== filter.source) return false;
     if (filter.duration === "under1m" && !(memo.duration < 60)) return false;
     if (filter.duration === "1to5m" && !(memo.duration >= 60 && memo.duration <= 300)) return false;
     if (filter.duration === "over5m" && !(memo.duration >= 300)) return false;
@@ -1482,11 +1668,6 @@ function FilterSheet(props) {
       { value: "month", label: t("dateMonth") },
       { value: "year", label: t("dateYear") }
     ]),
-    section(t("filterSource"), "source", [
-      { value: "all", label: t("sourceAll") },
-      { value: "library", label: t("sourceLibrary") },
-      { value: "local", label: t("sourceLocal") }
-    ]),
     section(t("filterSort"), "sort", [
       { value: "newest", label: t("sortNewest") },
       { value: "oldest", label: t("sortOldest") },
@@ -1555,188 +1736,6 @@ function Toggle(props) {
   );
 }
 __name(Toggle, "Toggle");
-const MAX_CHARS = 8e3;
-const ai = /* @__PURE__ */ __name(() => {
-  const bridge2 = typeof window !== "undefined" ? window.aibox : void 0;
-  return bridge2?.ai && typeof bridge2.ai.generate === "function" ? bridge2.ai : void 0;
-}, "ai");
-class AiError extends Error {
-  static {
-    __name(this, "AiError");
-  }
-}
-function clip(text2) {
-  return text2.length > MAX_CHARS ? text2.slice(0, MAX_CHARS) : text2;
-}
-__name(clip, "clip");
-function extractJSON(raw) {
-  let text2 = String(raw ?? "").trim();
-  if (text2.startsWith("```")) {
-    const lines = text2.split("\n");
-    if (lines[0]?.startsWith("```")) lines.shift();
-    if (lines[lines.length - 1]?.startsWith("```")) lines.pop();
-    text2 = lines.join("\n");
-  }
-  const objectStart = text2.indexOf("{");
-  const objectEnd = text2.lastIndexOf("}");
-  const arrayStart = text2.indexOf("[");
-  const arrayEnd = text2.lastIndexOf("]");
-  let slice = text2;
-  if (arrayStart >= 0 && arrayEnd > arrayStart && (objectStart < 0 || arrayStart < objectStart)) {
-    slice = text2.slice(arrayStart, arrayEnd + 1);
-  } else if (objectStart >= 0 && objectEnd > objectStart) {
-    slice = text2.slice(objectStart, objectEnd + 1);
-  }
-  try {
-    return JSON.parse(slice);
-  } catch {
-    return null;
-  }
-}
-__name(extractJSON, "extractJSON");
-async function generate(input) {
-  const api2 = ai();
-  if (!api2) throw new AiError("aibox/ai-unavailable");
-  try {
-    return await api2.generate({ ...input, intent: "balanced" });
-  } catch (error) {
-    throw new AiError(normalizeError(error).message);
-  }
-}
-__name(generate, "generate");
-const COMMON_GUIDE = 'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.';
-const TEMPLATE_GUIDE = {
-  general: {
-    system: "You summarize spoken recordings faithfully.",
-    guide: 'Write a 2-3 sentence overview paragraph, then a "## Key Points" section with short bullets.'
-  },
-  meeting: {
-    system: "You write meeting minutes.",
-    guide: 'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" (only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".'
-  },
-  interview: {
-    system: "You write interview debriefs.",
-    guide: 'Sections: "## Candidate", "## Strengths", "## Concerns", "## Notable Q&A", "## Overall".'
-  },
-  oneOnOne: {
-    system: "You write 1:1 notes.",
-    guide: 'Sections: "## Context", "## Feedback & Asks", "## Agreements", "## Next Steps".'
-  },
-  lecture: {
-    system: "You write lecture notes.",
-    guide: 'Sections: "## Overview", "## Key Concepts", "## Conclusions", "## To Review".'
-  },
-  podcast: {
-    system: "You write podcast show notes.",
-    guide: 'Sections: "## Overview", "## Topics", "## Quotes", "## Takeaways".'
-  }
-};
-async function summarize(transcript, template) {
-  const text2 = clip(transcript.trim());
-  if (!text2) throw new AiError("empty-transcript");
-  if (template === "general") {
-    const raw = await generate({
-      system: TEMPLATE_GUIDE.general.system,
-      prompt: 'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\nAnswer in the language of the transcript.\n\nTranscript:\n' + text2,
-      maxTokens: 900,
-      temperature: 0.3
-    });
-    const parsed = extractJSON(raw);
-    if (parsed && typeof parsed.abstract === "string" && parsed.abstract.trim()) {
-      return {
-        text: parsed.abstract.trim(),
-        points: Array.isArray(parsed.points) ? parsed.points.map((item) => String(item)).filter(Boolean) : []
-      };
-    }
-    return { text: raw.trim(), points: [] };
-  }
-  const spec = TEMPLATE_GUIDE[template];
-  const body = await generate({
-    system: spec.system,
-    prompt: `${COMMON_GUIDE}
-${spec.guide}
-
-Transcript:
-${text2}`,
-    maxTokens: 1400,
-    temperature: 0.3
-  });
-  return { text: body.trim(), points: [] };
-}
-__name(summarize, "summarize");
-const SPEAKER_COLOR_COUNT = 6;
-async function correct(input) {
-  const text2 = clip(input.transcript.trim());
-  if (!text2) throw new AiError("empty-transcript");
-  const speakerRule = input.mode === "none" ? 'Do NOT attribute speakers; return a single turn per paragraph with an empty "speaker".' : input.mode === "named" ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(", ")}. Use those exact names.` : 'Identify how many distinct speakers there are and label them "S1", "S2", … in order of first appearance.';
-  const raw = await generate({
-    system: "You clean up raw speech-recognition transcripts.",
-    prompt: `Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. Preserve meaning and language exactly — do not summarize, do not add or remove content. ${speakerRule}
-Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:
-[{"speaker":"S1","text":"..."}]
-
-Transcript:
-` + text2,
-    maxTokens: 2400,
-    temperature: 0.2
-  });
-  const parsed = extractJSON(raw);
-  if (!Array.isArray(parsed)) throw new AiError("unparseable");
-  const order = [];
-  const turns = [];
-  for (const item of parsed) {
-    const body = String(item?.text ?? "").trim();
-    if (!body) continue;
-    const speaker = String(item?.speaker ?? "").trim();
-    if (speaker && !order.includes(speaker)) order.push(speaker);
-    turns.push({
-      speaker,
-      colorIndex: speaker ? order.indexOf(speaker) % SPEAKER_COLOR_COUNT : 0,
-      text: body
-    });
-  }
-  if (turns.length === 0) throw new AiError("empty-result");
-  return turns;
-}
-__name(correct, "correct");
-function speakerDisplayName(label, index, template) {
-  const trimmed = label.trim();
-  if (!trimmed) return template.replace("{n}", String(index + 1));
-  const match = /^S(\d+)$/i.exec(trimmed);
-  if (match) return template.replace("{n}", match[1]);
-  return trimmed;
-}
-__name(speakerDisplayName, "speakerDisplayName");
-const TRANSLATION_LANGS = ["zh", "en", "ja", "ko", "fr", "de", "es", "ru"];
-const LANG_NAME = {
-  zh: "Chinese",
-  en: "English",
-  ja: "Japanese",
-  ko: "Korean",
-  fr: "French",
-  de: "German",
-  es: "Spanish",
-  ru: "Russian"
-};
-const TRANSLATE_CHUNK = 4e3;
-async function translate(input) {
-  const source = input.text.trim();
-  if (!source) throw new AiError("empty-transcript");
-  const name = LANG_NAME[input.lang];
-  const guide = input.bilingual ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation on the next line, then a blank line. Do not add any other commentary.` : `Output ONLY the ${name} translation, preserving paragraph breaks.`;
-  const chunks = [];
-  for (let index = 0; index < source.length; index += TRANSLATE_CHUNK) {
-    chunks.push(source.slice(index, index + TRANSLATE_CHUNK));
-  }
-  const parts = [];
-  for (const chunk of chunks) {
-    parts.push((await generate({ prompt: `${guide}
-
-${chunk}`, maxTokens: 2400, temperature: 0.2 })).trim());
-  }
-  return parts.join("\n\n");
-}
-__name(translate, "translate");
 const TEMPLATES = ["general", "meeting", "interview", "oneOnOne", "lecture", "podcast"];
 function MemoDetail(props) {
   const { palette: palette2, t, memo } = props;
@@ -1744,13 +1743,24 @@ function MemoDetail(props) {
   const [artifacts, setArtifacts] = useState(null);
   const [tab, setTab] = useState(null);
   const [chaptersBusy, setChaptersBusy] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [segments, setSegments] = useState([]);
   const [error, setError] = useState("");
+  const seekRef = useRef(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const next = memo.source === "library" ? await fetchTranscript(memo.id) : null;
+      const clip2 = (await listClips()).find((item) => item.id === memo.id);
       if (cancelled) return;
+      const next = clip2?.transcriptText ? {
+        status: clip2.transcriptStatus ?? "completed",
+        fullText: clip2.transcriptText,
+        locale: clip2.transcriptLocale ?? "",
+        isEdited: false,
+        segmentCount: clip2.transcriptSegments?.length ?? 0
+      } : clip2 ? { status: clip2.transcriptStatus ?? "none", fullText: "", locale: "", isEdited: false, segmentCount: 0 } : null;
       setTranscript(next);
+      setSegments(clip2?.transcriptSegments ?? []);
       const loaded = await loadArtifacts(memo.id, next?.fullText ?? "");
       if (cancelled) return;
       setArtifacts(loaded);
@@ -1759,32 +1769,56 @@ function MemoDetail(props) {
     return () => {
       cancelled = true;
     };
-  }, [memo.id, memo.source]);
-  useEffect(() => {
-    if (memo.source !== "library") return;
-    if (transcript?.status !== "pending" && transcript?.status !== "inProgress") return;
-    const timer = window.setInterval(async () => {
-      const next = await fetchTranscript(memo.id);
-      if (next) setTranscript(next);
-      if (next && next.status !== "pending" && next.status !== "inProgress") {
-        window.clearInterval(timer);
-        props.onRefresh();
-      }
-    }, 2e3);
-    return () => window.clearInterval(timer);
-  }, [memo.id, memo.source, transcript?.status]);
+  }, [memo.id]);
   const text2 = transcript?.fullText ?? "";
-  const context = { memo, transcript, artifacts, setArtifacts, text: text2 };
+  const context = {
+    memo,
+    transcript,
+    artifacts,
+    setArtifacts,
+    text: text2,
+    segments,
+    seek: /* @__PURE__ */ __name((seconds) => seekRef.current?.(seconds), "seek")
+  };
+  const runTranscription = /* @__PURE__ */ __name(async () => {
+    const clip2 = (await listClips()).find((item) => item.id === memo.id);
+    if (!clip2?.handle || transcribing) return;
+    setTranscribing(true);
+    setError("");
+    const outcome = await transcribeClip(clip2.handle, localeTag(props.settings.transcribeLocale));
+    setTranscribing(false);
+    if (!outcome.ok) {
+      setTranscript({ status: "failed", fullText: "", locale: "", isEdited: false, segmentCount: 0 });
+      setError(outcome.error);
+      const latest2 = (await listClips()).find((item) => item.id === memo.id) ?? clip2;
+      await saveClip({ ...latest2, transcriptStatus: "failed" });
+      return;
+    }
+    const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip2;
+    await saveClip({
+      ...latest,
+      transcriptText: outcome.text,
+      transcriptLocale: outcome.locale,
+      transcriptSegments: outcome.segments,
+      transcriptStatus: "completed"
+    });
+    setTranscript({
+      status: "completed",
+      fullText: outcome.text,
+      locale: outcome.locale,
+      isEdited: false,
+      segmentCount: outcome.segments.length
+    });
+    setSegments(outcome.segments);
+    props.onRefresh();
+  }, "runTranscription");
   useEffect(() => {
     if (!artifacts || !text2.trim()) return;
     if (!props.settings.autoSummarize) return;
     if (artifacts.summaryStatus !== "none") return;
     void runSummary(context, props.settings.defaultTemplate, setError);
   }, [artifacts?.memoID, text2, props.settings.autoSummarize]);
-  if (memo.source === "local") {
-    return /* @__PURE__ */ jsx(PushPage, { palette: palette2, title: memo.title, onBack: props.onBack, trailing: /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }), children: /* @__PURE__ */ jsx(LocalClipBody, { palette: palette2, t, memo }) });
-  }
-  const status = transcript?.status ?? "none";
+  const status = transcribing ? "inProgress" : transcript?.status ?? "none";
   return /* @__PURE__ */ jsx(PushPage, { palette: palette2, title: memo.title, onBack: props.onBack, trailing: /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }), children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
     !memo.hasAudio ? /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }, children: [
       /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, fontWeight: 500, color: palette2.orange }, children: [
@@ -1807,11 +1841,11 @@ function MemoDetail(props) {
             chapters: artifacts?.chapters ?? [],
             chaptersBusy,
             hasAudio: memo.hasAudio,
-            onSeek: /* @__PURE__ */ __name((seconds) => void seekMemo({ seconds }), "onSeek"),
+            onSeek: /* @__PURE__ */ __name((seconds) => seekRef.current?.(seconds), "onSeek"),
             onGenerateChapters: /* @__PURE__ */ __name(async () => {
               if (!artifacts) return;
               setChaptersBusy(true);
-              const next = await fetchChapters(memo.id, artifacts.chapters.length > 0);
+              const next = await chapters(text2, segments).catch(() => []);
               setChaptersBusy(false);
               const merged = { ...artifacts, chapters: next, sourceHash: hashText(text2) };
               setArtifacts(merged);
@@ -1837,23 +1871,16 @@ function MemoDetail(props) {
         {
           palette: palette2,
           title: status === "failed" ? t("retry") : t("transcribeAction"),
-          onClick: /* @__PURE__ */ __name(async () => {
-            await startTranscription(memo.id, localeArg(props.settings));
-            const next = await fetchTranscript(memo.id);
-            if (next) setTranscript(next);
-          }, "onClick")
+          onClick: /* @__PURE__ */ __name(() => void runTranscription(), "onClick")
         }
       ) }) : null
     ] }) : null,
-    /* @__PURE__ */ jsx(TransportBar, { palette: palette2, t, memo })
+    /* @__PURE__ */ jsx(ClipPlayer, { palette: palette2, t, memo, onSeekReady: /* @__PURE__ */ __name((seek) => {
+      seekRef.current = seek;
+    }, "onSeekReady") })
   ] }) });
 }
 __name(MemoDetail, "MemoDetail");
-function localeArg(settings) {
-  if (settings.transcribeLocale === "auto") return void 0;
-  return settings.transcribeLocale;
-}
-__name(localeArg, "localeArg");
 function MoreButton(props) {
   return /* @__PURE__ */ jsx(
     "button",
@@ -2323,88 +2350,6 @@ function TranslationTab(props) {
   ] });
 }
 __name(TranslationTab, "TranslationTab");
-function TransportBar(props) {
-  const { palette: palette2, t, memo } = props;
-  const [playing, setPlaying] = useState(false);
-  if (!memo.hasAudio) {
-    return /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: "center" }, children: [
-      /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 20, color: palette2.muted }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.muted, marginTop: 4 }, children: t("audioRemovedTitle") }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: palette2.muted }, children: t("audioRemovedBody") })
-    ] });
-  }
-  return /* @__PURE__ */ jsxs(
-    "div",
-    {
-      style: {
-        background: alpha(palette2.surface, 0.9),
-        padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: SPACE.s3
-      },
-      children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "button",
-            onClick: /* @__PURE__ */ __name(() => void seekMemo({ seconds: -15 }), "onClick"),
-            style: iconButton(palette2),
-            "aria-label": "-15s",
-            children: /* @__PURE__ */ jsx(Icon, { name: "gobackward", size: 21 })
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "button",
-            onClick: /* @__PURE__ */ __name(async () => {
-              await playMemo(memo.id);
-              setPlaying((value) => !value);
-            }, "onClick"),
-            style: {
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              border: "none",
-              background: palette2.accent,
-              color: palette2.onAccent,
-              fontSize: 20,
-              cursor: "pointer"
-            },
-            "aria-label": "Play",
-            children: /* @__PURE__ */ jsx(Icon, { name: playing ? "pause" : "play", size: 20 })
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "button",
-            onClick: /* @__PURE__ */ __name(() => void seekMemo({ seconds: 15 }), "onClick"),
-            style: iconButton(palette2),
-            "aria-label": "+15s",
-            children: /* @__PURE__ */ jsx(Icon, { name: "goforward", size: 21 })
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "button",
-            onClick: /* @__PURE__ */ __name(async () => {
-              await stopPlayback();
-              setPlaying(false);
-            }, "onClick"),
-            style: iconButton(palette2),
-            "aria-label": "Stop",
-            children: /* @__PURE__ */ jsx(Icon, { name: "stop", size: 17 })
-          }
-        )
-      ]
-    }
-  );
-}
-__name(TransportBar, "TransportBar");
 function iconButton(palette2) {
   return {
     width: 36,
@@ -2417,7 +2362,7 @@ function iconButton(palette2) {
   };
 }
 __name(iconButton, "iconButton");
-function LocalClipBody(props) {
+function ClipPlayer(props) {
   const { palette: palette2, t, memo } = props;
   const audioRef = useRef(null);
   const [position, setPosition] = useState(0);
@@ -2435,8 +2380,23 @@ function LocalClipBody(props) {
       cancelled = true;
     };
   }, [memo.url]);
-  return /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", gap: SPACE.s4, padding: SPACE.s5 }, children: [
-    /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.muted }, children: t("localClipNote").replace(/\*\*/g, "") }),
+  useEffect(() => {
+    props.onSeekReady((seconds) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const value = Math.max(0, seconds);
+      audio.currentTime = value;
+      setPosition(value);
+    });
+  }, []);
+  if (!memo.hasAudio) {
+    return /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: "center" }, children: [
+      /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 20, color: palette2.muted }),
+      /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.muted, marginTop: 4 }, children: t("audioRemovedTitle") }),
+      /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: palette2.muted }, children: t("audioRemovedBody") })
+    ] });
+  }
+  return /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", gap: SPACE.s4, padding: SPACE.s5, background: alpha(palette2.surface, 0.9) }, children: [
     /* @__PURE__ */ jsx(StaticWaveform, { palette: palette2, peaks, progress: duration > 0 ? position / duration : 0 }),
     /* @__PURE__ */ jsx(
       "audio",
@@ -2527,7 +2487,7 @@ function LocalClipBody(props) {
     ] })
   ] });
 }
-__name(LocalClipBody, "LocalClipBody");
+__name(ClipPlayer, "ClipPlayer");
 function StaticWaveform(props) {
   const ref = useRef(null);
   useEffect(() => {
@@ -2840,43 +2800,43 @@ function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 __name(text, "text");
+async function liveClips() {
+  return (await listClips()).filter((clip2) => !clip2.isTrashed);
+}
+__name(liveClips, "liveClips");
 async function allMemos() {
-  const [library, clips] = await Promise.all([listLibrary(), listClips()]);
-  return [...library, ...clips.filter((clip2) => !clip2.isTrashed).map(clipToMemo)].sort((a, b) => b.createdAt - a.createdAt);
+  return (await liveClips()).map(clipToMemo).sort((a, b) => b.createdAt - a.createdAt);
 }
 __name(allMemos, "allMemos");
-async function findMemo(id) {
-  return (await allMemos()).find((memo) => memo.id === id) ?? null;
+async function findClip(id) {
+  return (await liveClips()).find((clip2) => clip2.id === id) ?? null;
 }
-__name(findMemo, "findMemo");
-async function readableTranscript(memo) {
-  if (memo.source === "local") return { text: "", status: "none", corrected: false };
-  const transcript = await fetchTranscript(memo.id);
-  const artifacts = await loadArtifacts(memo.id, transcript?.fullText ?? "");
+__name(findClip, "findClip");
+async function readableTranscript(clip2) {
+  const raw = clip2.transcriptText ?? "";
+  const status = clip2.transcriptStatus ?? (raw ? "completed" : "none");
+  const artifacts = await loadArtifacts(clip2.id, raw);
   if (artifacts.correctionTurns.length) {
     return {
       text: artifacts.correctionTurns.map((turn) => turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text).join("\n\n"),
-      status: transcript?.status ?? "none",
+      status,
       corrected: true
     };
   }
-  return { text: transcript?.fullText ?? "", status: transcript?.status ?? "none", corrected: false };
+  return { text: raw, status, corrected: false };
 }
 __name(readableTranscript, "readableTranscript");
 function registerMemoActions(refresh, locale, labels) {
   registerActions({
     async memo_list(input) {
       const query = text(input?.query).toLowerCase();
-      const source = text(input?.source) || "all";
       const favOnly = input?.favOnly === true;
       let rows = await allMemos();
-      if (source !== "all") rows = rows.filter((memo) => memo.source === source);
       if (favOnly) rows = rows.filter((memo) => memo.isFavourite);
       if (query) rows = rows.filter((memo) => memo.title.toLowerCase().includes(query));
       if (rows.length === 0) return { ok: true, text: "No recordings match.", count: 0 };
       const lines = rows.map((memo, index) => {
         const flags = [
-          memo.source === "local" ? "on-device" : "library",
           memo.isFavourite ? "favourite" : "",
           memo.hasTranscript ? "transcribed" : "",
           memo.hasAudio ? "" : "transcript-only"
@@ -2888,25 +2848,30 @@ function registerMemoActions(refresh, locale, labels) {
     async memo_transcribe(input) {
       const id = text(input?.id);
       if (!id) return { ok: false, text: "Provide the recording id." };
-      const memo = await findMemo(id);
-      if (!memo) return { ok: false, text: "Recording not found." };
-      if (memo.source === "local") {
-        return {
-          ok: false,
-          text: "On-device clips cannot be transcribed: the container has no path from applet-private audio into transcription. Record into the host library instead."
-        };
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
+      if (clip2.transcriptText) {
+        return { ok: true, text: `'${clip2.title}' is already transcribed. Read it with memo_transcript.` };
       }
-      const locale2 = text(input?.locale);
-      const result = await startTranscription(id, locale2 || void 0);
+      const wanted = text(input?.locale);
+      const outcome = await transcribeClip(clip2.handle, wanted ? wanted.replace("_", "-") : localeTag("auto"));
+      if (!outcome.ok) return { ok: false, text: `Could not transcribe: ${outcome.error}` };
+      await saveClip({
+        ...clip2,
+        transcriptText: outcome.text,
+        transcriptLocale: outcome.locale,
+        transcriptSegments: outcome.segments,
+        transcriptStatus: "completed"
+      });
       refresh();
-      return { ok: result.ok, text: result.ok ? result.text || `Transcription queued for '${memo.title}'.` : result.error ?? "Failed." };
+      return { ok: true, text: outcome.text || `Transcribed '${clip2.title}' (no speech detected).` };
     },
     async memo_transcript(input) {
       const id = text(input?.id);
       if (!id) return { ok: false, text: "Provide the recording id." };
-      const memo = await findMemo(id);
-      if (!memo) return { ok: false, text: "Recording not found." };
-      const readable = await readableTranscript(memo);
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
+      const readable = await readableTranscript(clip2);
       if (!readable.text) {
         return { ok: true, text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`, status: readable.status };
       }
@@ -2916,14 +2881,14 @@ function registerMemoActions(refresh, locale, labels) {
     async memo_summarize(input) {
       const id = text(input?.id);
       if (!id) return { ok: false, text: "Provide the recording id." };
-      const memo = await findMemo(id);
-      if (!memo) return { ok: false, text: "Recording not found." };
-      const readable = await readableTranscript(memo);
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
+      const readable = await readableTranscript(clip2);
       if (!readable.text.trim()) return { ok: false, text: "No transcript — run memo_transcribe first." };
       const template = text(input?.template) || "general";
       try {
         const result = await summarize(readable.text, template);
-        const artifacts = await loadArtifacts(memo.id, readable.text);
+        const artifacts = await loadArtifacts(clip2.id, readable.text);
         await saveArtifacts({
           ...artifacts,
           summaryText: result.text,
@@ -2944,9 +2909,14 @@ ${result.points.map((point) => `- ${point}`).join("\n")}` : result.text;
     async memo_action_items(input) {
       const id = text(input?.id);
       if (!id) return { ok: false, text: "Provide the recording id." };
-      const memo = await findMemo(id);
-      if (!memo || memo.source === "local") return { ok: false, text: "Recording not found in the host library." };
-      const items = await fetchActionItems(id, input?.force === true);
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
+      const readable = await readableTranscript(clip2);
+      if (!readable.text.trim()) return { ok: false, text: "No transcript — run memo_transcribe first." };
+      const artifacts = await loadArtifacts(clip2.id, readable.text);
+      const cached = artifacts.actionItems;
+      const items = !cached.length || input?.force === true ? await actionItems(readable.text).catch(() => []) : cached;
+      if (items !== cached) await saveArtifacts({ ...artifacts, actionItems: items, sourceHash: hashText(readable.text) });
       if (items.length === 0) return { ok: true, text: "No action items found.", count: 0 };
       const lines = items.map((item) => {
         const tail = [item.owner, item.dueHint, item.sourceTime !== void 0 ? clockString(item.sourceTime) : ""].filter(Boolean).join(" · ");
@@ -2959,25 +2929,26 @@ ${result.points.map((point) => `- ${point}`).join("\n")}` : result.text;
       const id = text(input?.id);
       const question = text(input?.question);
       if (!id || !question) return { ok: false, text: "Provide both the recording id and a question." };
-      const memo = await findMemo(id);
-      if (!memo || memo.source === "local") return { ok: false, text: "Recording not found in the host library." };
-      const result = await askMemo(id, question);
-      if (!result.ok || !result.text.trim()) return { ok: false, text: result.error ?? "No answer." };
-      return { ok: true, text: result.text };
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
+      const readable = await readableTranscript(clip2);
+      if (!readable.text.trim()) return { ok: false, text: "No transcript — run memo_transcribe first." };
+      const answer = await ask(readable.text, question).catch(() => "");
+      if (!answer.trim()) return { ok: false, text: "No answer." };
+      return { ok: true, text: answer };
     },
     async memo_export(input) {
       const id = text(input?.id);
       if (!id) return { ok: false, text: "Provide the recording id." };
-      const memo = await findMemo(id);
-      if (!memo) return { ok: false, text: "Recording not found." };
+      const clip2 = await findClip(id);
+      if (!clip2) return { ok: false, text: "Recording not found." };
       const format = text(input?.format) || "markdown";
-      const transcript = memo.source === "library" ? await fetchTranscript(memo.id) : null;
-      const artifacts = await loadArtifacts(memo.id, transcript?.fullText ?? "");
+      const artifacts = await loadArtifacts(clip2.id, clip2.transcriptText ?? "");
       const payload = {
-        memo,
+        memo: clipToMemo(clip2),
         locale,
         summary: artifacts.summaryText,
-        transcript: transcript?.fullText ?? "",
+        transcript: clip2.transcriptText ?? "",
         correctionTurns: artifacts.correctionTurns,
         chapters: artifacts.chapters,
         actionItems: artifacts.actionItems,
@@ -3013,6 +2984,8 @@ const TABLE = {
   correcting: { zh: "校正中…", en: "Correcting…" },
   translating: { zh: "翻译中…", en: "Translating…" },
   sourceLocal: { zh: "本机", en: "On device" },
+  hasTranscript: { zh: "已转写", en: "Transcribed" },
+  transcribeUnavailable: { zh: "此设备暂时无法转写", en: "Transcription is unavailable on this device" },
   sourceLibrary: { zh: "录音库", en: "Library" },
   // 筛选
   filter: { zh: "筛选", en: "Filter" },
@@ -3231,35 +3204,30 @@ __name(makeT, "makeT");
 const SETTINGS_KEY = "settings";
 function useMemoStore() {
   const [ready, setReady] = useState(false);
-  const [library, setLibrary] = useState([]);
   const [clips, setClips] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [libraryError, setLibraryError] = useState(null);
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((value) => value + 1), []);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [nextLibrary, nextClips, stored] = await Promise.all([
-        capabilities.library ? listLibrary() : Promise.resolve([]),
+      const [nextClips, stored] = await Promise.all([
         listClips(),
         loadSetting(SETTINGS_KEY, {})
       ]);
       if (cancelled) return;
-      setLibrary(nextLibrary);
       setClips(nextClips);
       setSettings({ ...DEFAULT_SETTINGS, ...stored });
-      setLibraryError(capabilities.library ? null : "aibox/voicememos-unavailable");
       setReady(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [tick]);
-  const memos = useMemo(() => {
-    const merged = [...library, ...clips.filter((clip2) => !clip2.isTrashed).map(clipToMemo)];
-    return merged.sort((a, b) => b.createdAt - a.createdAt);
-  }, [library, clips]);
+  const memos = useMemo(
+    () => clips.filter((clip2) => !clip2.isTrashed).map(clipToMemo).sort((a, b) => b.createdAt - a.createdAt),
+    [clips]
+  );
   const updateSettings = useCallback((patch) => {
     setSettings((current) => {
       const next = { ...current, ...patch };
@@ -3272,8 +3240,6 @@ function useMemoStore() {
     memos,
     clips,
     settings,
-    libraryAvailable: capabilities.library,
-    libraryError,
     updateSettings,
     refresh
   };
@@ -3300,6 +3266,7 @@ function App() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [recorder, setRecorder] = useState(null);
+  const [transcription, setTranscription] = useState(null);
   const [starting, setStarting] = useState(false);
   const [busyIDs, setBusyIDs] = useState({});
   const [sheet, setSheet] = useState(null);
@@ -3311,6 +3278,38 @@ function App() {
   useEffect(() => {
     void (async () => setRecorder(await recorderAvailability()))();
   }, []);
+  useEffect(() => {
+    void (async () => setTranscription(await transcribeAvailability(localeTag(store.settings.transcribeLocale))))();
+  }, [store.settings.transcribeLocale]);
+  const transcribable = Boolean(transcription?.engine);
+  const runTranscription = useCallback(async (memo) => {
+    const clip2 = (await listClips()).find((item) => item.id === memo.id);
+    if (!clip2?.handle) return;
+    setBusyIDs((current) => ({ ...current, [memo.id]: t("transcribing") }));
+    await saveClip({ ...clip2, transcriptStatus: "inProgress" });
+    store.refresh();
+    const outcome = await transcribeClip(clip2.handle, localeTag(store.settings.transcribeLocale));
+    const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip2;
+    if (outcome.ok) {
+      await saveClip({
+        ...latest,
+        transcriptText: outcome.text,
+        transcriptLocale: outcome.locale,
+        transcriptSegments: outcome.segments,
+        transcriptStatus: "completed"
+      });
+    } else {
+      await saveClip({ ...latest, transcriptStatus: "failed" });
+      await confirmAlert(t("transcribeFailedTitle"), errorText(t, outcome.error));
+      setTranscription(await transcribeAvailability(localeTag(store.settings.transcribeLocale)));
+    }
+    setBusyIDs((current) => {
+      const next = { ...current };
+      delete next[memo.id];
+      return next;
+    });
+    store.refresh();
+  }, [store, t]);
   const exportLabels = useMemo(() => ({
     createdAt: t("labelCreatedAt"),
     duration: t("labelDuration"),
@@ -3347,49 +3346,33 @@ function App() {
       { id: "rename", title: t("rename") },
       { id: "fav", title: memo.isFavourite ? t("unfavourite") : t("favourite") }
     ];
-    if (memo.source === "library" && !memo.hasTranscript && memo.hasAudio) {
-      actions.push({ id: "transcribe", title: t("startTranscription") });
-    }
-    if (memo.source === "library" && memo.hasTranscript) actions.push({ id: "copy", title: t("copyTranscript") });
-    if (memo.source === "local") actions.push({ id: "share", title: t("shareAudio") });
-    actions.push({ id: "delete", title: memo.source === "local" ? t("moveToTrash") : t("deletePermanently"), destructive: true });
+    if (!memo.hasTranscript && transcribable) actions.push({ id: "transcribe", title: t("startTranscription") });
+    if (memo.hasTranscript) actions.push({ id: "copy", title: t("copyTranscript") });
+    actions.push({ id: "share", title: t("shareAudio") });
+    actions.push({ id: "delete", title: t("moveToTrash"), destructive: true });
     const picked = await actionSheet(actions);
     if (!picked) return;
-    const key = `${memo.source}:${memo.id}`;
     if (picked === "rename") {
       const next = await promptText(t("renamePrompt"), memo.title);
       if (!next) return;
-      if (memo.source === "library") await renameMemo(memo.id, next);
-      else {
-        const clip2 = (await listClips()).find((item) => item.id === memo.id);
-        if (clip2) await saveClip({ ...clip2, title: next });
-      }
+      const clip2 = (await listClips()).find((item) => item.id === memo.id);
+      if (clip2) await saveClip({ ...clip2, title: next });
       store.refresh();
       return;
     }
     if (picked === "fav") {
-      if (memo.source === "library") await toggleFavourite(memo.id);
-      else {
-        const clip2 = (await listClips()).find((item) => item.id === memo.id);
-        if (clip2) await saveClip({ ...clip2, isFavourite: !clip2.isFavourite });
-      }
+      const clip2 = (await listClips()).find((item) => item.id === memo.id);
+      if (clip2) await saveClip({ ...clip2, isFavourite: !clip2.isFavourite });
       store.refresh();
       return;
     }
     if (picked === "transcribe") {
-      setBusyIDs((current) => ({ ...current, [key]: t("transcribing") }));
-      await startTranscription(memo.id, store.settings.transcribeLocale === "auto" ? void 0 : store.settings.transcribeLocale);
-      setRoute({ kind: "detail", memo });
-      setBusyIDs((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
+      await runTranscription(memo);
       return;
     }
     if (picked === "copy") {
-      const transcript = await fetchTranscript(memo.id);
-      if (transcript?.fullText) await copyText(transcript.fullText);
+      const clip2 = (await listClips()).find((item) => item.id === memo.id);
+      if (clip2?.transcriptText) await copyText(clip2.transcriptText);
       return;
     }
     if (picked === "share") {
@@ -3397,22 +3380,14 @@ function App() {
       return;
     }
     if (picked === "delete") {
-      const ok = await confirmDestructive(
-        memo.source === "local" ? t("trashConfirmTitle") : t("deleteConfirmTitle"),
-        memo.source === "local" ? t("moveToTrash") : t("deletePermanently"),
-        t("cancel")
-      );
+      const ok = await confirmDestructive(t("trashConfirmTitle"), t("moveToTrash"), t("cancel"));
       if (!ok) return;
-      if (memo.source === "local") {
-        const clip2 = (await listClips()).find((item) => item.id === memo.id);
-        if (clip2) await saveClip({ ...clip2, isTrashed: true, trashedAt: Date.now() });
-      } else {
-        await deleteMemo(memo.id);
-      }
+      const clip2 = (await listClips()).find((item) => item.id === memo.id);
+      if (clip2) await saveClip({ ...clip2, isTrashed: true, trashedAt: Date.now() });
       store.refresh();
       if (route.kind === "detail") setRoute({ kind: "root" });
     }
-  }, [t, store, route.kind]);
+  }, [t, store, route.kind, transcribable, runTranscription]);
   const openDetailMenu = useCallback(async (context) => {
     detailContext.current = context;
     setDetailArtifacts(context.artifacts);
@@ -3458,7 +3433,7 @@ function App() {
     }
   }, [t, locale.locale, exportLabels, openMenu]);
   const rootMemos = store.memos;
-  const scopedMemos = route.kind === "scoped" ? route.scope === "fav" ? rootMemos.filter((memo) => memo.isFavourite) : route.scope === "local" ? rootMemos.filter((memo) => memo.source === "local") : rootMemos : [];
+  const scopedMemos = route.kind === "scoped" ? route.scope === "fav" ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos : [];
   return /* @__PURE__ */ jsxs(
     "div",
     {
@@ -3509,10 +3484,10 @@ function App() {
               }
             )
           ] }),
-          !store.libraryAvailable ? /* @__PURE__ */ jsxs("div", { style: { margin: `${SPACE.s3}px ${SPACE.s4}px 0`, background: alpha(palette$1.orange, 0.12), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 12, color: palette$1.orange }, children: [
+          transcription && !transcription.engine ? /* @__PURE__ */ jsxs("div", { style: { margin: `${SPACE.s3}px ${SPACE.s4}px 0`, background: alpha(palette$1.orange, 0.12), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 12, color: palette$1.orange }, children: [
             /* @__PURE__ */ jsx(Icon, { name: "warning", size: 12 }),
             " ",
-            t("libraryUnavailable")
+            t("transcribeUnavailable")
           ] }) : null,
           /* @__PURE__ */ jsxs("main", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }, children: [
             /* @__PURE__ */ jsx(
@@ -3580,12 +3555,7 @@ function App() {
             memos: rootMemos,
             trashCount: store.clips.filter((clip2) => clip2.isTrashed).length,
             onScope: /* @__PURE__ */ __name((scope) => setRoute({ kind: "scoped", scope }), "onScope"),
-            onTrash: /* @__PURE__ */ __name(() => setRoute({ kind: "trash" }), "onTrash"),
-            onHostRecord: /* @__PURE__ */ __name(async () => {
-              await hostRecordStart(defaultTitle(t("newRecording"), locale.locale));
-              store.refresh();
-            }, "onHostRecord"),
-            libraryAvailable: store.libraryAvailable
+            onTrash: /* @__PURE__ */ __name(() => setRoute({ kind: "trash" }), "onTrash")
           }
         ) }) : null,
         tab === "settings" ? /* @__PURE__ */ jsx("main", { style: { flex: 1, overflowY: "auto" }, children: /* @__PURE__ */ jsx(SettingsTab, { palette: palette$1, t, dark: Boolean(dark), settings: store.settings, onChange: store.updateSettings, clips: store.clips }) }) : null,
@@ -3687,16 +3657,17 @@ function App() {
             t,
             open: sheet === "actionItems",
             memoID: detailContext.current?.memo.id ?? "",
+            transcript: detailContext.current?.text ?? "",
             artifacts: detailArtifacts,
             onArtifacts: /* @__PURE__ */ __name((value) => {
               setDetailArtifacts(value);
               detailContext.current?.setArtifacts(value);
             }, "onArtifacts"),
-            onSeek: /* @__PURE__ */ __name((seconds) => void seekMemo({ seconds }), "onSeek"),
+            onSeek: /* @__PURE__ */ __name((seconds) => detailContext.current?.seek?.(seconds), "onSeek"),
             onClose: /* @__PURE__ */ __name(() => setSheet(null), "onClose")
           }
         ),
-        /* @__PURE__ */ jsx(AskSheet, { palette: palette$1, t, open: sheet === "ask", memoID: detailContext.current?.memo.id ?? "", onClose: /* @__PURE__ */ __name(() => setSheet(null), "onClose") }),
+        /* @__PURE__ */ jsx(AskSheet, { palette: palette$1, t, open: sheet === "ask", transcript: detailContext.current?.text ?? "", onClose: /* @__PURE__ */ __name(() => setSheet(null), "onClose") }),
         /* @__PURE__ */ jsx(
           CleanUpSheet,
           {
@@ -3704,6 +3675,7 @@ function App() {
             t,
             open: sheet === "cleanUp",
             memoID: detailContext.current?.memo.id ?? "",
+            transcript: detailContext.current?.text ?? "",
             onClose: /* @__PURE__ */ __name(() => setSheet(null), "onClose"),
             onApplied: store.refresh
           }
@@ -3717,8 +3689,7 @@ function LibraryTab(props) {
   const { palette: palette2, t } = props;
   const rows = [
     { id: "all", icon: "waveform", label: t("smartAllRecordings"), badge: props.memos.length },
-    { id: "fav", icon: "star.fill", label: t("smartFavourites"), badge: props.memos.filter((memo) => memo.isFavourite).length },
-    { id: "local", icon: "mic", label: t("smartLocalClips"), badge: props.memos.filter((memo) => memo.source === "local").length }
+    { id: "fav", icon: "star.fill", label: t("smartFavourites"), badge: props.memos.filter((memo) => memo.isFavourite).length }
   ];
   return /* @__PURE__ */ jsxs("div", { style: { padding: `${SPACE.s4}px 0` }, children: [
     rows.map((row) => /* @__PURE__ */ jsxs(
@@ -3771,7 +3742,6 @@ function LibraryTab(props) {
         ]
       }
     ),
-    props.libraryAvailable ? /* @__PURE__ */ jsx("div", { style: { padding: `${SPACE.s5}px ${SPACE.s4}px 0` }, children: /* @__PURE__ */ jsx(SecondaryButton, { palette: palette2, title: t("recordIntoLibrary"), icon: "mic", onClick: props.onHostRecord }) }) : null,
     /* @__PURE__ */ jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px`, fontSize: 12, color: palette2.muted }, children: t("foldersUnavailable") })
   ] });
 }

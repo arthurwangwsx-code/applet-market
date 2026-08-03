@@ -9,7 +9,7 @@
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 生成，请勿手改 -->
 
-当前宿主共 **43** 个命名空间、**206** 个方法。
+当前宿主共 **44** 个命名空间、**211** 个方法。
 
 ## 容器内建
 
@@ -40,6 +40,7 @@
 | [`aibox.list`](list.md) | Real native row gestures for your lists: UIContextMenuInteraction on long press and native swipe actions, driven by row rectangles your list reports. Web CSS cannot reproduce the lift-and-blur preview, the haptic curve or the swipe rubber-banding, which is most of what makes a list feel native. ALWAYS keep your own long-press/swipe fallback: configure returns rendered:false on surfaces that cannot host the layer. | 4 | 恒可用 |
 | [`aibox.menu`](menu.md) | Read or update the display state of business menu items declared by manifest.scene.menu. | 3 | 恒可用 |
 | [`aibox.navigation`](navigation.md) | Coordinate web history, native title, exit confirmation and edge-swipe behavior with the applet container. | 10 | 恒可用 |
+| [`aibox.overlay`](overlay.md) | A persistent control layer the host draws ABOVE the bottom tab bar, declared by manifest.scene.overlay. Use it for controls that must always be reachable — a record button, a mini player, a batch-action bar. Do NOT hand-draw these with position:fixed: the host layer gets real Liquid Glass, correct safe-area and keyboard behaviour, and structural stacking with the tab bar. It reserves its own height, so it never covers the last row of your content. | 3 | 恒可用 |
 | [`aibox.picker`](picker.md) | Let the user choose files or photos and return applet-scoped resource handles instead of Base64 payloads. | 2 | 需声明 `picker` |
 | [`aibox.scene`](scene.md) | Inspect native presentation, appearance, safe areas and orientation, and request declared changes. | 3 | 恒可用 |
 | [`aibox.tabs`](tabs.md) | The applet's own bottom tab bar, declared by manifest.scene.tabBar. The host renders it; switching tabs never reloads the WebView, so scroll position and in-memory state survive. | 4 | 恒可用 |
@@ -53,7 +54,7 @@
 
 | 命名空间 | 说明 | 方法 | 声明 |
 |---|---|:--:|---|
-| [`aibox.audio`](audio.md) | "Record audio inside your own UI. This is the ONLY way an applet can capture audio — "                 + "getUserMedia and MediaRecorder do not work inside the applet WebView. "                 + "The recording becomes an applet-private resource handle; it is never added to the user's voice-memo library." | 7 | 需声明 `audio` |
+| [`aibox.audio`](audio.md) | Record audio inside your own UI and turn your own audio into text. This is the ONLY way an applet can capture audio — getUserMedia and MediaRecorder do not work inside the applet WebView. Everything here works on applet-private resource handles and stays permanently available, independent of any host module. CHOOSING BETWEEN aibox.audio AND aibox.voiceMemos — ask one question: should the result show up in the user's own Voice Memos library? If yes, use aibox.voiceMemos (it drives the host module, opens host UI, and disappears when that module is not installed). If no, use aibox.audio: the product belongs to you, nothing is written to the user's library, and nothing here can vanish with a module. | 9 | 需声明 `audio` |
 | [`aibox.browser`](browser.md) | Open a link in the in-app browser, the system browser, or an external browser app — and come back. Prefer this over open.url for anything the user should read and return from. | 3 | 需声明 `browser` |
 | [`aibox.calendar`](calendar.md) | Read and manage calendar events and calendar subscriptions. | 2 | 需声明 `calendar` |
 | [`aibox.clipboard`](clipboard.md) | Read or replace the system text clipboard. | 2 | 需声明 `clipboard` |
@@ -72,7 +73,7 @@
 | [`aibox.shortcuts`](shortcuts.md) | Run or open Apple Shortcuts from a visible applet. | 2 | 需声明 `shortcuts` |
 | [`aibox.speech`](speech.md) | "On-device speech-to-text. This is the ONLY way an applet can take voice input — "                 + "getUserMedia and webkitSpeechRecognition do not work inside the applet WebView. "                 + "Audio never leaves the device." | 5 | 需声明 `speech` |
 | [`aibox.tts`](tts.md) | Speak text with the device's speech synthesizer. Audible even when the ring switch is silent; other audio is ducked, not stopped. | 2 | 需声明 `tts` |
-| [`aibox.voiceMemos`](voiceMemos.md) | Record, browse, transcribe and analyze voice memos through the host memo engine. | 21 | 需声明 `voiceMemos` |
+| [`aibox.voiceMemos`](voiceMemos.md) | Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present. | 21 | 需声明 `voiceMemos` |
 
 ## 长尾工具网关
 

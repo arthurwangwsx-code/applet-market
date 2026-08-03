@@ -3,7 +3,10 @@
   "defaultSuite": "smoke",
   "suites": {
     "smoke": [
-      { "action": "wait", "ms": 2500 },
+      {
+        "action": "wait",
+        "ms": 2500
+      },
       {
         "action": "assert",
         "expr": "['录音', '文件夹', '设置'].every(label => [...document.querySelectorAll('nav button')].some(b => b.textContent.includes(label)))",
@@ -23,17 +26,23 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('nav button')].find(x => x.textContent.includes('文件夹')); if (!b) throw new Error('folders tab not found'); b.click(); return 'switched' })()"
       },
-      { "action": "wait", "ms": 700 },
+      {
+        "action": "wait",
+        "ms": 700
+      },
       {
         "action": "assert",
-        "expr": "['全部录音', '收藏', '本机剪辑', '最近删除'].every(label => document.body.innerText.includes(label))",
+        "expr": "['全部录音', '收藏', '最近删除'].every(label => document.body.innerText.includes(label))",
         "matcher": "truthy"
       },
       {
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('nav button')].find(x => x.textContent.includes('设置')); if (!b) throw new Error('settings tab not found'); b.click(); return 'switched' })()"
       },
-      { "action": "wait", "ms": 700 },
+      {
+        "action": "wait",
+        "ms": 700
+      },
       {
         "action": "assert",
         "expr": "document.body.innerText.includes('转录语言') && document.body.innerText.includes('录音质量')",
@@ -42,6 +51,44 @@
       {
         "action": "assert",
         "expr": "document.querySelectorAll('#root select').length >= 3",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "typeof aibox.audio.transcribe === 'function' && typeof aibox.audio.transcribeAvailability === 'function'",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { window.__p = {}; aibox.audio.transcribeAvailability({ locale: 'zh-CN' }).then(a => { window.__p.avail = a }, e => { window.__p.availErr = String(e && e.message || e) }); aibox.audio.transcribe({ handle: 'resource://00000000-0000-4000-8000-000000000000' }).then(() => { window.__p.bogus = 'RESOLVED' }, e => { window.__p.bogus = String(e && e.message || e) }); aibox.audio.transcribe({}).then(() => { window.__p.missing = 'RESOLVED' }, e => { window.__p.missing = String(e && e.message || e) }); aibox.audio.transcribe({ handle: '/var/mobile/Containers/Data/Application/somebody-elses.m4a' }).then(() => { window.__p.path = 'RESOLVED' }, e => { window.__p.path = String(e && e.message || e) }); return 'probes-started' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 2000
+      },
+      {
+        "action": "assert",
+        "expr": "!!window.__p.avail && window.__p.avail.engine === true && typeof window.__p.avail.state === 'string' && window.__p.avail.locale === 'zh-CN'",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "String(window.__p.bogus).includes('aibox/not-found')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "String(window.__p.missing).includes('aibox/invalid-args')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "String(window.__p.path).includes('aibox/not-found')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "typeof aibox.voiceMemos === 'undefined' || typeof aibox.voiceMemos.list !== 'function' || !JSON.parse(document.querySelector('script#__aibox_manifest__')?.textContent || '{}')?.permissions?.capabilities?.includes?.('voiceMemos')",
         "matcher": "truthy"
       }
     ]

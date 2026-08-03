@@ -3,22 +3,26 @@
 // **4 个 Tab 不是 3 个**：摘要 / 原文 / 校正后 / 翻译，可左右横扫；进度点长在 Tab 标签上、
 // 内容区不放第二个 spinner。首次进入默认 Tab：有摘要 → 摘要；否则 → 原文（只判一次）。
 //
-// 两处相对原生的降级（容器缺口，见 lib/memos.ts 文件头）：
-//  · 原文 Tab **没有卡拉OK 逐句高亮、不能点句跳转** —— `memo_get_transcript` 只回 `segmentCount`，
-//    不回 segments 数组。渲染成段落纯文本，与原生「已编辑转写」那一支的渲染完全一致。
-//  · 宿主录音的 transport 条读不到播放位置（只有 play/stop/seek），所以只有本机剪辑有 scrubber。
+// ## 2.0.0：1.x 的两处降级都没有了
+// 1.x 的这个页面是**分叉**的：宿主录音走"有转写、但读不到播放位置、也拿不到 segments"的一支，
+// 本机剪辑走"能精确播放、但没有任何转写路径"的另一支。哪一支都不完整。
+//
+// 宿主补上 `aibox.audio.transcribe` 之后分叉消失，两半的长处合到同一个页面上：
+//  · 转写来自 `aibox.audio.transcribe`，**带时间戳分段** → 原文 Tab 可以点句跳转、章节可以定位；
+//  · 播放是页面自己的 `<audio>` → 有真 scrubber、有已播时间、进度与波形逐帧同步。
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { correct, summarize, translate, speakerDisplayName, TRANSLATION_LANGS, LANG_NAME, type TranslationLang } from '../lib/ai'
 import { clockFlat, clockString, hashText } from '../lib/format'
+import { chapters as generateChapters } from '../lib/ai'
 import {
-  askMemo, fetchActionItems, fetchChapters, fetchTranscript, loadArtifacts, playMemo, saveArtifacts,
-  seekMemo, startTranscription, stopPlayback,
+  listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
 } from '../lib/memos'
 import type { T } from '../lib/strings'
 import { RADIUS, SPACE, alpha, speakerPalette, type Palette } from '../lib/theme'
 import type {
   ActionItem, Chapter, Memo, MemoArtifacts, MemoTranscript, Settings, SpeakerMode, SummaryTemplate,
+  TranscriptSegment,
 } from '../lib/types'
 import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton, Sheet } from './primitives'
 
@@ -41,15 +45,31 @@ export function MemoDetail(props: {
   const [artifacts, setArtifacts] = useState<MemoArtifacts | null>(null)
   const [tab, setTab] = useState<DetailTab | null>(null)
   const [chaptersBusy, setChaptersBusy] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [segments, setSegments] = useState<TranscriptSegment[]>([])
   const [error, setError] = useState('')
+  /** 播放器的 seek 出口。章节 / 分段点击都经它跳转——1.x 这条线在宿主播放器上根本不存在。 */
+  const seekRef = useRef<((seconds: number) => void) | null>(null)
 
-  // 载入转写 + applet 侧衍生产物。
+  // 载入转写 + applet 侧衍生产物。转写现在长在剪辑记录上，不再有第二个数据源。
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const next = memo.source === 'library' ? await fetchTranscript(memo.id) : null
+      const clip = (await listClips()).find((item) => item.id === memo.id)
       if (cancelled) return
+      const next: MemoTranscript | null = clip?.transcriptText
+        ? {
+            status: clip.transcriptStatus ?? 'completed',
+            fullText: clip.transcriptText,
+            locale: clip.transcriptLocale ?? '',
+            isEdited: false,
+            segmentCount: clip.transcriptSegments?.length ?? 0,
+          }
+        : clip
+          ? { status: clip.transcriptStatus ?? 'none', fullText: '', locale: '', isEdited: false, segmentCount: 0 }
+          : null
       setTranscript(next)
+      setSegments(clip?.transcriptSegments ?? [])
       const loaded = await loadArtifacts(memo.id, next?.fullText ?? '')
       if (cancelled) return
       setArtifacts(loaded)
@@ -57,25 +77,44 @@ export function MemoDetail(props: {
       setTab((current) => current ?? (loaded.summaryText ? 'summary' : 'original'))
     })()
     return () => { cancelled = true }
-  }, [memo.id, memo.source])
-
-  // 转写在跑时轮询（宿主是 @Model 推送即时刷新，容器只能 2s 一轮）。
-  useEffect(() => {
-    if (memo.source !== 'library') return
-    if (transcript?.status !== 'pending' && transcript?.status !== 'inProgress') return
-    const timer = window.setInterval(async () => {
-      const next = await fetchTranscript(memo.id)
-      if (next) setTranscript(next)
-      if (next && next.status !== 'pending' && next.status !== 'inProgress') {
-        window.clearInterval(timer)
-        props.onRefresh()
-      }
-    }, 2000)
-    return () => window.clearInterval(timer)
-  }, [memo.id, memo.source, transcript?.status])
+  }, [memo.id])
 
   const text = transcript?.fullText ?? ''
-  const context: DetailContext = { memo, transcript, artifacts, setArtifacts, text }
+  const context: DetailContext = {
+    memo, transcript, artifacts, setArtifacts, text, segments,
+    seek: (seconds) => seekRef.current?.(seconds),
+  }
+
+  /** 转写这一条录音。同步等待到出结果——宿主侧每个 applet 同时只允许一条，排队没有意义。 */
+  const runTranscription = async () => {
+    const clip = (await listClips()).find((item) => item.id === memo.id)
+    if (!clip?.handle || transcribing) return
+    setTranscribing(true)
+    setError('')
+    const outcome = await transcribeClip(clip.handle, localeTag(props.settings.transcribeLocale))
+    setTranscribing(false)
+    if (!outcome.ok) {
+      setTranscript({ status: 'failed', fullText: '', locale: '', isEdited: false, segmentCount: 0 })
+      setError(outcome.error)
+      const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip
+      await saveClip({ ...latest, transcriptStatus: 'failed' })
+      return
+    }
+    const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip
+    await saveClip({
+      ...latest,
+      transcriptText: outcome.text,
+      transcriptLocale: outcome.locale,
+      transcriptSegments: outcome.segments,
+      transcriptStatus: 'completed',
+    })
+    setTranscript({
+      status: 'completed', fullText: outcome.text, locale: outcome.locale,
+      isEdited: false, segmentCount: outcome.segments.length,
+    })
+    setSegments(outcome.segments)
+    props.onRefresh()
+  }
 
   // 详情页自动跑（规格 §13.7）：**只补空、不重复、不覆盖**用户已生成/已改的结果。
   useEffect(() => {
@@ -86,15 +125,7 @@ export function MemoDetail(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artifacts?.memoID, text, props.settings.autoSummarize])
 
-  if (memo.source === 'local') {
-    return (
-      <PushPage palette={palette} title={memo.title} onBack={props.onBack} trailing={<MoreButton palette={palette} onClick={() => props.onMenu(context)} />}>
-        <LocalClipBody palette={palette} t={t} memo={memo} />
-      </PushPage>
-    )
-  }
-
-  const status = transcript?.status ?? 'none'
+  const status = transcribing ? 'inProgress' : (transcript?.status ?? 'none')
 
   return (
     <PushPage palette={palette} title={memo.title} onBack={props.onBack} trailing={<MoreButton palette={palette} onClick={() => props.onMenu(context)} />}>
@@ -123,11 +154,12 @@ export function MemoDetail(props: {
                   chapters={artifacts?.chapters ?? []}
                   chaptersBusy={chaptersBusy}
                   hasAudio={memo.hasAudio}
-                  onSeek={(seconds) => void seekMemo({ seconds })}
+                  onSeek={(seconds) => seekRef.current?.(seconds)}
                   onGenerateChapters={async () => {
                     if (!artifacts) return
                     setChaptersBusy(true)
-                    const next = await fetchChapters(memo.id, artifacts.chapters.length > 0)
+                    // 秒数用真实分段回查校准，不信模型编的时间戳（见 lib/ai.ts chapters 注释）。
+                    const next = await generateChapters(text, segments).catch(() => [] as Chapter[])
                     setChaptersBusy(false)
                     const merged = { ...artifacts, chapters: next, sourceHash: hashText(text) }
                     setArtifacts(merged)
@@ -167,18 +199,14 @@ export function MemoDetail(props: {
                 <PrimaryButton
                   palette={palette}
                   title={status === 'failed' ? t('retry') : t('transcribeAction')}
-                  onClick={async () => {
-                    await startTranscription(memo.id, localeArg(props.settings))
-                    const next = await fetchTranscript(memo.id)
-                    if (next) setTranscript(next)
-                  }}
+                  onClick={() => void runTranscription()}
                 />
               </div>
             ) : null}
           </Centered>
         ) : null}
 
-        <TransportBar palette={palette} t={t} memo={memo} />
+        <ClipPlayer palette={palette} t={t} memo={memo} onSeekReady={(seek) => { seekRef.current = seek }} />
       </div>
     </PushPage>
   )
@@ -190,12 +218,10 @@ export interface DetailContext {
   artifacts: MemoArtifacts | null
   setArtifacts: (value: MemoArtifacts) => void
   text: string
-}
-
-/** 转写 locale 三级优先：设置里显式指定 → 该录音已存 locale → App 内语言。**绝不裸用系统区域**。 */
-function localeArg(settings: Settings): string | undefined {
-  if (settings.transcribeLocale === 'auto') return undefined
-  return settings.transcribeLocale
+  /** 带时间戳的转写分段。2.0.0 才有——1.x 的宿主工具只回 `segmentCount`。 */
+  segments: TranscriptSegment[]
+  /** 跳到某一秒。接的是页面自己的 `<audio>`，所以是真的精确跳转。 */
+  seek: (seconds: number) => void
 }
 
 function MoreButton(props: { palette: Palette; onClick: () => void }) {
@@ -720,73 +746,6 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
 
 // —— transport 条（§4.5） ——
 
-function TransportBar(props: { palette: Palette; t: T; memo: Memo }) {
-  const { palette, t, memo } = props
-  const [playing, setPlaying] = useState(false)
-
-  if (!memo.hasAudio) {
-    return (
-      <div style={{ background: alpha(palette.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: 'center' }}>
-        <Icon name="waveform.slash" size={20} color={palette.muted} />
-        <div style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>{t('audioRemovedTitle')}</div>
-        <div style={{ fontSize: 12, color: palette.muted }}>{t('audioRemovedBody')}</div>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      style={{
-        background: alpha(palette.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3,
-      }}
-    >
-      {/* 宿主播放器**读不到当前位置**（只有 play/stop/seek），所以这里没有 scrubber、没有已播时间。 */}
-      <button
-        type="button"
-        onClick={() => void seekMemo({ seconds: -15 })}
-        style={iconButton(palette)}
-        aria-label="-15s"
-      >
-        <Icon name="gobackward" size={21} />
-      </button>
-      <button
-        type="button"
-        onClick={async () => {
-          await playMemo(memo.id)
-          setPlaying((value) => !value)
-        }}
-        style={{
-          width: 50, height: 50, borderRadius: 25, border: 'none', background: palette.accent,
-          color: palette.onAccent, fontSize: 20, cursor: 'pointer',
-        }}
-        aria-label="Play"
-      >
-        <Icon name={playing ? 'pause' : 'play'} size={20} />
-      </button>
-      <button
-        type="button"
-        onClick={() => void seekMemo({ seconds: 15 })}
-        style={iconButton(palette)}
-        aria-label="+15s"
-      >
-        <Icon name="goforward" size={21} />
-      </button>
-      <button
-        type="button"
-        onClick={async () => {
-          await stopPlayback()
-          setPlaying(false)
-        }}
-        style={iconButton(palette)}
-        aria-label="Stop"
-      >
-        <Icon name="stop" size={17} />
-      </button>
-    </div>
-  )
-}
-
 function iconButton(palette: Palette): React.CSSProperties {
   return {
     width: 36, height: 36, borderRadius: 18, border: 'none', background: 'transparent',
@@ -794,9 +753,19 @@ function iconButton(palette: Palette): React.CSSProperties {
   }
 }
 
-// —— 本机剪辑详情（精确播放 + 静态波形，这是宿主录音做不到的那一半） ——
+// —— 播放器（静态波形 + 精确 scrubber + 15s 跳转） ——
+//
+// 2.0.0 起这是**唯一**的播放器。1.x 还有一条遥控宿主播放器的分支，它读不到当前位置
+//（`memo_play/stop/seek` 只有这三下），所以那条线上既没有 scrubber 也没有已播时间，
+// 章节和分段点击更是无从跳起。现在音频字节就在手上，这些全部是真的。
 
-function LocalClipBody(props: { palette: Palette; t: T; memo: Memo }) {
+function ClipPlayer(props: {
+  palette: Palette
+  t: T
+  memo: Memo
+  /** 把 seek 出口交给页面（章节 / 分段点击经它跳转）。 */
+  onSeekReady: (seek: (seconds: number) => void) => void
+}) {
   const { palette, t, memo } = props
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [position, setPosition] = useState(0)
@@ -815,10 +784,30 @@ function LocalClipBody(props: { palette: Palette; t: T; memo: Memo }) {
     return () => { cancelled = true }
   }, [memo.url])
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s4, padding: SPACE.s5 }}>
-      <div style={{ fontSize: 13, color: palette.muted }}>{t('localClipNote').replace(/\*\*/g, '')}</div>
+  // seek 出口只在挂载时交一次；`currentTime` 的写入是即时的，不需要 state 中转。
+  useEffect(() => {
+    props.onSeekReady((seconds) => {
+      const audio = audioRef.current
+      if (!audio) return
+      const value = Math.max(0, seconds)
+      audio.currentTime = value
+      setPosition(value)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  if (!memo.hasAudio) {
+    return (
+      <div style={{ background: alpha(palette.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: 'center' }}>
+        <Icon name="waveform.slash" size={20} color={palette.muted} />
+        <div style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>{t('audioRemovedTitle')}</div>
+        <div style={{ fontSize: 12, color: palette.muted }}>{t('audioRemovedBody')}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s4, padding: SPACE.s5, background: alpha(palette.surface, 0.9) }}>
       <StaticWaveform palette={palette} peaks={peaks} progress={duration > 0 ? position / duration : 0} />
 
       <audio
@@ -1008,5 +997,4 @@ function stripBold(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '$1')
 }
 
-export { fetchActionItems, askMemo }
 export type { ActionItem }

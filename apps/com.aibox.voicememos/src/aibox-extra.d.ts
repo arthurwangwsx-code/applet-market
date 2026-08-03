@@ -1,4 +1,4 @@
-// `aibox.audio.*` 与 `aibox.voiceMemos.*` 的本地类型补丁。
+// `aibox.audio.*` 的本地类型补丁（2.0.0：`aibox.voiceMemos.*` 那半段已随两条线合并删除）。
 //
 // 真值：
 //  · `Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift` 的 descriptor
@@ -88,6 +88,32 @@ declare namespace aibox {
     function recordCancel(): Promise<boolean>
 
     /**
+     * 转写能力探测。**不弹框、不转写。**
+     * `state` 的分档决定的是**完全相反**的 UI：`engine-missing` 要把整个转写入口藏掉，
+     * `needs-model-download` 要照常显示（第一次点会先下模型）。别把它压成一个布尔。
+     */
+    function transcribeAvailability(input?: { locale?: string }): Promise<{
+      available: boolean
+      /** available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing */
+      state: string
+      locale: string
+      /** 这个宿主构建里到底有没有转写引擎。 */
+      engine: boolean
+    }>
+
+    /**
+     * 把**自己的**一段音频转成文字。输入是 `resource://` 句柄（不是路径——applet 没有路径，
+     * 宿主在它那一侧解析）。长录音是分钟级重活，每个 applet 同时只允许一条，撞上回 `aibox/busy`。
+     */
+    function transcribe(input: { handle: string; locale?: string; segments?: boolean }): Promise<{
+      text: string
+      locale: string
+      segmentCount: number
+      /** `segments:false` 时不返回。start/duration/end 单位是秒。 */
+      segments?: { text: string; start: number; duration: number; end: number }[]
+    }>
+
+    /**
      * 录音中轮询。`levels` 是最近 120 个样本（20 Hz、约 6 秒），**已经按原生同一条曲线归一到 0…1**，
      * 最旧的在前 —— 左侧补零、最新的贴右边缘画，就与原生逐像素同口径。
      */
@@ -105,28 +131,4 @@ declare namespace aibox {
     }>
   }
 
-  namespace voiceMemos {
-    function list(input?: { folderId?: string; favOnly?: boolean; query?: string }): Promise<ToolEnvelope>
-    function get(input: { id: string }): Promise<ToolEnvelope>
-    function recordStart(input?: { title?: string }): Promise<ToolEnvelope>
-    function recordControl(input: { action: 'pause' | 'resume' | 'stop' }): Promise<ToolEnvelope>
-    function recordStatus(input?: Record<string, never>): Promise<ToolEnvelope>
-    function transcribe(input: { id: string; locale?: string }): Promise<ToolEnvelope>
-    function transcript(input: { id: string }): Promise<ToolEnvelope>
-    function play(input: { id: string }): Promise<ToolEnvelope>
-    function stop(input?: Record<string, never>): Promise<ToolEnvelope>
-    function seek(input: { seconds?: number; percentage?: number }): Promise<ToolEnvelope>
-    function rename(input: { id: string; title: string }): Promise<ToolEnvelope>
-    function move(input: { id: string; folderId?: string }): Promise<ToolEnvelope>
-    function favourite(input: { id: string }): Promise<ToolEnvelope>
-    function summarize(input: { id: string }): Promise<ToolEnvelope>
-    function actionItems(input: { id: string; force?: boolean }): Promise<ToolEnvelope>
-    function ask(input: { id: string; question: string }): Promise<ToolEnvelope>
-    /** ⚠️ **破坏性**：直接改写 fullText 并置 isEdited。 */
-    function cleanTranscript(input: { id: string }): Promise<ToolEnvelope>
-    function chapters(input: { id: string; force?: boolean }): Promise<ToolEnvelope>
-    // `delete` / `import` 是 TS 保留字，`declare namespace` 里声明不出来 —— 桥上它们**确实**叫
-    // 这两个名字（`memo_delete` / `memo_import` 的投影）。调用点用方括号取，见 `lib/memos.ts`。
-    // ⚠️ `delete` 是**永久删除**（删音频 + 删记录），不是移到最近删除。
-  }
 }

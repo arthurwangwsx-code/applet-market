@@ -1,65 +1,47 @@
-// 两个录音来源的统一读写层。
+// 录音数据层。**2.0.0 起只有一条线。**
 //
-// ## 为什么是两个来源，而不是一个
-// 容器把这件事切成了两半，谁都不能单独顶替另一个（规格 §17.2）：
+// ## 1.x 为什么必须同时用两条线，2.0.0 为什么不用了
+// 1.x 的 `aibox.audio.*`（应用内录音）拿得到音频字节、实时电平和精确播放位置，
+// 唯独**没有任何转写路径**；而转写是这个应用全部 AI 价值的输入（摘要 / 待办 / 章节 / 问答
+// 无一例外以 transcript 为输入）。于是它只能同时挂着宿主录音库 `aibox.voiceMemos.*`
+// 那条线——代价是列表变成合并视图、每个入口都要按来源分档、而且整个应用的命脉握在
+// 一个可以被解链的宿主模块手里。
 //
-// | | 宿主录音库 `aibox.voiceMemos.*` | 应用内录音 `aibox.audio.*` |
+// 宿主补上 `aibox.audio.transcribe` 之后，那个理由整条消失：
+//
+// | | 1.x（两条线） | 2.0.0（一条线） |
 // |---|---|---|
-// | 起录 | 会**拉起宿主全屏录音页盖住小应用**（effect: presentation） | 无界面，页面自己画 |
-// | 实时电平 | ❌ `recordStatus` 只回 `{isRecording,isPaused,elapsed}` | ✅ 120 个样本、20 Hz，已归一 |
-// | 音频字节 | ❌ 够不到（不在 FileBox，也没有导出工具） | ✅ applet 资源 URL，可 `<audio>`/`decodeAudioData` |
-// | 精确播放位置 | ❌ 只有 play/stop/seek，读不到当前位置 | ✅ `<audio>.currentTime` |
-// | 转写 | ✅ Apple 语音识别 | ❌ **没有任何路径**（`memo_import` 只收沙箱绝对路径或工件 ref，
-// |   |   |   applet 资源句柄两者都不是） |
-// | AI（摘要/待办/章节/问答/整理） | ✅ 宿主工具 | 经转写才有意义，故同上 |
+// | 录音 | `aibox.audio` | `aibox.audio` |
+// | 实时电平 | `aibox.audio.recordStatus` | 同左 |
+// | 音频字节 / 播放位置 | `aibox.audio` 句柄 + `<audio>` | 同左 |
+// | **转写** | ❌ 只能走 `voiceMemos.transcribe` | ✅ `aibox.audio.transcribe`（句柄进，文本+分段出） |
+// | AI（摘要/待办/章节/问答） | 一半走宿主 memo_* 工具 | 全部 `aibox.ai.generate` + 本地模板 |
+// | 数据 | 一半在宿主库里 | 全部在 `aibox.db` / `aibox.storage` / applet 资源域 |
 //
-// 所以列表是**合并视图**、行上带来源角标，能力按来源分档渲染入口 ——
-// 这正是容器纪律「能力缺席时不渲染入口」的直接后果，不是设计上的取巧。
-
+// 结果：**本应用不再依赖任何宿主模块**。`aibox.audio` / `aibox.ai` / `aibox.db` 都是平台能力，
+// 不随任何模块存废。manifest 里的 `voiceMemos` 声明也随之删除——声明一个不用的能力，
+// 只会让用户在授权时看见一条解释不了的请求。
+//
+// ⚠️ 老用户在宿主录音库里的数据**原地不动**，本应用不读也不删它。
+//    2.0.0 是一次干净的切线，不是数据迁移。
 import { normalizeError } from '@aibox/applet-sdk'
 import { hashText, snippetOf } from './format'
 import type {
-  ActionItem, Chapter, LocalClip, Memo, MemoArtifacts, MemoTranscript, SummaryTemplate,
+  LocalClip, Memo, MemoArtifacts, SummaryTemplate, TranscriptSegment,
 } from './types'
 
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 
 export const capabilities = {
-  get library() { return Boolean(api()?.voiceMemos) },
   get recorder() { return Boolean(api()?.audio) },
+  /** 转写出口是否存在。**注意它只说"方法在"，不说"此刻能转"** —— 后者要问 transcribeAvailability()。 */
+  get transcribe() { return typeof api()?.audio?.transcribe === 'function' },
   get ai() { return Boolean(api()?.ai) },
   get share() { return Boolean(api()?.share) },
   get shareFile() { return typeof api()?.share?.file === 'function' },
   get clipboard() { return Boolean(api()?.clipboard) },
   get ui() { return Boolean(api()?.ui) },
   get haptics() { return Boolean(api()?.haptics) },
-}
-
-export interface CallResult {
-  ok: boolean
-  text: string
-  json: unknown
-  error: string | null
-}
-
-/**
- * 调一个 `aibox.voiceMemos.<method>`。统一回 `{ok, text, json, error}`：
- * 多数 memo 工具把 JSON 直接放进 `text`，不走 `details`。失败不抛，让 UI 靠 `error` 分类空态。
- */
-export async function memoCall(method: string, args: Record<string, unknown> = {}): Promise<CallResult> {
-  const bridge = api()
-  const namespace = bridge?.voiceMemos as unknown as Record<string, (input: unknown) => Promise<aibox.ToolEnvelope>> | undefined
-  if (!namespace || typeof namespace[method] !== 'function') {
-    return { ok: false, text: '', json: null, error: 'aibox/voicememos-unavailable' }
-  }
-  try {
-    const raw = await namespace[method](args)
-    const text = String(raw?.text ?? '')
-    const ok = !(raw?.ok === false || raw?.isError === true)
-    return { ok, text, json: parseJSON(text), error: ok ? null : text }
-  } catch (error) {
-    return { ok: false, text: '', json: null, error: normalizeError(error).message }
-  }
 }
 
 export function parseJSON(text: string): unknown {
@@ -69,139 +51,6 @@ export function parseJSON(text: string): unknown {
     return JSON.parse(trimmed)
   } catch {
     return null
-  }
-}
-
-// —— 宿主录音库 ——
-
-interface RawMemo {
-  id?: string
-  title?: string
-  duration?: number
-  createdAt?: number
-  isFavourite?: boolean
-  hasTranscript?: boolean
-  hasAudio?: boolean
-  isAudioProtected?: boolean
-  folder?: string
-}
-
-export async function listLibrary(input: { query?: string; favOnly?: boolean } = {}): Promise<Memo[]> {
-  const args: Record<string, unknown> = {}
-  if (input.query) args.query = input.query
-  if (input.favOnly) args.favOnly = true
-  const result = await memoCall('list', args)
-  if (!Array.isArray(result.json)) return []
-  return (result.json as RawMemo[]).map(toMemo)
-}
-
-function toMemo(raw: RawMemo): Memo {
-  return {
-    id: String(raw.id ?? ''),
-    source: 'library',
-    title: String(raw.title ?? ''),
-    duration: Number(raw.duration ?? 0),
-    // 宿主给的是 unix **秒**，本地统一用毫秒。
-    createdAt: Number(raw.createdAt ?? 0) * 1000,
-    isFavourite: Boolean(raw.isFavourite),
-    hasTranscript: Boolean(raw.hasTranscript),
-    hasAudio: raw.hasAudio !== false,
-    isAudioProtected: Boolean(raw.isAudioProtected),
-    folder: raw.folder,
-  }
-}
-
-export async function fetchTranscript(id: string): Promise<MemoTranscript | null> {
-  const result = await memoCall('transcript', { id })
-  const json = result.json as Record<string, unknown> | null
-  if (!json) return null
-  return {
-    status: (String(json.status ?? 'none') as MemoTranscript['status']) ?? 'none',
-    fullText: String(json.fullText ?? ''),
-    locale: String(json.locale ?? ''),
-    isEdited: Boolean(json.isEdited),
-    segmentCount: Number(json.segmentCount ?? 0),
-  }
-}
-
-export async function startTranscription(id: string, locale?: string): Promise<CallResult> {
-  return memoCall('transcribe', locale ? { id, locale } : { id })
-}
-
-export async function renameMemo(id: string, title: string): Promise<CallResult> {
-  return memoCall('rename', { id, title })
-}
-
-/** ⚠️ 宿主的 `memo_delete` 是**永久删除**（删音频 + 删记录），语义比 UI 的「移到最近删除」危险得多。 */
-export async function deleteMemo(id: string): Promise<CallResult> {
-  return memoCall('delete', { id })
-}
-
-export async function toggleFavourite(id: string): Promise<CallResult> {
-  return memoCall('favourite', { id })
-}
-
-export async function playMemo(id: string): Promise<CallResult> {
-  return memoCall('play', { id })
-}
-
-export async function stopPlayback(): Promise<CallResult> {
-  return memoCall('stop', {})
-}
-
-export async function seekMemo(input: { seconds?: number; percentage?: number }): Promise<CallResult> {
-  return memoCall('seek', input as Record<string, unknown>)
-}
-
-/** 宿主的 AI 工具：待办 / 章节 / 问答 / 整理。摘要在本地做（要模板参数，宿主工具没有）。 */
-export async function fetchActionItems(id: string, force = false): Promise<ActionItem[]> {
-  const result = await memoCall('actionItems', force ? { id, force: true } : { id })
-  if (!Array.isArray(result.json)) return []
-  return (result.json as Record<string, unknown>[]).map((raw, index) => ({
-    id: String(raw.id ?? `item-${index}`),
-    text: String(raw.text ?? ''),
-    kind: (String(raw.kind ?? 'task') as ActionItem['kind']) ?? 'task',
-    isDone: Boolean(raw.isDone),
-    owner: raw.owner ? String(raw.owner) : undefined,
-    dueHint: raw.dueHint ? String(raw.dueHint) : undefined,
-    sourceTime: typeof raw.sourceTime === 'number' ? raw.sourceTime : undefined,
-  })).filter((item) => item.text)
-}
-
-export async function fetchChapters(id: string, force = false): Promise<Chapter[]> {
-  const result = await memoCall('chapters', force ? { id, force: true } : { id })
-  if (!Array.isArray(result.json)) return []
-  return (result.json as Record<string, unknown>[])
-    .map((raw) => ({ title: String(raw.title ?? ''), start: Number(raw.start ?? 0) }))
-    .filter((chapter) => chapter.title)
-}
-
-export async function askMemo(id: string, question: string): Promise<CallResult> {
-  return memoCall('ask', { id, question })
-}
-
-/** ⚠️ **破坏性**：直接改写宿主的 `fullText` 并置 `isEdited`，随后全部 AI 产物作废。 */
-export async function cleanTranscript(id: string): Promise<CallResult> {
-  return memoCall('cleanTranscript', { id })
-}
-
-/** 宿主录音（会拉起全屏录音页盖在小应用上）。 */
-export async function hostRecordStart(title?: string): Promise<CallResult> {
-  return memoCall('recordStart', title ? { title } : {})
-}
-
-export async function hostRecordControl(action: 'pause' | 'resume' | 'stop'): Promise<CallResult> {
-  return memoCall('recordControl', { action })
-}
-
-export async function hostRecordStatus(): Promise<{ isRecording: boolean; isPaused: boolean; elapsed: number; title: string }> {
-  const result = await memoCall('recordStatus', {})
-  const json = (result.json ?? {}) as Record<string, unknown>
-  return {
-    isRecording: Boolean(json.isRecording),
-    isPaused: Boolean(json.isPaused),
-    elapsed: Number(json.elapsed ?? 0),
-    title: String(json.title ?? ''),
   }
 }
 
@@ -314,6 +163,95 @@ export async function recordStop(): Promise<StoppedClip | null> {
   } catch {
     return null
   }
+}
+
+// —— 转写（2.0.0 新线：`aibox.audio.transcribe`） ——
+
+export interface TranscribeAvailability {
+  /** 此刻真的能转。`needsModelDownload` 一档为 false，但入口**仍应显示**（见 state）。 */
+  available: boolean
+  /** available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing */
+  state: string
+  locale: string
+  /** 宿主这个构建里到底有没有转写引擎。false = 装的是不带 MediaProcessing 的壳。 */
+  engine: boolean
+}
+
+/**
+ * 探一下能不能转写。**不弹框、不转写**，挂载时调一次即可。
+ *
+ * 为什么值得单独探：`needs-model-download` 与 `engine-missing` 的正确 UI 完全相反——前者
+ * 该照常显示按钮（第一次点会下模型），后者该把整个转写区隐藏掉并说明原因。把两者混成一个
+ * 布尔，就必然出现「点了没反应」的按钮。
+ */
+export async function transcribeAvailability(locale?: string): Promise<TranscribeAvailability> {
+  const bridge = api()
+  if (typeof bridge?.audio?.transcribeAvailability !== 'function') {
+    // 宿主太老，连方法都没有。这是 2.0.0 唯一需要探测宿主版本的地方。
+    return { available: false, state: 'host-too-old', locale: locale ?? '', engine: false }
+  }
+  try {
+    const value = await bridge.audio.transcribeAvailability(locale ? { locale } : {})
+    return {
+      available: Boolean(value.available),
+      state: String(value.state ?? ''),
+      locale: String(value.locale ?? locale ?? ''),
+      engine: Boolean(value.engine),
+    }
+  } catch (error) {
+    return { available: false, state: normalizeError(error).message, locale: locale ?? '', engine: false }
+  }
+}
+
+export interface TranscribeOutcome {
+  ok: boolean
+  text: string
+  locale: string
+  segments: TranscriptSegment[]
+  /** 失败时的稳定错误码（`aibox/...`），供 UI 分类兜底。 */
+  error: string
+}
+
+/**
+ * 把一段**本应用自己的**录音转成文字。
+ *
+ * 输入是资源句柄，不是路径——applet 没有路径，宿主在自己那一侧把句柄解析成沙箱 URL。
+ * 长录音是分钟级重活，宿主侧每个 applet 同时只允许一条（撞上回 `aibox/busy`），
+ * 所以调用方**不要**并发提交一批。
+ */
+export async function transcribeClip(handle: string, locale?: string): Promise<TranscribeOutcome> {
+  const bridge = api()
+  const empty = { ok: false, text: '', locale: locale ?? '', segments: [] as TranscriptSegment[] }
+  if (typeof bridge?.audio?.transcribe !== 'function') {
+    return { ...empty, error: 'aibox/unavailable: host-too-old' }
+  }
+  if (!handle) return { ...empty, error: 'aibox/invalid-args: missing handle' }
+  try {
+    const value = await bridge.audio.transcribe(locale ? { handle, locale } : { handle })
+    const segments = Array.isArray(value.segments)
+      ? (value.segments as Record<string, unknown>[]).map((raw) => ({
+          text: String(raw.text ?? ''),
+          start: Number(raw.start ?? 0),
+          duration: Number(raw.duration ?? 0),
+          end: Number(raw.end ?? 0),
+        })).filter((segment) => segment.text)
+      : []
+    return {
+      ok: true,
+      text: String(value.text ?? ''),
+      locale: String(value.locale ?? locale ?? ''),
+      segments,
+      error: '',
+    }
+  } catch (error) {
+    return { ...empty, error: normalizeError(error).message }
+  }
+}
+
+/** 设置里的 `auto | zh_CN | en_US` → 宿主要的 BCP-47（`zh_CN` → `zh-CN`）；auto 回 undefined 用设备语言。 */
+export function localeTag(preference: 'auto' | 'zh_CN' | 'en_US'): string | undefined {
+  if (preference === 'auto') return undefined
+  return preference.replace('_', '-')
 }
 
 // —— applet 侧持久化（本机剪辑 + AI 衍生产物 + 设置） ——
@@ -496,18 +434,17 @@ export async function saveSetting(key: string, value: unknown): Promise<void> {
   }
 }
 
-// —— 合并视图 ——
+// —— 视图模型 ——
 
 export function clipToMemo(clip: LocalClip): Memo {
   return {
     id: clip.id,
-    source: 'local',
     title: clip.title,
     duration: clip.durationMs / 1000,
     createdAt: clip.createdAt,
     isFavourite: clip.isFavourite,
-    // 本机剪辑**没有转写路径**：容器里没有任何工具能转写一个 applet 私有资源。
-    hasTranscript: false,
+    // 2.0.0：转写就长在剪辑自己身上（`aibox.audio.transcribe` 的产物直接存进 `aibox.db`）。
+    hasTranscript: Boolean(clip.transcriptText),
     hasAudio: true,
     isAudioProtected: false,
     url: clip.url,

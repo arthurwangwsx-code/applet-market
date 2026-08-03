@@ -2,7 +2,7 @@
 
 > Record, browse, transcribe and analyze voice memos through the host memo engine.
 
-**分组** 系统能力投影 ｜ **方法数** 20 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"voiceMemos"`。**声明 ≠ 授权**，用户仍会被逐项询问。
+**分组** 系统能力投影 ｜ **方法数** 21 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"voiceMemos"`。**声明 ≠ 授权**，用户仍会被逐项询问。
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 从宿主 descriptor 生成，请勿手改 -->
 
@@ -24,6 +24,7 @@
 | `play` | `memo_play` | `localWrite` |
 | `stop` | `memo_stop_playback` | `localWrite` |
 | `seek` | `memo_seek` | `localWrite` |
+| `waveform` | `memo_waveform` | `read` |
 | `import` | `memo_import` | `localWrite` |
 | `rename` | `memo_rename` | `localWrite` |
 | `delete` | `memo_delete` | `localWrite` |
@@ -161,6 +162,19 @@
 **参数**
 
 参数取自宿主工具 `memo_seek` 的真实 `ToolDefinition.parametersJSON`，随宿主版本变化。
+写代码前用 `await aibox.capabilities()` 或 `applet_read action=capabilities` 读当前 schema。
+
+**返回** `{ok, text, permission, details?, progress, artifacts}`
+
+### `aibox.voiceMemos.waveform()`
+
+投影自宿主工具 `memo_waveform`；摘要与参数以该工具的真实定义为准。
+
+**副作用档位** `read`（读取）— 只读，不改任何状态；不触发用户确认。
+
+**参数**
+
+参数取自宿主工具 `memo_waveform` 的真实 `ToolDefinition.parametersJSON`，随宿主版本变化。
 写代码前用 `await aibox.capabilities()` 或 `applet_read action=capabilities` 读当前 schema。
 
 **返回** `{ok, text, permission, details?, progress, artifacts}`

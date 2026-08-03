@@ -36,7 +36,16 @@ Update the compact current-page snapshot without sending a chat message.
 
 **参数**
 
-_(schema 无法解析，请检查宿主源码)_
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|:--:|---|
+| `route` | string |  |  |
+| `pageTitle` | string |  |  |
+| `visibleText` | string |  |  |
+| `formState` | any |  |  |
+| `consoleErrors` | string[] |  |  |
+| `selectedElement` | object |  |  |
+
+未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `ContextSnapshot`
 

@@ -61,13 +61,13 @@ const NAMESPACE_GROUP = {
   // 容器内建
   storage: 'container', net: 'container', ai: 'container', access: 'container',
   lifecycle: 'container', action: 'container', resource: 'container', db: 'container',
-  apps: 'container', jobs: 'container', chat: 'container',
+  apps: 'container', jobs: 'container', chat: 'container', data: 'container',
   // 应用级外壳
   scene: 'shell', navigation: 'shell', menu: 'shell', tabs: 'shell', toolbar: 'shell',
-  ui: 'shell', picker: 'shell', toast: 'shell', haptics: 'shell',
+  ui: 'shell', picker: 'shell', toast: 'shell', haptics: 'shell', list: 'shell',
   // 系统能力投影
   browser: 'system', clipboard: 'system', device: 'system', media: 'system',
-  open: 'system', share: 'system', tts: 'system',
+  open: 'system', share: 'system', tts: 'system', audio: 'system', speech: 'system',
   health: 'system', notifications: 'system', location: 'system', calendar: 'system',
   reminders: 'system', contacts: 'system', photos: 'system', files: 'system',
   music: 'system', voiceMemos: 'system', shortcuts: 'system',
@@ -249,6 +249,11 @@ function evalExpr(text, symbols = {}) {
   if (str && str.end >= t.length) return str.value;
   if (t.startsWith('.')) return t.slice(1).trim();
   if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(t) && t in symbols) return symbols[t];
+  // `Self.snapshotSchema` / `MediaCapabilityAdapter.idSchema` —— 带类型限定的同文件常量。
+  // 不解开会把标识符原文当成 schema 写进快照（`"parametersJSON": "Self.snapshotSchema"`），
+  // 文档里就变成一句「schema 无法解析」，且没有任何闸门看得出来。
+  const qualified = /^[A-Za-z_][A-Za-z0-9_]*\.([A-Za-z_][A-Za-z0-9_]*)$/.exec(t);
+  if (qualified && qualified[1] in symbols) return symbols[qualified[1]];
   return t;
 }
 

@@ -4,7 +4,7 @@
 //   · Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletDeveloperSDK.swift（aiTypeScript）
 //   · applet-market/docs/api/capabilities.snapshot.json（descriptor 快照，由 gen-api-docs.mjs 抽取）
 // 重新生成： npm run sdk:types      漂移检查： npm run sdk:types:check
-// 命名空间：39 个（宿主恒有 13 个、可声明 23 个）
+// 命名空间：43 个（宿主恒有 15 个、可声明 25 个）
 
 /* eslint-disable */
 declare namespace aibox {
@@ -249,6 +249,77 @@ declare namespace aibox {
     function on(event: "changed", handler: (state: State) => void): () => void
   }
 
+  namespace list {
+    type ActionRole = "normal" | "destructive"
+    type ActionTint = "default" | "accent" | "danger"
+    interface Action {
+      id: string
+      title: string
+      /** SF Symbol name. */
+      icon?: string
+      role?: ActionRole
+      tint?: ActionTint
+    }
+    /** Per-row display override. Display state only — identity (id, role, tint) can never change. */
+    interface ActionOverride {
+      title?: string | null
+      icon?: string | null
+      enabled?: boolean | null
+      hidden?: boolean | null
+    }
+    interface Row {
+      id: string
+      /**
+       * [x, y, width, height] in CSS POINTS, viewport coordinates — exactly what
+       * getBoundingClientRect() returns. Never multiply by devicePixelRatio (the host applies the
+       * screen scale) and never add scrollTop (the client rect already accounts for scrolling).
+       * Getting this wrong pops the menu on the wrong row, which is worse than no menu at all.
+       */
+      rect: [number, number, number, number]
+      actions?: Record<string, ActionOverride>
+    }
+    interface State {
+      /** false when this surface cannot host the gesture layer (card, headless) — KEEP your own fallback. */
+      rendered: boolean
+      regions: string[]
+      regionId?: string
+      configured?: boolean
+      contextMenu?: Array<Required<Pick<Action, "id" | "title" | "role" | "tint">> & { icon: string | null }>
+      leadingSwipe?: Array<Required<Pick<Action, "id" | "title" | "role" | "tint">> & { icon: string | null }>
+      trailingSwipe?: Array<Required<Pick<Action, "id" | "title" | "role" | "tint">> & { icon: string | null }>
+      rows?: number
+    }
+    interface ActionEvent {
+      regionId: string
+      rowId: string
+      actionId: string
+      /** Which affordance produced it — you may confirm a swipe-delete differently from a menu-delete. */
+      source: "contextMenu" | "swipe"
+    }
+    function getState(regionId?: string): Promise<State>
+    /** Declares the region's action identity once. Check `rendered` and keep a self-drawn fallback. */
+    function configure(input: {
+      regionId: string
+      contextMenu?: Action[]
+      leadingSwipe?: Action[]
+      trailingSwipe?: Action[]
+    }): Promise<State>
+    /**
+     * Report the currently VISIBLE rows. Rectangles go stale after 600ms, so call this on every
+     * scroll frame — `<VirtualList onVisibleRowsChange>` and `useListGestures` already do it for you.
+     */
+    function setRows(regionId: string, rows: Row[]): Promise<{
+      accepted: boolean
+      regionId: string
+      rows?: number
+      generation?: number
+      reason?: "not-configured"
+    }>
+    function release(regionId: string): Promise<{ released: boolean; regionId: string }>
+    function on(event: "action", handler: (payload: ActionEvent) => void): () => void
+    function on(event: "changed", handler: (state: State) => void): () => void
+  }
+
   namespace navigation {
     type SwipeBackPolicy = "automatic" | "disabled"
     interface State {
@@ -259,6 +330,13 @@ declare namespace aibox {
       closeConfirmationTitle: string | null
       closeConfirmationMessage: string | null
       swipeBack: SwipeBackPolicy
+      /** "native" = the host runs a real UINavigationController page stack for your sub-pages,
+       *  so the back gesture is the system's own interactive pop (previous page revealed live,
+       *  abandonable mid-drag). "web" = plain Web History; draw your own back affordance.
+       *  Opt in with manifest presentation.subpages = true. */
+      transition: "native" | "web"
+      /** Depth of the host-side native page stack; mirrors `depth` when transition is "native". */
+      nativeDepth: number
     }
     interface CloseConfirmationOptions { enabled: boolean; title?: string; message?: string }
     function getState(): Promise<State>
@@ -340,6 +418,23 @@ declare namespace aibox {
     function emit(input: { event: string; payload?: unknown }): Promise<unknown>
   }
 
+  namespace audio {
+    /** Probe whether recording can start right now. Never prompts and never opens the microphone — call it on mount and hide the record button when unavailable. Result: {available, microphone, supportsBackgroundRecording, busy, reason} */
+    function availability(input?: Record<string, never>): Promise<unknown>
+    /** Start recording. Shows no host UI. Fails with aibox/busy if any recording is already running. Result: {started, discarded, format, sampleRate, channels, supportsBackgroundRecording} — started:false with discarded:true means you called recordStop while the permission prompt was still up, so nothing was captured */
+    function recordStart(input?: { bitrate?: number; channels?: 1 | 2; format?: "m4a" | "wav"; sampleRate?: number }): Promise<unknown>
+    /** Pause the recording. Returns false when there is nothing of yours to pause, or after an interruption (that file is already finalized). Result: boolean */
+    function recordPause(input?: Record<string, never>): Promise<unknown>
+    /** Resume a paused recording. Result: boolean */
+    function recordResume(input?: Record<string, never>): Promise<unknown>
+    /** Stop and finalize. Returns an applet resource handle you can play with <audio src=ref.url> or decode with AudioContext. Clips shorter than 500ms are discarded (discarded:true) and nothing is written. Result: {handle, url, name, mimeType, size, durationMs, byteCount, format, sampleRate, channels, interrupted} | {discarded:true, durationMs} */
+    function recordStop(input?: Record<string, never>): Promise<unknown>
+    /** Discard the recording and delete the file. Nothing is stored. Result: boolean */
+    function recordCancel(input?: Record<string, never>): Promise<unknown>
+    /** Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) already normalized to 0…1 with the same curve the native recorder uses, oldest first — pad the left with zeros and draw the newest at the right edge. Result: {state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb} */
+    function recordStatus(input?: Record<string, never>): Promise<unknown>
+  }
+
   namespace browser {
     /** Open an http/https URL. mode inApp keeps the user inside the app (default); system uses SFSafari so Safari logins/passkeys apply; external hands off to the default browser app. Unavailable modes degrade inApp → system → external instead of failing. Result: {opened:boolean, mode:string} */
     function open(input: { mode?: "inApp" | "system" | "external"; url: string }): Promise<unknown>
@@ -360,7 +455,7 @@ declare namespace aibox {
     /** Set the collaboration mode for this applet. Result: ConversationBinding */
     function bind(input?: { mode?: "use" | "build" | "diagnose" | "automate" }): Promise<unknown>
     /** Update the compact current-page snapshot without sending a chat message. Result: ContextSnapshot */
-    function snapshot(input?: Record<string, never>): Promise<unknown>
+    function snapshot(input?: { consoleErrors?: Array<string>; formState?: unknown; pageTitle?: string; route?: string; selectedElement?: Record<string, unknown>; visibleText?: string }): Promise<unknown>
     /** Read the current collaboration binding and compact snapshot. Result: ConversationBinding */
     function context(input?: Record<string, never>): Promise<unknown>
     /** Record a user-selected DOM element for precise AI edits. Result: SelectedElement */
@@ -385,6 +480,17 @@ declare namespace aibox {
     function find(input?: Record<string, never>): Promise<unknown>
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
     function create(input?: Record<string, never>): Promise<unknown>
+  }
+
+  namespace data {
+    /** Bytes used and remaining across this applet's private data (kv + db + imports). Check it before bulk writes and use it to drive your own eviction policy — the host sets the budget, you decide what to drop. Result: {usedBytes, limitBytes, remainingBytes, layers:{kv,db,imports,other}} */
+    function usage(input?: Record<string, never>): Promise<unknown>
+    /** Which version last wrote the data on disk versus the version running now. This is the migration hook: when changed is true, migrate from previous to current, then call acknowledgeVersion(). The host knows nothing about your schema. Result: {current, previous, isFirstRun, changed, firstSeenAt?} */
+    function version(input?: Record<string, never>): Promise<unknown>
+    /** Mark the current version's data as migrated. Idempotent; until you call it, version() keeps reporting the same transition, so a failed migration is retried instead of silently skipped. Result: {current, previous, isFirstRun, changed} */
+    function acknowledgeVersion(input?: Record<string, never>): Promise<unknown>
+    /** The data snapshot the host captured before the last update, if any. Read it to tell the user a rollback point exists; the host keeps exactly one. Result: {version?, capturedAt?, bytes} | null */
+    function snapshot(input?: Record<string, never>): Promise<unknown>
   }
 
   namespace db {
@@ -483,6 +589,17 @@ declare namespace aibox {
     function runDue(input?: Record<string, never>): Promise<unknown>
     /** Read the next calculable due time for every enabled automation. Result: {id,nextAt:string|null}[] */
     function next(input?: Record<string, never>): Promise<unknown>
+  }
+
+  namespace list {
+    /** Read whether the host actually attached the gesture layer, plus the declared actions of one region. Always readable — this is the degradation probe. Result: {rendered, regions:string[], configured?, contextMenu?, leadingSwipe?, trailingSwipe?, rows?} */
+    function getState(input?: { regionId?: string }): Promise<unknown>
+    /** Declare the row actions of one region. Identity (ids, role, tint) is fixed here; per-row differences go through setRows overrides. Re-configuring the same regionId replaces the declaration and drops the stale row rectangles. Result: {rendered, regions, configured, contextMenu, leadingSwipe, trailingSwipe, rows} */
+    function configure(input: { contextMenu?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }>; leadingSwipe?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }>; regionId: string; trailingSwipe?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }> }): Promise<unknown>
+    /** Report the currently VISIBLE row rectangles. rect is [x, y, width, height] in CSS points in viewport coordinates — exactly getBoundingClientRect(); never multiply by devicePixelRatio and never add scrollTop. Rectangles expire after 600ms, so re-report on every scroll frame (VirtualList and useListGestures already do). Per-row 'actions' overrides may change title/icon/enabled/hidden only — never identity. Result: {accepted:boolean, regionId, rows?, generation?, reason?} */
+    function setRows(input: { regionId: string; rows: Array<{ actions?: Record<string, unknown>; id: string; rect: Array<number> }> }): Promise<unknown>
+    /** Drop a region when its list unmounts. Idempotent. Result: {released:boolean, regionId} */
+    function release(input: { regionId: string }): Promise<unknown>
   }
 
   namespace location {
@@ -600,6 +717,19 @@ declare namespace aibox {
     function open(input?: Record<string, never>): Promise<unknown>
   }
 
+  namespace speech {
+    /** Probe whether recognition can run right now. Never prompts and never opens the microphone — call it on mount and hide the mic button when unavailable. Result: {available, supportsOnDevice, microphone, speech, locale, reason} */
+    function availability(input?: { locale?: string }): Promise<unknown>
+    /** Open the microphone and resolve with the recognized text. Resolves when you call stop(), when maxDurationMs elapses, or when the engine finalizes. For push-to-talk, call recognize() WITHOUT awaiting on press and stop() on release, then await the recognize promise. Result: {transcript, confidence, locale, cancelled, timedOut, onDevice} */
+    function recognize(input?: { locale?: string; maxDurationMs?: number; onPartial?: boolean }): Promise<unknown>
+    /** Stop capturing and let the pending recognize() resolve with the final text. Result: boolean */
+    function stop(input?: Record<string, never>): Promise<unknown>
+    /** Abandon the pending recognize(); it resolves with cancelled:true and an empty transcript. Result: boolean */
+    function cancel(input?: Record<string, never>): Promise<unknown>
+    /** Poll the in-flight session: elapsed time and the interim transcript so far. Result: {recognizing, elapsedMs, partial, locale} */
+    function status(input?: Record<string, never>): Promise<unknown>
+  }
+
   namespace toast {
     /** Show a transient message. Result: boolean */
     function show(input: { message: string }): Promise<unknown>
@@ -634,6 +764,8 @@ declare namespace aibox {
     stop(input?: Record<string, never>): Promise<unknown>
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
     seek(input?: Record<string, never>): Promise<unknown>
+    /**  Result: {ok, text, permission, details?, progress, artifacts} */
+    waveform(input?: Record<string, never>): Promise<unknown>
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
     "import"(input?: Record<string, never>): Promise<unknown>
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
@@ -873,10 +1005,10 @@ interface Window {
 }
 
 /** 宿主可声明的扩展能力命名空间（manifest.permissions.capabilities 的取值域）。 */
-declare type AiboxDeclarableCapability = "browser" | "calendar" | "clipboard" | "contacts" | "device" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "share" | "shortcuts" | "toast" | "tools" | "tts" | "ui" | "voiceMemos"
+declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "voiceMemos"
 
 /** 容器恒可用命名空间：无需也不该写进 manifest.permissions.capabilities。 */
-declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "db" | "jobs" | "lifecycle" | "menu" | "navigation" | "resource" | "scene" | "tabs" | "toolbar"
+declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "data" | "db" | "jobs" | "lifecycle" | "list" | "menu" | "navigation" | "resource" | "scene" | "tabs" | "toolbar"
 
 // 本文件**必须**保持为 global script（没有顶层 import/export）——加一行 `export {}` 就会把它变成
 // 模块，`declare namespace aibox` 随即只在该模块内可见，全仓的 `aibox.*` 类型一起失效。

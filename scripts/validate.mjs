@@ -111,9 +111,13 @@ function validateManifest(appId, manifest, meta) {
     err(appId, "manifest.networkAllowed 含 '*'——市场包不允许任意 host，请精确列域名")
   }
 
-  // 键名闸门：宿主用合成 Codable 读 manifest，不认识的键**静默忽略**——写错一个键不会报错，
-  // 只是那条声明从未生效。最容易踩的是照抄 `applet_manage` 工具 schema 的 snake_case
-  //（`timeout_ms` / `max_retries` / `requires_network`…），而 manifest 侧要的是 camelCase。
+  // 键名 + 枚举值闸门（两张表都从宿主 Swift 源码机械提取，不手抄）：
+  //  · 键名：宿主用合成 Codable 读 manifest，不认识的键**静默忽略**——写错一个键不会报错，
+  //    只是那条声明从未生效。最容易踩的是照抄 `applet_manage` 工具 schema 的 snake_case
+  //   （`timeout_ms` / `max_retries` / `requires_network`…），而 manifest 侧要的是 camelCase。
+  //  · 枚举值：枚举是**硬解码**的，一个非法值让整份 manifest 解不出来 → **应用静默装不上**。
+  //    `com.aibox.timer` 1.0.0 带着 `effect: "localWrite"`（桥的副作用档位，不是 manifest 词汇）
+  //    发布过一次，而当时本文件对 `effect` 零命中，CI 如实反映「没人检查这一项」。
   if (hostSchema) {
     const { errors: keyErrors, warnings: keyWarnings } = checkManifestKeys(manifest, hostSchema)
     for (const message of keyErrors) err(appId, message)

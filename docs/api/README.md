@@ -9,7 +9,7 @@
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 生成，请勿手改 -->
 
-当前宿主共 **39** 个命名空间、**185** 个方法。
+当前宿主共 **43** 个命名空间、**206** 个方法。
 
 ## 容器内建
 
@@ -22,6 +22,7 @@
 | [`aibox.ai`](ai.md) | The app's language model: prose (generate), typed objects (decide), and constrained choices (chooseAction). Needs permissions.ai; metered per applet; every call can fail, so keep a deterministic fallback. | 12 | 需 `ai` |
 | [`aibox.apps`](apps.md) | Discover and invoke declared actions on installed applets without changing the host tool registry. | 4 | 恒可用 |
 | [`aibox.chat`](chat.md) | Bind the current applet to its docked AI conversation and share compact, user-approved page context. | 7 | 恒可用 |
+| [`aibox.data`](data.md) | Metadata about this applet's own private data: how much of its storage budget is left, and which version last wrote it. The budget is shared by aibox.storage, aibox.db and aibox.resource; going over it fails writes with aibox/quota-exceeded. | 4 | 恒可用 |
 | [`aibox.db`](db.md) | Per-applet structured document collections with atomic persistence and exact-match queries. | 8 | 恒可用 |
 | [`aibox.jobs`](jobs.md) | Persistent applet automations executed through short-lived headless action runtimes. | 6 | 恒可用 |
 | [`aibox.lifecycle`](lifecycle.md) | Read host lifecycle state and subscribe to foreground, background, memory, locale and text-size events. | 1 | 恒可用 |
@@ -36,6 +37,7 @@
 | 命名空间 | 说明 | 方法 | 声明 |
 |---|---|:--:|---|
 | [`aibox.haptics`](haptics.md) | Trigger native haptic feedback on a physical device. | 3 | 需声明 `haptics` |
+| [`aibox.list`](list.md) | Real native row gestures for your lists: UIContextMenuInteraction on long press and native swipe actions, driven by row rectangles your list reports. Web CSS cannot reproduce the lift-and-blur preview, the haptic curve or the swipe rubber-banding, which is most of what makes a list feel native. ALWAYS keep your own long-press/swipe fallback: configure returns rendered:false on surfaces that cannot host the layer. | 4 | 恒可用 |
 | [`aibox.menu`](menu.md) | Read or update the display state of business menu items declared by manifest.scene.menu. | 3 | 恒可用 |
 | [`aibox.navigation`](navigation.md) | Coordinate web history, native title, exit confirmation and edge-swipe behavior with the applet container. | 10 | 恒可用 |
 | [`aibox.picker`](picker.md) | Let the user choose files or photos and return applet-scoped resource handles instead of Base64 payloads. | 2 | 需声明 `picker` |
@@ -51,6 +53,7 @@
 
 | 命名空间 | 说明 | 方法 | 声明 |
 |---|---|:--:|---|
+| [`aibox.audio`](audio.md) | "Record audio inside your own UI. This is the ONLY way an applet can capture audio — "                 + "getUserMedia and MediaRecorder do not work inside the applet WebView. "                 + "The recording becomes an applet-private resource handle; it is never added to the user's voice-memo library." | 7 | 需声明 `audio` |
 | [`aibox.browser`](browser.md) | Open a link in the in-app browser, the system browser, or an external browser app — and come back. Prefer this over open.url for anything the user should read and return from. | 3 | 需声明 `browser` |
 | [`aibox.calendar`](calendar.md) | Read and manage calendar events and calendar subscriptions. | 2 | 需声明 `calendar` |
 | [`aibox.clipboard`](clipboard.md) | Read or replace the system text clipboard. | 2 | 需声明 `clipboard` |
@@ -67,8 +70,9 @@
 | [`aibox.reminders`](reminders.md) | Read and manage reminders through the host reminders module. | 1 | 需声明 `reminders` |
 | [`aibox.share`](share.md) | Present the native system share sheet, as plain text or as a real file the user can save to Files or AirDrop. | 2 | 需声明 `share` |
 | [`aibox.shortcuts`](shortcuts.md) | Run or open Apple Shortcuts from a visible applet. | 2 | 需声明 `shortcuts` |
+| [`aibox.speech`](speech.md) | "On-device speech-to-text. This is the ONLY way an applet can take voice input — "                 + "getUserMedia and webkitSpeechRecognition do not work inside the applet WebView. "                 + "Audio never leaves the device." | 5 | 需声明 `speech` |
 | [`aibox.tts`](tts.md) | Speak text with the device's speech synthesizer. Audible even when the ring switch is silent; other audio is ducked, not stopped. | 2 | 需声明 `tts` |
-| [`aibox.voiceMemos`](voiceMemos.md) | Record, browse, transcribe and analyze voice memos through the host memo engine. | 20 | 需声明 `voiceMemos` |
+| [`aibox.voiceMemos`](voiceMemos.md) | Record, browse, transcribe and analyze voice memos through the host memo engine. | 21 | 需声明 `voiceMemos` |
 
 ## 长尾工具网关
 

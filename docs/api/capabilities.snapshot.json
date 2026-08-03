@@ -209,6 +209,78 @@
       "group": "container"
     },
     {
+      "namespace": "audio",
+      "summary": "\"Record audio inside your own UI. This is the ONLY way an applet can capture audio — \"\n                + \"getUserMedia and MediaRecorder do not work inside the applet WebView. \"\n                + \"The recording becomes an applet-private resource handle; it is never added to the user's voice-memo library.\"",
+      "methods": [
+        {
+          "name": "availability",
+          "summary": "Probe whether recording can start right now. Never prompts and never opens the microphone — call it on mount and hide the record button when unavailable.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available, microphone, supportsBackgroundRecording, busy, reason}",
+          "effect": "read",
+          "example": "const a = await aibox.audio.availability(); if (!a.available) hideRecordButton(a.reason)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordStart",
+          "summary": "Start recording. Shows no host UI. Fails with aibox/busy if any recording is already running.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"format\":{\"type\":\"string\",\"enum\":[\"m4a\",\"wav\"],\"description\":\"m4a is AAC (default, small); wav is 16-bit PCM for when you want to decode samples in JS.\"},\"sampleRate\":{\"type\":\"integer\",\"minimum\":8000,\"maximum\":48000,\"description\":\"Default 44100.\"},\"bitrate\":{\"type\":\"integer\",\"description\":\"AAC bits per second; default 128000. Ignored for wav.\"},\"channels\":{\"type\":\"integer\",\"enum\":[1,2],\"description\":\"Default 1 — speech gains nothing from stereo and doubles the size.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{started, discarded, format, sampleRate, channels, supportsBackgroundRecording} — started:false with discarded:true means you called recordStop while the permission prompt was still up, so nothing was captured",
+          "effect": "external",
+          "example": "await aibox.audio.recordStart({ format:'m4a', sampleRate:44100, bitrate:128000, channels:1 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordPause",
+          "summary": "Pause the recording. Returns false when there is nothing of yours to pause, or after an interruption (that file is already finalized).",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.audio.recordPause()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordResume",
+          "summary": "Resume a paused recording.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.audio.recordResume()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordStop",
+          "summary": "Stop and finalize. Returns an applet resource handle you can play with <audio src=ref.url> or decode with AudioContext. Clips shorter than 500ms are discarded (discarded:true) and nothing is written.",
+          "parametersJSON": "{}",
+          "resultSummary": "{handle, url, name, mimeType, size, durationMs, byteCount, format, sampleRate, channels, interrupted} | {discarded:true, durationMs}",
+          "effect": "localWrite",
+          "example": "const r = await aibox.audio.recordStop(); if (!r.discarded) player.src = r.url",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordCancel",
+          "summary": "Discard the recording and delete the file. Nothing is stored.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.audio.recordCancel()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        },
+        {
+          "name": "recordStatus",
+          "summary": "Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) already normalized to 0…1 with the same curve the native recorder uses, oldest first — pad the left with zeros and draw the newest at the right edge.",
+          "parametersJSON": "{}",
+          "resultSummary": "{state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb}",
+          "effect": "read",
+          "example": "const s = await aibox.audio.recordStatus(); drawWaveform(s.levels)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "browser",
       "summary": "Open a link in the in-app browser, the system browser, or an external browser app — and come back. Prefer this over open.url for anything the user should read and return from.",
       "methods": [
@@ -289,7 +361,7 @@
         {
           "name": "snapshot",
           "summary": "Update the compact current-page snapshot without sending a chat message.",
-          "parametersJSON": "Self.snapshotSchema",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formState\":{},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"selectedElement\":{\"type\":\"object\"}},\"additionalProperties\":false}",
           "resultSummary": "ContextSnapshot",
           "effect": "localWrite",
           "example": "await aibox.chat.snapshot({ route:location.hash, pageTitle:document.title, visibleText:document.body.innerText.slice(0,1200) })",
@@ -400,6 +472,51 @@
       "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift",
       "kind": "projection",
       "group": "system"
+    },
+    {
+      "namespace": "data",
+      "summary": "Metadata about this applet's own private data: how much of its storage budget is left, and which version last wrote it. The budget is shared by aibox.storage, aibox.db and aibox.resource; going over it fails writes with aibox/quota-exceeded.",
+      "methods": [
+        {
+          "name": "usage",
+          "summary": "Bytes used and remaining across this applet's private data (kv + db + imports). Check it before bulk writes and use it to drive your own eviction policy — the host sets the budget, you decide what to drop.",
+          "parametersJSON": "{}",
+          "resultSummary": "{usedBytes, limitBytes, remainingBytes, layers:{kv,db,imports,other}}",
+          "effect": "read",
+          "example": "const u = await aibox.data.usage(); if (u.remainingBytes < 1e6) await trimOldRecords()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
+        },
+        {
+          "name": "version",
+          "summary": "Which version last wrote the data on disk versus the version running now. This is the migration hook: when changed is true, migrate from previous to current, then call acknowledgeVersion(). The host knows nothing about your schema.",
+          "parametersJSON": "{}",
+          "resultSummary": "{current, previous, isFirstRun, changed, firstSeenAt?}",
+          "effect": "read",
+          "example": "const v = await aibox.data.version(); if (v.changed) { await migrate(v.previous, v.current); await aibox.data.acknowledgeVersion() }",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
+        },
+        {
+          "name": "acknowledgeVersion",
+          "summary": "Mark the current version's data as migrated. Idempotent; until you call it, version() keeps reporting the same transition, so a failed migration is retried instead of silently skipped.",
+          "parametersJSON": "{}",
+          "resultSummary": "{current, previous, isFirstRun, changed}",
+          "effect": "localWrite",
+          "example": "await aibox.data.acknowledgeVersion()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
+        },
+        {
+          "name": "snapshot",
+          "summary": "The data snapshot the host captured before the last update, if any. Read it to tell the user a rollback point exists; the host keeps exactly one.",
+          "parametersJSON": "{}",
+          "resultSummary": "{version?, capturedAt?, bytes} | null",
+          "effect": "read",
+          "example": "const s = await aibox.data.snapshot(); if (s) showRollbackHint(s.capturedAt)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "container"
     },
     {
       "namespace": "db",
@@ -844,6 +961,51 @@
       "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
       "kind": "descriptor",
       "group": "container"
+    },
+    {
+      "namespace": "list",
+      "summary": "Real native row gestures for your lists: UIContextMenuInteraction on long press and native swipe actions, driven by row rectangles your list reports. Web CSS cannot reproduce the lift-and-blur preview, the haptic curve or the swipe rubber-banding, which is most of what makes a list feel native. ALWAYS keep your own long-press/swipe fallback: configure returns rendered:false on surfaces that cannot host the layer.",
+      "methods": [
+        {
+          "name": "getState",
+          "summary": "Read whether the host actually attached the gesture layer, plus the declared actions of one region. Always readable — this is the degradation probe.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"regionId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{rendered, regions:string[], configured?, contextMenu?, leadingSwipe?, trailingSwipe?, rows?}",
+          "effect": "read",
+          "example": "const s = await aibox.list.getState('feed'); if (!s.rendered) useOwnLongPressMenu()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "configure",
+          "summary": "Declare the row actions of one region. Identity (ids, role, tint) is fixed here; per-row differences go through setRows overrides. Re-configuring the same regionId replaces the declaration and drops the stale row rectangles.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\"],\"properties\":{\"regionId\":{\"type\":\"string\",\"maxLength\":64},\"contextMenu\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\",\"description\":\"SF Symbol name.\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}},\"leadingSwipe\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}},\"trailingSwipe\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "{rendered, regions, configured, contextMenu, leadingSwipe, trailingSwipe, rows}",
+          "effect": "presentation",
+          "example": "const s = await aibox.list.configure({ regionId:'feed', contextMenu:[{id:'save',title:'Save',icon:'bookmark'},{id:'delete',title:'Delete',icon:'trash',role:'destructive'}], trailingSwipe:[{id:'delete',title:'Delete',icon:'trash',role:'destructive'}] }); if (!s.rendered) useOwnLongPressMenu()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "setRows",
+          "summary": "Report the currently VISIBLE row rectangles. rect is [x, y, width, height] in CSS points in viewport coordinates — exactly getBoundingClientRect(); never multiply by devicePixelRatio and never add scrollTop. Rectangles expire after 600ms, so re-report on every scroll frame (VirtualList and useListGestures already do). Per-row 'actions' overrides may change title/icon/enabled/hidden only — never identity.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\",\"rows\"],\"properties\":{\"regionId\":{\"type\":\"string\"},\"rows\":{\"type\":\"array\",\"maxItems\":120,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"rect\"],\"properties\":{\"id\":{\"type\":\"string\"},\"rect\":{\"type\":\"array\",\"minItems\":4,\"maxItems\":4,\"items\":{\"type\":\"number\"},\"description\":\"[x, y, width, height] in CSS points, viewport coordinates.\"},\"actions\":{\"type\":\"object\",\"description\":\"Per-row display overrides keyed by declared action id.\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "{accepted:boolean, regionId, rows?, generation?, reason?}",
+          "effect": "presentation",
+          "example": "aibox.list.setRows('feed', [{ id:'a1', rect:[0,120,390,96], actions:{ delete:{ hidden: item.pinned } } }])",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        },
+        {
+          "name": "release",
+          "summary": "Drop a region when its list unmounts. Idempotent.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\"],\"properties\":{\"regionId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{released:boolean, regionId}",
+          "effect": "presentation",
+          "example": "await aibox.list.release('feed')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "shell"
     },
     {
       "namespace": "location",
@@ -1609,6 +1771,60 @@
       "group": "system"
     },
     {
+      "namespace": "speech",
+      "summary": "\"On-device speech-to-text. This is the ONLY way an applet can take voice input — \"\n                + \"getUserMedia and webkitSpeechRecognition do not work inside the applet WebView. \"\n                + \"Audio never leaves the device.\"",
+      "methods": [
+        {
+          "name": "availability",
+          "summary": "Probe whether recognition can run right now. Never prompts and never opens the microphone — call it on mount and hide the mic button when unavailable.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{available, supportsOnDevice, microphone, speech, locale, reason}",
+          "effect": "read",
+          "example": "const a = await aibox.speech.availability({ locale:'en-US' }); if (!a.available) hideMic(a.reason)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
+        },
+        {
+          "name": "recognize",
+          "summary": "Open the microphone and resolve with the recognized text. Resolves when you call stop(), when maxDurationMs elapses, or when the engine finalizes. For push-to-talk, call recognize() WITHOUT awaiting on press and stop() on release, then await the recognize promise.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag. Always pass it for read-aloud practice: a mismatched recognizer transcribes look-alike words in the wrong language and every score is wrong.\"},\"maxDurationMs\":{\"type\":\"integer\",\"minimum\":1000,\"maximum\":120000,\"description\":\"Hard stop; default 10000. Reaching it finalizes (it does not discard).\"},\"onPartial\":{\"type\":\"boolean\",\"description\":\"Keep interim results flowing; read them from status().partial. Default true.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{transcript, confidence, locale, cancelled, timedOut, onDevice}",
+          "effect": "external",
+          "example": "const r = await aibox.speech.recognize({ locale:'en-US', maxDurationMs:10000 }); if (!r.cancelled) score(r.transcript)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
+        },
+        {
+          "name": "stop",
+          "summary": "Stop capturing and let the pending recognize() resolve with the final text.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.speech.stop()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
+        },
+        {
+          "name": "cancel",
+          "summary": "Abandon the pending recognize(); it resolves with cancelled:true and an empty transcript.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.speech.cancel()",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
+        },
+        {
+          "name": "status",
+          "summary": "Poll the in-flight session: elapsed time and the interim transcript so far.",
+          "parametersJSON": "{}",
+          "resultSummary": "{recognizing, elapsedMs, partial, locale}",
+          "effect": "read",
+          "example": "const s = await aibox.speech.status(); caption.textContent = s.partial",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "storage",
       "summary": "Per-applet persistent JSON key-value storage.",
       "methods": [
@@ -1992,6 +2208,16 @@
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
         },
         {
+          "name": "waveform",
+          "summary": "",
+          "parametersJSON": null,
+          "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "effect": "read",
+          "example": null,
+          "toolName": "memo_waveform",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift"
+        },
+        {
           "name": "import",
           "summary": "",
           "parametersJSON": null,
@@ -2098,6 +2324,7 @@
     }
   ],
   "declarable": [
+    "audio",
     "browser",
     "calendar",
     "clipboard",
@@ -2116,6 +2343,7 @@
     "reminders",
     "share",
     "shortcuts",
+    "speech",
     "toast",
     "tools",
     "tts",
@@ -2127,9 +2355,11 @@
     "action",
     "apps",
     "chat",
+    "data",
     "db",
     "jobs",
     "lifecycle",
+    "list",
     "menu",
     "navigation",
     "resource",

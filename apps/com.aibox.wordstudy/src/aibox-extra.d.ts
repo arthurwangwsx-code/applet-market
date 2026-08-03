@@ -1,13 +1,26 @@
 // `aibox.speech.*` 的本地类型补丁。
 //
-// SDK 的 `generated/aibox-global.d.ts` 是从 `docs/api/capabilities.snapshot.json` 派生的，而那份
-// 快照还是 39 命名空间的版本 —— 2026-08 新落的 `aibox.audio` / `aibox.speech`（麦克风两条）
-// 尚未进快照，于是 SDK 里查不到类型。真值在
+// 真值在
 // `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift`
 // 的 descriptor，本文件按它逐字誊写签名。
 //
 // **不改 SDK 包**：那是另一条流水线的产物（`npm run sdk:types` 从宿主源码重新生成），
-// 手改会在下一次生成时被覆盖，而"漂移的类型比没有类型更糟"。等快照刷新后本文件可整份删掉。
+// 手改会在下一次生成时被覆盖，而"漂移的类型比没有类型更糟"。
+//
+// ## 2026-08-03 更正：快照已刷新，但本文件**还不能删**
+//
+// 原注释写着「等快照刷新后本文件可整份删掉」。快照已经刷到 42 命名空间（`aibox.audio` /
+// `aibox.speech` / `aibox.list` 都进去了），SDK 也重新生成过 —— 实测删掉本文件后 `tsc --noEmit`：
+//
+//   src/lib/host.ts(95,9): error TS18046: 'value' is of type 'unknown'.   ×6
+//
+// 命名空间确实有了，**返回类型仍是 `Promise<unknown>`**。原因见主仓库
+// `docs/capabilities/applet/sdk-architecture.md` §5.1：descriptor 只有机器可读的入参 schema
+//（`parametersJSON`），返回侧只有散文 `resultSummary`，于是 185 个方法里 126 个（68%）的生成签名
+// 一律是 `Promise<unknown>`。
+//
+// **真正的删除前提是 §5.1 的 `resultSchemaJSON`（落地顺序第 12 步），不是刷快照。**
+// 在那之前本文件是「返回 schema 缺失」在应用侧的形状，删了就是把类型换成一堆 `as` 断言。
 //
 // 与 `aibox-global.d.ts` 同样的纪律：**本文件必须保持为 global script**（无顶层 import/export），
 // 否则 `declare namespace aibox` 会变成模块内可见，全仓 `aibox.*` 类型一起失效。

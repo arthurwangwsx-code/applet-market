@@ -1,16 +1,26 @@
 // `aibox.audio.*` 与 `aibox.voiceMemos.*` 的本地类型补丁。
 //
-// SDK 的 `generated/aibox-global.d.ts` 是从 `docs/api/capabilities.snapshot.json` 派生的：
-//  · `aibox.audio`（2026-08 新落的应用内录音）**还没进快照**，SDK 里查不到；
-//  · `aibox.voiceMemos` 在快照里，但由 `HostToolProjectionCapabilityAdapter` 升格而成，
-//    SDK 只给到 `Promise<unknown>` —— 这里补一个 `ToolEnvelope` 别名，让调用点少写一堆断言。
-//
 // 真值：
 //  · `Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift` 的 descriptor
-//  · `Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift`（voiceMemos 的 20 个方法）
+//  · `Runtime/Capabilities/HostToolProjectionCapabilityAdapter.swift`（voiceMemos 的 21 个方法）
 //
 // **不改 SDK 包**：那是 `npm run sdk:types` 从宿主源码重新生成的产物，手改会被覆盖，
-// 而"漂移的类型比没有类型更糟"。等快照刷新后本文件可整份删掉。
+// 而"漂移的类型比没有类型更糟"。
+//
+// ## 2026-08-03 更正：快照已刷新，但本文件**还不能删**
+//
+// 原注释写着「等快照刷新后本文件可整份删掉」。快照已经刷到 42 命名空间（`aibox.audio` 进去了），
+// SDK 也重新生成过 —— 实测删掉本文件后 `tsc --noEmit` 仍有 20+ 条：
+//
+//   src/lib/memos.ts(51,103): error TS2694: Namespace 'aibox' has no exported member 'ToolEnvelope'.
+//   src/lib/memos.ts(222,18): error TS18046: 'value' is of type 'unknown'.   ×20
+//
+// 命名空间确实有了，**返回类型仍是 `Promise<unknown>`**。原因见主仓库
+// `docs/capabilities/applet/sdk-architecture.md` §5.1：descriptor 只有机器可读的入参 schema，
+// 返回侧只有散文 `resultSummary`，于是 68% 的生成签名一律是 `Promise<unknown>`；
+// `voiceMemos` 更是由 `HostToolProjectionCapabilityAdapter` 升格而来，连入参 schema 都在运行时才有。
+//
+// **真正的删除前提是 §5.1 的 `resultSchemaJSON`（落地顺序第 12 步），不是刷快照。**
 //
 // 纪律同 `aibox-global.d.ts`：**本文件必须保持为 global script**（无顶层 import/export）。
 

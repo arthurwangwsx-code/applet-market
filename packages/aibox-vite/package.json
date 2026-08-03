@@ -12,6 +12,7 @@
       "default": "./index.mjs"
     },
     "./tsconfig.base.json": "./tsconfig.base.json",
+    "./types/aibox-ui.d.ts": "./types/aibox-ui.d.ts",
     "./lib/runtime-modules.mjs": "./lib/runtime-modules.mjs",
     "./lib/schema-to-ts.mjs": "./lib/schema-to-ts.mjs",
     "./package.json": "./package.json"
@@ -20,6 +21,7 @@
     "index.mjs",
     "index.d.ts",
     "lib",
+    "types",
     "tsconfig.base.json"
   ],
   "dependencies": {

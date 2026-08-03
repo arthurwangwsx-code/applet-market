@@ -18,7 +18,7 @@ import AIPanel from './components/AIPanel.jsx'
 import { fetchSingleSource } from './lib/aggregator.js'
 import { getSession, whenReady } from './lib/session.js'
 import { registerActions } from './lib/actions.js'
-import { useSubpageStack } from './lib/subpages.js'
+import { useSubpageStack } from 'aibox/ui'
 import { openArticle as performOpen, knowledgeMarkdown } from './lib/reading.js'
 import {
   capabilities, browserAvailability, aiAvailability, findTool, callTool, onEvent, onNamespaceEvent,
@@ -81,7 +81,7 @@ export default function App() {
   const [ready, setReady] = React.useState(false)
   const [tab, setTab] = React.useState('feed')
   const [query, setQuery] = React.useState('')
-  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进子页走 `aibox.navigation.push`，
+  // 子页栈 = 宿主原生页栈的镜像（框架资产 `aibox/ui`）：进子页走 `aibox.navigation.push`，
   // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
   const subpages = useSubpageStack({
     pathFor: routePath,

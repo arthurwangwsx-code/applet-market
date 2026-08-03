@@ -7,7 +7,7 @@
 import React from 'react'
 import Icon from './Icon.jsx'
 import { EmptyState, ListHeader, Segmented, Spinner, SwipeRow } from './primitives.jsx'
-import { useRowGestures } from '../lib/gestures.js'
+import { useRowGestures } from 'aibox/ui'
 import { CollectionRow, SongRow } from './rows.jsx'
 import { C, SPACE } from './theme.js'
 import { music as callMusic, classifyMusicError, openURL } from '../lib/host.js'

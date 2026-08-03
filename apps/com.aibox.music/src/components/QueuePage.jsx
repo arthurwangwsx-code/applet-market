@@ -9,7 +9,7 @@ import Icon from './Icon.jsx'
 import { EmptyState, ListHeader, SwipeRow } from './primitives.jsx'
 import { QueueRow } from './rows.jsx'
 import { C, SPACE } from './theme.js'
-import { useRowGestures } from '../lib/gestures.js'
+import { useRowGestures } from 'aibox/ui'
 
 const ROW = 52
 

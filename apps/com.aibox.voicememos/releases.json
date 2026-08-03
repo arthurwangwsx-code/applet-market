@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "2.1.0",
+  "latestVersion": "2.2.0",
   "releases": [
+    {
+      "version": "2.2.0",
+      "releasedAt": "2026-08-03T13:51:59Z",
+      "notes": "子页栈与行手势改用框架资产 aibox/ui 的 useSubpageStack / useRowGestures（删除本地 lib/shell.ts 中的页栈实现与 lib/gestures.js）；AI 动作 id 改为下划线式",
+      "fileCount": 4,
+      "totalBytes": 197758,
+      "path": "apps/com.aibox.voicememos/releases/2.2.0",
+      "localizedNotes": {
+        "en": "Subpage stack and row gestures now use useSubpageStack / useRowGestures from aibox/ui (local copies removed); AI action ids switched to snake_case"
+      },
+      "bundleSha256": "91666ac2950a3ee011407e3e960f8d0b4136c9fbf352882d33d9a1431dff7c74"
+    },
     {
       "version": "2.1.0",
       "releasedAt": "2026-08-03T13:28:07Z",

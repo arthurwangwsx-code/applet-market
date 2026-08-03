@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.ledger",
-  "latestVersion": "1.0.3",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-03T13:51:47Z",
+      "notes": "子页栈改用框架资产 aibox/ui 的 useSubpageStack（删除本地 lib/subpages.js 副本）；AI 动作 id 改为下划线式",
+      "fileCount": 46,
+      "totalBytes": 435876,
+      "path": "apps/com.aibox.ledger/releases/1.1.0",
+      "localizedNotes": {
+        "en": "Subpage stack now uses the framework's useSubpageStack from aibox/ui (local copy removed); AI action ids switched to snake_case"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "6ac77573c3690584e25b2b96ee926d34b5dfc5b9ed0fe37136f6e0084d7736b2"
+    },
     {
       "version": "1.0.3",
       "releasedAt": "2026-08-03T05:09:37Z",

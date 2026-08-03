@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-03T13:51:57Z",
+      "notes": "子页栈与行手势改用框架资产 aibox/ui 的 useSubpageStack / useRowGestures（删除本地 lib/subpages.js、lib/gestures.js 副本）；AI 动作 id 改为下划线式",
+      "fileCount": 33,
+      "totalBytes": 277123,
+      "path": "apps/com.aibox.music/releases/1.2.0",
+      "localizedNotes": {
+        "en": "Subpage stack and row gestures now use useSubpageStack / useRowGestures from aibox/ui (local copies removed); AI action ids switched to snake_case"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "17a0e4f261fa8430a479411c3463f8b1e9763b4bdf48f4543b24ceaffea6a57d"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-03T13:27:55Z",

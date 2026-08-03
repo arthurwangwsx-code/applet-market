@@ -33,7 +33,7 @@ import {
   onEvent, onNamespaceEvent, registerAction, setNavigationTitle, shareText, tabs, toolbar,
 } from './lib/host.js'
 import { ACTION_HANDLERS } from './lib/actions.js'
-import { useSubpageStack } from './lib/subpages.js'
+import { useSubpageStack } from 'aibox/ui'
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js'
 
 const TABS = [
@@ -84,7 +84,7 @@ export default function App() {
   const { store, music } = refs.current
 
   const [tab, setTab] = React.useState('player')
-  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进详情走 `aibox.navigation.push`，
+  // 子页栈 = 宿主原生页栈的镜像（框架资产 `aibox/ui`）：进详情走 `aibox.navigation.push`，
   // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
   const subpages = useSubpageStack({
     pathFor: routePath,

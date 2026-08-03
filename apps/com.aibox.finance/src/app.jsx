@@ -23,7 +23,7 @@ import { Ledger } from './lib/ledger.js'
 import { QuoteService } from './lib/quotes.js'
 import { AlertStore, isPercentCondition, isUpwardCondition } from './lib/alerts.js'
 import { registerTools } from './lib/tools.js'
-import { useSubpageStack } from './lib/subpages.js'
+import { useSubpageStack } from 'aibox/ui'
 import { INDEX_ROWS, decimalsFor, resolveSymbol } from './lib/symbol.js'
 import { formatPercent, formatPrice } from './lib/format.js'
 import {
@@ -81,7 +81,7 @@ export default function App() {
 
   const [ready, setReady] = React.useState(false)
   const [tab, setTab] = React.useState('markets')
-  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进详情走 `aibox.navigation.push`，
+  // 子页栈 = 宿主原生页栈的镜像（框架资产 `aibox/ui`）：进详情走 `aibox.navigation.push`，
   // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
   const subpages = useSubpageStack({ pathFor: routePath, titleFor: (row) => (row && row.title) || '' })
   const [sheet, setSheet] = React.useState(null)          // { name, ... }

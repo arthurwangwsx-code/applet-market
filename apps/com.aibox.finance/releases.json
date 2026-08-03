@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.finance",
-  "latestVersion": "1.0.2",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-03T13:51:48Z",
+      "notes": "子页栈改用框架资产 aibox/ui 的 useSubpageStack（删除本地 lib/subpages.js 副本）",
+      "fileCount": 45,
+      "totalBytes": 425068,
+      "path": "apps/com.aibox.finance/releases/1.1.0",
+      "localizedNotes": {
+        "en": "Subpage stack now uses the framework's useSubpageStack from aibox/ui (local copy removed)"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "18e97b39190234b1d080e45343b549fb7a1358bad9cbc1d0834fdc10d6ae86f4"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-08-03T04:05:17Z",

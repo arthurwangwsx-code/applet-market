@@ -3,7 +3,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 import { useState, useEffect, useMemo, useCallback, useRef, createElement, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
-import { useListGestures } from "aibox/ui";
+import { useRowGestures, useSubpageStack } from "aibox/ui";
 function bridge$1() {
   try {
     return typeof window !== "undefined" ? window.aibox : void 0;
@@ -1416,56 +1416,6 @@ function filterIsActive(filter) {
   return filter.duration !== "any" || filter.date !== "all" || filter.favOnly || filter.withTranscript;
 }
 __name(filterIsActive, "filterIsActive");
-const HEARTBEAT_MS = 280;
-const MAX_ROWS = 120;
-function useRowGestures(regionId, config = {}) {
-  const { rendered, available, onVisibleRowsChange } = useListGestures(regionId, config);
-  const containerRef = useRef(null);
-  const reportRef = useRef(onVisibleRowsChange);
-  reportRef.current = onVisibleRowsChange;
-  useEffect(() => {
-    if (!rendered) return void 0;
-    let frame = 0;
-    const report = /* @__PURE__ */ __name(() => {
-      frame = 0;
-      const node2 = containerRef.current;
-      if (!node2) return;
-      const viewport = window.innerHeight || 0;
-      const rows = [];
-      const nodes = node2.querySelectorAll("[data-row-id]");
-      for (let i = 0; i < nodes.length && rows.length < MAX_ROWS; i += 1) {
-        const element = nodes[i];
-        const rect = element.getBoundingClientRect();
-        if (rect.height <= 0 || rect.bottom < -40 || rect.top > viewport + 40) continue;
-        rows.push({ id: element.getAttribute("data-row-id"), rect: [rect.left, rect.top, rect.width, rect.height] });
-      }
-      reportRef.current(rows);
-    }, "report");
-    const schedule = /* @__PURE__ */ __name(() => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(report);
-    }, "schedule");
-    report();
-    const timer = window.setInterval(report, HEARTBEAT_MS);
-    const node = containerRef.current;
-    if (node) node.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("scroll", schedule, { passive: true, capture: true });
-    window.addEventListener("resize", schedule);
-    return () => {
-      window.clearInterval(timer);
-      if (frame) window.cancelAnimationFrame(frame);
-      if (node) node.removeEventListener("scroll", schedule);
-      window.removeEventListener("scroll", schedule, true);
-      window.removeEventListener("resize", schedule);
-    };
-  }, [rendered, regionId]);
-  const regionProps = useMemo(() => ({
-    ref: containerRef,
-    "data-region-id": regionId
-  }), [regionId]);
-  return { rendered, available, regionProps };
-}
-__name(useRowGestures, "useRowGestures");
 function MemoList(props) {
   const { palette: palette2, t } = props;
   const rows = useMemo(() => applyFilter(props.memos, props.filter, props.query), [props.memos, props.filter, props.query]);
@@ -2943,65 +2893,6 @@ function hostNavigation() {
   return api2 && api2.navigation || null;
 }
 __name(hostNavigation, "hostNavigation");
-function historyDepth() {
-  try {
-    const state = window.history.state;
-    const marked = state ? Number(state.__aiboxDepth) : NaN;
-    return Number.isFinite(marked) ? Math.max(0, marked) : null;
-  } catch {
-    return null;
-  }
-}
-__name(historyDepth, "historyDepth");
-async function hostPush(path, title) {
-  const nav = hostNavigation();
-  if (!nav || typeof nav.push !== "function") return false;
-  try {
-    await nav.push(title ? { route: path, title } : { route: path });
-  } catch {
-    return false;
-  }
-  if (typeof nav.getState === "function") {
-    try {
-      await nav.getState();
-    } catch {
-    }
-  }
-  return true;
-}
-__name(hostPush, "hostPush");
-function hostBack() {
-  const nav = hostNavigation();
-  if (nav && typeof nav.back === "function") {
-    try {
-      nav.back().catch(() => {
-      });
-    } catch {
-      return false;
-    }
-    return true;
-  }
-  if (typeof window !== "undefined" && window.history) {
-    window.history.back();
-    return true;
-  }
-  return false;
-}
-__name(hostBack, "hostBack");
-function hostPopToRoot() {
-  const nav = hostNavigation();
-  if (nav && typeof nav.popToRoot === "function") {
-    try {
-      nav.popToRoot().catch(() => {
-      });
-    } catch {
-    }
-    return;
-  }
-  const depth = historyDepth();
-  if (typeof window !== "undefined" && window.history && depth) window.history.go(-depth);
-}
-__name(hostPopToRoot, "hostPopToRoot");
 function setNavigationTitle(title) {
   const nav = hostNavigation();
   if (!nav || typeof nav.setTitle !== "function") return;
@@ -3013,39 +2904,6 @@ function setNavigationTitle(title) {
   }
 }
 __name(setNavigationTitle, "setNavigationTitle");
-function useSubpageStack(options) {
-  const configRef = useRef(options);
-  configRef.current = options;
-  const [stack, setStack] = useState([]);
-  useEffect(() => {
-    const onPopState = /* @__PURE__ */ __name(() => {
-      const depth = historyDepth();
-      setStack((rows) => {
-        const target = depth === null ? rows.length - 1 : depth;
-        const clamped = Math.max(0, Math.min(rows.length, target));
-        return clamped === rows.length ? rows : rows.slice(0, clamped);
-      });
-    }, "onPopState");
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-  const push = useCallback((route) => {
-    const { pathFor, titleFor } = configRef.current;
-    void hostPush(pathFor(route), titleFor(route)).then(() => setStack((rows) => [...rows, route]));
-  }, []);
-  const back = useCallback(() => {
-    const depth = historyDepth();
-    if (depth !== null && depth > 0 && hostBack()) return;
-    setStack((rows) => rows.slice(0, -1));
-  }, []);
-  const reset = useCallback(() => {
-    const depth = historyDepth();
-    if (depth) hostPopToRoot();
-    setStack((rows) => rows.length === 0 ? rows : []);
-  }, []);
-  return { stack, route: stack.length > 0 ? stack[stack.length - 1] : null, push, back, reset };
-}
-__name(useSubpageStack, "useSubpageStack");
 function useOverlay(onInvoke) {
   const [rendered, setRendered] = useState(false);
   const handler = useRef(onInvoke);

@@ -10,7 +10,8 @@ import { FilterSheet, MemoList, Toggle, applyFilter } from './components/MemoLis
 import { MemoDetail, type DetailContext } from './components/MemoDetail'
 import { RecordSheet } from './components/RecordSheet'
 import { Icon, PushPage } from './components/primitives'
-import { setNavigationTitle, useOverlay, useSubpageStack } from './lib/shell'
+import { useSubpageStack } from 'aibox/ui'
+import { setNavigationTitle, useOverlay } from './lib/shell'
 import { registerMemoActions } from './lib/actions'
 import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format'
 import {

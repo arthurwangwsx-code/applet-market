@@ -1,0 +1,935 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.finance",
+  "version": "1.1.0",
+  "releasedAt": "2026-08-03T13:51:48Z",
+  "notes": "子页栈改用框架资产 aibox/ui 的 useSubpageStack（删除本地 lib/subpages.js 副本）",
+  "localizedNotes": {
+    "en": "Subpage stack now uses the framework's useSubpageStack from aibox/ui (local copy removed)"
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "理财",
+    "localizedNames": {
+      "en": "Finance"
+    },
+    "icon": "chart.line.uptrend.xyaxis",
+    "iconTintHex": "E64340",
+    "summary": "行情、自选与模拟持仓",
+    "localizedSummaries": {
+      "en": "Quotes, watchlist, and paper-trading portfolio"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": true,
+      "capabilities": [
+        "notifications",
+        "share"
+      ],
+      "networkAllowed": [
+        "gtimg.cn",
+        "sinajs.cn",
+        "sina.com.cn",
+        "eastmoney.com",
+        "1234567.com.cn"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "markets",
+            "title": "行情",
+            "localizedTitles": {
+              "en": "Markets"
+            },
+            "icon": "chart.line.uptrend.xyaxis"
+          },
+          {
+            "id": "industry",
+            "title": "行业",
+            "localizedTitles": {
+              "en": "Industry"
+            },
+            "icon": "square.grid.2x2",
+            "selectedIcon": "square.grid.2x2.fill"
+          },
+          {
+            "id": "portfolio",
+            "title": "持仓",
+            "localizedTitles": {
+              "en": "Portfolio"
+            },
+            "icon": "wallet.pass",
+            "selectedIcon": "wallet.pass.fill"
+          },
+          {
+            "id": "settings",
+            "title": "设置",
+            "localizedTitles": {
+              "en": "Settings"
+            },
+            "icon": "gearshape",
+            "selectedIcon": "gearshape.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "ai",
+            "icon": "sparkles",
+            "tint": "accent"
+          },
+          {
+            "id": "search",
+            "icon": "magnifyingglass"
+          }
+        ]
+      }
+    },
+    "actions": [
+      {
+        "id": "finance_quote",
+        "name": "finance_quote",
+        "displayName": "查行情",
+        "summary": "Get delayed quotes for stocks, funds or indices — price, change, open/high/low, turnover, P/E and order book. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "stock",
+          "quote",
+          "price",
+          "index",
+          "fund",
+          "行情",
+          "股票",
+          "股价",
+          "基金",
+          "指数"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbols\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"description\":\"Canonical symbol\"},\"description\":\"Batch of symbols. Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"symbol\":{\"type\":\"string\",\"description\":\"Single symbol. Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"force\":{\"type\":\"boolean\",\"description\":\"Bypass the local TTL cache and refetch.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_search",
+        "name": "finance_search",
+        "displayName": "搜索标的",
+        "summary": "Search instruments by name or code across A-shares, Hong Kong, US and mutual funds. Use this whenever the user names a company instead of a code. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "search",
+          "find",
+          "ticker",
+          "lookup",
+          "搜索",
+          "查找",
+          "代码"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Company name, ticker or code.\"},\"market\":{\"type\":\"string\",\"enum\":[\"ashare\",\"hk\",\"us\",\"fund\"],\"description\":\"Restrict results to one market.\"},\"limit\":{\"type\":\"number\",\"description\":\"Max results, 1..15. Default 15.\"}},\"required\":[\"query\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_chart",
+        "name": "finance_chart",
+        "displayName": "取K线",
+        "summary": "Fetch OHLCV candles plus locally computed indicator values (MA / MACD / KDJ / BOLL) and a window summary. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "chart",
+          "candle",
+          "kline",
+          "trend",
+          "MA",
+          "MACD",
+          "KDJ",
+          "K线",
+          "走势",
+          "技术指标"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"period\":{\"type\":\"string\",\"enum\":[\"5m\",\"15m\",\"30m\",\"60m\",\"day\",\"week\",\"month\"],\"description\":\"Candle period. Default day.\"},\"count\":{\"type\":\"number\",\"description\":\"Number of candles, 1..800. Default 120.\"},\"adjust\":{\"type\":\"string\",\"enum\":[\"qfq\",\"hfq\"],\"description\":\"Price adjustment for daily/weekly/monthly. Default qfq.\"},\"indicators\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"ma\",\"macd\",\"kdj\",\"boll\"],\"description\":\"Indicator\"},\"description\":\"Indicators to summarize.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_watch",
+        "name": "finance_watch",
+        "displayName": "管理自选",
+        "summary": "List, add, remove or regroup the watchlist, and manage watchlist groups. Writes to the user's watchlist. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "watchlist",
+          "follow",
+          "add",
+          "remove",
+          "自选",
+          "关注",
+          "添加"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"remove\",\"move\",\"create_group\",\"delete_group\"],\"description\":\"What to do. Default list.\"},\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"group\":{\"type\":\"string\",\"description\":\"Group name.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": false,
+        "idempotent": true
+      },
+      {
+        "id": "finance_portfolio",
+        "name": "finance_portfolio",
+        "displayName": "看持仓",
+        "summary": "Value the paper portfolio (holdings with market value, cost, unrealized and daily P&L) or list recent trades. Positions with a missing quote or FX rate are reported as incomplete rather than guessed. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "portfolio",
+          "holdings",
+          "positions",
+          "pnl",
+          "持仓",
+          "组合",
+          "盈亏"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"holdings\",\"history\"],\"description\":\"Default holdings.\"},\"account\":{\"type\":\"string\",\"description\":\"Account name. Omit for the primary account.\"},\"limit\":{\"type\":\"number\",\"description\":\"Rows for history, 1..100. Default 20.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_trade",
+        "name": "finance_trade",
+        "displayName": "模拟买卖",
+        "summary": "Record a simulated buy or sell in a paper account. Cross-currency trades lock the exchange rate at execution and fail when no rate is available. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "buy",
+          "sell",
+          "trade",
+          "order",
+          "买入",
+          "卖出",
+          "交易",
+          "下单"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"buy\",\"sell\"],\"description\":\"Trade side.\"},\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"quantity\":{\"type\":\"number\",\"description\":\"Share/unit count, must be > 0.\"},\"price\":{\"type\":\"number\",\"description\":\"Execution price in the instrument currency. Defaults to the latest quote.\"},\"account\":{\"type\":\"string\",\"description\":\"Account name. Omit for the primary account.\"},\"fee\":{\"type\":\"number\",\"description\":\"Commission in the account currency (major units, e.g. 5.00).\"}},\"required\":[\"action\",\"symbol\",\"quantity\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": false,
+        "idempotent": false
+      },
+      {
+        "id": "finance_account",
+        "name": "finance_account",
+        "displayName": "管理账户",
+        "summary": "List, create, rename, reset, archive or delete paper accounts, and record cash flows (deposit / withdrawal / dividend / interest / tax / fee / adjustment). Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "account",
+          "cash",
+          "deposit",
+          "withdraw",
+          "账户",
+          "入金",
+          "出金",
+          "现金"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"copy\",\"rename\",\"update\",\"cashflow\",\"reset\",\"archive\",\"unarchive\",\"delete\"],\"description\":\"Default list.\"},\"name\":{\"type\":\"string\",\"description\":\"Account name (target, or new name for create/rename).\"},\"currency\":{\"type\":\"string\",\"enum\":[\"CNY\",\"HKD\",\"USD\"],\"description\":\"Account currency for create. Default CNY.\"},\"initial_cash\":{\"type\":\"number\",\"description\":\"Initial cash in major units for create. Default 1000000.\"},\"note\":{\"type\":\"string\",\"description\":\"Free-form note.\"},\"cashflow_type\":{\"type\":\"string\",\"enum\":[\"deposit\",\"withdrawal\",\"dividend\",\"interest\",\"tax\",\"fee\",\"adjustment\"],\"description\":\"Cash flow kind.\"},\"amount\":{\"type\":\"number\",\"description\":\"Cash flow amount in major units, must be > 0.\"},\"is_real_copy\":{\"type\":\"boolean\",\"description\":\"Mark the account as a mirror of real holdings.\"},\"include_archived\":{\"type\":\"boolean\",\"description\":\"Include archived accounts when listing.\"},\"from_account\":{\"type\":\"string\",\"description\":\"Source account name for copy.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": false,
+        "idempotent": false
+      },
+      {
+        "id": "finance_alert",
+        "name": "finance_alert",
+        "displayName": "到价提醒",
+        "summary": "List, set, remove, enable or disable price alerts. Alerts are checked while quotes refresh in the foreground — this container has no background wake-up. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "alert",
+          "notify",
+          "target price",
+          "提醒",
+          "到价",
+          "通知"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"set\",\"remove\",\"enable\",\"disable\"],\"description\":\"Default list.\"},\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"condition\":{\"type\":\"string\",\"enum\":[\"above\",\"below\",\"up_pct\",\"down_pct\"],\"description\":\"Trigger condition.\"},\"price\":{\"type\":\"number\",\"description\":\"Target price, or target percent for up_pct / down_pct.\"},\"note\":{\"type\":\"string\",\"description\":\"Free-form note.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": false,
+        "idempotent": true
+      },
+      {
+        "id": "finance_financials",
+        "name": "finance_financials",
+        "displayName": "查财务",
+        "summary": "Fetch up to eight periods of key financial indicators (revenue, net profit, ROE, gross margin, EPS, BPS with YoY) plus the current P/E and P/B. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "financials",
+          "earnings",
+          "revenue",
+          "ROE",
+          "PE",
+          "财务",
+          "营收",
+          "净利润",
+          "市盈率"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_perf",
+        "name": "finance_perf",
+        "displayName": "组合绩效",
+        "summary": "Compute portfolio performance: total and annualized return, max drawdown, volatility, Sharpe and win rate. Refreshes quotes and records a daily snapshot first; drawdown/volatility/Sharpe need at least two daily snapshots. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "performance",
+          "sharpe",
+          "drawdown",
+          "return",
+          "绩效",
+          "年化",
+          "回撤",
+          "夏普"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"account\":{\"type\":\"string\",\"description\":\"Account name. Omit for the primary account.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": false
+      },
+      {
+        "id": "finance_diagnose",
+        "name": "finance_diagnose",
+        "displayName": "组合诊断",
+        "summary": "Score portfolio structure (0..100) and list risk flags such as over-concentration, too few holdings or an excessive cash ratio. Refuses to score when any quote or FX rate is missing. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "diagnose",
+          "risk",
+          "concentration",
+          "诊断",
+          "风险",
+          "集中度"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"account\":{\"type\":\"string\",\"description\":\"Account name. Omit for the primary account.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_dividend",
+        "name": "finance_dividend",
+        "displayName": "查分红",
+        "summary": "Fetch the dividend and bonus-issue history for an A-share company. A-shares only. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "dividend",
+          "bonus",
+          "payout",
+          "分红",
+          "送配",
+          "派息"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_fundflow",
+        "name": "finance_fundflow",
+        "displayName": "资金流向",
+        "summary": "Fetch daily net capital flow for an A-share stock split by order size (main / super / large / medium / small), in CNY. A-shares only. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "fund flow",
+          "capital",
+          "main net",
+          "资金流",
+          "主力",
+          "净流入"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"days\":{\"type\":\"number\",\"description\":\"Trading days, 1..60. Default 10.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_sector",
+        "name": "finance_sector",
+        "displayName": "板块行情",
+        "summary": "List industry or concept sectors ranked by change or main capital inflow, or list a sector's constituents. Needs a mainland-China network connection; returns empty otherwise. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "sector",
+          "industry",
+          "concept",
+          "board",
+          "板块",
+          "行业",
+          "概念"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"industry\",\"concept\",\"constituents\"],\"description\":\"What to list.\"},\"sort\":{\"type\":\"string\",\"enum\":[\"change\",\"moneyflow\"],\"description\":\"Ranking field. Default change.\"},\"code\":{\"type\":\"string\",\"description\":\"Sector code (BKxxxx) — required for constituents.\"},\"limit\":{\"type\":\"number\",\"description\":\"Rows, 1..40. Default 12.\"}},\"required\":[\"action\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_moneyrank",
+        "name": "finance_moneyrank",
+        "displayName": "资金排行",
+        "summary": "Rank the whole A-share market by main capital net inflow or outflow. Needs a mainland-China network connection. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "money flow",
+          "inflow",
+          "outflow",
+          "ranking",
+          "资金排行",
+          "净流入",
+          "净流出"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"direction\":{\"type\":\"string\",\"enum\":[\"inflow\",\"outflow\"],\"description\":\"Default inflow.\"},\"limit\":{\"type\":\"number\",\"description\":\"Rows, 1..30. Default 12.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_dragon",
+        "name": "finance_dragon",
+        "displayName": "龙虎榜",
+        "summary": "Fetch the latest Dragon-Tiger list (stocks with abnormal trading), deduplicated by code, with net buy amounts and the listing reason. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "dragon tiger",
+          "billboard",
+          "abnormal",
+          "龙虎榜",
+          "异动"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"number\",\"description\":\"Rows, 1..30. Default 12.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_sentiment",
+        "name": "finance_sentiment",
+        "displayName": "市场情绪",
+        "summary": "Fetch today's market breadth: limit-up count, limit-down count, broken-board count, seal rate and the longest consecutive limit-up streak. Needs a mainland-China network connection. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "sentiment",
+          "limit up",
+          "breadth",
+          "情绪",
+          "涨停",
+          "跌停",
+          "封板"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_screener",
+        "name": "finance_screener",
+        "displayName": "选股扫描",
+        "summary": "Scan the top A-share universe and filter locally by P/E, P/B, change, market cap or industry. Needs a mainland-China network connection. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "screener",
+          "filter",
+          "scan",
+          "valuation",
+          "选股",
+          "筛选",
+          "扫描"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"sortBy\":{\"type\":\"string\",\"enum\":[\"change\",\"moneyflow\",\"turnover\",\"pe\",\"marketcap\"],\"description\":\"Sort field. Default change.\"},\"order\":{\"type\":\"string\",\"enum\":[\"asc\",\"desc\"],\"description\":\"Sort order. Defaults to asc for pe, desc otherwise.\"},\"peMin\":{\"type\":\"number\",\"description\":\"Minimum P/E.\"},\"peMax\":{\"type\":\"number\",\"description\":\"Maximum P/E.\"},\"pbMax\":{\"type\":\"number\",\"description\":\"Maximum P/B.\"},\"changeMin\":{\"type\":\"number\",\"description\":\"Minimum percent change.\"},\"changeMax\":{\"type\":\"number\",\"description\":\"Maximum percent change.\"},\"mktcapMinYi\":{\"type\":\"number\",\"description\":\"Minimum market cap in 亿 (100 million CNY).\"},\"industry\":{\"type\":\"string\",\"description\":\"Industry name substring.\"},\"limit\":{\"type\":\"number\",\"description\":\"Rows, 1..25. Default 12.\"}},\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_backtest",
+        "name": "finance_backtest",
+        "displayName": "策略回测",
+        "summary": "Run a local historical backtest (buy & hold, or MA5/MA20 crossover) and report return, annualized return, max drawdown, volatility, Sharpe and win rate. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "backtest",
+          "strategy",
+          "simulate",
+          "回测",
+          "策略",
+          "均线"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"strategy\":{\"type\":\"string\",\"enum\":[\"buyhold\",\"macross\"],\"description\":\"Default buyhold.\"},\"count\":{\"type\":\"number\",\"description\":\"Daily candles, 30..800. Default 250.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_plan",
+        "name": "finance_plan",
+        "displayName": "定投模拟",
+        "summary": "Simulate a dollar-cost-averaging plan over historical prices and report invested amount, current value, average cost and the lump-sum comparison. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "dca",
+          "plan",
+          "invest",
+          "monthly",
+          "定投",
+          "计划"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"amount\":{\"type\":\"number\",\"description\":\"Amount invested each period. Default 1000.\"},\"frequency\":{\"type\":\"string\",\"enum\":[\"weekly\",\"monthly\"],\"description\":\"Default monthly.\"},\"count\":{\"type\":\"number\",\"description\":\"Daily candles, 60..800. Default 500.\"}},\"required\":[\"symbol\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_news",
+        "name": "finance_news",
+        "displayName": "财经快讯",
+        "summary": "Fetch market newsflashes, per-stock announcements, or the latest earnings pre-announcements. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "news",
+          "announcement",
+          "forecast",
+          "快讯",
+          "公告",
+          "业绩预告"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"market\",\"stock\",\"forecast\"],\"description\":\"What to fetch.\"},\"symbol\":{\"type\":\"string\",\"description\":\"Required for action=stock. Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"limit\":{\"type\":\"number\",\"description\":\"Rows, 1..25. Default 10.\"}},\"required\":[\"action\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_compare",
+        "name": "finance_compare",
+        "displayName": "横向对比",
+        "summary": "Compare several instruments (price, change, P/E, P/B, market cap) or several paper accounts (total value, P&L, return) side by side. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "compare",
+          "versus",
+          "benchmark",
+          "对比",
+          "比较"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"instruments\",\"accounts\"],\"description\":\"Default instruments.\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"description\":\"Symbol or account name\"},\"description\":\"Things to compare.\"}},\"required\":[\"items\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "finance_rebalance",
+        "name": "finance_rebalance",
+        "displayName": "再平衡提案",
+        "summary": "Propose (never execute) the trades needed to move a paper account toward target weights. Weights are normalized to 100%; nothing is ordered. Market quotes are delayed and for simulation/research only — never place real trades or move real money.",
+        "keywords": [
+          "rebalance",
+          "allocation",
+          "target weight",
+          "再平衡",
+          "调仓",
+          "配置"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"account\":{\"type\":\"string\",\"description\":\"Account name. Omit for the primary account.\"},\"targets\":{\"type\":\"array\",\"description\":\"Target weights.\",\"items\":{\"type\":\"object\",\"properties\":{\"symbol\":{\"type\":\"string\",\"description\":\"Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.\"},\"weight\":{\"type\":\"number\",\"description\":\"Relative weight, > 0.\"}},\"required\":[\"symbol\",\"weight\"],\"additionalProperties\":false}}},\"required\":[\"targets\"],\"additionalProperties\":false}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      }
+    ]
+  },
+  "totalBytes": 425068,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 2395,
+      "sha256": "d5f09a158839f165c9e725e766c93869d7ec4ecf5b52263b8870faa2e37e386d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.jsx",
+      "bytes": 17893,
+      "sha256": "df9d0624bef1292ed0141ba91b8337089658524ebf297f38a46e29056a2f590b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AccountsPage.jsx",
+      "bytes": 13067,
+      "sha256": "c20892a3a8a0ea5224b894a8d954457ca1804bdf31d74ee69b71562cab6357bf",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AIPanel.jsx",
+      "bytes": 8288,
+      "sha256": "ef25fb8e39725c7e7223f3fe36e991c9e8ef316481b34ac234bc3d847e2ddb4c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AlertPanel.jsx",
+      "bytes": 4571,
+      "sha256": "15a20e7bcd45d5bba1c797f3f6a513c630b421ba0ba95a899bcc0f81bbff23d5",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Chart.jsx",
+      "bytes": 8617,
+      "sha256": "afb6260da4ba92dfb158bf87ad15119255d1d6ded3a88aa81119bd14eb3f0c43",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/DetailPage.jsx",
+      "bytes": 15141,
+      "sha256": "957bc179b64359b26740e41b14cf8be1e5bdc0c6302e6cbc8426b93bad784a05",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/FundamentalsView.jsx",
+      "bytes": 6266,
+      "sha256": "dd784bb8226d0e4ff6f8dd4591245464274505057f5c7f7a7a996b08f6bd1080",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.jsx",
+      "bytes": 7571,
+      "sha256": "74256d472991e8b90865d8686d0d947478d5db31e1355177d05d9c3a76ea708d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/IndustryPage.jsx",
+      "bytes": 14276,
+      "sha256": "b58fab508b48aaf680b8de5df5a27c1a6ba5d11cd1cb8ca160c1ad3f37f05e9b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/PortfolioPage.jsx",
+      "bytes": 15681,
+      "sha256": "df8f80c8a4273823347f6ee97c9364df84cd0d0655b7734766ee5fce8fae38ae",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.jsx",
+      "bytes": 16227,
+      "sha256": "5ae9090282030d63d9e02387a15e400cf1c20544ff4627920a31f65db03401ce",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.jsx",
+      "bytes": 8147,
+      "sha256": "11ef53417228fbd2e159f53f896a0d982c9ded92ed4cfdd071ab1605e56d3459",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SettingsPage.jsx",
+      "bytes": 8145,
+      "sha256": "011dca0cfb0a86b832dab24b481518001f4b91149cb5a5c1bf159e0f9bfd6744",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Shell.jsx",
+      "bytes": 5282,
+      "sha256": "dcb0e138121c3ccaca678661a9a7b61c20c14cd9eb9669dfc804d756e183a1d6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/StrategyPage.jsx",
+      "bytes": 6331,
+      "sha256": "99653936563d617541b0a0f2fd16c56254c209d536679af896d7c94533183f66",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 4356,
+      "sha256": "6d06e61407034605bf9e7ca80ca98ffd7e63ab7438cf549c9b32db5e4cf95766",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/TradePanel.jsx",
+      "bytes": 8056,
+      "sha256": "3c1fdd82765773507c4b390d94e5908db4fb63ccb930aaeeab31afed57d09e3b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/VirtualList.jsx",
+      "bytes": 9045,
+      "sha256": "8f8714331f2d34ab919ae0cfded62f154fa9d919deac5fc32811349fb7050859",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/WatchlistPage.jsx",
+      "bytes": 11442,
+      "sha256": "732d38c6b7855107b8665f9823716500fbd793722fda5453d790c158239454d3",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/index.js",
+      "bytes": 2136,
+      "sha256": "39421632df07ed87dda7f498ac3f060b6026647a2ac3ccb9f9bbacc2b1fd98c7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.en.js",
+      "bytes": 14861,
+      "sha256": "04d293c982405e1418a2fac12c57ba6c20ee94581d3e94424beadf5430b2a6b3",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.js",
+      "bytes": 447,
+      "sha256": "f1f4abd7b1c4056635b7984ee98e04f617986ffc8a468b7320cef1f4dc112136",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.zh.js",
+      "bytes": 14941,
+      "sha256": "177f7e285bbd344e716c544df621e1498676553e7f6657baa20ea16d93fd81ad",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/alerts.js",
+      "bytes": 4259,
+      "sha256": "8090da529f104e1b4d9b845473e79896654fc57ebfd493dcf98517b709689d94",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 6375,
+      "sha256": "7c3b49be7b3c88c4dcc121dbb568e5bd095c8f92c3715e2b12a9e8738d63bb4c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 5152,
+      "sha256": "c3fb9c1a028d2bad362d75003bef083e52a418dd51d5dc4985d85edfcea568dc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/http.js",
+      "bytes": 6698,
+      "sha256": "5fef17250533f04c6d4a5a548dd5f8651d530a46b307a30fdaa90f6a92def60a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/indicators.js",
+      "bytes": 4986,
+      "sha256": "b76234c92220d53420ea47cee46288f5e150bc83d10688fcf937104d70ec1795",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/ledger.js",
+      "bytes": 14187,
+      "sha256": "a57892f036a3623d2208d620c5cc785d951bd852285bc2f6d59e5297b9f5f77b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/money.js",
+      "bytes": 4068,
+      "sha256": "271714792c4ab658696412eef600d8580f1894779aff27b4810b870535b15804",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/portfolio.js",
+      "bytes": 15643,
+      "sha256": "2008f26915d7afe7aa28d3230dc044a0367227e323da82c3adac7615b321b1ff",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers/eastmoney.js",
+      "bytes": 7448,
+      "sha256": "709a535cc927485320f85ed0c3087eeea7963bbc87ad1948abf1b936e7e00939",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers/fund.js",
+      "bytes": 5001,
+      "sha256": "ef50779bf030344cd2f5b1dbd983dbff92960bc7ea13592419e9f5b2b6b11592",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers/push2.js",
+      "bytes": 6486,
+      "sha256": "94b91cb3f24bf89bb9bc526dea7fad4e431236964851259ceadb9deb059565c1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers/sina.js",
+      "bytes": 5562,
+      "sha256": "1c5261593a92ed7213ac16b2211859073b7735e141e580cc6c7216d230fc99dd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/providers/tencent.js",
+      "bytes": 7424,
+      "sha256": "878c882c34452e8967e1188e2e6fec8a8cf6f4bd6621fa0b7642e6e56138b30f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/quotes.js",
+      "bytes": 7325,
+      "sha256": "bf9f35d1f6cb6609d30aee2dd8bd46899a3a60f291d973a3f926b2ff3516b166",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 10260,
+      "sha256": "b79946574f9199eb4e09f3f5d214d78da6fc709baac81d459e389c116fa9912e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/strategy.js",
+      "bytes": 6955,
+      "sha256": "5be7ca160bf0fbef6590622251eaf8d46bfd60b2e72879ed6cbcbe807e4af7dd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/symbol.js",
+      "bytes": 6679,
+      "sha256": "953b2a6273a7697b3bc200a56ce3b2291bdc27b32dfe2b7e4d0421ee0180dfe6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/tool-defs.js",
+      "bytes": 16046,
+      "sha256": "cc00a5efe95fa7369fe679b46c49d054412fc61ce094c0803f318aea271b6640",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/tools-write.js",
+      "bytes": 8171,
+      "sha256": "c33068d1023b1765c5e4ecd56169ffaa802463276dabb58e84ef16bb1a539a18",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/tools.js",
+      "bytes": 22896,
+      "sha256": "7f0784d3401fcdf60c3ba3664b8e3384c3f49cebda51547931edd58f0626de74",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 30265,
+      "sha256": "98c6eca226afdb2ac69717f6b2d6fbb45a2ca9a726564e79d680646178402ed6",
+      "encoding": "utf8"
+    }
+  ]
+}

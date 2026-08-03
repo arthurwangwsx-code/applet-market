@@ -10,7 +10,7 @@ import type { T } from '../lib/strings'
 import { RADIUS, SPACE, alpha, favouriteTint, type Palette } from '../lib/theme'
 import { DEFAULT_FILTER, filterIsActive, type Memo, type MemoFilter } from '../lib/types'
 import { Icon, SecondaryButton, Sheet } from './primitives'
-import { useRowGestures } from '../lib/gestures'
+import { useRowGestures } from 'aibox/ui'
 
 export function MemoList(props: {
   palette: Palette

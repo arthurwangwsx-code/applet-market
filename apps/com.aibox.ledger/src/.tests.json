@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('账本当前只读')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('button')].some(b => b.textContent.trim() === '记一笔')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '记一笔'); if (!b) throw new Error('记一笔 entry point missing — the ledger is probably read-only'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 1000 },
+      {
+        "action": "assert",
+        "expr": "['支出', '收入', '转账', '保存'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const pick = t => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === t); if (!b) throw new Error('editor control not found: ' + t); b.click() }; pick('餐饮'); ['1', '2', '.', '5'].forEach(pick); return 'entered 12.5' })()"
+      },
+      { "action": "wait", "ms": 500 },
+      {
+        "action": "assert",
+        "expr": "/12\\.5/.test(document.body.innerText)",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '保存'); if (!b) throw new Error('保存 not found'); b.click(); return 'saved' })()"
+      },
+      { "action": "wait", "ms": 2000 },
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('账本当前只读')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('还没有记录')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('餐饮') && /−¥\\s*12\\.50/.test(document.body.innerText)",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "(() => { const m = document.body.innerText.match(/支出\\s*¥\\s*([\\d,.]+)/); return !!m && parseFloat(m[1].replace(/,/g, '')) >= 12.5 })()",
+        "matcher": "truthy"
+      },
+      { "action": "assert", "matcher": "noHorizontalOverflow" }
+    ],
+    "readonly-guard": [
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('账本当前只读')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!!(window.aibox && window.aibox.db && typeof window.aibox.db.insert === 'function')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { window.__aiboxWriteProbe = 'pending'; window.aibox.db.insert({ collection: '__verify_probe', document: { _id: 'probe', at: Date.now() } }).then(() => { window.__aiboxWriteProbe = 'ok' }).catch(e => { window.__aiboxWriteProbe = 'ERR ' + (e && e.message ? e.message : e) }); return 'sent' })()"
+      },
+      { "action": "wait", "ms": 1500 },
+      {
+        "action": "assert",
+        "expr": "window.__aiboxWriteProbe",
+        "matcher": "equals",
+        "expected": "ok"
+      }
+    ]
+  }
+}

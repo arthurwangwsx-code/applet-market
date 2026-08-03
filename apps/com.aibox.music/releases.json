@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T04:05:17Z",
+      "notes": "新增 .tests.json 回归套件（smoke 覆盖外壳与降级，engine 覆盖真实播放引擎数据面）",
+      "fileCount": 34,
+      "totalBytes": 271644,
+      "path": "apps/com.aibox.music/releases/1.0.2",
+      "localizedNotes": {
+        "en": "Add a .tests.json regression suite: smoke covers the shell and its degradation, engine covers the real playback engine data path"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "a63c5b9093ea0cd5c0d640cbf1db7fefd91d5195e24830f503ba379f43b1a6f9"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T03:40:40Z",

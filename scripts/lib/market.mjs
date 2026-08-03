@@ -216,8 +216,12 @@ export function isBuiltApp(appId) {
  * 一个应用要进包的文件清单：`[{ absDir, relative }]`，relative 就是 bundle 里的路径。
  *
  * 构建型：`dist/**` **平铺到包根**（`dist/index.html` → `index.html`，`entry: index.html` 因此命中）
- * ＋ `src/manifest.json` → `manifest.json`。manifest 是**声明不是代码**，永远从 src 取，不进构建。
+ * ＋ 从 `src/` 取的**作者手写声明**（`manifest.json`、`.tests.json`）——它们是声明不是代码，
+ * 不进构建产物，但必须随包走。
  */
+/** 构建型工程里「住在 src/、必须原样进包」的作者手写文件。 */
+const AUTHORED_SIDECARS = ['manifest.json', '.tests.json']
+
 export function collectBundleEntries(appId) {
   const paths = appPaths(appId)
   if (!isBuiltApp(appId)) {
@@ -230,7 +234,14 @@ export function collectBundleEntries(appId) {
   if (entries.some((entry) => entry.relative === 'manifest.json')) {
     throw new Error('dist/ 里不该有 manifest.json —— 它是声明不是构建产物，只从 src/manifest.json 取')
   }
-  entries.push({ absDir: paths.srcDir, relative: 'manifest.json' })
+  // `.tests.json` 之所以也要特判：它是应用自带的回归套件，`applet-verify test <appId>` 靠它重放。
+  // 源码型应用天然带上（`listSourceFiles` 不跳 dotfile），构建型应用如果只取 dist/ 就会**静默丢掉**——
+  // 表现是「源码里明明写了套件，装完却报『该应用没有 .tests.json』」，与历史上
+  // `skipsHiddenFiles` 吃掉它是同一类坑。
+  for (const sidecar of AUTHORED_SIDECARS) {
+    if (!fs.existsSync(path.join(paths.srcDir, sidecar))) continue
+    entries.push({ absDir: paths.srcDir, relative: sidecar })
+  }
   return entries.sort((a, b) => a.relative.localeCompare(b.relative))
 }
 

@@ -1,0 +1,659 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.music",
+  "version": "1.0.2",
+  "releasedAt": "2026-08-03T04:05:17Z",
+  "notes": "新增 .tests.json 回归套件（smoke 覆盖外壳与降级，engine 覆盖真实播放引擎数据面）",
+  "localizedNotes": {
+    "en": "Add a .tests.json regression suite: smoke covers the shell and its degradation, engine covers the real playback engine data path"
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "音乐",
+    "localizedNames": {
+      "en": "Music"
+    },
+    "icon": "music.note",
+    "iconTintHex": "FF6B6B",
+    "summary": "本地与 Apple Music 播放器",
+    "localizedSummaries": {
+      "en": "Local and Apple Music player"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [
+        "mzstatic.com"
+      ],
+      "capabilities": [
+        "music",
+        "haptics",
+        "share",
+        "open",
+        "ui"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "actions": [
+      {
+        "id": "music.nowPlayingSummary",
+        "name": "nowPlayingSummary",
+        "displayName": "当前播放摘要",
+        "summary": "Return the current track, queue summary, sleep timer and lyrics availability in one call, instead of chaining music_status + music_queue + music_lyrics.",
+        "keywords": [
+          "music",
+          "now playing",
+          "queue",
+          "音乐",
+          "正在播放",
+          "队列"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"isPlaying\":{\"type\":\"boolean\"},\"playbackState\":{\"type\":\"string\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"durationSeconds\":{\"type\":\"integer\"},\"queueCount\":{\"type\":\"integer\"},\"currentIndex\":{\"type\":\"integer\"},\"upNext\":{\"type\":\"array\"},\"repeatMode\":{\"type\":\"string\"},\"isShuffled\":{\"type\":\"boolean\"},\"sleepTimer\":{\"type\":[\"string\",\"null\"]},\"lyrics\":{\"type\":\"object\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation",
+          "applet"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "music.playMostPlayed",
+        "name": "playMostPlayed",
+        "displayName": "播放最常听的歌",
+        "summary": "Play the user's most-played tracks, ranked by this app's own play history (the host music tools do not expose play history).",
+        "keywords": [
+          "music",
+          "most played",
+          "history",
+          "音乐",
+          "最常播放",
+          "播放历史"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"How many tracks to queue (default 20).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"queued\":{\"type\":\"integer\"},\"startedWith\":{\"type\":[\"string\",\"null\"]},\"message\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation",
+          "shortcut"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "music.resumeLast",
+        "name": "resumeLast",
+        "displayName": "接着上次继续听",
+        "summary": "Resume the last track this app played, seeking back to the stored position (this app's own restore point; no host tool persists it).",
+        "keywords": [
+          "music",
+          "resume",
+          "continue",
+          "音乐",
+          "继续播放",
+          "接着听"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"message\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation",
+          "shortcut"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "music.toggleShuffle",
+        "name": "toggleShuffle",
+        "displayName": "随机播放",
+        "summary": "Toggle shuffle on the host playback engine. Drives the ⋯ menu row, so it is a UI action rather than an agent tool (music_shuffle already covers agents).",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false
+      },
+      {
+        "id": "music.setRepeat",
+        "name": "setRepeat",
+        "displayName": "循环模式",
+        "summary": "Set the repeat mode to off / one / all. Input is the bare mode string supplied by the ⋯ menu row.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false
+      },
+      {
+        "id": "music.setSleepTimer",
+        "name": "setSleepTimer",
+        "displayName": "睡眠定时器",
+        "summary": "Set or cancel the sleep timer. Input is {minutes} for a preset, {mode:'endOfTrack'} to stop after the current song, or {mode:'off'} to cancel.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "mediaPlayback",
+        "readOnly": false
+      },
+      {
+        "id": "music.openEffects",
+        "name": "openEffects",
+        "displayName": "音效",
+        "summary": "Open the audio effects subpage.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      },
+      {
+        "id": "music.shareCurrent",
+        "name": "shareCurrent",
+        "displayName": "分享当前歌曲",
+        "summary": "Share the current track through the system share sheet.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      },
+      {
+        "id": "music.openSettings",
+        "name": "openSettings",
+        "displayName": "音乐设置",
+        "summary": "Open the music settings subpage.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "forYou",
+            "title": "为你推荐",
+            "localizedTitles": {
+              "en": "For You"
+            },
+            "icon": "sparkles"
+          },
+          {
+            "id": "search",
+            "title": "搜索",
+            "localizedTitles": {
+              "en": "Search"
+            },
+            "icon": "magnifyingglass"
+          },
+          {
+            "id": "player",
+            "title": "正在播放",
+            "localizedTitles": {
+              "en": "Playing"
+            },
+            "icon": "play.circle",
+            "selectedIcon": "play.circle.fill"
+          },
+          {
+            "id": "queue",
+            "title": "队列",
+            "localizedTitles": {
+              "en": "Queue"
+            },
+            "icon": "list.bullet"
+          },
+          {
+            "id": "albums",
+            "title": "资料库",
+            "localizedTitles": {
+              "en": "Library"
+            },
+            "icon": "square.stack",
+            "selectedIcon": "square.stack.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ],
+        "search": {
+          "enabled": true,
+          "placeholder": "艺人、歌曲、歌词等",
+          "localizedPlaceholders": {
+            "en": "Artists, Songs, Lyrics, and More"
+          },
+          "scopes": [
+            {
+              "id": "catalog",
+              "title": "Apple Music"
+            },
+            {
+              "id": "library",
+              "title": "资料库"
+            }
+          ]
+        }
+      },
+      "menu": {
+        "mergePolicy": "appletFirst",
+        "sections": [
+          {
+            "id": "playback",
+            "items": [
+              {
+                "id": "shuffle",
+                "title": "随机播放",
+                "localizedTitles": {
+                  "en": "Shuffle"
+                },
+                "icon": "shuffle",
+                "actionID": "music.toggleShuffle"
+              },
+              {
+                "id": "repeat",
+                "title": "循环",
+                "localizedTitles": {
+                  "en": "Repeat"
+                },
+                "icon": "repeat",
+                "children": [
+                  {
+                    "id": "repeatOff",
+                    "title": "关闭",
+                    "localizedTitles": {
+                      "en": "Off"
+                    },
+                    "actionID": "music.setRepeat",
+                    "inputJSON": "\"off\""
+                  },
+                  {
+                    "id": "repeatOne",
+                    "title": "单曲循环",
+                    "localizedTitles": {
+                      "en": "Repeat One"
+                    },
+                    "actionID": "music.setRepeat",
+                    "inputJSON": "\"one\""
+                  },
+                  {
+                    "id": "repeatAll",
+                    "title": "全部循环",
+                    "localizedTitles": {
+                      "en": "Repeat All"
+                    },
+                    "actionID": "music.setRepeat",
+                    "inputJSON": "\"all\""
+                  }
+                ]
+              },
+              {
+                "id": "sleepTimer",
+                "title": "睡眠定时器",
+                "localizedTitles": {
+                  "en": "Sleep Timer"
+                },
+                "icon": "moon.zzz.fill",
+                "children": [
+                  {
+                    "id": "sleepOff",
+                    "title": "关闭定时器",
+                    "localizedTitles": {
+                      "en": "Turn Off Timer"
+                    },
+                    "icon": "moon.zzz.fill",
+                    "role": "destructive",
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"mode\":\"off\"}",
+                    "hidden": true
+                  },
+                  {
+                    "id": "sleep5",
+                    "title": "5 分钟",
+                    "localizedTitles": {
+                      "en": "5 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":5}"
+                  },
+                  {
+                    "id": "sleep10",
+                    "title": "10 分钟",
+                    "localizedTitles": {
+                      "en": "10 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":10}"
+                  },
+                  {
+                    "id": "sleep15",
+                    "title": "15 分钟",
+                    "localizedTitles": {
+                      "en": "15 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":15}"
+                  },
+                  {
+                    "id": "sleep30",
+                    "title": "30 分钟",
+                    "localizedTitles": {
+                      "en": "30 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":30}"
+                  },
+                  {
+                    "id": "sleep45",
+                    "title": "45 分钟",
+                    "localizedTitles": {
+                      "en": "45 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":45}"
+                  },
+                  {
+                    "id": "sleep60",
+                    "title": "60 分钟",
+                    "localizedTitles": {
+                      "en": "60 Minutes"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"minutes\":60}"
+                  },
+                  {
+                    "id": "sleepEndOfTrack",
+                    "title": "播完这首后停止",
+                    "localizedTitles": {
+                      "en": "Stop After This Song"
+                    },
+                    "actionID": "music.setSleepTimer",
+                    "inputJSON": "{\"mode\":\"endOfTrack\"}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "player",
+            "items": [
+              {
+                "id": "audioEffects",
+                "title": "音效",
+                "localizedTitles": {
+                  "en": "Audio Effects"
+                },
+                "icon": "slider.horizontal.3",
+                "actionID": "music.openEffects"
+              },
+              {
+                "id": "shareTrack",
+                "title": "分享",
+                "localizedTitles": {
+                  "en": "Share"
+                },
+                "icon": "square.and.arrow.up",
+                "actionID": "music.shareCurrent",
+                "hidden": true
+              }
+            ]
+          },
+          {
+            "id": "app",
+            "items": [
+              {
+                "id": "musicSettings",
+                "title": "音乐设置",
+                "localizedTitles": {
+                  "en": "Music Settings"
+                },
+                "icon": "gearshape",
+                "actionID": "music.openSettings"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "totalBytes": 271644,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 2350,
+      "sha256": "249198b1c409bda57ac8f4ab569b192ae8a381be9fd15bc5e6ebd61c762f690e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.jsx",
+      "bytes": 24573,
+      "sha256": "be5bd4c28834aa299a0f847c9c334d867b7fcc820e4b13b95f848c5f8d1fcfa5",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/DetailPage.jsx",
+      "bytes": 7438,
+      "sha256": "dfcc0c44e268c623518e6b4b909337fe15cc1604cd930d74abd35c8eab6d5cef",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/EffectsPage.jsx",
+      "bytes": 6426,
+      "sha256": "c8e6c778fc4cca58d2effe0cd7656d24b8f34bbc028a7a2dac47a48d850087a2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ForYouPage.jsx",
+      "bytes": 6988,
+      "sha256": "7edfe7285a5bf0b818ad3a0c74846b88b27c567085cbdbf283e8df71a30fc46d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.jsx",
+      "bytes": 10333,
+      "sha256": "bd811a617a0f03b43e99dcfb782a6739373a5670794f18952848010196058302",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/LibraryPage.jsx",
+      "bytes": 7412,
+      "sha256": "1bbab4883f94ab4186a06d1bf8a7298323f5bf11c5a8a2d21dea6764c41e7d4b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/LocalLibrary.jsx",
+      "bytes": 8981,
+      "sha256": "d6c280d359da1e5c69b1215860447de214d7d03747162d9601a28d542259c25d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Lyrics.jsx",
+      "bytes": 5555,
+      "sha256": "7b68807df474b151b1249f8f039e7d218a23921ee14eaff6834221a20352397d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MiniBar.jsx",
+      "bytes": 3600,
+      "sha256": "d02a6cb665a9fb59b17f6cc80245b88662cfae63bd2da0a88b335c2630fb3502",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/NowPlaying.jsx",
+      "bytes": 11781,
+      "sha256": "f0558fefaa6840317beb3e025a5d0465de3db7a1afdb01fc62edad3683e9374b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/OptionsMenu.jsx",
+      "bytes": 7934,
+      "sha256": "6dd0a515c135c2d805e1fe29a6db04ef0018b0026dc3c1a972a9407a9a568bb1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/PlayerControls.jsx",
+      "bytes": 5823,
+      "sha256": "3885fe04d91b4909588f8af8799d2801bcecf90045e4cefe549f0e29db7db86f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.jsx",
+      "bytes": 15458,
+      "sha256": "974681022c31725e49a1221d1dbcfc3d1f453027382e7f3f72afccd3ead44b88",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/QueuePage.jsx",
+      "bytes": 6010,
+      "sha256": "188db7ae57096ca7d3438a57e04821d6342a7c33294b97cb60d36af031b783a2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/rows.jsx",
+      "bytes": 7058,
+      "sha256": "4a2571d7643e920d6d2d52aea549b01e7bf21392d7ebd77548e29380bd774991",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.jsx",
+      "bytes": 9511,
+      "sha256": "0a9b88e61d1262062bbcf9953c0d97671d857d0feca60fc8215b49fce69c61ef",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SettingsPage.jsx",
+      "bytes": 5905,
+      "sha256": "8cbf4e4aacc548d2c270a7bc70564837510f8e4e163697a087158265177e7b48",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Sheets.jsx",
+      "bytes": 5120,
+      "sha256": "75719bca27c6b4ca407983ba96d40a8d9b7737d6dd09241b20e06ed3f88fa702",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Shell.jsx",
+      "bytes": 3054,
+      "sha256": "ec8829a836a7c49363affae0f29eca7552d19bacc7224e62266f0d8ec496c7a7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 5393,
+      "sha256": "a33dc9f6aeb7042300d33ac6e1fac241098a5e26fbf66b2b8ff943d1279ca269",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/index.js",
+      "bytes": 1831,
+      "sha256": "3fc53225508065b8ed41c71f3a6c2464216c3e92b211bab00cf58a932f17fb7b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.js",
+      "bytes": 18742,
+      "sha256": "e2e092e12c8042cc00cf761c3bdedc31694c26b31673f43bb0560f9811474b41",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 5856,
+      "sha256": "d03744cc04ee0492952b7a299440175003d7762c87347019e0eb85b9af0648ff",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/artwork.js",
+      "bytes": 5921,
+      "sha256": "dd4e93dee92251be7147e9df52c23e83b349eaeb61e14bff249da8defcba892c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/clock.js",
+      "bytes": 4766,
+      "sha256": "c82d10adb62374f5d3645ed8c22c29fe8fa973a46a9102fc59d22e7ee176d74a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 3232,
+      "sha256": "0445fba52890210c627e8675dd51ba7c16f7d17ad32ea488a3ccc1bcf7b8fc95",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 10215,
+      "sha256": "00a0ccb1f63b782ddaf5823d66a5822bcc97d0beaa75aa9c097e59f31eec76da",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/lyrics.js",
+      "bytes": 5643,
+      "sha256": "9d188f0dab741d1f1890c54e58dfc4ccede0c41b0a1a247f9afafe103e64411a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/music.js",
+      "bytes": 13252,
+      "sha256": "9a7c380d872b1223d20f87b1b437bd59be8749f40a245e62a1d56efbd5539af3",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/queue.js",
+      "bytes": 8427,
+      "sha256": "1cbe3ea63a08331fe3c97ca3e3e5f2408db9653db47d4fb12e4cb7af8fb1150b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 8407,
+      "sha256": "a906eb15dc9250dc979fc6e89614db15e4f6a7467ec83e8e49abf8c9120998e0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/subpages.js",
+      "bytes": 6524,
+      "sha256": "dd6f7415450d76be87c60d31dc5fb0066aab31b62a362b0700a29a65ae5600eb",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 12125,
+      "sha256": "a7faa3acf613a2381b59e39120113e286ce9f707abb4da0093b3e31d04069eed",
+      "encoding": "utf8"
+    }
+  ]
+}

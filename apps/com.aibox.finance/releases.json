@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.finance",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T04:05:17Z",
+      "notes": "新增 .tests.json 回归套件（覆盖指数行情与板块页）",
+      "fileCount": 46,
+      "totalBytes": 431597,
+      "path": "apps/com.aibox.finance/releases/1.0.2",
+      "localizedNotes": {
+        "en": "Add a .tests.json regression suite covering index quotes and the sector page"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "67180fd6b071d3c6bb560ec1bbb485abd6b867886d3ae87c62992b1ddebf1a57"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T03:40:33Z",

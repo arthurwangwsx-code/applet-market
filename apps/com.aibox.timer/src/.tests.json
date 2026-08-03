@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('25:00')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "['5 分钟', '15 分钟', '25 分钟', '45 分钟'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '5 分钟'); if (!b) throw new Error('preset 5 分钟 not found'); b.click(); return 'started' })()"
+      },
+      { "action": "wait", "ms": 1500 },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('button')].some(b => b.textContent.trim() === '停止')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "(() => { const m = document.body.innerText.match(/0(\\d):(\\d\\d)/); return !!m && Number(m[1]) * 60 + Number(m[2]) <= 300 })()",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '停止'); if (!b) throw new Error('停止 not found'); b.click(); return 'stopped' })()"
+      },
+      { "action": "wait", "ms": 1500 },
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('还没有记录')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('专注')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('25:00')",
+        "matcher": "truthy"
+      },
+      { "action": "assert", "matcher": "noHorizontalOverflow" }
+    ]
+  }
+}

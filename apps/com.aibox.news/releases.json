@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.0.2",
+  "latestVersion": "1.0.3",
   "releases": [
+    {
+      "version": "1.0.3",
+      "releasedAt": "2026-08-03T04:05:05Z",
+      "notes": "宿主工具探测改用 aibox.access.explain（tools.describe 在工具不可用时 reject，会在每轮验收里留下一条假故障日志）；新增 .tests.json 回归套件",
+      "fileCount": 40,
+      "totalBytes": 269104,
+      "path": "apps/com.aibox.news/releases/1.0.3",
+      "localizedNotes": {
+        "en": "Probe host tools with aibox.access.explain instead of tools.describe, which rejects when a tool is unavailable and left a false-alarm error in every verification run; add a .tests.json regression suite"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "4a3dabf8c09115aa895cd8e90b6ce93a2a695c927847fdc6227d42527148631e"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-08-03T03:40:24Z",

@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.timer",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T04:04:57Z",
+      "notes": "修复 manifest 里非法的 action effect（localWrite → write，宿主无法解码整份 manifest）；新增 .tests.json 回归套件",
+      "fileCount": 4,
+      "totalBytes": 28664,
+      "path": "apps/com.aibox.timer/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Fix an invalid action effect in the manifest (localWrite is not a host enum value, which made the whole manifest undecodable); add a .tests.json regression suite"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "26a78f9451e127aca0ab2332605c34747d2621ddbc248bc849e9cb88458cb89f"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-02T20:18:25Z",

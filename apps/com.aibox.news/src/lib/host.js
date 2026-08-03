@@ -363,8 +363,27 @@ export async function aiGenerate(input) {
 
 // MARK: - tools（长尾工具网关；知识库入库用）
 
+/**
+ * 某个宿主工具「现在能不能调」。
+ *
+ * ⚠️ 别用 `tools.describe` 探：它在工具不可用时**reject**，而容器会把每一次 reject 写进 console.error。
+ * 于是一次纯粹的能力探测在每轮验收里都留下一条
+ * `aibox/denied: tool 'vault_create' is not granted to this applet`——功能上完全正确（下面 catch 了、
+ * 菜单项也正确地不出现），但它长得跟真故障一模一样，把无头验收的信噪比拖下去。
+ *
+ * `aibox.access.explain` 是容器为这件事准备的**只读**入口：它永远 resolve，回
+ * `{ allowed, code, failedGate, remedies }`，不产生错误日志。老宿主没有 access 面时回落到旧探法。
+ */
 export async function findTool(name) {
   const api = bridge()
+  if (api && api.access && typeof api.access.explain === 'function') {
+    try {
+      const verdict = await api.access.explain({ tool: name })
+      return !!(verdict && verdict.allowed)
+    } catch (error) {
+      return false
+    }
+  }
   if (!api || !api.tools || typeof api.tools.describe !== 'function') return false
   try {
     await api.tools.describe({ name })

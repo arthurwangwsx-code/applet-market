@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      {
+        "action": "assert",
+        "expr": "['audioTab_forYou', 'audioTab_search', 'audioTab_player', 'audioTab_queue', 'audioTab_albums'].every(id => !!document.querySelector('[aria-label=\"' + id + '\"]'))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = document.querySelector('[aria-label=\"audioTab_queue\"]'); if (!b) throw new Error('queue tab missing'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 800 },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('队列')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = document.querySelector('[aria-label=\"audioTab_player\"]'); if (!b) throw new Error('player tab missing'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 800 },
+      {
+        "action": "assert",
+        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
+        "matcher": "truthy"
+      },
+      { "action": "assert", "matcher": "noHorizontalOverflow" }
+    ],
+    "engine": [
+      {
+        "action": "assert",
+        "expr": "!!(window.aibox && window.aibox.music && typeof window.aibox.music.search === 'function')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { window.__aiboxMusicProbe = 'pending'; window.aibox.music.search({ query: 'jazz', limit: 5 }).then(r => { window.__aiboxMusicProbe = JSON.stringify(r).slice(0, 400) }).catch(e => { window.__aiboxMusicProbe = 'ERR ' + (e && e.message ? e.message : e) }); return 'sent' })()"
+      },
+      { "action": "wait", "ms": 4000 },
+      {
+        "action": "assert",
+        "expr": "window.__aiboxMusicProbe",
+        "matcher": "contains",
+        "expected": "\"ok\":true"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = document.querySelector('[aria-label=\"audioTab_forYou\"]'); if (!b) throw new Error('forYou tab missing'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 3000 },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.replace(/\\s+/g, '').length > 60",
+        "matcher": "truthy"
+      }
+    ]
+  }
+}

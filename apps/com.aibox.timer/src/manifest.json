@@ -39,7 +39,7 @@
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"remainingSeconds\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"remainingSeconds\":{\"type\":\"integer\"},\"label\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}}",
       "headless": true,
       "visibility": ["agent", "automation"],
-      "effect": "localWrite",
+      "effect": "write",
       "readOnly": false,
       "idempotent": false
     },
@@ -67,7 +67,7 @@
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"stopped\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"stopped\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
       "headless": true,
       "visibility": ["agent", "automation"],
-      "effect": "localWrite",
+      "effect": "write",
       "readOnly": false,
       "idempotent": true
     }

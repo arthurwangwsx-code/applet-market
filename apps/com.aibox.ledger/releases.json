@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.ledger",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T04:05:16Z",
+      "notes": "新增 .tests.json 回归套件（覆盖记一笔→保存→明细与月度合计的完整业务流程）",
+      "fileCount": 48,
+      "totalBytes": 446710,
+      "path": "apps/com.aibox.ledger/releases/1.0.2",
+      "localizedNotes": {
+        "en": "Add a .tests.json regression suite covering the full create-entry business flow"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "20fb693acd6c6561b2b78a46c2bf36e52723f0bdebbbed9856d78643f8cdbe9c"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T03:40:29Z",

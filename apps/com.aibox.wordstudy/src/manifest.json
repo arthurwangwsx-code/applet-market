@@ -15,7 +15,9 @@
   "securityMode": "secure",
   "permissions": {
     "network": true,
-    "networkAllowed": ["dict.youdao.com"],
+    "networkAllowed": [
+      "dict.youdao.com"
+    ],
     "storage": true,
     "ai": true,
     "capabilities": [
@@ -31,7 +33,11 @@
   },
   "presentation": {
     "default": "page",
-    "surfaces": ["page", "sheet", "fullscreen"]
+    "surfaces": [
+      "page",
+      "sheet",
+      "fullscreen"
+    ]
   },
   "scene": {
     "tabBar": {
@@ -39,21 +45,27 @@
         {
           "id": "translate",
           "title": "翻译",
-          "localizedTitles": { "en": "Translate" },
+          "localizedTitles": {
+            "en": "Translate"
+          },
           "icon": "character.bubble",
           "selectedIcon": "character.bubble.fill"
         },
         {
           "id": "search",
           "title": "搜索",
-          "localizedTitles": { "en": "Search" },
+          "localizedTitles": {
+            "en": "Search"
+          },
           "icon": "magnifyingglass",
           "selectedIcon": "magnifyingglass"
         },
         {
           "id": "vocab",
           "title": "生词本",
-          "localizedTitles": { "en": "Vocabulary" },
+          "localizedTitles": {
+            "en": "Vocabulary"
+          },
           "icon": "star",
           "selectedIcon": "star.fill"
         }
@@ -66,12 +78,28 @@
       "name": "word_lookup",
       "displayName": "查词",
       "summary": "Looks up an English word or short phrase: phonetics (UK/US IPA), part-of-speech senses, inflected forms, example sentences, exam tags (CET-4/6, postgrad, etc.), synonyms/antonyms, and a memory tip. Cached lookups return instantly; a new word is scraped from a dictionary site and falls back to a one-shot AI generation (may take a few seconds). Accepts a spelling-corrected suggestion if the input looks misspelled.",
-      "keywords": ["word", "dictionary", "define", "lookup", "vocabulary", "english", "phonetics", "查词", "单词", "词典", "释义", "音标"],
+      "keywords": [
+        "word",
+        "dictionary",
+        "define",
+        "lookup",
+        "vocabulary",
+        "english",
+        "phonetics",
+        "查词",
+        "单词",
+        "词典",
+        "释义",
+        "音标"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The English word or short phrase to look up.\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"word\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"cached\":{\"type\":\"boolean\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation"],
-      "effect": "external",
+      "visibility": [
+        "agent",
+        "automation"
+      ],
+      "effect": "externalNetwork",
       "readOnly": false,
       "idempotent": true
     },
@@ -80,12 +108,23 @@
       "name": "word_translate",
       "displayName": "翻译",
       "summary": "Translates text between Chinese and English (auto-detects direction by default: CJK input → Chinese-to-English, otherwise English-to-Chinese). Returns translation only, no explanation. Pass 'direction' to force a specific direction instead of auto-detection.",
-      "keywords": ["translate", "translation", "chinese", "english", "翻译", "中译英", "英译中"],
+      "keywords": [
+        "translate",
+        "translation",
+        "chinese",
+        "english",
+        "翻译",
+        "中译英",
+        "英译中"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"The text to translate (up to 3000 characters).\"},\"direction\":{\"type\":\"string\",\"enum\":[\"auto\",\"zhToEn\",\"enToZh\"],\"description\":\"Translation direction; defaults to 'auto' (detect by script).\"}},\"required\":[\"text\"],\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"srcLang\":{\"type\":\"string\"},\"dstLang\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation"],
-      "effect": "external",
+      "visibility": [
+        "agent",
+        "automation"
+      ],
+      "effect": "externalNetwork",
       "readOnly": false,
       "idempotent": true
     },
@@ -94,11 +133,21 @@
       "name": "word_list_vocab",
       "displayName": "列出生词本",
       "summary": "Lists the user's saved vocabulary (words and saved sentences), most recently added first. Filter by kind or mastered status, and/or search by a text fragment matched against the term and its brief gloss. Read-only, local data — no AI call, no network.",
-      "keywords": ["vocabulary", "saved words", "word list", "生词本", "收藏的词", "单词列表"],
+      "keywords": [
+        "vocabulary",
+        "saved words",
+        "word list",
+        "生词本",
+        "收藏的词",
+        "单词列表"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"filter\":{\"type\":\"string\",\"enum\":[\"all\",\"word\",\"sentence\",\"mastered\",\"unmastered\"],\"description\":\"Restrict the list to this kind/status; defaults to 'all'.\"},\"query\":{\"type\":\"string\",\"description\":\"Optional fuzzy text to match against term or gloss.\"},\"limit\":{\"type\":\"integer\",\"description\":\"Max items to return (default 50, max 200).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation"],
+      "visibility": [
+        "agent",
+        "automation"
+      ],
       "effect": "read",
       "readOnly": true,
       "idempotent": true
@@ -108,31 +157,53 @@
       "name": "word_vocab_upsert",
       "displayName": "收进生词本",
       "summary": "Adds a word or sentence to the user's saved vocabulary, or updates its mastered flag if it's already saved. Non-destructive — never deletes existing data. Use word_lookup first if you need the word's brief gloss cached alongside it.",
-      "keywords": ["save word", "add vocabulary", "mastered", "收藏单词", "加入生词本", "已掌握"],
+      "keywords": [
+        "save word",
+        "add vocabulary",
+        "mastered",
+        "收藏单词",
+        "加入生词本",
+        "已掌握"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The word or sentence text to save.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"word\",\"sentence\"],\"description\":\"What kind of entry this is; defaults to 'word'.\"},\"mastered\":{\"type\":\"boolean\",\"description\":\"Mark as mastered (archived, out of review pool).\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"created\":{\"type\":\"boolean\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation"],
-      "effect": "localWrite",
+      "visibility": [
+        "agent",
+        "automation"
+      ],
+      "effect": "write",
       "readOnly": false,
       "idempotent": false,
-      "execution": { "mode": "serial" }
+      "execution": {
+        "mode": "sequential"
+      }
     },
     {
       "id": "word.vocabRemove",
       "name": "word_vocab_remove",
       "displayName": "移出生词本",
       "summary": "Permanently removes a word or sentence from the user's saved vocabulary. This cannot be undone — confirm with the user before calling unless they explicitly asked to delete it.",
-      "keywords": ["remove word", "delete vocabulary", "移除生词", "删除单词"],
+      "keywords": [
+        "remove word",
+        "delete vocabulary",
+        "移除生词",
+        "删除单词"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The exact word or sentence text to remove.\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"removed\":{\"type\":\"boolean\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation"],
-      "effect": "localWrite",
+      "visibility": [
+        "agent",
+        "automation"
+      ],
+      "effect": "delete",
       "readOnly": false,
       "destructive": true,
       "idempotent": true,
-      "execution": { "mode": "serial" }
+      "execution": {
+        "mode": "sequential"
+      }
     }
   ]
 }

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.wordstudy",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T04:02:02Z",
+      "notes": "首个版本：查词（有道抓取 + AI 兜底）、翻译、生词本、Leitner 复习、跟读评分、相册查词，并对 AI 提供 5 个 word_* 工具。",
+      "fileCount": 3,
+      "totalBytes": 166846,
+      "path": "apps/com.aibox.wordstudy/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release: dictionary lookup (web scrape with AI fallback), translation, vocabulary, Leitner review, read-aloud scoring, photo lookup, plus 5 word_* tools for the assistant."
+      },
+      "bundleSha256": "cf716653dac6ad57d4030ee5d804aa1b825c9c6dd4c221bbb9e72a106538e94b"
+    }
+  ]
+}

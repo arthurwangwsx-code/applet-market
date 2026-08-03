@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { clearHistory, clearTranslations, getDaily, removeHistory, saveDaily, upsertVocab } from '../lib/db'
 import { generateDaily } from '../lib/dict'
-import { confirm, copyText, speak } from '../lib/host'
+import { confirm, copyText, probeAI, speak } from '../lib/host'
 import { dateKeyOf, dueCount, resolveIntent, suggest } from '../lib/logic'
 import { seedSentence } from '../lib/seed'
 import { dueBanner, type Lang, type T } from '../lib/strings'
@@ -27,6 +27,8 @@ export function SearchPage(props: {
   onTranslateSentence: (text: string) => void
   onOpenReview: () => void
   aiAvailable: boolean
+  /** 宿主当前给的呈现面。`null` = 还没回话；`headless` = 无头。两种都不自动发 AI。 */
+  surface: string | null
 }) {
   const { palette, t, store } = props
   const [daily, setDaily] = useState<DailySentence | null>(null)
@@ -36,23 +38,38 @@ export function SearchPage(props: {
   const trimmed = props.query.trim()
   const due = useMemo(() => dueCount(store.vocab), [store.vocab])
 
-  // 每日一句三级降级：缓存 → AI → 内置种子（静默兜底，不报错）。
+  // 每日一句三级降级：缓存 → AI → 内置种子。
+  //
+  // 顺序刻意是「先把种子渲染出来，再尝试用 AI 升级」：
+  //  · 卡片首帧就有内容，不会先空一块再跳出来；
+  //  · AI 这一步有两道门 —— `ai.availability()`（模型配没配，不弹框不花配额）与
+  //    **呈现面必须可见**。`aibox/not-visible` 的语义是"授权提示需要一个可见的 applet 来锚定"，
+  //    无头运行时 `generate` 必被拒、页面白吃一条 console 错误。
+  //  · `surface === null` = scene 还没回话（`useScene` 是异步的，首帧恒为 null）——
+  //    这时**不能**当成可见，否则挂载那一刻就会打出去一发必失败的请求。
   useEffect(() => {
     let cancelled = false
     void (async () => {
       const dateKey = dateKeyOf()
       const cached = await getDaily(dateKey)
+      if (cancelled) return
       if (cached) {
-        if (!cancelled) setDaily(cached)
+        setDaily(cached)
         return
       }
-      const generated = props.aiAvailable ? await generateDaily(dateKey) : null
-      const value: DailySentence = { dateKey, ...(generated ?? seedSentence(dateKey)) }
-      if (generated) await saveDaily(value)
-      if (!cancelled) setDaily(value)
+      setDaily({ dateKey, ...seedSentence(dateKey) })
+
+      const visible = props.surface !== null && props.surface !== 'headless'
+      if (!props.aiAvailable || !visible) return
+      if (!(await probeAI())) return
+      const generated = await generateDaily(dateKey)
+      if (cancelled || !generated) return
+      const value: DailySentence = { dateKey, ...generated }
+      await saveDaily(value)
+      setDaily(value)
     })()
     return () => { cancelled = true }
-  }, [props.aiAvailable])
+  }, [props.aiAvailable, props.surface])
 
   const suggestions = useMemo(
     () => suggest({ prefix: trimmed, history: store.history, vocab: store.vocab, cachedWords: store.cachedWords }),

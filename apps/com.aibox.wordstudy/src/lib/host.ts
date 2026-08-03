@@ -8,6 +8,23 @@ import type { Accent } from './types'
 
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 
+/**
+ * AI 是否**现在**真的能用。
+ *
+ * `isAvailable('ai','generate')` 只说明命名空间注册了 —— 无头/未授权时调用仍会被拒
+ * （`aibox/not-visible`：授权提示需要一个可见的 applet 来锚定）。纪律是"先探测再使用"，
+ * 所以自动触发的 AI（每日一句）必须先过这道，不能靠 catch 兜住一条 console 错误。
+ */
+export async function probeAI(): Promise<boolean> {
+  const bridge = api()
+  if (!bridge?.ai || typeof bridge.ai.availability !== 'function') return false
+  try {
+    return (await bridge.ai.availability()).available
+  } catch {
+    return false
+  }
+}
+
 export const capabilities = {
   get tts() { return isAvailable('tts', 'speak') },
   get speech() { return isAvailable('speech', 'recognize') },

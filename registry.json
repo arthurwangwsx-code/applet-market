@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T03:40:40Z",
-  "appCount": 5,
+  "updatedAt": "2026-08-03T04:02:10Z",
+  "appCount": 7,
   "apps": [
     {
       "appId": "com.aibox.finance",
@@ -188,6 +188,63 @@
         "vite"
       ],
       "minHostVersion": "1.0.0"
+    },
+    {
+      "appId": "com.aibox.voicememos",
+      "name": "语音备忘录",
+      "summary": "录音、转写与 AI 分析",
+      "icon": "waveform",
+      "category": "productivity",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-03T04:02:10Z",
+      "versionCount": 1,
+      "capabilities": [
+        "ai",
+        "audio",
+        "clipboard",
+        "haptics",
+        "share",
+        "storage",
+        "tabs",
+        "ui",
+        "voiceMemos"
+      ],
+      "path": "apps/com.aibox.voicememos",
+      "localizedNames": {
+        "en": "Voice Memos"
+      },
+      "iconTintHex": "FF6B35"
+    },
+    {
+      "appId": "com.aibox.wordstudy",
+      "name": "单词学习",
+      "summary": "查词、翻译、生词本与 Leitner 复习",
+      "icon": "character.book.closed",
+      "category": "productivity",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-03T04:02:02Z",
+      "versionCount": 1,
+      "capabilities": [
+        "ai",
+        "clipboard",
+        "haptics",
+        "net",
+        "photos",
+        "picker",
+        "share",
+        "speech",
+        "storage",
+        "tabs",
+        "tts",
+        "ui"
+      ],
+      "path": "apps/com.aibox.wordstudy",
+      "localizedNames": {
+        "en": "Word Study"
+      },
+      "iconTintHex": "2D6AE0"
     }
   ]
 }

@@ -56,6 +56,11 @@ export default function App() {
   const [recordOpen, setRecordOpen] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const [recorder, setRecorder] = useState<{ available: boolean; reason: string; background: boolean } | null>(null)
+  /**
+   * 起录在飞。**首次使用必然要等几秒** —— `recordStart` 要等 iOS 的麦克风授权框被回答才 resolve，
+   * 这期间不锁按钮的话，第二下点击会拿到 `aibox/busy` 并弹一个假的失败提示。
+   */
+  const [starting, setStarting] = useState(false)
   const [busyIDs, setBusyIDs] = useState<Record<string, string>>({})
   const [sheet, setSheet] = useState<'actionItems' | 'ask' | 'cleanUp' | null>(null)
   const detailContext = useRef<DetailContext | null>(null)
@@ -87,18 +92,23 @@ export default function App() {
   }, [store.refresh, locale.locale, exportLabels])
 
   const beginRecording = useCallback(async () => {
-    if (!recorder?.available) return
+    if (!recorder?.available || starting) return
+    setStarting(true)
     const preset = QUALITY_PRESET[store.settings.quality]
-    // 「先真正起录成功，才弹面板」—— 权限被拒时不弹空面板。
-    const result = await recordStart(preset)
-    if (!result.started) {
-      await confirmAlert(t('recordFailedTitle'), errorText(t, result.error))
-      setRecorder(await recorderAvailability())
-      return
+    try {
+      // 「先真正起录成功，才弹面板」—— 权限被拒时不弹空面板。
+      const result = await recordStart(preset)
+      if (!result.started) {
+        await confirmAlert(t('recordFailedTitle'), errorText(t, result.error))
+        setRecorder(await recorderAvailability())
+        return
+      }
+      setDraftTitle('')
+      setRecordOpen(true)
+    } finally {
+      setStarting(false)
     }
-    setDraftTitle('')
-    setRecordOpen(true)
-  }, [recorder, store.settings.quality, t])
+  }, [recorder, starting, store.settings.quality, t])
 
   const openMenu = useCallback(async (memo: Memo) => {
     const actions: { id: string; title: string; destructive?: boolean }[] = [
@@ -302,9 +312,11 @@ export default function App() {
             >
               <button
                 type="button"
+                disabled={starting}
                 onClick={() => void beginRecording()}
                 style={{
-                  width: 48, height: 48, borderRadius: 24, border: 'none', cursor: 'pointer',
+                  width: 48, height: 48, borderRadius: 24, border: 'none',
+                  cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.55 : 1,
                   background: palette.red, color: '#FFFFFF', fontSize: 18, pointerEvents: 'auto',
                   boxShadow: '0 3px 6px rgba(0,0,0,0.18)',
                 }}

@@ -3290,6 +3290,7 @@ function App() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [recorder, setRecorder] = useState(null);
+  const [starting, setStarting] = useState(false);
   const [busyIDs, setBusyIDs] = useState({});
   const [sheet, setSheet] = useState(null);
   const detailContext = useRef(null);
@@ -3314,17 +3315,22 @@ function App() {
     registerMemoActions(store.refresh, locale.locale, exportLabels);
   }, [store.refresh, locale.locale, exportLabels]);
   const beginRecording = useCallback(async () => {
-    if (!recorder?.available) return;
+    if (!recorder?.available || starting) return;
+    setStarting(true);
     const preset = QUALITY_PRESET[store.settings.quality];
-    const result = await recordStart(preset);
-    if (!result.started) {
-      await confirmAlert(t("recordFailedTitle"), errorText(t, result.error));
-      setRecorder(await recorderAvailability());
-      return;
+    try {
+      const result = await recordStart(preset);
+      if (!result.started) {
+        await confirmAlert(t("recordFailedTitle"), errorText(t, result.error));
+        setRecorder(await recorderAvailability());
+        return;
+      }
+      setDraftTitle("");
+      setRecordOpen(true);
+    } finally {
+      setStarting(false);
     }
-    setDraftTitle("");
-    setRecordOpen(true);
-  }, [recorder, store.settings.quality, t]);
+  }, [recorder, starting, store.settings.quality, t]);
   const openMenu = useCallback(async (memo) => {
     const actions = [
       { id: "rename", title: t("rename") },
@@ -3533,13 +3539,15 @@ function App() {
                 "button",
                 {
                   type: "button",
+                  disabled: starting,
                   onClick: /* @__PURE__ */ __name(() => void beginRecording(), "onClick"),
                   style: {
                     width: 48,
                     height: 48,
                     borderRadius: 24,
                     border: "none",
-                    cursor: "pointer",
+                    cursor: starting ? "default" : "pointer",
+                    opacity: starting ? 0.55 : 1,
                     background: palette$1.red,
                     color: "#FFFFFF",
                     fontSize: 18,

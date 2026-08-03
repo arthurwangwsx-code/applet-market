@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.voicememos",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T04:02:10Z",
+      "notes": "首个版本：应用内录音（实时滚动波形）、录音库浏览与搜索筛选、转写、AI 摘要（6 模板）/待办/章节/问答/说话人校正/翻译、Markdown/文本/SRT 导出，并对 AI 提供 7 个 memo_* 工具。",
+      "fileCount": 3,
+      "totalBytes": 184424,
+      "path": "apps/com.aibox.voicememos/releases/1.0.0",
+      "localizedNotes": {
+        "en": "First release: in-app recording with a live waveform, library browsing with search and filters, transcription, AI summary (6 templates), action items, chapters, Q&A, speaker correction, translation, Markdown/text/SRT export, plus 7 memo_* tools for the assistant."
+      },
+      "bundleSha256": "c5f0b55fcaeedcd1ade869e6956917254a5d2ae258f016b337053c6094434172"
+    }
+  ]
+}

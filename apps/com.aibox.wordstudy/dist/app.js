@@ -1193,6 +1193,16 @@ function matchesFilter$1(item, filter) {
 }
 __name(matchesFilter$1, "matchesFilter$1");
 const api = /* @__PURE__ */ __name(() => typeof window !== "undefined" ? window.aibox : void 0, "api");
+async function probeAI() {
+  const bridge2 = api();
+  if (!bridge2?.ai || typeof bridge2.ai.availability !== "function") return false;
+  try {
+    return (await bridge2.ai.availability()).available;
+  } catch {
+    return false;
+  }
+}
+__name(probeAI, "probeAI");
 const capabilities = {
   get picker() {
     return isAvailable("picker", "photo");
@@ -2205,19 +2215,25 @@ function SearchPage(props) {
     void (async () => {
       const dateKey = dateKeyOf();
       const cached = await getDaily(dateKey);
+      if (cancelled) return;
       if (cached) {
-        if (!cancelled) setDaily(cached);
+        setDaily(cached);
         return;
       }
-      const generated = props.aiAvailable ? await generateDaily(dateKey) : null;
-      const value = { dateKey, ...generated ?? seedSentence(dateKey) };
-      if (generated) await saveDaily(value);
-      if (!cancelled) setDaily(value);
+      setDaily({ dateKey, ...seedSentence(dateKey) });
+      const visible = props.surface !== null && props.surface !== "headless";
+      if (!props.aiAvailable || !visible) return;
+      if (!await probeAI()) return;
+      const generated = await generateDaily(dateKey);
+      if (cancelled || !generated) return;
+      const value = { dateKey, ...generated };
+      await saveDaily(value);
+      setDaily(value);
     })();
     return () => {
       cancelled = true;
     };
-  }, [props.aiAvailable]);
+  }, [props.aiAvailable, props.surface]);
   const suggestions = useMemo(
     () => suggest({ prefix: trimmed, history: store.history, vocab: store.vocab, cachedWords: store.cachedWords }),
     [trimmed, store.history, store.vocab, store.cachedWords]
@@ -3627,6 +3643,7 @@ function App() {
               store,
               query: searchQuery,
               aiAvailable,
+              surface: scene?.effective ?? null,
               onOpenWord: openWord,
               onOpenTranslation: /* @__PURE__ */ __name((id) => setRoute({ kind: "translation", id }), "onOpenTranslation"),
               onTranslateSentence: goTranslate,

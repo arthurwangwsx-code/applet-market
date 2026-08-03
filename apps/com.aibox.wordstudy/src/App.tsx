@@ -138,6 +138,7 @@ export default function App() {
             store={store}
             query={searchQuery}
             aiAvailable={aiAvailable}
+            surface={scene?.effective ?? null}
             onOpenWord={openWord}
             onOpenTranslation={(id) => setRoute({ kind: 'translation', id })}
             onTranslateSentence={goTranslate}

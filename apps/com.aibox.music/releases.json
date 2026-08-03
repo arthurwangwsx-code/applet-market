@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T03:40:40Z",
+      "notes": "子页导航改用系统原生页栈：设置/音效/专辑详情左滑返回时实时透出上一页、可中途放弃，不再直接退出整个小应用；修复顶栏出现两个 ⋯（more 补 role:hostMenu，自绘菜单整体迁进 scene.menu，右上角改用系统原生菜单）；tabs.changed 现在消费 rendered。",
+      "fileCount": 33,
+      "totalBytes": 269294,
+      "path": "apps/com.aibox.music/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Subpages now mirror into the host's native page stack: swiping back from settings, effects or an album reveals the previous page live and can be abandoned mid-drag, instead of dismissing the whole applet. Fixes the duplicated ⋯ in the navigation bar (more is now role:hostMenu and the web menu moved into scene.menu, so the overflow menu is a real system menu), and tabs.changed now consumes rendered."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "2b0bfa53b01d1bd2e43b9175e283efdabb8e197de0c99ec188bf000a6c7f2f83"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-02T20:06:12Z",

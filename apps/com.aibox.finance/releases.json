@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.finance",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T03:40:33Z",
+      "notes": "子页导航改用系统原生页栈：标的详情左滑返回时实时透出上一页、可中途放弃，不再直接退出整个小应用；到价提醒入口移进详情页动作行（顶栏交给宿主画）；tabs.changed 现在消费 rendered。",
+      "fileCount": 45,
+      "totalBytes": 429202,
+      "path": "apps/com.aibox.finance/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Subpages now mirror into the host's native page stack: swiping back from an instrument detail reveals the previous page live and can be abandoned mid-drag, instead of dismissing the whole applet. The price-alert entry moved into the detail action row now that the host draws the navigation bar, and tabs.changed now consumes rendered."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "2cd9c6ab55d6e6f61fc8e939da033bf241deb4bb082b00be06bbc403cf14f2bb"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-02T20:11:14Z",

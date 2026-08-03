@@ -32,7 +32,8 @@
     "surfaces": [
       "page",
       "fullscreen"
-    ]
+    ],
+    "subpages": true
   },
   "actions": [
     {
@@ -76,6 +77,66 @@
       "effect": "mediaPlayback",
       "readOnly": false,
       "idempotent": false
+    },
+    {
+      "id": "music.toggleShuffle",
+      "name": "toggleShuffle",
+      "displayName": "随机播放",
+      "summary": "Toggle shuffle on the host playback engine. Drives the ⋯ menu row, so it is a UI action rather than an agent tool (music_shuffle already covers agents).",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "mediaPlayback",
+      "readOnly": false
+    },
+    {
+      "id": "music.setRepeat",
+      "name": "setRepeat",
+      "displayName": "循环模式",
+      "summary": "Set the repeat mode to off / one / all. Input is the bare mode string supplied by the ⋯ menu row.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "mediaPlayback",
+      "readOnly": false
+    },
+    {
+      "id": "music.setSleepTimer",
+      "name": "setSleepTimer",
+      "displayName": "睡眠定时器",
+      "summary": "Set or cancel the sleep timer. Input is {minutes} for a preset, {mode:'endOfTrack'} to stop after the current song, or {mode:'off'} to cancel.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "mediaPlayback",
+      "readOnly": false
+    },
+    {
+      "id": "music.openEffects",
+      "name": "openEffects",
+      "displayName": "音效",
+      "summary": "Open the audio effects subpage.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    },
+    {
+      "id": "music.shareCurrent",
+      "name": "shareCurrent",
+      "displayName": "分享当前歌曲",
+      "summary": "Share the current track through the system share sheet.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
+    },
+    {
+      "id": "music.openSettings",
+      "name": "openSettings",
+      "displayName": "音乐设置",
+      "summary": "Open the music settings subpage.",
+      "headless": false,
+      "visibility": ["userInterface"],
+      "effect": "nativePresentation",
+      "readOnly": true
     }
   ],
   "scene": {
@@ -118,7 +179,7 @@
     },
     "toolbar": {
       "trailing": [
-        { "id": "more", "icon": "ellipsis" }
+        { "id": "more", "icon": "ellipsis", "role": "hostMenu" }
       ],
       "search": {
         "enabled": true,
@@ -129,6 +190,151 @@
           { "id": "library", "title": "资料库" }
         ]
       }
+    },
+    "menu": {
+      "mergePolicy": "appletFirst",
+      "sections": [
+        {
+          "id": "playback",
+          "items": [
+            {
+              "id": "shuffle",
+              "title": "随机播放",
+              "localizedTitles": { "en": "Shuffle" },
+              "icon": "shuffle",
+              "actionID": "music.toggleShuffle"
+            },
+            {
+              "id": "repeat",
+              "title": "循环",
+              "localizedTitles": { "en": "Repeat" },
+              "icon": "repeat",
+              "children": [
+                {
+                  "id": "repeatOff",
+                  "title": "关闭",
+                  "localizedTitles": { "en": "Off" },
+                  "actionID": "music.setRepeat",
+                  "inputJSON": "\"off\""
+                },
+                {
+                  "id": "repeatOne",
+                  "title": "单曲循环",
+                  "localizedTitles": { "en": "Repeat One" },
+                  "actionID": "music.setRepeat",
+                  "inputJSON": "\"one\""
+                },
+                {
+                  "id": "repeatAll",
+                  "title": "全部循环",
+                  "localizedTitles": { "en": "Repeat All" },
+                  "actionID": "music.setRepeat",
+                  "inputJSON": "\"all\""
+                }
+              ]
+            },
+            {
+              "id": "sleepTimer",
+              "title": "睡眠定时器",
+              "localizedTitles": { "en": "Sleep Timer" },
+              "icon": "moon.zzz.fill",
+              "children": [
+                {
+                  "id": "sleepOff",
+                  "title": "关闭定时器",
+                  "localizedTitles": { "en": "Turn Off Timer" },
+                  "icon": "moon.zzz.fill",
+                  "role": "destructive",
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"mode\":\"off\"}",
+                  "hidden": true
+                },
+                {
+                  "id": "sleep5",
+                  "title": "5 分钟",
+                  "localizedTitles": { "en": "5 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":5}"
+                },
+                {
+                  "id": "sleep10",
+                  "title": "10 分钟",
+                  "localizedTitles": { "en": "10 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":10}"
+                },
+                {
+                  "id": "sleep15",
+                  "title": "15 分钟",
+                  "localizedTitles": { "en": "15 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":15}"
+                },
+                {
+                  "id": "sleep30",
+                  "title": "30 分钟",
+                  "localizedTitles": { "en": "30 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":30}"
+                },
+                {
+                  "id": "sleep45",
+                  "title": "45 分钟",
+                  "localizedTitles": { "en": "45 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":45}"
+                },
+                {
+                  "id": "sleep60",
+                  "title": "60 分钟",
+                  "localizedTitles": { "en": "60 Minutes" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"minutes\":60}"
+                },
+                {
+                  "id": "sleepEndOfTrack",
+                  "title": "播完这首后停止",
+                  "localizedTitles": { "en": "Stop After This Song" },
+                  "actionID": "music.setSleepTimer",
+                  "inputJSON": "{\"mode\":\"endOfTrack\"}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "player",
+          "items": [
+            {
+              "id": "audioEffects",
+              "title": "音效",
+              "localizedTitles": { "en": "Audio Effects" },
+              "icon": "slider.horizontal.3",
+              "actionID": "music.openEffects"
+            },
+            {
+              "id": "shareTrack",
+              "title": "分享",
+              "localizedTitles": { "en": "Share" },
+              "icon": "square.and.arrow.up",
+              "actionID": "music.shareCurrent",
+              "hidden": true
+            }
+          ]
+        },
+        {
+          "id": "app",
+          "items": [
+            {
+              "id": "musicSettings",
+              "title": "音乐设置",
+              "localizedTitles": { "en": "Music Settings" },
+              "icon": "gearshape",
+              "actionID": "music.openSettings"
+            }
+          ]
+        }
+      ]
     }
   }
 }

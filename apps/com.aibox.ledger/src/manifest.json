@@ -31,7 +31,8 @@
     "surfaces": [
       "page",
       "fullscreen"
-    ]
+    ],
+    "subpages": true
   },
   "scene": {
     "tabBar": {

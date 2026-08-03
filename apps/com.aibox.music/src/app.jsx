@@ -33,6 +33,7 @@ import {
   onEvent, onNamespaceEvent, registerAction, setNavigationTitle, shareText, tabs, toolbar,
 } from './lib/host.js'
 import { ACTION_HANDLERS } from './lib/actions.js'
+import { useSubpageStack } from './lib/subpages.js'
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js'
 
 const TABS = [
@@ -71,6 +72,9 @@ export default function App() {
 
   const [locale, setLocale] = React.useState(currentLocale)
   const t = React.useMemo(() => makeT(locale), [locale])
+  // 子页标题在 push 那一刻要用最新的翻译函数，而 push 回调是稳定的 —— 经 ref 取值。
+  const tRef = React.useRef(t)
+  tRef.current = t
 
   const refs = React.useRef(null)
   if (refs.current === null) {
@@ -80,7 +84,13 @@ export default function App() {
   const { store, music } = refs.current
 
   const [tab, setTab] = React.useState('player')
-  const [stack, setStack] = React.useState([])
+  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进详情走 `aibox.navigation.push`，
+  // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
+  const subpages = useSubpageStack({
+    pathFor: routePath,
+    titleFor: (row) => routeTitle(row, tRef.current),
+  })
+  const { stack } = subpages
   const [sheet, setSheet] = React.useState(null)
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [picker, setPicker] = React.useState(null)
@@ -143,6 +153,10 @@ export default function App() {
     Object.keys(ACTION_HANDLERS).forEach((name) => registerAction(name, ACTION_HANDLERS[name]))
   }, [])
 
+  // 外壳接线只跑一次，而 reset 要在每次切 Tab 时清掉子页栈 —— 经 ref 取最新那一个。
+  const resetRef = React.useRef(subpages.reset)
+  resetRef.current = subpages.reset
+
   // —— 宿主外壳接线 ——
   React.useEffect(() => {
     let cancelled = false
@@ -155,10 +169,16 @@ export default function App() {
         tabs.select(store.ui.selectedTab || 'player')
       }
       offs.push(onNamespaceEvent('tabs', 'changed', (payload) => {
-        if (payload && payload.selected) {
+        if (!payload) return
+        // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
+        // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
+        const rendered = payload.rendered !== false
+        setShell((current) => (current.tabsRendered === rendered
+          ? current : { ...current, tabsRendered: rendered }))
+        if (payload.selected) {
           haptics.selection()
           setTab(payload.selected)
-          setStack([])
+          resetRef.current()
           setMode('album')
         }
       }))
@@ -170,9 +190,9 @@ export default function App() {
           searchRendered: !!(bar.search && bar.search.rendered),
         }))
       }
-      offs.push(onNamespaceEvent('toolbar', 'invoke', (payload) => {
-        if (payload && payload.id === 'more') setMenuOpen(true)
-      }))
+      // `more` 在 manifest 里是 `role:"hostMenu"` 的**位置标记**、不是按钮：它不渲染、
+      // 也永不发 `toolbar.invoke`。菜单内容改由 `scene.menu` 声明，宿主用原生 Menu 画。
+      // 自绘 ⋯（没有宿主顶栏的形态）仍走 OptionsMenu，见下面的 Header。
       offs.push(onNamespaceEvent('toolbar', 'searchChanged', (payload) => {
         setQuery(String((payload && payload.query) || ''))
       }))
@@ -235,13 +255,12 @@ export default function App() {
     setTimeout(() => setNotice(null), 2600)
   }, [])
 
-  const navigate = React.useCallback((route) => setStack((rows) => [...rows, route]), [])
-  const back = React.useCallback(() => setStack((rows) => rows.slice(0, -1)), [])
+  const { push: navigate, back } = subpages
 
   const selectTab = React.useCallback((next) => {
     haptics.selection()
     setTab(next)
-    setStack([])
+    resetRef.current()
     setMode('album')
     tabs.select(next)
   }, [])
@@ -358,12 +377,74 @@ export default function App() {
     version: music.version + store.version,
   }), [t, locale, store, music, actions, favorites, current, music.version, store.version]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const route = stack[stack.length - 1] || null
+  const { route } = subpages
   const showMini = showMiniFor(tab, current) && !route
+
+  // —— 宿主 ⋯ 菜单（scene.menu）——
+  //
+  // 这些行以前是自绘面板（web 菜单），于是顶栏出现**两个 ⋯**：`more` 没标 `role:"hostMenu"`，
+  // 宿主把它当普通按钮画在前面、再画自己的 ⋯。现在菜单内容整体迁进 `scene.menu`，
+  // `more` 退化成位置标记，右上角只剩一个 ⋯，而且是系统原生 Menu。
+  //
+  // 每轮重注册：处理器要闭包到最新的 music / navigate / actions。
+  React.useEffect(() => {
+    registerAction('toggleShuffle', () => { music.setShuffle(!music.status.isShuffled); return null })
+    registerAction('setRepeat', (mode) => { music.setRepeat(String(mode || 'off')); return null })
+    registerAction('setSleepTimer', (input) => {
+      const value = input || {}
+      if (value.mode === 'off') music.cancelSleepTimer()
+      else if (value.mode === 'endOfTrack') music.setSleepTimerEndOfTrack()
+      else music.setSleepTimer(Math.max(1, Number(value.minutes) || 0))
+      return null
+    })
+    registerAction('openEffects', () => { navigate({ name: 'effects' }); return null })
+    registerAction('openSettings', () => { navigate({ name: 'settings' }); return null })
+    registerAction('shareCurrent', () => { actions.shareCurrent(); return null })
+  })
+
+  // 原生菜单项没有「勾选态」「右侧详情」两个字段，只能覆盖 title / icon / enabled / hidden。
+  // 所以：勾选用 `icon: 'checkmark'` 表达（就是系统菜单的写法），当前值并进标题。
+  const menuStatus = music.status
+  const sleepTimer = music.sleepTimer
+  const externalURL = current ? store.externalURL(current) : null
+  React.useEffect(() => {
+    const api = window.aibox
+    if (!api || !api.menu || typeof api.menu.update !== 'function') return
+    // 播放相关的几项只在「正在播放」页出现（照抄原生 AiBoxMusicKit 的 ⋯ 菜单）。
+    const isPlayer = tab === 'player' && !route
+    const repeatValue = {
+      off: t('menu.repeatOff'), one: t('menu.repeatOne'), all: t('menu.repeatAll'),
+    }[menuStatus.repeatMode] || t('menu.repeatOff')
+    const timerValue = sleepTimer.endOfTrack
+      ? t('menu.stopAfterSong')
+      : (sleepTimer.remaining !== null && sleepTimer.remaining !== undefined
+        ? t('menu.stopIn', `${Math.floor(sleepTimer.remaining / 60)}:${String(sleepTimer.remaining % 60).padStart(2, '0')}`)
+        : t('menu.notSet'))
+    api.menu.update({
+      items: {
+        shuffle: { hidden: !isPlayer, icon: menuStatus.isShuffled ? 'checkmark' : 'shuffle' },
+        repeat: {
+          hidden: !isPlayer,
+          icon: menuStatus.repeatMode === 'one' ? 'repeat.1' : 'repeat',
+          title: `${t('menu.repeat')} · ${repeatValue}`,
+        },
+        repeatOff: { icon: menuStatus.repeatMode === 'off' ? 'checkmark' : null },
+        repeatOne: { icon: menuStatus.repeatMode === 'one' ? 'checkmark' : null },
+        repeatAll: { icon: menuStatus.repeatMode === 'all' ? 'checkmark' : null },
+        sleepTimer: { hidden: !isPlayer, title: `${t('menu.sleepTimer')} · ${timerValue}` },
+        sleepOff: { hidden: !sleepTimer.active },
+        audioEffects: { hidden: !isPlayer },
+        shareTrack: { hidden: !isPlayer || !externalURL },
+      },
+    }).catch(() => {})
+  }, [tab, route, t, externalURL, menuStatus.isShuffled, menuStatus.repeatMode,
+    sleepTimer.active, sleepTimer.endOfTrack, sleepTimer.remaining])
 
   return (
     <div className="mu-root">
-      {(!shell.toolbarRendered || route) ? (
+      {/* 宿主画了顶栏就**不再自绘** —— 子页也不自绘：宿主在 `webDepth > 0` 时自己就有返回键，
+          ⋯ 也由宿主的原生 Menu 画。没有宿主顶栏时（fullscreen 形态 / 无宿主）才补上这一条。 */}
+      {!shell.toolbarRendered ? (
         <Header
           title={route ? routeTitle(route, t) : tabTitle(tab, music.status.queueCount, t)}
           onBack={route ? back : undefined}
@@ -453,7 +534,16 @@ function tabTitle(tab, queueCount, t) {
   return row ? t(row.titleKey) : ''
 }
 
+/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
+function routePath(route) {
+  if (!route) return '#/'
+  if (route.name === 'collection') return `#/collection/${encodeURIComponent((route.item && route.item.musicItemId) || '')}`
+  if (route.name === 'category') return `#/category/${encodeURIComponent(route.id || '')}`
+  return `#/${route.name}`
+}
+
 function routeTitle(route, t) {
+  if (!route) return ''
   switch (route.name) {
     case 'settings': return t('settings.title')
     case 'effects': return t('effects.title')

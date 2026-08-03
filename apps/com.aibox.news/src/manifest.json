@@ -72,7 +72,8 @@
     "surfaces": [
       "page",
       "fullscreen"
-    ]
+    ],
+    "subpages": true
   },
   "actions": [
     {

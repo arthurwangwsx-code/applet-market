@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.ledger",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T03:40:29Z",
+      "notes": "子页导航改用系统原生页栈：项目/账户详情左滑返回时实时透出上一页、可中途放弃，不再直接退出整个小应用；顶栏不再与宿主重复画一层；tabs.changed 现在消费 rendered。",
+      "fileCount": 47,
+      "totalBytes": 443277,
+      "path": "apps/com.aibox.ledger/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Subpages now mirror into the host's native page stack: swiping back from a project or account detail reveals the previous page live and can be abandoned mid-drag, instead of dismissing the whole applet. No more duplicated navigation bar, and tabs.changed now consumes rendered."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "95140e7084f01f87200603d313f429bc307d40a6e61716fece6882240c9376cd"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-02T20:15:50Z",

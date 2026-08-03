@@ -18,6 +18,7 @@ import AIPanel from './components/AIPanel.jsx'
 import { fetchSingleSource } from './lib/aggregator.js'
 import { getSession, whenReady } from './lib/session.js'
 import { registerActions } from './lib/actions.js'
+import { useSubpageStack } from './lib/subpages.js'
 import { openArticle as performOpen, knowledgeMarkdown } from './lib/reading.js'
 import {
   capabilities, browserAvailability, aiAvailability, findTool, callTool, onEvent, onNamespaceEvent,
@@ -69,6 +70,9 @@ export default function App() {
 
   const [locale, setLocale] = React.useState(currentLocale)
   const t = React.useMemo(() => makeT(locale), [locale])
+  // 子页标题在 push 那一刻要用最新的翻译函数，而 push 回调是稳定的 —— 经 ref 取值。
+  const tRef = React.useRef(t)
+  tRef.current = t
 
   // 与 AI 工具共用同一份状态（lib/session.js 的模块级单例），UI 只是它的一个消费方。
   const session = getSession()
@@ -77,7 +81,13 @@ export default function App() {
   const [ready, setReady] = React.useState(false)
   const [tab, setTab] = React.useState('feed')
   const [query, setQuery] = React.useState('')
-  const [stack, setStack] = React.useState([])
+  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进子页走 `aibox.navigation.push`，
+  // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
+  const subpages = useSubpageStack({
+    pathFor: routePath,
+    titleFor: (row) => routeTitle(row, tRef.current),
+  })
+  const { stack } = subpages
   const [aiSession, setAISession] = React.useState(null)
   const [now, setNow] = React.useState(() => Date.now())
   const [shell, setShell] = React.useState({ tabsRendered: false, toolbarRendered: false, searchRendered: false })
@@ -148,6 +158,9 @@ export default function App() {
   // —— 宿主外壳接线 ——
   const openAIRef = React.useRef(openAI)
   openAIRef.current = openAI
+  // 外壳接线只跑一次，而 reset 要在每次切 Tab 时清掉子页栈 —— 经 ref 取最新那一个。
+  const resetRef = React.useRef(subpages.reset)
+  resetRef.current = subpages.reset
 
   React.useEffect(() => {
     let cancelled = false
@@ -163,7 +176,13 @@ export default function App() {
           }
         } catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
         offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
-          if (state && state.selected) { setTab(state.selected); setStack([]) }
+          if (!state) return
+          // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
+          // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
+          const rendered = state.rendered !== false
+          setShell((current) => (current.tabsRendered === rendered
+            ? current : { ...current, tabsRendered: rendered }))
+          if (state.selected) { setTab(state.selected); resetRef.current() }
         }))
       }
       if (api && api.toolbar && typeof api.toolbar.getState === 'function') {
@@ -221,8 +240,7 @@ export default function App() {
   const readKeys = React.useMemo(() => store.readKeys, [store, store.version]) // eslint-disable-line react-hooks/exhaustive-deps
   const savedKeys = React.useMemo(() => store.savedKeys, [store, store.version]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const navigate = React.useCallback((route) => setStack((rows) => [...rows, route]), [])
-  const back = React.useCallback(() => setStack((rows) => rows.slice(0, -1)), [])
+  const { push: navigate, back } = subpages
 
   const ctx = React.useMemo(() => ({
     t,
@@ -285,19 +303,21 @@ export default function App() {
     shell.searchRendered, caps.hasAI, caps.hasTTS, caps.hasKB, readKeys, savedKeys,
     navigate, back, openAI, broadcast.active, broadcast.index]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const route = stack.length > 0 ? stack[stack.length - 1] : null
+  const { route } = subpages
   const currentTab = TABS.find((row) => row.id === tab) || TABS[0]
 
   const selectTab = (next) => {
     setTab(next)
-    setStack([])
+    subpages.reset()
     const api = window.aibox
     if (api && api.tabs && typeof api.tabs.select === 'function') api.tabs.select(next).catch(() => {})
   }
 
   return (
     <div className="news-root">
-      {(!shell.toolbarRendered || route) ? (
+      {/* 宿主画了顶栏就**不再自绘** —— 子页也不自绘：宿主在 `webDepth > 0` 时自己就有返回键，
+          两条一起画等于两层导航栏、两个标题。没有宿主顶栏时（fullscreen 形态 / 无宿主）才补上。 */}
+      {!shell.toolbarRendered ? (
         <NavBar
           title={route ? routeTitle(route, t) : t(currentTab.titleKey)}
           onBack={route ? back : undefined}
@@ -353,7 +373,15 @@ export default function App() {
   )
 }
 
+/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
+function routePath(route) {
+  if (!route) return '#/'
+  if (route.name === 'source') return `#/source/${encodeURIComponent((route.feed && route.feed.id) || '')}`
+  return `#/${route.name}`
+}
+
 function routeTitle(route, t) {
+  if (!route) return ''
   switch (route.name) {
     case 'settings': return t('news.settings.title')
     case 'addSource': return t('news.add.nav')

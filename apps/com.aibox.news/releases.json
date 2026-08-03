@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "releases": [
+    {
+      "version": "1.0.2",
+      "releasedAt": "2026-08-03T03:40:24Z",
+      "notes": "子页导航改用系统原生页栈：详情页左滑返回时实时透出上一页、可中途放弃，不再直接退出整个小应用；顶栏不再与宿主重复画一层；tabs.changed 现在消费 rendered。",
+      "fileCount": 39,
+      "totalBytes": 265114,
+      "path": "apps/com.aibox.news/releases/1.0.2",
+      "localizedNotes": {
+        "en": "Subpages now mirror into the host's native page stack: swiping back reveals the previous page live and can be abandoned mid-drag, instead of dismissing the whole applet. No more duplicated navigation bar, and tabs.changed now consumes rendered."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "5879f450158cbec94446c647c02076318de08804e77c22e3476d5b7f4e667041"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-03T02:01:11Z",

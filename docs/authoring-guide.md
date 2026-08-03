@@ -144,6 +144,58 @@ aibox.toolbar.on('searchChanged', ({ query }) => setQuery(query))
 
 完整合同见宿主文档 `docs/capabilities/applet/app-shell-and-market.md` §1–§3。
 
+有两条细节写错了不会报错、只会在真机上显形：
+
+- **`role: "hostMenu"`**：宿主的 ⋯ 菜单是**保留出口**，声不声明都在。想让自己的 ⋯ 就是它，
+  必须在 `toolbar.trailing` 里放一个 `{ "id": "more", "icon": "ellipsis", "role": "hostMenu" }`
+  ——这是个**位置标记**，不渲染成按钮、也永不发 `toolbar.invoke`。漏了 `role`，宿主会把它
+  当成一个普通按钮画在前面、再画自己的 ⋯，于是**右上角出现两个 ⋯**。
+  菜单内容写进 `scene.menu`（支持两级子菜单，每项 `actionID` 指向 `manifest.actions`）。
+- **`tabs.changed` 要读 `rendered`，不只是 `selected`**：宿主会在**挂载之后**翻转 `rendered`
+  （形态切换、控制器重建都会重发 `changed`）。只在启动那一刻判断一次，自绘降级底栏就会
+  永远缺席或永远多一条。
+
+### 子页导航：用系统的页栈，不要自己画
+
+有「列表 → 详情」结构就必须接这条，否则**在详情页左滑会直接退出整个小应用**——宿主看到的
+`webDepth` 恒为 0，于是认为你在根路由，把最左缘让给了外层的退出手势。这不是「返回没有动画」，
+是「返回手势是错的」。
+
+接上之后，返回走的是 iOS 自己的 interactive pop：拖动中实时透出上一页、拖到一半可以放弃。
+
+三步：
+
+```jsonc
+// ① manifest 打开开关（这是 opt-in；card / sheet / drawer 形态不装页栈）
+{ "presentation": { "default": "page", "subpages": true } }
+```
+
+```javascript
+// ② 进子页：先让宿主冻结当前页像素，**等屏障回来**再渲染新路由
+await aibox.navigation.push({ route: '#/article/42', title: '文章详情' })
+await aibox.navigation.getState()          // ← 顺序屏障，不能省
+setStack((rows) => [...rows, route])
+
+// ③ 返回一律经 popstate 回来，并且**对齐到深度**（popToRoot 会一次退多层）
+addEventListener('popstate', () => {
+  const depth = (history.state && history.state.__aiboxDepth) || 0
+  setStack((rows) => rows.slice(0, depth))
+})
+```
+
+- 屏障为什么不能省：`push()` 是纯 JS、返回的是**已解决的** Promise，`await` 它只让出一个
+  微任务。紧接着的 `getState()` 才真正等到宿主处理完（两条消息同一个 reply handler、FIFO）。
+  省掉它是**观感退化而非功能损坏**：冻结的会是新页面的像素。
+- 自己的返回键**不要乐观 setState**：调 `aibox.navigation.back()`，让 popstate 把栈弹回去。
+  抢先改 state 会让宿主的转场演给一个空页面看。
+- 切 Tab 用 `aibox.navigation.popToRoot()` + 本地清空，两边幂等对账。
+- **宿主画了顶栏就别再自绘**：`webDepth > 0` 时宿主自己就有返回键，两条一起画 = 两层导航栏。
+  只在 `toolbar.getState().rendered === false`（fullscreen 形态 / 无宿主）时补自绘顶栏。
+
+本仓 `apps/com.aibox.news/src/lib/subpages.js` 是可直接抄走的实现（`useSubpageStack`），
+news / ledger / finance / music 四个应用用的都是它。完整机制见宿主文档
+`docs/capabilities/applet/native-navigation.md`。
+
 ### 可选能力（用前先探测）
 
 ```javascript

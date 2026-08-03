@@ -23,6 +23,7 @@ import { Ledger } from './lib/ledger.js'
 import { QuoteService } from './lib/quotes.js'
 import { AlertStore, isPercentCondition, isUpwardCondition } from './lib/alerts.js'
 import { registerTools } from './lib/tools.js'
+import { useSubpageStack } from './lib/subpages.js'
 import { INDEX_ROWS, decimalsFor, resolveSymbol } from './lib/symbol.js'
 import { formatPercent, formatPrice } from './lib/format.js'
 import {
@@ -80,7 +81,9 @@ export default function App() {
 
   const [ready, setReady] = React.useState(false)
   const [tab, setTab] = React.useState('markets')
-  const [stack, setStack] = React.useState([])
+  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进详情走 `aibox.navigation.push`，
+  // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
+  const subpages = useSubpageStack({ pathFor: routePath, titleFor: (row) => (row && row.title) || '' })
   const [sheet, setSheet] = React.useState(null)          // { name, ... }
   const [aiSession, setAISession] = React.useState(null)
   const [refreshing, setRefreshing] = React.useState(false)
@@ -189,6 +192,9 @@ export default function App() {
   // —— 宿主外壳接线 ——
   const openSearchRef = React.useRef(null)
   const openAIRef = React.useRef(null)
+  // 外壳接线只跑一次，而 reset 要在每次切 Tab 时清掉子页栈 —— 经 ref 取最新那一个。
+  const resetRef = React.useRef(subpages.reset)
+  resetRef.current = subpages.reset
 
   React.useEffect(() => {
     let cancelled = false
@@ -204,7 +210,13 @@ export default function App() {
           }
         } catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
         offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
-          if (state && state.selected) { setTab(state.selected); setStack([]) }
+          if (!state) return
+          // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
+          // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
+          const rendered = state.rendered !== false
+          setShell((current) => (current.tabsRendered === rendered
+            ? current : { ...current, tabsRendered: rendered }))
+          if (state.selected) { setTab(state.selected); resetRef.current() }
         }))
       }
       if (api && api.toolbar && typeof api.toolbar.getState === 'function') {
@@ -238,8 +250,7 @@ export default function App() {
   }, [ready, store, ledger, quotes, alerts])
 
   // —— 路由与动作 ——
-  const navigate = React.useCallback((route) => setStack((rows) => [...rows, route]), [])
-  const back = React.useCallback(() => setStack((rows) => rows.slice(0, -1)), [])
+  const { push: navigate, back } = subpages
 
   const openDetail = React.useCallback((canonical) => {
     const symbol = resolveSymbol(canonical)
@@ -298,7 +309,7 @@ export default function App() {
   openSearchRef.current = ctx.actions.openSearch
   openAIRef.current = () => setAISession({ identity: 'finance:root' })
 
-  const route = stack.length > 0 ? stack[stack.length - 1] : null
+  const { route } = subpages
   const currentTab = TABS.find((row) => row.id === tab) || TABS[0]
   const title = route ? route.title : t(currentTab.titleKey)
 
@@ -310,7 +321,7 @@ export default function App() {
 
   const selectTab = (next) => {
     setTab(next)
-    setStack([])
+    subpages.reset()
     const api = window.aibox
     if (api && api.tabs && typeof api.tabs.select === 'function') api.tabs.select(next).catch(() => {})
   }
@@ -320,25 +331,21 @@ export default function App() {
 
   return (
     <div className="fin-root">
-      {(!shell.toolbarRendered || route) ? (
+      {/* 宿主画了顶栏就**不再自绘** —— 子页也不自绘：宿主在 `webDepth > 0` 时自己就有返回键，
+          两条一起画等于两层导航栏、两个标题。没有宿主顶栏时（fullscreen 形态 / 无宿主）才补上。 */}
+      {!shell.toolbarRendered ? (
         <NavBar
           title={title}
           onBack={route ? back : undefined}
           backLabel={t('finance.cancel')}
-          trailing={route && route.name === 'detail' ? (
-            <ToolbarButton
-              icon="bell"
-              label={t('finance.alert.title')}
-              onClick={() => ctx.actions.openAlert(route.canonical, route.symbol, route.title)}
-            />
-          ) : (!route && !shell.toolbarRendered ? (
+          trailing={!route ? (
             <>
               {hasAI ? (
                 <ToolbarButton icon="sparkles" label={t('finance.ai.title')} onClick={() => openAIRef.current()} />
               ) : null}
               <ToolbarButton icon="magnifyingglass" label={t('finance.search.title')} onClick={ctx.actions.openSearch} />
             </>
-          ) : null)}
+          ) : null}
         />
       ) : null}
 
@@ -391,4 +398,11 @@ export default function App() {
       <AIPanel ctx={ctx} session={aiSession} onClose={() => setAISession(null)} />
     </div>
   )
+}
+
+/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
+function routePath(route) {
+  if (!route) return '#/'
+  if (route.name === 'detail') return `#/detail/${encodeURIComponent(route.canonical || '')}`
+  return `#/${route.name}`
 }

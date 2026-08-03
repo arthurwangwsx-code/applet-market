@@ -189,8 +189,11 @@ export default function DetailPage({ ctx, route }) {
     if (quote.amplitude) stats.push({ key: 'amplitude', label: t('finance.stat.amplitude'), value: formatPercent(quote.amplitude, false) })
   }
 
+  // 提醒入口住在这一排，不住顶栏：详情页改由**宿主**画顶栏（原生子页栈接管返回），
+  // 自绘顶栏只在没有宿主顶栏的形态下出现，把入口挂在那儿等于「有时有、有时没有」。
   const actionButtons = [
     { id: 'watch', icon: watched ? 'star.fill' : 'star', label: t(watched ? 'finance.action.watching' : 'finance.action.watch'), onClick: () => actions.toggleWatch(canonical, name) },
+    { id: 'alert', icon: 'bell', label: t('finance.alert.title'), onClick: () => actions.openAlert(canonical, symbol, name) },
     { id: 'trade', icon: 'arrow.left.arrow.right', label: t('finance.action.trade'), disabled: !quote, onClick: () => actions.openTrade(canonical, symbol, name) },
     { id: 'strategy', icon: 'function', label: t('finance.action.strategy'), onClick: () => actions.openStrategy(canonical, symbol, name) },
   ]

@@ -38,6 +38,7 @@ import {
   pickTextFile, shareFile, tapFeedback,
 } from './lib/host.js'
 import { registerLedgerActions } from './lib/register-actions.js'
+import { useSubpageStack } from './lib/subpages.js'
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js'
 
 const TABS = [
@@ -85,6 +86,9 @@ export default function App() {
 
   const [locale, setLocale] = React.useState(currentLocale)
   const t = React.useMemo(() => makeT(locale), [locale])
+  // 子页标题在 push 那一刻要用最新的翻译函数，而 push 回调是稳定的 —— 经 ref 取值。
+  const tRef = React.useRef(t)
+  tRef.current = t
 
   const storeRef = React.useRef(null)
   if (storeRef.current === null) storeRef.current = new LedgerStore()
@@ -92,7 +96,14 @@ export default function App() {
 
   const [ready, setReady] = React.useState(false)
   const [tab, setTab] = React.useState('transactions')
-  const [route, setRoute] = React.useState(null)
+  // 子页栈 = 宿主原生页栈的镜像（见 lib/subpages.js）：进详情走 `aibox.navigation.push`，
+  // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
+  const subpages = useSubpageStack({
+    pathFor: routePath,
+    titleFor: (row) => routeTitle(row, storeRef.current, tRef.current),
+  })
+  const { route } = subpages
+  const setRoute = subpages.push
   const [query, setQuery] = React.useState('')
   const [monthKey, setMonthKey] = React.useState(monthKeyNow)
   const [sheet, setSheet] = React.useState(null)
@@ -165,6 +176,10 @@ export default function App() {
     setSheet({ kind: 'csvPreview', draft: parseImport(picked.text, store) })
   }, [store])
 
+  // 外壳接线只跑一次，而 reset 要在每次切 Tab 时清掉子页栈 —— 经 ref 取最新那一个。
+  const resetRef = React.useRef(subpages.reset)
+  resetRef.current = subpages.reset
+
   // 宿主外壳接线。
   React.useEffect(() => {
     let cancelled = false
@@ -180,7 +195,12 @@ export default function App() {
           }
         } catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
         offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
-          if (state && state.selected) { setTab(state.selected); setRoute(null) }
+          if (!state) return
+          // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
+          // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
+          const rendered = state.rendered !== false
+          setShell((current) => (current.tabs === rendered ? current : { ...current, tabs: rendered }))
+          if (state.selected) { setTab(state.selected); resetRef.current() }
         }))
       }
       if (api && api.toolbar && typeof api.toolbar.getState === 'function') {
@@ -402,17 +422,19 @@ export default function App() {
 
   const selectTab = (next) => {
     setTab(next)
-    setRoute(null)
+    subpages.reset()
     const api = window.aibox
     if (api && api.tabs && typeof api.tabs.select === 'function') api.tabs.select(next).catch(() => {})
   }
 
   return (
     <div className="lg-root">
-      {(!shell.toolbar || route) ? (
+      {/* 宿主画了顶栏就**不再自绘** —— 子页也不自绘：宿主在 `webDepth > 0` 时自己就有返回键，
+          两条一起画等于两层导航栏、两个标题。没有宿主顶栏时（fullscreen 形态 / 无宿主）才补上。 */}
+      {!shell.toolbar ? (
         <NavBar
           title={route ? routeTitle(route, store, t) : t(currentTab.titleKey)}
-          onBack={route ? () => setRoute(null) : undefined}
+          onBack={route ? subpages.back : undefined}
           backLabel={t('x.close')}
           trailing={!route && !shell.toolbar ? (
             <>
@@ -477,7 +499,14 @@ export default function App() {
   )
 }
 
+/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
+function routePath(route) {
+  if (!route) return '#/'
+  return `#/${route.name}/${encodeURIComponent(route.id || '')}`
+}
+
 function routeTitle(route, store, t) {
+  if (!route) return ''
   if (route.name === 'account') return store.account(route.id)?.name ?? t('tab.accounts')
   return store.project(route.id)?.name ?? t('tab.projects')
 }

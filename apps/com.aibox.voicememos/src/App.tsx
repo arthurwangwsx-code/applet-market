@@ -11,7 +11,7 @@ import { MemoDetail, type DetailContext } from './components/MemoDetail'
 import { RecordSheet } from './components/RecordSheet'
 import { Icon, PushPage } from './components/primitives'
 import { useSubpageStack } from 'aibox/ui'
-import { setNavigationTitle, useOverlay } from './lib/shell'
+import { setNavigationTitle, useHostChrome, useHostMenu, useOverlay } from './lib/shell'
 import { registerMemoActions } from './lib/actions'
 import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format'
 import {
@@ -90,21 +90,23 @@ export default function App() {
   const [sheet, setSheet] = useState<'actionItems' | 'ask' | 'cleanUp' | null>(null)
   const detailContext = useRef<DetailContext | null>(null)
   const [detailArtifacts, setDetailArtifacts] = useState<MemoArtifacts | null>(null)
+  /** 系统 ⋯ 菜单的可见性输入。**只存这两个布尔**，不把整个 context 塞进 state —— 那东西每帧重建，
+   *  进了 state 就是一条自触发的重渲染环。 */
+  const [detailMenuState, setDetailMenuState] =
+    useState<{ hasText: boolean; hasSummary: boolean } | null>(null)
 
+  // 切 Tab = **整条子页栈作废**（原生语义：底栏是页栈的兄弟，切过去看到的是那一栏自己的根页）。
+  // 只 setTab 不退栈的话，人在详情页切 Tab 会看到「底栏高亮变了、页面纹丝不动」——
+  // 因为详情页是盖在根视图上的一层，根视图换了哪个 Tab 它都盖着（2026-08-04 真机反馈）。
   useEffect(() => {
-    if (tabs.rendered && tabs.selected && tabs.selected !== tab) setTab(tabs.selected as TabID)
+    if (!tabs.rendered || !tabs.selected || tabs.selected === tab) return
+    setTab(tabs.selected as TabID)
+    subpages.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.selected, tabs.rendered])
 
   // 宿主画了导航栏（含返回键与 ⋯）就**不再自绘** —— 两条顶栏叠起来是这一轮反复出现的形状。
-  const [hostChrome, setHostChrome] = useState(false)
-  useEffect(() => {
-    const api = (window as any).aibox
-    if (!api?.toolbar?.getState) return
-    void api.toolbar.getState()
-      .then((state: any) => setHostChrome(!!(state && state.rendered)))
-      .catch(() => undefined)
-  }, [])
+  const hostChrome = useHostChrome()
 
   // 顶栏标题：根页用 Tab 名，子页用页面自己定义的标题（用户明确要求「标题要在阅读页面自己定义」）。
   useEffect(() => {
@@ -285,27 +287,14 @@ export default function App() {
     if (picked) await runRowAction(memo, picked)
   }, [t, transcribable, runRowAction])
 
-  const openDetailMenu = useCallback(async (context: DetailContext) => {
-    detailContext.current = context
-    setDetailArtifacts(context.artifacts)
+  /**
+   * 详情页菜单的**动作半边**。系统 ⋯ 菜单（`menu.invoke`）与自绘 action sheet 共用这一份 ——
+   * 两条路各写一遍处理器，就是「同一条录音从不同入口点同一个菜单项、行为不一样」的来源。
+   */
+  const runDetailAction = useCallback(async (picked: string) => {
+    const context = detailContext.current
+    if (!context) return
     const memo = context.memo
-    const hasText = Boolean(context.text.trim())
-    const actions: { id: string; title: string; destructive?: boolean }[] = []
-    if (hasText) {
-      actions.push({ id: 'actionItems', title: t('actionItems') })
-      actions.push({ id: 'ask', title: t('askTitle') })
-      actions.push({ id: 'cleanUp', title: t('cleanUp'), destructive: true })
-      actions.push({ id: 'shareTranscript', title: t('shareTranscript') })
-      if (context.artifacts?.summaryText) actions.push({ id: 'shareSummary', title: t('shareSummary') })
-      if (capabilities.shareFile) {
-        actions.push({ id: 'exportMd', title: t('exportMarkdown') })
-        actions.push({ id: 'exportTxt', title: t('exportText') })
-        actions.push({ id: 'exportSrt', title: t('exportSRT') })
-      }
-    }
-    actions.push({ id: 'rename', title: t('rename') })
-    const picked = await actionSheet(actions)
-    if (!picked) return
 
     if (picked === 'actionItems') return setSheet('actionItems')
     if (picked === 'ask') return setSheet('ask')
@@ -330,7 +319,67 @@ export default function App() {
       const body = format === 'srt' ? exportSRT(payload) : format === 'txt' ? exportText(payload) : exportMarkdown(payload)
       await shareFile(`${fileSlug(memo.title)}-${newID().slice(0, 6)}.${format}`, body)
     }
-  }, [t, locale.locale, exportLabels, openMenu])
+  }, [locale.locale, exportLabels, openMenu])
+
+  // —— 系统 ⋯ 菜单（`aibox.menu`）——
+  //
+  // 用户 2026-08-04 真机反馈：「音频播放页面的标题和菜单并没有使用系统的，这个需要去对接一下。」
+  // 菜单项在 manifest `scene.menu` 里冻结身份，这里只改**展示态**；点击经 `menu.invoke` 落到
+  // 与自绘 sheet 同一份 `runDetailAction`。
+  const hostMenu = useHostMenu((id) => { void runDetailAction(id) })
+
+  /**
+   * 详情页把「菜单要按什么决定可见性」交上来。**必须持续上报，不能等用户点了 ⋯ 才知道** ——
+   * 系统菜单是宿主画的，弹出那一刻不再经过页面，可见性得提前配好。
+   */
+  const publishDetailContext = useCallback((context: DetailContext | null) => {
+    detailContext.current = context
+    setDetailArtifacts(context?.artifacts ?? null)
+    setDetailMenuState(context
+      ? { hasText: Boolean(context.text.trim()), hasSummary: Boolean(context.artifacts?.summaryText) }
+      : null)
+  }, [])
+
+  useEffect(() => {
+    if (!hostMenu.declared) return
+    const open = detailMenuState !== null
+    const text = open && detailMenuState.hasText
+    const exportable = text && capabilities.shareFile
+    hostMenu.update({
+      actionItems: { hidden: !text },
+      ask: { hidden: !text },
+      cleanUp: { hidden: !text },
+      shareTranscript: { hidden: !text },
+      shareSummary: { hidden: !(text && detailMenuState.hasSummary) },
+      exportMd: { hidden: !exportable },
+      exportTxt: { hidden: !exportable },
+      exportSrt: { hidden: !exportable },
+      rename: { hidden: !open },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hostMenu.declared, detailMenuState])
+
+  /** 自绘详情菜单 —— 宿主没有系统 ⋯ 菜单（`declared:false`）时的降级路径，动作集逐条一致。 */
+  const openDetailMenu = useCallback(async (context: DetailContext) => {
+    publishDetailContext(context)
+    const hasText = Boolean(context.text.trim())
+    const actions: { id: string; title: string; destructive?: boolean }[] = []
+    if (hasText) {
+      actions.push({ id: 'actionItems', title: t('actionItems') })
+      actions.push({ id: 'ask', title: t('askTitle') })
+      actions.push({ id: 'cleanUp', title: t('cleanUp'), destructive: true })
+      actions.push({ id: 'shareTranscript', title: t('shareTranscript') })
+      if (context.artifacts?.summaryText) actions.push({ id: 'shareSummary', title: t('shareSummary') })
+      if (capabilities.shareFile) {
+        actions.push({ id: 'exportMd', title: t('exportMarkdown') })
+        actions.push({ id: 'exportTxt', title: t('exportText') })
+        actions.push({ id: 'exportSrt', title: t('exportSRT') })
+      }
+    }
+    actions.push({ id: 'rename', title: t('rename') })
+    const picked = await actionSheet(actions)
+    if (picked) await runDetailAction(picked)
+  }, [t, publishDetailContext, runDetailAction])
 
   const rootMemos = store.memos
   // 2.0.0 只剩一个来源，「本机剪辑」这一段等同于「全部」，故智能列表只留 全部 / 收藏。
@@ -475,6 +524,8 @@ export default function App() {
           settings={store.settings}
           onBack={subpages.back}
           onMenu={openDetailMenu}
+          onContext={publishDetailContext}
+          hostMenu={hostMenu.declared}
           onRefresh={store.refresh}
           overlayRendered={overlay.rendered}
           overlayUpdate={overlay.update}

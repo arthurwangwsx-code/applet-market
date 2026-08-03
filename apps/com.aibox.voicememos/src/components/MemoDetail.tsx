@@ -37,7 +37,15 @@ export function MemoDetail(props: {
   memo: Memo
   settings: Settings
   onBack: () => void
+  /** 自绘 ⋯ 的入口。宿主有系统菜单时不再渲染那颗按钮，本回调也就不会被调到。 */
   onMenu: (context: DetailContext) => void
+  /**
+   * 持续上报当前详情上下文。系统 ⋯ 菜单由宿主绘制，弹出那一刻不经过页面 ——
+   * 哪几项该可见必须**提前**配好，不能等用户点了才算。
+   */
+  onContext?: (context: DetailContext | null) => void
+  /** 宿主有系统 ⋯ 菜单。true = 不画页内那颗 ⋯（否则真机上是「系统 ⋯ 旁边挂个假 ⋯」）。 */
+  hostMenu?: boolean
   onRefresh: () => void
   /** 宿主是否画了悬浮层。true = 播放控制交给常驻层，页内只留波形与进度条。 */
   overlayRendered?: boolean
@@ -93,6 +101,19 @@ export function MemoDetail(props: {
     seek: (seconds) => seekRef.current?.(seconds),
   }
 
+  // 上报给根视图配系统 ⋯ 菜单。**按签名而不是按 context 触发**：context 每帧重建，
+  // 直接进依赖数组就是每帧过一次桥。签名里只放真正影响菜单可见性的几件事。
+  const contextRef = useRef(context)
+  contextRef.current = context
+  const onContextRef = useRef(props.onContext)
+  onContextRef.current = props.onContext
+  const menuSignature = `${memo.id}|${text.trim() ? 1 : 0}|${artifacts?.summaryText ? 1 : 0}`
+  useEffect(() => {
+    onContextRef.current?.(contextRef.current)
+  }, [menuSignature])
+  // 离开详情页把菜单项收回去 —— 留着的话在列表页点 ⋯ 会看到一整排「对哪条录音操作？」的孤儿项。
+  useEffect(() => () => { onContextRef.current?.(null) }, [])
+
   /** 转写这一条录音。同步等待到出结果——宿主侧每个 applet 同时只允许一条，排队没有意义。 */
   const runTranscription = async () => {
     const clip = (await listClips()).find((item) => item.id === memo.id)
@@ -136,7 +157,13 @@ export function MemoDetail(props: {
   const status = transcribing ? 'inProgress' : (transcript?.status ?? 'none')
 
   return (
-    <PushPage palette={palette} title={memo.title} onBack={props.onBack} chrome={props.chrome} trailing={<MoreButton palette={palette} onClick={() => props.onMenu(context)} />}>
+    <PushPage
+      palette={palette}
+      title={memo.title}
+      onBack={props.onBack}
+      chrome={props.chrome}
+      trailing={props.hostMenu ? undefined : <MoreButton palette={palette} onClick={() => props.onMenu(context)} />}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         {!memo.hasAudio ? (
           <div style={{ background: alpha(palette.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }}>
@@ -901,15 +928,21 @@ function ClipPlayer(props: {
         style={{ width: '100%', accentColor: palette.accent }}
       />
 
-      {/* 宿主画了悬浮播放条就不再画页内走带键 —— 两排播放键是「控件重复」而不是「随手可控」。
-          波形与进度条留在页内（它们是内容，不是常驻控制）。 */}
-      <div style={{ display: props.overlayRendered ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3 }}>
+      {/* 走带键**常驻**。
+          这里曾经是「宿主画了悬浮播放条就把页内走带键整排 display:none」，理由是「两排播放键是控件重复」。
+          真机上的结果却是：进详情页只剩一条光秃秃的进度条，**没有任何播放/暂停可点**——悬浮条要等
+          第一次交互才起来（2026-08-04 反馈「音频播放板块没有暂停控制，只有在滑动进度条时才会出现播放控制」）。
+          判据因此改了：播放区是这一页的**主体控件**，它不能依赖另一层是否就位。悬浮条是「滚走了/离开页面
+          仍能控」的补充，不是它的替身；两者同时在场是原生播放页的常态（详情页走带 + 锁屏/迷你条）。 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3 }}>
         <span style={{ fontSize: 12, color: palette.muted, minWidth: 38, fontFamily: 'ui-monospace, monospace' }}>
           {clockFlat(position)}
         </span>
+        {/* 三颗键一律走 `skip` / `toggle` —— 与悬浮条上的控件**同一份实现**。各写一遍的代价是
+            「页内点暂停停了、悬浮条上的图标还是播放中」这类两处状态对不上的毛病。 */}
         <button
           type="button"
-          onClick={() => { if (audioRef.current) audioRef.current.currentTime = Math.max(0, position - 15) }}
+          onClick={() => skip(-15)}
           style={iconButton(palette)}
           aria-label="-15s"
         >
@@ -917,24 +950,19 @@ function ClipPlayer(props: {
         </button>
         <button
           type="button"
-          onClick={() => {
-            const audio = audioRef.current
-            if (!audio) return
-            if (playing) audio.pause()
-            else void audio.play()
-            setPlaying(!playing)
-          }}
+          onClick={toggle}
           style={{
             width: 50, height: 50, borderRadius: 25, border: 'none', background: palette.accent,
             color: palette.onAccent, fontSize: 20, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}
-          aria-label="Play"
+          aria-label={playing ? t('pause') : t('play')}
         >
-          <Icon name={playing ? 'pause' : 'play'} size={20} />
+          <Icon name={playing ? 'pause' : 'play'} size={20} color={palette.onAccent} />
         </button>
         <button
           type="button"
-          onClick={() => { if (audioRef.current) audioRef.current.currentTime = Math.min(duration, position + 15) }}
+          onClick={() => skip(15)}
           style={iconButton(palette)}
           aria-label="+15s"
         >
@@ -968,8 +996,13 @@ function StaticWaveform(props: { palette: Palette; peaks: number[]; progress: nu
     context.setTransform(dpr, 0, 0, dpr, 0, 0)
     context.clearRect(0, 0, width, height)
 
+    // 未播放段的颜色**必须来自 palette**。这里曾经硬编码 `rgba(255,255,255,0.18)`（只在深色底上成立），
+    // 浅色模式下整条未播放波形是白底白条 = 看不见：屏幕上只剩已播的那一小截蓝色，看着像「波形只画了 1/5」
+    // （2026-08-04 真机截图的形状）。基线同理。
+    const idle = alpha(props.palette.muted, 0.32)
+
     if (props.peaks.length === 0) {
-      context.fillStyle = 'rgba(255,255,255,0.18)'
+      context.fillStyle = idle
       context.fillRect(0, height / 2 - 0.75, width, 1.5)
       return
     }
@@ -983,7 +1016,7 @@ function StaticWaveform(props: { palette: Palette; peaks: number[]; progress: nu
       const value = props.peaks[Math.floor((index / barCount) * props.peaks.length)] ?? 0
       const barHeight = Math.max(height * 0.06, value * height)
       const x = index * stride
-      context.fillStyle = x + barWidth / 2 <= played ? props.palette.accent : 'rgba(255,255,255,0.18)'
+      context.fillStyle = x + barWidth / 2 <= played ? props.palette.accent : idle
       // `roundRect` 在 iOS 17 的 WKWebView 上存在，但保留矩形兜底：少一个圆角好过整条波形不画。
       const round = (context as CanvasRenderingContext2D & { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect
       if (typeof round === 'function') {

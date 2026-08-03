@@ -4,17 +4,155 @@
 
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import * as ui from 'aibox/ui'
 import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
 
+/**
+ * 图标 —— 画**真** SF Symbol（`applet://symbol/…`，aibox-ui ≥ 1.2.0）。
+ *
+ * 在宿主上架这条路由之前，这里是一张 emoji 近似表（`mic → 🎙`、`drive → 💾`）。真机上的后果是
+ * 「同一个应用里两套图标语言」：宿主外壳（底栏、悬浮条、顶栏）画细线条单色符号，内容区却是彩色 emoji
+ * ——2026-08-04 真机反馈「录音状态下的图标没有优化好」正是它。emoji 表**只作为宿主太老时的降级路径**保留。
+ *
+ * 颜色走 CSS 遮罩而不是 `<img>`：位图不会继承 `currentColor`，而本应用绝大多数调用点都靠外层的
+ * `color` 传色（`<div style={{color: palette.orange}}><Icon …/></div>`）。遮罩让这条继承照旧成立，
+ * 一个调用点都不用改。
+ */
 export function Icon({ name, size = 16, color }: { name: string; size?: number; color?: string }) {
-  // 宿主的 SF Symbol 不在 WebView 里，用等价的 Unicode/emoji 字形近似（形状对齐，不追像素）。
+  const symbols = useSymbolSupport()
+  const symbol = SF_SYMBOL[name] ?? name
+  const url = symbols ? symbolURL(symbol, size) : ''
+
+  if (url === '') {
+    return (
+      <span aria-hidden style={{ fontSize: size, lineHeight: 1, color, display: 'inline-block' }}>
+        {GLYPH[name] ?? '•'}
+      </span>
+    )
+  }
   return (
-    <span aria-hidden style={{ fontSize: size, lineHeight: 1, color, display: 'inline-block' }}>
-      {GLYPH[name] ?? '•'}
-    </span>
+    <span
+      aria-hidden
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: size,
+        verticalAlign: '-0.125em',
+        // `currentColor` = 外层 color；显式 color 传参优先。
+        backgroundColor: color ?? 'currentColor',
+        WebkitMaskImage: `url("${url}")`,
+        maskImage: `url("${url}")`,
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+      }}
+    />
   )
 }
 
+/** 遮罩用的符号 URL。颜色由 CSS 上色，这里只要形状 —— 故一律取纯黑（遮罩只看 alpha）。 */
+function symbolURL(symbol: string, size: number): string {
+  const build = (ui as { symbolURL?: (name: string, options?: Record<string, unknown>) => string }).symbolURL
+  if (typeof build !== 'function') return ''
+  // 求比 CSS 尺寸略大的点数：遮罩按 `contain` 缩放，宁可下采样也不要放大糊掉。
+  return build(symbol, { size: Math.max(8, Math.round(size * 1.25)), color: '000000' })
+}
+
+/**
+ * 宿主到底有没有这条符号路由。**探一次、全局共享**：老宿主上 `aibox-ui` 没有 `symbolURL`，
+ * 或者有函数但 scheme handler 不认 `/symbol/` → 一律回落 emoji 表。
+ *
+ * 用 `<img>` 探而不是 fetch：CSP 只放行 `img-src applet:`，`connect-src` 不含它。
+ * 遮罩加载失败没有事件可听，所以必须**先探再画**，不能靠 onError 兜底。
+ */
+type SymbolProbe = 'unknown' | 'probing' | 'ok' | 'missing'
+let symbolProbe: SymbolProbe = 'unknown'
+const symbolProbeWaiters = new Set<(value: boolean) => void>()
+
+function useSymbolSupport(): boolean {
+  const [supported, setSupported] = useState(symbolProbe === 'ok')
+
+  useEffect(() => {
+    if (symbolProbe === 'ok' || symbolProbe === 'missing') {
+      setSupported(symbolProbe === 'ok')
+      return undefined
+    }
+    symbolProbeWaiters.add(setSupported)
+    if (symbolProbe === 'unknown') {
+      symbolProbe = 'probing'
+      const url = symbolURL('checkmark', 16)
+      if (url === '') {
+        settleSymbolProbe(false)
+      } else {
+        const image = new Image()
+        image.onload = () => settleSymbolProbe(true)
+        image.onerror = () => settleSymbolProbe(false)
+        image.src = url
+      }
+    }
+    return () => { symbolProbeWaiters.delete(setSupported) }
+  }, [])
+
+  return supported
+}
+
+function settleSymbolProbe(ok: boolean): void {
+  symbolProbe = ok ? 'ok' : 'missing'
+  const waiters = [...symbolProbeWaiters]
+  symbolProbeWaiters.clear()
+  waiters.forEach((notify) => notify(ok))
+}
+
+/**
+ * 短名 → 真 SF Symbol 名。表里没有的名字**原样透传**，所以调用点可以直接写 `star.fill` 这类真名。
+ * 键与下面的 emoji 表逐条对齐：降级路径不能因为改了这一层就少画几个图标。
+ */
+const SF_SYMBOL: Record<string, string> = {
+  chevron: 'chevron.right',
+  speaker: 'speaker.wave.2',
+  star: 'star',
+  sparkles: 'sparkles',
+  blank: 'square.dashed',
+  stop: 'stop.fill',
+  check: 'checkmark',
+  clipboard: 'doc.on.clipboard',
+  share: 'square.and.arrow.up',
+  refresh: 'arrow.clockwise',
+  swap: 'arrow.left.arrow.right',
+  quote: 'quote.opening',
+  list: 'list.bullet',
+  question: 'questionmark',
+  warning: 'exclamationmark.triangle',
+  drive: 'internaldrive',
+  book: 'book',
+  cards: 'rectangle.stack',
+  folder: 'folder',
+  doc: 'doc.text',
+  gear: 'gearshape',
+  bubble: 'text.bubble',
+  wand: 'wand.and.stars',
+  down: 'arrow.down',
+  // 走带键就是 ±15 秒，用带数字的那两枚 —— 通用的旋转箭头看不出跳多少。
+  gobackward: 'gobackward.15',
+  goforward: 'goforward.15',
+  photo: 'photo',
+  clock: 'clock',
+  shield: 'shield',
+  lock: 'lock',
+  pause: 'pause.fill',
+  play: 'play.fill',
+  pencil: 'pencil',
+  ear: 'ear',
+  globe: 'globe',
+  lightbulb: 'lightbulb',
+  trash: 'trash',
+  mic: 'mic.fill',
+}
+
+/** 宿主太老（没有 `applet://symbol/`）时的降级字形表。**新代码不要往这里加**。 */
 const GLYPH: Record<string, string> = {
   magnifyingglass: '⌕',
   speaker: '🔊',

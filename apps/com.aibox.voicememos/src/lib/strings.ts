@@ -80,6 +80,7 @@ const TABLE = {
   paused: { zh: '已暂停', en: 'Paused' },
   record: { zh: '录制', en: 'Record' },
   pause: { zh: '暂停', en: 'Pause' },
+  play: { zh: '播放', en: 'Play' },
   resume: { zh: '继续', en: 'Resume' },
   stop: { zh: '停止', en: 'Stop' },
   recordFailedTitle: { zh: '无法录音', en: "Can't record" },

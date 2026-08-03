@@ -63,6 +63,34 @@
         }
       ]
     },
+    "menu": {
+      "sections": [
+        {
+          "id": "ai",
+          "items": [
+            { "id": "actionItems", "title": "待办事项", "localizedTitles": { "en": "Action Items" }, "icon": "checklist", "hidden": true },
+            { "id": "ask", "title": "询问这段录音", "localizedTitles": { "en": "Ask this recording" }, "icon": "questionmark.bubble", "hidden": true },
+            { "id": "cleanUp", "title": "整理文本", "localizedTitles": { "en": "Clean Up" }, "icon": "wand.and.stars", "role": "destructive", "hidden": true }
+          ]
+        },
+        {
+          "id": "share",
+          "items": [
+            { "id": "shareTranscript", "title": "分享原文", "localizedTitles": { "en": "Share transcript" }, "icon": "square.and.arrow.up", "hidden": true },
+            { "id": "shareSummary", "title": "分享摘要", "localizedTitles": { "en": "Share summary" }, "icon": "square.and.arrow.up", "hidden": true },
+            { "id": "exportMd", "title": "导出为 Markdown", "localizedTitles": { "en": "Export as Markdown" }, "icon": "doc.richtext", "hidden": true },
+            { "id": "exportTxt", "title": "导出为文本", "localizedTitles": { "en": "Export as text" }, "icon": "doc.plaintext", "hidden": true },
+            { "id": "exportSrt", "title": "导出为字幕", "localizedTitles": { "en": "Export as subtitles" }, "icon": "captions.bubble", "hidden": true }
+          ]
+        },
+        {
+          "id": "manage",
+          "items": [
+            { "id": "rename", "title": "重命名", "localizedTitles": { "en": "Rename" }, "icon": "pencil", "hidden": true }
+          ]
+        }
+      ]
+    },
     "tabBar": {
       "items": [
         {

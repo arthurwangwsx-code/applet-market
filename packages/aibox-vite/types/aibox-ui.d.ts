@@ -19,7 +19,7 @@
 //  本文件是它的**类型侧镜像**，手工维护：改了那边的导出面，这里要跟着改。
 //  判断有没有漂：`grep -o "export{[^}]*}" Resources/Runtime/aibox-ui.mjs` 对一遍导出名即可。
 //
-//  对应资产版本：aibox-ui 1.1.0
+//  对应资产版本：aibox-ui 1.2.0
 //
 
 declare module 'aibox/ui' {
@@ -153,6 +153,36 @@ declare module 'aibox/ui' {
 
   /** 命名空间别名：`ui.image.url(...)`。 */
   export const image: { url: typeof imageURL }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SF Symbol（§3.5）
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /** SF Symbol 字重档，与 `UIImage.SymbolWeight` 一一对应。 */
+  export type SymbolWeight =
+    | 'ultralight' | 'thin' | 'light' | 'regular' | 'medium'
+    | 'semibold' | 'bold' | 'heavy' | 'black'
+
+  export interface SymbolOptions {
+    /** 字号（**CSS 点**，1…256），默认 17。**不要自己乘 devicePixelRatio**。 */
+    size?: number
+    weight?: SymbolWeight
+    scale?: 'small' | 'medium' | 'large'
+    /** 十六进制色（`#RGB` / `#RRGGBB` / `#AARRGGBB`，`#` 可省）。PNG 不会跟随深浅色，**必须显式给**。 */
+    color?: string
+  }
+
+  /**
+   * 把一个 SF Symbol 名换成宿主渲染的 PNG URL，可直接放进 `<img src>`。
+   *
+   * 这是页面画**真** SF Symbol 的唯一通道 —— WebView 里没有那套字体，各应用自抄的
+   * emoji 近似表（`mic → 🎙`）与宿主外壳的单色符号是两套图标语言，观感对不上。
+   * 名字非法时返回空串；符号在系统里不存在时宿主回 404（DevTools 可见），**不静默画占位块**。
+   */
+  export function symbolURL(name: string, options?: SymbolOptions): string
+
+  /** 命名空间别名：`ui.symbol.url(...)`。 */
+  export const symbol: { url: typeof symbolURL }
 
   // ──────────────────────────────────────────────────────────────────────────
   // 虚拟长列表（§3.2）

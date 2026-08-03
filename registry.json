@@ -1,9 +1,40 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T20:10:07Z",
-  "appCount": 9,
+  "updatedAt": "2026-08-03T21:40:21Z",
+  "appCount": 10,
   "apps": [
+    {
+      "appId": "com.aibox.bilibili",
+      "name": "哔哩哔哩",
+      "summary": "看视频、搜索、追更",
+      "icon": "play.tv.fill",
+      "category": "media",
+      "author": "AiBox",
+      "latestVersion": "1.0.0",
+      "latestReleasedAt": "2026-08-03T21:40:21Z",
+      "versionCount": 1,
+      "capabilities": [
+        "browser",
+        "clipboard",
+        "haptics",
+        "net",
+        "secrets",
+        "share",
+        "storage",
+        "tabs",
+        "toast",
+        "video"
+      ],
+      "latestTotalBytes": 84560,
+      "latestFileCount": 15,
+      "runtimeKind": "source",
+      "path": "apps/com.aibox.bilibili",
+      "localizedNames": {
+        "en": "Bilibili"
+      },
+      "iconTintHex": "FB7299"
+    },
     {
       "appId": "com.aibox.downloads",
       "name": "下载",

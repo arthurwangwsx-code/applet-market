@@ -586,21 +586,48 @@
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
         },
         {
+          "name": "removeWhere",
+          "summary": "\"Delete every document matching `where`; returns how many were removed. \"\n                      + \"Use this instead of looping remove() — each single remove rewrites the whole collection file, \"\n                      + \"so deleting 500 documents one by one is 500 full-table writes. `where` must be non-empty; \"\n                      + \"to empty a collection call clear().\"",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"where\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\",\"minProperties\":1}},\"additionalProperties\":false}",
+          "resultSummary": "number (documents removed)",
+          "effect": "localWrite",
+          "example": "await aibox.db.removeWhere({ collection:'clips', where:{ _createdAt:{ $lt:'2026-05-01' } } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
           "name": "query",
-          "summary": "Query by exact field equality, with stable sorting and pagination.",
+          "summary": "\"Query documents, with stable sorting and pagination. \" + Self.operatorHelp",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"},\"sortBy\":{\"type\":\"string\"},\"descending\":{\"type\":\"boolean\"},\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":500}},\"additionalProperties\":false}",
-          "resultSummary": "document[]",
+          "resultSummary": "document[] (at most 500 — page with offset, or use count/aggregate for totals)",
           "effect": "read",
-          "example": "await aibox.db.query({ collection:'tasks', where:{done:false}, sortBy:'_updatedAt', descending:true })",
+          "example": "await aibox.db.query({ collection:'tx', where:{ date:{$gte:'2026-08-01'}, kind:{$in:['food','rent']} }, sortBy:'date', descending:true })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
         },
         {
           "name": "count",
-          "summary": "Count documents matching exact field equality.",
+          "summary": "\"Count matching documents without transferring them. \" + Self.operatorHelp",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"}},\"additionalProperties\":false}",
           "resultSummary": "number",
           "effect": "read",
-          "example": null,
+          "example": "await aibox.db.count({ collection:'tx', where:{ amount:{$gt:1000} } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "aggregate",
+          "summary": "\"Group and reduce documents natively. \"\n                      + \"Prefer this over query()+reduce in JS: a monthly total over 3000 rows needs no rows to cross the bridge \"\n                      + \"(and query() caps at 500 anyway). Each result row has _group and _count plus your named metrics. \"\n                      + \"Omit groupBy to reduce the whole collection into one row. \" + Self.operatorHelp",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"metrics\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"},\"groupBy\":{\"type\":\"string\"},\"metrics\":{\"type\":\"object\",\"minProperties\":1,\"additionalProperties\":{\"type\":\"object\",\"minProperties\":1,\"maxProperties\":1,\"properties\":{\"$sum\":{\"type\":\"string\"},\"$avg\":{\"type\":\"string\"},\"$min\":{\"type\":\"string\"},\"$max\":{\"type\":\"string\"},\"$count\":{\"type\":\"boolean\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
+          "resultSummary": "Array<{_group, _count, ...metrics}> sorted by _group; $avg/$min/$max are null when no value qualifies",
+          "effect": "read",
+          "example": "await aibox.db.aggregate({ collection:'tx', where:{ date:{$gte:'2026-08-01',$lt:'2026-09-01'} }, groupBy:'category', metrics:{ total:{$sum:'amount'}, n:{$count:true} } })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
+        },
+        {
+          "name": "search",
+          "summary": "\"Case- and accent-insensitive substring scan across string fields. \"\n                      + \"Omit `fields` to scan every non-underscore string field. Combine with `where` to scope it. \"\n                      + \"NOTE: this is a linear substring scan, not an inverted index, and results are NOT ranked — \"\n                      + \"they come back in collection order. That is deliberate: tokenizer-based ranking drops CJK text \"\n                      + \"(no word boundaries), and at the 20k-document cap a scan is milliseconds.\"",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"text\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"fields\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"where\":{\"type\":\"object\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":500}},\"additionalProperties\":false}",
+          "resultSummary": "document[] in collection order (unranked)",
+          "effect": "read",
+          "example": "await aibox.db.search({ collection:'notes', text:'蛋白质', fields:['title','body'] })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
         },
         {
@@ -1117,13 +1144,13 @@
     },
     {
       "namespace": "lifecycle",
-      "summary": "Read host lifecycle state and subscribe to foreground, background, memory, locale and text-size events.",
+      "summary": "Read host lifecycle state and subscribe to foreground, background, memory, locale, text-size and occlusion events. Subscribe to 'occluded'/'revealed' to stop animations and polling when the applet is no longer on screen: document.visibilitychange does NOT fire when another tab or an overlay covers the applet, so this is the only signal for that case.",
       "methods": [
         {
           "name": "getState",
-          "summary": "Read the current application lifecycle and environment state.",
+          "summary": "Read the current application lifecycle and environment state, including whether this applet is currently visible and whether the host suspends its rendering when occluded.",
           "parametersJSON": "{}",
-          "resultSummary": "{state,locale,contentSizeCategory,lowPowerMode}",
+          "resultSummary": "{state,locale,contentSizeCategory,lowPowerMode,visible,occluded,surfaceActivity,hostSuspendsWhenOccluded}",
           "effect": "read",
           "example": "await aibox.lifecycle.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1922,6 +1949,78 @@
       "group": "shell"
     },
     {
+      "namespace": "secrets",
+      "summary": "Keychain-backed credential storage, isolated per applet — and the session cookie jar behind aibox.net.fetch. Use this for anything that authenticates the user (login tokens, API keys), NEVER aibox.storage: storage is plaintext and goes into the user's backup. Cookies are handled for you: net.fetch injects and collects them automatically, so a login flow just needs to call the site's login endpoint and then read the session with hasSession().",
+      "methods": [
+        {
+          "name": "set",
+          "summary": "Store one credential under a key. Empty value removes it.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\",\"value\"],\"properties\":{\"key\":{\"type\":\"string\"},\"value\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{stored:boolean}",
+          "effect": "localWrite",
+          "example": "await aibox.secrets.set('apiKey', key)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "get",
+          "summary": "Read one credential back. Returns null when absent.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "string or null",
+          "effect": "read",
+          "example": "const key = await aibox.secrets.get('apiKey')",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "remove",
+          "summary": "Delete one credential.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "keys",
+          "summary": "List the credential keys this applet has stored. Values are never returned.",
+          "parametersJSON": "{}",
+          "resultSummary": "string[]",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "hasSession",
+          "summary": "Whether this applet holds session cookies for a host — i.e. whether the user is logged in. Check this on launch to decide between the logged-in and guest UI; do NOT keep your own 'isLoggedIn' flag in storage, it will drift from the real cookie state.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"host\":{\"type\":\"string\",\"description\":\"Optional host filter, e.g. 'bilibili.com'. Omit to ask about any host.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{hasSession:boolean, hosts:string[]}",
+          "effect": "read",
+          "example": "const { hasSession } = await aibox.secrets.hasSession({ host: 'bilibili.com' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "clearSession",
+          "summary": "Log out: drop the session cookies. Pass a host to drop only that site's, omit to drop all of them. Credentials stored via set() are untouched.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"host\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+          "resultSummary": "{cleared:integer}",
+          "effect": "localWrite",
+          "example": "await aibox.secrets.clearSession({ host: 'bilibili.com' })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "Whether the keychain actually accepts writes in this build. False on unsigned simulator builds — surface it instead of letting logins silently fail to persist.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean}",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "share",
       "summary": "Present the native system share sheet, as plain text or as a real file the user can save to Files or AirDrop.",
       "methods": [
@@ -2311,6 +2410,123 @@
       "group": "shell"
     },
     {
+      "namespace": "video",
+      "summary": "Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background.",
+      "methods": [
+        {
+          "name": "play",
+          "summary": "Play one video full-screen. url must be http(s) — a direct media URL (mp4/m3u8), not a web page. resumeFrom continues from a saved position in seconds. presentation 'immersive' (default) takes over the screen; 'embedded' plays without taking over.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\",\"description\":\"Optional .srt sidecar subtitle URL.\"},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Seconds to resume from.\"},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
+          "resultSummary": "{playing:boolean}",
+          "effect": "presentation",
+          "example": "await aibox.video.play({ url: streamURL, title: video.title, resumeFrom: 120 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "playQueue",
+          "summary": "Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\"}}}},\"startAt\":{\"type\":\"integer\",\"minimum\":0},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
+          "resultSummary": "{playing:boolean, count:integer}",
+          "effect": "presentation",
+          "example": "await aibox.video.playQueue({ items: parts.map(p => ({url: p.url, title: p.title})), startAt: 0 })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "pause",
+          "summary": "Pause playback. Does nothing if what is playing was not started by your applet.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "resume",
+          "summary": "Resume playback. Does nothing if what is playing was not started by your applet.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "stop",
+          "summary": "Stop playback and dismiss the player. Only affects playback your applet started.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "seek",
+          "summary": "Jump to a position in seconds. Clamped to the video duration by the host.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"seconds\"],\"properties\":{\"seconds\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "next",
+          "summary": "Play the next item in the queue. No-op without a queue.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "previous",
+          "summary": "Play the previous item in the queue. No-op without a queue.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "status",
+          "summary": "Current playback snapshot. mine tells you whether the host is playing something YOUR applet started — check it before showing your own progress UI, because the user may be watching something else entirely.",
+          "parametersJSON": "{}",
+          "resultSummary": "{state:'idle'|'loading'|'playing'|'paused'|'failed', url, title, currentTime, duration, queueIndex, queueCount, mine:boolean, error}",
+          "effect": "read",
+          "example": "const s = await aibox.video.status(); if (s.mine) setProgress(s.currentTime / s.duration)",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "subscribe",
+          "summary": "Start pushing 'video.progress' events (~2Hz) to aibox.events. Strongly preferred over polling status(). Events stop automatically when your applet closes.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": "await aibox.video.subscribe(); aibox.events.on('video.progress', s => setProgress(s))",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "unsubscribe",
+          "summary": "Stop the progress event stream.",
+          "parametersJSON": "{}",
+          "resultSummary": "boolean",
+          "effect": "localWrite",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "Whether this build has a video engine at all. Hide your play buttons instead of letting a tap do nothing.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean}",
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "voiceMemos",
       "summary": "Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present.",
       "methods": [
@@ -2549,6 +2765,7 @@
     "photos",
     "picker",
     "reminders",
+    "secrets",
     "share",
     "shortcuts",
     "speech",
@@ -2556,6 +2773,7 @@
     "tools",
     "tts",
     "ui",
+    "video",
     "voiceMemos"
   ],
   "alwaysAvailable": [

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "defaultSuite": "smoke",
+  "suites": {
+    "smoke": [
+      { "action": "wait", "ms": 3000 },
+      {
+        "action": "assert",
+        "expr": "!/加载失败|拿不到|接口返回/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "首页不能一上来就是错误态——真出错时这条会红，比截图上人眼看更早发现"
+      },
+      {
+        "action": "assert",
+        "expr": "document.querySelectorAll('[data-row-id]').length >= 5",
+        "matcher": "truthy",
+        "note": "推荐流至少渲染出 5 行（虚拟列表只渲可见区，所以不检查全量条数）"
+      },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('img')].some(i => i.src.startsWith('applet://localhost/image/'))",
+        "matcher": "truthy",
+        "note": "封面必须走 applet://image/ —— 裸 https 会被 CSP 静默拦成空白，这条是唯一能自动逮到的地方"
+      },
+      {
+        "action": "assert",
+        "expr": "/观看/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "播放量格式化生效（formatCount）"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '排行榜'); if (!b) throw new Error('排行榜 segment not found'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 2500 },
+      {
+        "action": "assert",
+        "expr": "document.querySelectorAll('[data-row-id]').length >= 5",
+        "matcher": "truthy",
+        "note": "切到排行榜后仍有内容（排行榜走的是另一个免签端点）"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '搜索'); if (!b) throw new Error('搜索 tab not found'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 1500 },
+      {
+        "action": "eval",
+        "expr": "(() => { const i = document.querySelector('input'); if (!i) throw new Error('search input not found'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(i, '编程'); i.dispatchEvent(new Event('input', { bubbles: true })); const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '搜索'); b.click(); return 'ok' })()",
+        "note": "受控 input 必须用原生 setter 再派发 input 事件，直接改 .value 不会触发 React 的 onChange"
+      },
+      { "action": "wait", "ms": 3500 },
+      {
+        "action": "assert",
+        "expr": "/视频/.test(document.body.innerText) && document.querySelectorAll('[data-row-id]').length >= 3",
+        "matcher": "truthy",
+        "note": "搜索出结果 —— 这条同时验证了 WBI 签名是对的（签错会回 -403，结果为空）"
+      }
+    ]
+  }
+}

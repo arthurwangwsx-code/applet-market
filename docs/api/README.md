@@ -9,7 +9,7 @@
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 生成，请勿手改 -->
 
-当前宿主共 **45** 个命名空间、**227** 个方法。
+当前宿主共 **47** 个命名空间、**249** 个方法。
 
 ## 容器内建
 
@@ -23,9 +23,9 @@
 | [`aibox.apps`](apps.md) | Discover and invoke declared actions on installed applets without changing the host tool registry. | 4 | 恒可用 |
 | [`aibox.chat`](chat.md) | Bind the current applet to its docked AI conversation and share compact, user-approved page context. | 7 | 恒可用 |
 | [`aibox.data`](data.md) | Metadata about this applet's own private data: how much of its storage budget is left, and which version last wrote it. The budget is shared by aibox.storage, aibox.db and aibox.resource; going over it fails writes with aibox/quota-exceeded. | 4 | 恒可用 |
-| [`aibox.db`](db.md) | Per-applet structured document collections with atomic persistence and exact-match queries. | 8 | 恒可用 |
+| [`aibox.db`](db.md) | Per-applet structured document collections with atomic persistence and exact-match queries. | 11 | 恒可用 |
 | [`aibox.jobs`](jobs.md) | Persistent applet automations executed through short-lived headless action runtimes. | 6 | 恒可用 |
-| [`aibox.lifecycle`](lifecycle.md) | Read host lifecycle state and subscribe to foreground, background, memory, locale and text-size events. | 1 | 恒可用 |
+| [`aibox.lifecycle`](lifecycle.md) | Read host lifecycle state and subscribe to foreground, background, memory, locale, text-size and occlusion events. Subscribe to 'occluded'/'revealed' to stop animations and polling when the applet is no longer on screen: document.visibilitychange does NOT fire when another tab or an overlay covers the applet, so this is the only signal for that case. | 1 | 恒可用 |
 | [`aibox.net`](net.md) | Native HTTP proxy with a per-host allowlist. Unlike browser fetch it can set Referer/User-Agent and read any charset, so use it for endpoints that reject browser requests or answer in GBK/Big5. | 1 | 需 `network` |
 | [`aibox.resource`](resource.md) | Inspect, read or remove applet-scoped resources returned by native pickers. | 4 | 恒可用 |
 | [`aibox.storage`](storage.md) | Per-applet persistent JSON key-value storage. | 4 | 需 `storage` |
@@ -70,10 +70,12 @@
 | [`aibox.open`](open.md) | Open a safe external URL or system handler. | 1 | 需声明 `open` |
 | [`aibox.photos`](photos.md) | Search, inspect, OCR, save and explicitly mutate photos through the host media tools. | 5 | 需声明 `photos` |
 | [`aibox.reminders`](reminders.md) | Read and manage reminders through the host reminders module. | 1 | 需声明 `reminders` |
+| [`aibox.secrets`](secrets.md) | Keychain-backed credential storage, isolated per applet — and the session cookie jar behind aibox.net.fetch. Use this for anything that authenticates the user (login tokens, API keys), NEVER aibox.storage: storage is plaintext and goes into the user's backup. Cookies are handled for you: net.fetch injects and collects them automatically, so a login flow just needs to call the site's login endpoint and then read the session with hasSession(). | 7 | 需声明 `secrets` |
 | [`aibox.share`](share.md) | Present the native system share sheet, as plain text or as a real file the user can save to Files or AirDrop. | 2 | 需声明 `share` |
 | [`aibox.shortcuts`](shortcuts.md) | Run or open Apple Shortcuts from a visible applet. | 2 | 需声明 `shortcuts` |
 | [`aibox.speech`](speech.md) | "On-device speech-to-text. This is the ONLY way an applet can take voice input — "                 + "getUserMedia and webkitSpeechRecognition do not work inside the applet WebView. "                 + "Audio never leaves the device." | 5 | 需声明 `speech` |
 | [`aibox.tts`](tts.md) | Speak text with the device's speech synthesizer. Audible even when the ring switch is silent; other audio is ducked, not stopped. | 2 | 需声明 `tts` |
+| [`aibox.video`](video.md) | Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background. | 12 | 需声明 `video` |
 | [`aibox.voiceMemos`](voiceMemos.md) | Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present. | 21 | 需声明 `voiceMemos` |
 
 ## 长尾工具网关

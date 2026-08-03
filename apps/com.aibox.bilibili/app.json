@@ -1,0 +1,13 @@
+{
+  "appId": "com.aibox.bilibili",
+  "name": "哔哩哔哩",
+  "localizedNames": {
+    "en": "Bilibili"
+  },
+  "summary": "看视频、搜索、追更",
+  "icon": "play.tv.fill",
+  "iconTintHex": "FB7299",
+  "category": "media",
+  "author": "AiBox",
+  "tags": []
+}

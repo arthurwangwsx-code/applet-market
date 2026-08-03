@@ -1,6 +1,6 @@
 # `aibox.lifecycle`
 
-> Read host lifecycle state and subscribe to foreground, background, memory, locale and text-size events.
+> Read host lifecycle state and subscribe to foreground, background, memory, locale, text-size and occlusion events. Subscribe to 'occluded'/'revealed' to stop animations and polling when the applet is no longer on screen: document.visibilitychange does NOT fire when another tab or an overlay covers the applet, so this is the only signal for that case.
 
 **分组** 容器内建 ｜ **方法数** 1 ｜ **声明要求** 容器协议内核，**manifest 无需声明**（写/执行型方法仍会走一次授权确认）。
 
@@ -10,7 +10,7 @@
 
 ### `aibox.lifecycle.getState()`
 
-Read the current application lifecycle and environment state.
+Read the current application lifecycle and environment state, including whether this applet is currently visible and whether the host suspends its rendering when occluded.
 
 **副作用档位** `read`（读取）— 只读，不改任何状态；不触发用户确认。
 
@@ -18,7 +18,7 @@ Read the current application lifecycle and environment state.
 
 无参数。
 
-**返回** `{state,locale,contentSizeCategory,lowPowerMode}`
+**返回** `{state,locale,contentSizeCategory,lowPowerMode,visible,occluded,surfaceActivity,hostSuspendsWhenOccluded}`
 
 ```js
 await aibox.lifecycle.getState()

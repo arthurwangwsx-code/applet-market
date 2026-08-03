@@ -57,10 +57,13 @@ export const CATEGORIES = new Set([
 // AI 工具 schema 的 enum）。这里必须与它逐字一致——多了会放过装不上的包，少了会误拒合法包。
 // 注意 `tts`（语音**输出**）与 `speech`（语音**识别**）是两条能力，别混；`browser` 是 2026-08
 // 新增（浏览器桥）；`download` 是 2026-08 新增（宿主下载引擎的遥控面）；`audio`（应用内录音）/ `speech`（端侧 STT）是 2026-08 新增的麦克风两条。
+// `video`（宿主视频引擎的遥控面）与 `secrets`（Keychain 凭据 + 会话 cookie 罐）是 2026-08 新增。
+// 注意 `video` 与 `media` 是两条：`media` 只播 applet 自己资源里的**音频**，
+// `video` 是遥控宿主 AVPlayer 播任意 http(s) 视频（全屏 / 画中画 / 锁屏卡片都在那一侧）。
 export const KNOWN_CAPABILITIES = new Set([
   'audio', 'browser', 'calendar', 'clipboard', 'contacts', 'device', 'download', 'files', 'haptics',
   'health', 'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
-  'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'voiceMemos',
+  'secrets', 'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'video', 'voiceMemos',
 ])
 
 // 容器协议自身的命名空间：恒可用，**不需要**也不应该写进 permissions.capabilities。

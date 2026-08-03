@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.bilibili",
+  "latestVersion": "1.0.0",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "releasedAt": "2026-08-03T21:40:21Z",
+      "notes": "首个版本：推荐/热门/排行榜、综合搜索、视频详情与原生播放器播放、扫码登录与观看历史",
+      "fileCount": 15,
+      "totalBytes": 84560,
+      "path": "apps/com.aibox.bilibili/releases/1.0.0",
+      "bundleSha256": "0c40749d36a0df24e81140898ca729a1bb7900b353515a3c2dfe4773d303852a"
+    }
+  ]
+}

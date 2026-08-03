@@ -3,6 +3,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 import { useState, useEffect, useMemo, useCallback, useRef, createElement, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
+import * as ui from "aibox/ui";
 import { useRowGestures, useSubpageStack } from "aibox/ui";
 function bridge$1() {
   try {
@@ -956,9 +957,129 @@ function alpha(color, value) {
 }
 __name(alpha, "alpha");
 function Icon({ name, size = 16, color }) {
-  return /* @__PURE__ */ jsx("span", { "aria-hidden": true, style: { fontSize: size, lineHeight: 1, color, display: "inline-block" }, children: GLYPH[name] ?? "•" });
+  const symbols = useSymbolSupport();
+  const symbol = SF_SYMBOL[name] ?? name;
+  const url = symbols ? symbolURL(symbol, size) : "";
+  if (url === "") {
+    return /* @__PURE__ */ jsx("span", { "aria-hidden": true, style: { fontSize: size, lineHeight: 1, color, display: "inline-block" }, children: GLYPH[name] ?? "•" });
+  }
+  return /* @__PURE__ */ jsx(
+    "span",
+    {
+      "aria-hidden": true,
+      style: {
+        display: "inline-block",
+        width: size,
+        height: size,
+        verticalAlign: "-0.125em",
+        // `currentColor` = 外层 color；显式 color 传参优先。
+        backgroundColor: color ?? "currentColor",
+        WebkitMaskImage: `url("${url}")`,
+        maskImage: `url("${url}")`,
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center"
+      }
+    }
+  );
 }
 __name(Icon, "Icon");
+function symbolURL(symbol, size) {
+  const build = ui.symbolURL;
+  if (typeof build !== "function") return "";
+  return build(symbol, { size: Math.max(8, Math.round(size * 1.25)), color: "000000" });
+}
+__name(symbolURL, "symbolURL");
+let symbolProbe = "unknown";
+const symbolProbeWaiters = /* @__PURE__ */ new Set();
+function useSymbolSupport() {
+  const [supported, setSupported] = useState(symbolProbe === "ok");
+  useEffect(() => {
+    if (symbolProbe === "ok" || symbolProbe === "missing") {
+      setSupported(symbolProbe === "ok");
+      return void 0;
+    }
+    symbolProbeWaiters.add(setSupported);
+    if (symbolProbe === "unknown") {
+      symbolProbe = "probing";
+      const url = symbolURL("checkmark", 16);
+      if (url === "" || !maskSupported()) {
+        settleSymbolProbe(false);
+      } else {
+        const image = new Image();
+        image.onload = () => settleSymbolProbe(true);
+        image.onerror = () => settleSymbolProbe(false);
+        image.src = url;
+      }
+    }
+    return () => {
+      symbolProbeWaiters.delete(setSupported);
+    };
+  }, []);
+  return supported;
+}
+__name(useSymbolSupport, "useSymbolSupport");
+function maskSupported() {
+  const api2 = typeof CSS !== "undefined" ? CSS : void 0;
+  if (!api2 || typeof api2.supports !== "function") return false;
+  try {
+    return api2.supports("-webkit-mask-image", 'url("a")') || api2.supports("mask-image", 'url("a")');
+  } catch {
+    return false;
+  }
+}
+__name(maskSupported, "maskSupported");
+function settleSymbolProbe(ok) {
+  symbolProbe = ok ? "ok" : "missing";
+  const waiters = [...symbolProbeWaiters];
+  symbolProbeWaiters.clear();
+  waiters.forEach((notify) => notify(ok));
+}
+__name(settleSymbolProbe, "settleSymbolProbe");
+const SF_SYMBOL = {
+  chevron: "chevron.right",
+  speaker: "speaker.wave.2",
+  star: "star",
+  sparkles: "sparkles",
+  blank: "square.dashed",
+  stop: "stop.fill",
+  check: "checkmark",
+  clipboard: "doc.on.clipboard",
+  share: "square.and.arrow.up",
+  refresh: "arrow.clockwise",
+  swap: "arrow.left.arrow.right",
+  quote: "quote.opening",
+  list: "list.bullet",
+  question: "questionmark",
+  warning: "exclamationmark.triangle",
+  drive: "internaldrive",
+  book: "book",
+  cards: "rectangle.stack",
+  folder: "folder",
+  doc: "doc.text",
+  gear: "gearshape",
+  bubble: "text.bubble",
+  wand: "wand.and.stars",
+  down: "arrow.down",
+  // 走带键就是 ±15 秒，用带数字的那两枚 —— 通用的旋转箭头看不出跳多少。
+  gobackward: "gobackward.15",
+  goforward: "goforward.15",
+  photo: "photo",
+  clock: "clock",
+  shield: "shield",
+  lock: "lock",
+  pause: "pause.fill",
+  play: "play.fill",
+  pencil: "pencil",
+  ear: "ear",
+  globe: "globe",
+  lightbulb: "lightbulb",
+  trash: "trash",
+  mic: "mic.fill"
+};
 const GLYPH = {
   magnifyingglass: "⌕",
   speaker: "🔊",
@@ -1148,7 +1269,8 @@ function PushPage(props) {
           }
         ) : null,
         !chrome && props.trailing ? /* @__PURE__ */ jsx("div", { style: { display: "flex", justifyContent: "flex-end", padding: "6px 12px 0" }, children: props.trailing }) : null,
-        /* @__PURE__ */ jsx("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }, children: props.children })
+        /* @__PURE__ */ jsx("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }, children: props.children }),
+        props.footer
       ]
     }
   );
@@ -1813,6 +1935,17 @@ function MemoDetail(props) {
     segments,
     seek: /* @__PURE__ */ __name((seconds) => seekRef.current?.(seconds), "seek")
   };
+  const contextRef = useRef(context);
+  contextRef.current = context;
+  const onContextRef = useRef(props.onContext);
+  onContextRef.current = props.onContext;
+  const menuSignature = `${memo.id}|${text2.trim() ? 1 : 0}|${artifacts?.summaryText ? 1 : 0}`;
+  useEffect(() => {
+    onContextRef.current?.(contextRef.current);
+  }, [menuSignature]);
+  useEffect(() => () => {
+    onContextRef.current?.(null);
+  }, []);
   const runTranscription = /* @__PURE__ */ __name(async () => {
     const clip2 = (await listClips()).find((item) => item.id === memo.id);
     if (!clip2?.handle || transcribing) return;
@@ -1852,77 +1985,85 @@ function MemoDetail(props) {
     void runSummary(context, props.settings.defaultTemplate, setError);
   }, [artifacts?.memoID, text2, props.settings.autoSummarize]);
   const status = transcribing ? "inProgress" : transcript?.status ?? "none";
-  return /* @__PURE__ */ jsx(PushPage, { palette: palette2, title: memo.title, onBack: props.onBack, chrome: props.chrome, trailing: /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }), children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
-    !memo.hasAudio ? /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, fontWeight: 500, color: palette2.orange }, children: [
-        /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 13 }),
-        " ",
-        t("audioRemovedTitle")
-      ] }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: palette2.muted, marginTop: 2 }, children: t("audioRemovedBody") })
-    ] }) : null,
-    status === "completed" ? /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx(TabStrip, { palette: palette2, t, tab: tab ?? "original", artifacts, onChange: setTab }),
-      /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s6}px` }, children: [
-        (tab ?? "original") === "summary" ? /* @__PURE__ */ jsx(SummaryTab, { palette: palette2, t, context, settings: props.settings, onError: setError }) : null,
-        (tab ?? "original") === "original" ? /* @__PURE__ */ jsx(
-          OriginalTab,
-          {
-            palette: palette2,
-            t,
-            transcript,
-            chapters: artifacts?.chapters ?? [],
-            chaptersBusy,
-            hasAudio: memo.hasAudio,
-            onSeek: /* @__PURE__ */ __name((seconds) => seekRef.current?.(seconds), "onSeek"),
-            onGenerateChapters: /* @__PURE__ */ __name(async () => {
-              if (!artifacts) return;
-              setChaptersBusy(true);
-              const next = await chapters(text2, segments).catch(() => []);
-              setChaptersBusy(false);
-              const merged = { ...artifacts, chapters: next, sourceHash: hashText(text2) };
-              setArtifacts(merged);
-              await saveArtifacts(merged);
-            }, "onGenerateChapters")
-          }
-        ) : null,
-        (tab ?? "original") === "corrected" ? /* @__PURE__ */ jsx(CorrectedTab, { palette: palette2, t, dark: props.dark, context, onError: setError }) : null,
-        (tab ?? "original") === "translation" ? /* @__PURE__ */ jsx(TranslationTab, { palette: palette2, t, context, onError: setError }) : null,
-        error ? /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.red, marginTop: SPACE.s3 }, children: error }) : null
-      ] })
-    ] }) : null,
-    status === "pending" || status === "inProgress" ? /* @__PURE__ */ jsxs(Centered, { children: [
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 17, fontWeight: 600, color: palette2.ink }, children: t("transcribingTitle") }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: palette2.muted, marginTop: 6 }, children: t("transcribingBody") })
-    ] }) : null,
-    status === "none" || status === "failed" ? /* @__PURE__ */ jsxs(Centered, { children: [
-      /* @__PURE__ */ jsx(Icon, { name: status === "failed" ? "warning" : "bubble", size: 46, color: palette2.accent }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 17, fontWeight: 600, color: palette2.ink, marginTop: SPACE.s3 }, children: status === "failed" ? t("transcribeFailedTitle") : t("noTranscriptTitle") }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: palette2.muted, marginTop: 6, maxWidth: 300 }, children: status === "failed" ? t("transcribeFailedBody") : t("noTranscriptBody") }),
-      memo.hasAudio ? /* @__PURE__ */ jsx("div", { style: { marginTop: SPACE.s5 }, children: /* @__PURE__ */ jsx(
-        PrimaryButton,
+  return /* @__PURE__ */ jsx(
+    PushPage,
+    {
+      palette: palette2,
+      title: memo.title,
+      onBack: props.onBack,
+      chrome: props.chrome,
+      trailing: props.hostMenu ? void 0 : /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }),
+      footer: /* @__PURE__ */ jsx(
+        ClipPlayer,
         {
           palette: palette2,
-          title: status === "failed" ? t("retry") : t("transcribeAction"),
-          onClick: /* @__PURE__ */ __name(() => void runTranscription(), "onClick")
+          t,
+          memo,
+          onSeekReady: /* @__PURE__ */ __name((seek) => {
+            seekRef.current = seek;
+          }, "onSeekReady"),
+          registerPlayerCommand: props.registerPlayerCommand
         }
-      ) }) : null
-    ] }) : null,
-    /* @__PURE__ */ jsx(
-      ClipPlayer,
-      {
-        palette: palette2,
-        t,
-        memo,
-        onSeekReady: /* @__PURE__ */ __name((seek) => {
-          seekRef.current = seek;
-        }, "onSeekReady"),
-        overlayRendered: Boolean(props.overlayRendered),
-        overlayUpdate: props.overlayUpdate,
-        registerPlayerCommand: props.registerPlayerCommand
-      }
-    )
-  ] }) });
+      ),
+      children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
+        !memo.hasAudio ? /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }, children: [
+          /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, fontWeight: 500, color: palette2.orange }, children: [
+            /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 13 }),
+            " ",
+            t("audioRemovedTitle")
+          ] }),
+          /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: palette2.muted, marginTop: 2 }, children: t("audioRemovedBody") })
+        ] }) : null,
+        status === "completed" ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx(TabStrip, { palette: palette2, t, tab: tab ?? "original", artifacts, onChange: setTab }),
+          /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s6}px` }, children: [
+            (tab ?? "original") === "summary" ? /* @__PURE__ */ jsx(SummaryTab, { palette: palette2, t, context, settings: props.settings, onError: setError }) : null,
+            (tab ?? "original") === "original" ? /* @__PURE__ */ jsx(
+              OriginalTab,
+              {
+                palette: palette2,
+                t,
+                transcript,
+                chapters: artifacts?.chapters ?? [],
+                chaptersBusy,
+                hasAudio: memo.hasAudio,
+                onSeek: /* @__PURE__ */ __name((seconds) => seekRef.current?.(seconds), "onSeek"),
+                onGenerateChapters: /* @__PURE__ */ __name(async () => {
+                  if (!artifacts) return;
+                  setChaptersBusy(true);
+                  const next = await chapters(text2, segments).catch(() => []);
+                  setChaptersBusy(false);
+                  const merged = { ...artifacts, chapters: next, sourceHash: hashText(text2) };
+                  setArtifacts(merged);
+                  await saveArtifacts(merged);
+                }, "onGenerateChapters")
+              }
+            ) : null,
+            (tab ?? "original") === "corrected" ? /* @__PURE__ */ jsx(CorrectedTab, { palette: palette2, t, dark: props.dark, context, onError: setError }) : null,
+            (tab ?? "original") === "translation" ? /* @__PURE__ */ jsx(TranslationTab, { palette: palette2, t, context, onError: setError }) : null,
+            error ? /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.red, marginTop: SPACE.s3 }, children: error }) : null
+          ] })
+        ] }) : null,
+        status === "pending" || status === "inProgress" ? /* @__PURE__ */ jsxs(Centered, { children: [
+          /* @__PURE__ */ jsx("div", { style: { fontSize: 17, fontWeight: 600, color: palette2.ink }, children: t("transcribingTitle") }),
+          /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: palette2.muted, marginTop: 6 }, children: t("transcribingBody") })
+        ] }) : null,
+        status === "none" || status === "failed" ? /* @__PURE__ */ jsxs(Centered, { children: [
+          /* @__PURE__ */ jsx(Icon, { name: status === "failed" ? "warning" : "bubble", size: 46, color: palette2.accent }),
+          /* @__PURE__ */ jsx("div", { style: { fontSize: 17, fontWeight: 600, color: palette2.ink, marginTop: SPACE.s3 }, children: status === "failed" ? t("transcribeFailedTitle") : t("noTranscriptTitle") }),
+          /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: palette2.muted, marginTop: 6, maxWidth: 300 }, children: status === "failed" ? t("transcribeFailedBody") : t("noTranscriptBody") }),
+          memo.hasAudio ? /* @__PURE__ */ jsx("div", { style: { marginTop: SPACE.s5 }, children: /* @__PURE__ */ jsx(
+            PrimaryButton,
+            {
+              palette: palette2,
+              title: status === "failed" ? t("retry") : t("transcribeAction"),
+              onClick: /* @__PURE__ */ __name(() => void runTranscription(), "onClick")
+            }
+          ) }) : null
+        ] }) : null
+      ] })
+    }
+  );
 }
 __name(MemoDetail, "MemoDetail");
 function MoreButton(props) {
@@ -1933,7 +2074,7 @@ function MoreButton(props) {
       onClick: props.onClick,
       style: { border: "none", background: "transparent", color: props.palette.accent, fontSize: 17, cursor: "pointer", width: 44, height: 44 },
       "aria-label": "More",
-      children: "⋯"
+      children: /* @__PURE__ */ jsx(Icon, { name: "ellipsis", size: 17 })
     }
   );
 }
@@ -2460,34 +2601,20 @@ function ClipPlayer(props) {
     });
     return () => props.registerPlayerCommand?.(null);
   });
-  const barProgress = duration > 0 ? Math.round(position / duration * 100) / 100 : 0;
-  const sentSignature = useRef("");
-  useEffect(() => {
-    if (!props.overlayRendered || !props.overlayUpdate) return;
-    const signature = `${memo.id}|${playing}|${barProgress}|${memo.hasAudio}`;
-    if (sentSignature.current === signature) return;
-    sentSignature.current = signature;
-    props.overlayUpdate({
-      player: {
-        hidden: !memo.hasAudio,
-        title: memo.title,
-        subtitle: clockFlat(position),
-        progress: barProgress,
-        controls: { toggle: { active: playing } }
-      }
-    });
-  });
-  useEffect(() => () => {
-    props.overlayUpdate?.({ player: { hidden: true } });
-  }, []);
+  const dock = /* @__PURE__ */ __name((top) => ({
+    background: palette2.surface,
+    borderTop: `1px solid ${palette2.line}`,
+    padding: `${top}px ${SPACE.s5}px ${SPACE.s3}px`,
+    paddingBottom: `calc(${SPACE.s3}px + env(safe-area-inset-bottom))`
+  }), "dock");
   if (!memo.hasAudio) {
-    return /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: "center" }, children: [
+    return /* @__PURE__ */ jsxs("div", { style: { ...dock(SPACE.s3), textAlign: "center" }, children: [
       /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 20, color: palette2.muted }),
       /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: palette2.muted, marginTop: 4 }, children: t("audioRemovedTitle") }),
       /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: palette2.muted }, children: t("audioRemovedBody") })
     ] });
   }
-  return /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", gap: SPACE.s4, padding: SPACE.s5, background: alpha(palette2.surface, 0.9) }, children: [
+  return /* @__PURE__ */ jsxs("div", { style: { ...dock(SPACE.s4), display: "flex", flexDirection: "column", gap: SPACE.s3 }, children: [
     /* @__PURE__ */ jsx(StaticWaveform, { palette: palette2, peaks, progress: duration > 0 ? position / duration : 0 }),
     /* @__PURE__ */ jsx(
       "audio",
@@ -2520,15 +2647,13 @@ function ClipPlayer(props) {
         style: { width: "100%", accentColor: palette2.accent }
       }
     ),
-    /* @__PURE__ */ jsxs("div", { style: { display: props.overlayRendered ? "none" : "flex", alignItems: "center", justifyContent: "center", gap: SPACE.s3 }, children: [
+    /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: SPACE.s3 }, children: [
       /* @__PURE__ */ jsx("span", { style: { fontSize: 12, color: palette2.muted, minWidth: 38, fontFamily: "ui-monospace, monospace" }, children: clockFlat(position) }),
       /* @__PURE__ */ jsx(
         "button",
         {
           type: "button",
-          onClick: /* @__PURE__ */ __name(() => {
-            if (audioRef.current) audioRef.current.currentTime = Math.max(0, position - 15);
-          }, "onClick"),
+          onClick: /* @__PURE__ */ __name(() => skip(-15), "onClick"),
           style: iconButton(palette2),
           "aria-label": "-15s",
           children: /* @__PURE__ */ jsx(Icon, { name: "gobackward", size: 21 })
@@ -2538,13 +2663,7 @@ function ClipPlayer(props) {
         "button",
         {
           type: "button",
-          onClick: /* @__PURE__ */ __name(() => {
-            const audio = audioRef.current;
-            if (!audio) return;
-            if (playing) audio.pause();
-            else void audio.play();
-            setPlaying(!playing);
-          }, "onClick"),
+          onClick: toggle,
           style: {
             width: 50,
             height: 50,
@@ -2553,19 +2672,20 @@ function ClipPlayer(props) {
             background: palette2.accent,
             color: palette2.onAccent,
             fontSize: 20,
-            cursor: "pointer"
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center"
           },
-          "aria-label": "Play",
-          children: /* @__PURE__ */ jsx(Icon, { name: playing ? "pause" : "play", size: 20 })
+          "aria-label": playing ? t("pause") : t("play"),
+          children: /* @__PURE__ */ jsx(Icon, { name: playing ? "pause" : "play", size: 20, color: palette2.onAccent })
         }
       ),
       /* @__PURE__ */ jsx(
         "button",
         {
           type: "button",
-          onClick: /* @__PURE__ */ __name(() => {
-            if (audioRef.current) audioRef.current.currentTime = Math.min(duration, position + 15);
-          }, "onClick"),
+          onClick: /* @__PURE__ */ __name(() => skip(15), "onClick"),
           style: iconButton(palette2),
           "aria-label": "+15s",
           children: /* @__PURE__ */ jsx(Icon, { name: "goforward", size: 21 })
@@ -2594,8 +2714,9 @@ function StaticWaveform(props) {
     if (!context) return;
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.clearRect(0, 0, width, height);
+    const idle = alpha(props.palette.muted, 0.32);
     if (props.peaks.length === 0) {
-      context.fillStyle = "rgba(255,255,255,0.18)";
+      context.fillStyle = idle;
       context.fillRect(0, height / 2 - 0.75, width, 1.5);
       return;
     }
@@ -2609,7 +2730,7 @@ function StaticWaveform(props) {
       const value = props.peaks[Math.floor(index / barCount * props.peaks.length)] ?? 0;
       const barHeight = Math.max(height * 0.06, value * height);
       const x = index * stride;
-      context.fillStyle = x + barWidth / 2 <= played ? props.palette.accent : "rgba(255,255,255,0.18)";
+      context.fillStyle = x + barWidth / 2 <= played ? props.palette.accent : idle;
       const round = context.roundRect;
       if (typeof round === "function") {
         context.beginPath();
@@ -2741,14 +2862,11 @@ function RecordSheet(props) {
         ) }),
         /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: SPACE.s3, padding: `0 ${SPACE.s5}px ${SPACE.s2}px`, fontSize: 12, color: palette2.muted }, children: [
           /* @__PURE__ */ jsxs("span", { style: { flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [
-            /* @__PURE__ */ jsx(Icon, { name: "mic", size: 11 }),
+            /* @__PURE__ */ jsx(Icon, { name: "waveform.and.mic", size: 11 }),
             " ",
             t("localeAuto")
           ] }),
-          props.backgroundSupported ? /* @__PURE__ */ jsxs("span", { children: [
-            /* @__PURE__ */ jsx(Icon, { name: "drive", size: 11 }),
-            " ✓"
-          ] }) : null
+          props.backgroundSupported ? /* @__PURE__ */ jsx("span", { children: /* @__PURE__ */ jsx(Icon, { name: "checkmark.circle", size: 11 }) }) : null
         ] }),
         /* @__PURE__ */ jsx(LiveWaveform, { palette: palette2, levels, active: recording && !paused }),
         /* @__PURE__ */ jsx(
@@ -2789,9 +2907,12 @@ function RecordSheet(props) {
                 border: `1px solid ${palette2.line}`,
                 color: palette2.ink,
                 fontSize: 20,
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center"
               },
-              children: /* @__PURE__ */ jsx(Icon, { name: paused ? "mic" : "pause", size: 20 })
+              children: /* @__PURE__ */ jsx(Icon, { name: paused ? "record.circle" : "pause", size: 20, color: paused ? palette2.red : void 0 })
             }
           ),
           /* @__PURE__ */ jsx(
@@ -2808,9 +2929,12 @@ function RecordSheet(props) {
                 border: "none",
                 color: "#FFFFFF",
                 fontSize: 22,
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center"
               },
-              children: /* @__PURE__ */ jsx(Icon, { name: "stop", size: 22 })
+              children: /* @__PURE__ */ jsx(Icon, { name: "stop", size: 22, color: "#FFFFFF" })
             }
           ),
           /* @__PURE__ */ jsx(
@@ -2830,9 +2954,12 @@ function RecordSheet(props) {
                 border: `1px solid ${palette2.line}`,
                 color: palette2.muted,
                 fontSize: 15,
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center"
               },
-              children: "✕"
+              children: /* @__PURE__ */ jsx(Icon, { name: "xmark", size: 18 })
             }
           )
         ] })
@@ -2904,6 +3031,79 @@ function setNavigationTitle(title) {
   }
 }
 __name(setNavigationTitle, "setNavigationTitle");
+function useHostChrome() {
+  const [chrome, setChrome] = useState(false);
+  useEffect(() => {
+    const nav = hostNavigation();
+    if (!nav || typeof nav.getState !== "function") return void 0;
+    let cancelled = false;
+    const read = /* @__PURE__ */ __name(() => {
+      nav.getState().then((state) => {
+        if (cancelled || !state) return;
+        setChrome(typeof state.hostChrome === "boolean" ? state.hostChrome : state.transition === "native");
+      }).catch(() => void 0);
+    }, "read");
+    read();
+    const scene = bridge()?.scene;
+    let off;
+    if (scene && typeof scene.on === "function") {
+      try {
+        off = scene.on("changed", read);
+      } catch {
+      }
+    }
+    return () => {
+      cancelled = true;
+      try {
+        off?.();
+      } catch {
+      }
+    };
+  }, []);
+  return chrome;
+}
+__name(useHostChrome, "useHostChrome");
+function useHostMenu(onInvoke) {
+  const [declared, setDeclared] = useState(false);
+  const handler = useRef(onInvoke);
+  handler.current = onInvoke;
+  useEffect(() => {
+    const menu = bridge()?.menu;
+    if (!menu || typeof menu.getState !== "function") return void 0;
+    let cancelled = false;
+    const offs = [];
+    menu.getState().then((state) => {
+      if (!cancelled) setDeclared(!!(state && state.declared));
+    }).catch(() => void 0);
+    if (typeof menu.on === "function") {
+      try {
+        offs.push(menu.on("invoke", (event) => handler.current(String(event && event.id || ""))));
+      } catch {
+      }
+    }
+    return () => {
+      cancelled = true;
+      offs.forEach((off) => {
+        try {
+          if (typeof off === "function") off();
+        } catch {
+        }
+      });
+    };
+  }, []);
+  const update = useCallback((items) => {
+    const menu = bridge()?.menu;
+    if (!menu || typeof menu.update !== "function") return;
+    try {
+      const result = menu.update({ items });
+      if (result && typeof result.catch === "function") result.catch(() => {
+      });
+    } catch {
+    }
+  }, []);
+  return { declared, update };
+}
+__name(useHostMenu, "useHostMenu");
 function useOverlay(onInvoke) {
   const [rendered, setRendered] = useState(false);
   const handler = useRef(onInvoke);
@@ -3191,6 +3391,7 @@ const TABLE = {
   paused: { zh: "已暂停", en: "Paused" },
   record: { zh: "录制", en: "Record" },
   pause: { zh: "暂停", en: "Pause" },
+  play: { zh: "播放", en: "Play" },
   resume: { zh: "继续", en: "Resume" },
   stop: { zh: "停止", en: "Stop" },
   recordFailedTitle: { zh: "无法录音", en: "Can't record" },
@@ -3441,15 +3642,13 @@ function App() {
   const [sheet, setSheet] = useState(null);
   const detailContext = useRef(null);
   const [detailArtifacts, setDetailArtifacts] = useState(null);
+  const [detailMenuState, setDetailMenuState] = useState(null);
   useEffect(() => {
-    if (tabs.rendered && tabs.selected && tabs.selected !== tab) setTab(tabs.selected);
+    if (!tabs.rendered || !tabs.selected || tabs.selected === tab) return;
+    setTab(tabs.selected);
+    subpages.reset();
   }, [tabs.selected, tabs.rendered]);
-  const [hostChrome, setHostChrome] = useState(false);
-  useEffect(() => {
-    const api2 = window.aibox;
-    if (!api2?.toolbar?.getState) return;
-    void api2.toolbar.getState().then((state) => setHostChrome(!!(state && state.rendered))).catch(() => void 0);
-  }, []);
+  const hostChrome = useHostChrome();
   useEffect(() => {
     const title = route ? routeTitle(route, t) : tabTitle(tab, t);
     document.title = title;
@@ -3470,8 +3669,8 @@ function App() {
     overlay.update({ record: { hidden: !recordVisible, enabled: !starting } });
   }, [overlay.rendered, recordVisible, starting]);
   useEffect(() => {
-    if (!overlay.rendered || route?.kind === "detail") return;
-    playerCommandRef.current = null;
+    if (!overlay.rendered) return;
+    if (route?.kind !== "detail") playerCommandRef.current = null;
     overlay.update({ player: { hidden: true } });
   }, [overlay.rendered, route]);
   useEffect(() => {
@@ -3592,27 +3791,10 @@ function App() {
     const picked = await actionSheet(actions);
     if (picked) await runRowAction(memo, picked);
   }, [t, transcribable, runRowAction]);
-  const openDetailMenu = useCallback(async (context) => {
-    detailContext.current = context;
-    setDetailArtifacts(context.artifacts);
+  const runDetailAction = useCallback(async (picked) => {
+    const context = detailContext.current;
+    if (!context) return;
     const memo = context.memo;
-    const hasText = Boolean(context.text.trim());
-    const actions = [];
-    if (hasText) {
-      actions.push({ id: "actionItems", title: t("actionItems") });
-      actions.push({ id: "ask", title: t("askTitle") });
-      actions.push({ id: "cleanUp", title: t("cleanUp"), destructive: true });
-      actions.push({ id: "shareTranscript", title: t("shareTranscript") });
-      if (context.artifacts?.summaryText) actions.push({ id: "shareSummary", title: t("shareSummary") });
-      if (capabilities.shareFile) {
-        actions.push({ id: "exportMd", title: t("exportMarkdown") });
-        actions.push({ id: "exportTxt", title: t("exportText") });
-        actions.push({ id: "exportSrt", title: t("exportSRT") });
-      }
-    }
-    actions.push({ id: "rename", title: t("rename") });
-    const picked = await actionSheet(actions);
-    if (!picked) return;
     if (picked === "actionItems") return setSheet("actionItems");
     if (picked === "ask") return setSheet("ask");
     if (picked === "cleanUp") return setSheet("cleanUp");
@@ -3635,7 +3817,52 @@ function App() {
       const body = format === "srt" ? exportSRT(payload) : format === "txt" ? exportText(payload) : exportMarkdown(payload);
       await shareFile(`${fileSlug(memo.title)}-${newID().slice(0, 6)}.${format}`, body);
     }
-  }, [t, locale.locale, exportLabels, openMenu]);
+  }, [locale.locale, exportLabels, openMenu]);
+  const hostMenu = useHostMenu((id) => {
+    void runDetailAction(id);
+  });
+  const publishDetailContext = useCallback((context) => {
+    detailContext.current = context;
+    setDetailArtifacts(context?.artifacts ?? null);
+    setDetailMenuState(context ? { hasText: Boolean(context.text.trim()), hasSummary: Boolean(context.artifacts?.summaryText) } : null);
+  }, []);
+  useEffect(() => {
+    if (!hostMenu.declared) return;
+    const open = detailMenuState !== null;
+    const text2 = open && detailMenuState.hasText;
+    const exportable = text2 && capabilities.shareFile;
+    hostMenu.update({
+      actionItems: { hidden: !text2 },
+      ask: { hidden: !text2 },
+      cleanUp: { hidden: !text2 },
+      shareTranscript: { hidden: !text2 },
+      shareSummary: { hidden: !(text2 && detailMenuState.hasSummary) },
+      exportMd: { hidden: !exportable },
+      exportTxt: { hidden: !exportable },
+      exportSrt: { hidden: !exportable },
+      rename: { hidden: !open }
+    });
+  }, [hostMenu.declared, detailMenuState]);
+  const openDetailMenu = useCallback(async (context) => {
+    publishDetailContext(context);
+    const hasText = Boolean(context.text.trim());
+    const actions = [];
+    if (hasText) {
+      actions.push({ id: "actionItems", title: t("actionItems") });
+      actions.push({ id: "ask", title: t("askTitle") });
+      actions.push({ id: "cleanUp", title: t("cleanUp"), destructive: true });
+      actions.push({ id: "shareTranscript", title: t("shareTranscript") });
+      if (context.artifacts?.summaryText) actions.push({ id: "shareSummary", title: t("shareSummary") });
+      if (capabilities.shareFile) {
+        actions.push({ id: "exportMd", title: t("exportMarkdown") });
+        actions.push({ id: "exportTxt", title: t("exportText") });
+        actions.push({ id: "exportSrt", title: t("exportSRT") });
+      }
+    }
+    actions.push({ id: "rename", title: t("rename") });
+    const picked = await actionSheet(actions);
+    if (picked) await runDetailAction(picked);
+  }, [t, publishDetailContext, runDetailAction]);
   const rootMemos = store.memos;
   const scopedMemos = route?.kind === "scoped" ? route.scope === "fav" ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos : [];
   return /* @__PURE__ */ jsxs(
@@ -3770,7 +3997,10 @@ function App() {
           "button",
           {
             type: "button",
-            onClick: /* @__PURE__ */ __name(() => setTab(id), "onClick"),
+            onClick: /* @__PURE__ */ __name(() => {
+              setTab(id);
+              subpages.reset();
+            }, "onClick"),
             style: {
               flex: 1,
               border: "none",
@@ -3797,9 +4027,9 @@ function App() {
             settings: store.settings,
             onBack: subpages.back,
             onMenu: openDetailMenu,
+            onContext: publishDetailContext,
+            hostMenu: hostMenu.declared,
             onRefresh: store.refresh,
-            overlayRendered: overlay.rendered,
-            overlayUpdate: overlay.update,
             registerPlayerCommand: /* @__PURE__ */ __name((handler) => {
               playerCommandRef.current = handler;
             }, "registerPlayerCommand"),

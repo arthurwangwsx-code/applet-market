@@ -83,9 +83,11 @@ export function RecordSheet(props: {
 
       <div style={{ display: 'flex', gap: SPACE.s3, padding: `0 ${SPACE.s5}px ${SPACE.s2}px`, fontSize: 12, color: palette.muted }}>
         <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          <Icon name="mic" size={11} /> {t('localeAuto')}
+          <Icon name="waveform.and.mic" size={11} /> {t('localeAuto')}
         </span>
-        {props.backgroundSupported ? <span><Icon name="drive" size={11} /> ✓</span> : null}
+        {/* 后台录音可用的标记。这里曾是「💾 ✓」——一个软盘 emoji 加一个字面对勾，既看不出是什么意思，
+            也和外壳那套单色符号完全不是一套东西。 */}
+        {props.backgroundSupported ? <span><Icon name="checkmark.circle" size={11} /></span> : null}
       </div>
 
       <LiveWaveform palette={palette} levels={levels} active={recording && !paused} />
@@ -118,9 +120,11 @@ export function RecordSheet(props: {
           style={{
             width: 56, height: 56, borderRadius: 28, background: palette.surface,
             border: `1px solid ${palette.line}`, color: palette.ink, fontSize: 20, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <Icon name={paused ? 'mic' : 'pause'} size={20} />
+          {/* 继续录音用红点而不是麦克风 —— 与原生「暂停 ↔ 录制」那对图标同语。 */}
+          <Icon name={paused ? 'record.circle' : 'pause'} size={20} color={paused ? palette.red : undefined} />
         </button>
         <button
           type="button"
@@ -129,9 +133,10 @@ export function RecordSheet(props: {
           style={{
             width: 72, height: 72, borderRadius: 36, background: palette.red, border: 'none',
             color: '#FFFFFF', fontSize: 22, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <Icon name="stop" size={22} />
+          <Icon name="stop" size={22} color="#FFFFFF" />
         </button>
         <button
           type="button"
@@ -143,9 +148,10 @@ export function RecordSheet(props: {
           style={{
             width: 56, height: 56, borderRadius: 28, background: 'transparent',
             border: `1px solid ${palette.line}`, color: palette.muted, fontSize: 15, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          ✕
+          <Icon name="xmark" size={18} />
         </button>
       </div>
     </Sheet>

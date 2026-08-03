@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "2.2.0",
+  "latestVersion": "2.3.0",
   "releases": [
+    {
+      "version": "2.3.0",
+      "releasedAt": "2026-08-03T20:10:07Z",
+      "notes": "顶栏标题与 ⋯ 菜单改用系统导航栏（scene.menu + menu.invoke）；图标改画真 SF Symbol；播放器钉在页底、走带键常驻；切 Tab 退出子页栈",
+      "fileCount": 4,
+      "totalBytes": 206518,
+      "path": "apps/com.aibox.voicememos/releases/2.3.0",
+      "localizedNotes": {
+        "en": "Title and ... menu now use the system navigation bar (scene.menu + menu.invoke); icons render real SF Symbols; the player is pinned to the page bottom with always-visible transport; switching tabs pops the subpage stack"
+      },
+      "bundleSha256": "6c52d32b9bcab385a2fcd1d4fb9b98c1f12c1171bb7a054e2bda2d6ffb25cb72"
+    },
     {
       "version": "2.2.0",
       "releasedAt": "2026-08-03T13:51:59Z",

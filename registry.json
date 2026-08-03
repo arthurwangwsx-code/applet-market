@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T15:08:09Z",
+  "updatedAt": "2026-08-03T20:10:07Z",
   "appCount": 9,
   "apps": [
     {
@@ -292,9 +292,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "2.2.0",
-      "latestReleasedAt": "2026-08-03T13:51:59Z",
-      "versionCount": 5,
+      "latestVersion": "2.3.0",
+      "latestReleasedAt": "2026-08-03T20:10:07Z",
+      "versionCount": 6,
       "capabilities": [
         "ai",
         "audio",
@@ -305,7 +305,7 @@
         "tabs",
         "ui"
       ],
-      "latestTotalBytes": 197758,
+      "latestTotalBytes": 206518,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",

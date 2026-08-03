@@ -84,7 +84,9 @@ function useSymbolSupport(): boolean {
     if (symbolProbe === 'unknown') {
       symbolProbe = 'probing'
       const url = symbolURL('checkmark', 16)
-      if (url === '') {
+      // 遮罩不可用时**必须**回落 emoji：只有 background-color 而遮罩没生效的话，每个图标都会变成
+      // 一个实心色块 —— 比 emoji 难看得多，而且遮罩加载失败没有事件可听、发现不了。
+      if (url === '' || !maskSupported()) {
         settleSymbolProbe(false)
       } else {
         const image = new Image()
@@ -97,6 +99,17 @@ function useSymbolSupport(): boolean {
   }, [])
 
   return supported
+}
+
+/** 引擎认不认 CSS 遮罩。WebKit 一直认 `-webkit-mask-image`，这里只是不把它当理所当然。 */
+function maskSupported(): boolean {
+  const api = typeof CSS !== 'undefined' ? CSS : undefined
+  if (!api || typeof api.supports !== 'function') return false
+  try {
+    return api.supports('-webkit-mask-image', 'url("a")') || api.supports('mask-image', 'url("a")')
+  } catch {
+    return false
+  }
 }
 
 function settleSymbolProbe(ok: boolean): void {
@@ -486,6 +499,11 @@ export function PushPage(props: {
    * 而且那个自绘的 `‹` 会变成一颗位置怪异的孤零零把手。
    */
   chrome?: boolean
+  /**
+   * 钉在页面底边的一条（播放器、批量操作栏之类）。**在滚动区之外** —— 放进 `children` 就得滚到最底
+   * 才看得到，长文稿页面上等于「功能藏起来了」（2026-08-04 真机反馈）。
+   */
+  footer?: ReactNode
 }) {
   const chrome = props.chrome !== false
   return (
@@ -520,6 +538,7 @@ export function PushPage(props: {
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 12px 0' }}>{props.trailing}</div>
       ) : null}
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{props.children}</div>
+      {props.footer}
     </div>
   )
 }

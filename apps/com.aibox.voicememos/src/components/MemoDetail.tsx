@@ -47,11 +47,7 @@ export function MemoDetail(props: {
   /** 宿主有系统 ⋯ 菜单。true = 不画页内那颗 ⋯（否则真机上是「系统 ⋯ 旁边挂个假 ⋯」）。 */
   hostMenu?: boolean
   onRefresh: () => void
-  /** 宿主是否画了悬浮层。true = 播放控制交给常驻层，页内只留波形与进度条。 */
-  overlayRendered?: boolean
-  /** 把播放条的展示态推给宿主（title / progress / controls.toggle.active / hidden）。 */
-  overlayUpdate?: (items: Record<string, any>) => void
-  /** 把「播放器指令入口」交给根视图（overlay 上的控件点击经它落到真 `<audio>`）。 */
+  /** 把「播放器指令入口」交给根视图（宿主侧的控件点击经它落到真 `<audio>`）。 */
   registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
   /** 宿主画了导航栏（返回键 + 标题）就不自绘。 */
   chrome?: boolean
@@ -163,6 +159,15 @@ export function MemoDetail(props: {
       onBack={props.onBack}
       chrome={props.chrome}
       trailing={props.hostMenu ? undefined : <MoreButton palette={palette} onClick={() => props.onMenu(context)} />}
+      footer={
+        <ClipPlayer
+          palette={palette}
+          t={t}
+          memo={memo}
+          onSeekReady={(seek) => { seekRef.current = seek }}
+          registerPlayerCommand={props.registerPlayerCommand}
+        />
+      }
     >
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         {!memo.hasAudio ? (
@@ -241,15 +246,6 @@ export function MemoDetail(props: {
           </Centered>
         ) : null}
 
-        <ClipPlayer
-          palette={palette}
-          t={t}
-          memo={memo}
-          onSeekReady={(seek) => { seekRef.current = seek }}
-          overlayRendered={Boolean(props.overlayRendered)}
-          overlayUpdate={props.overlayUpdate}
-          registerPlayerCommand={props.registerPlayerCommand}
-        />
       </div>
     </PushPage>
   )
@@ -275,7 +271,7 @@ function MoreButton(props: { palette: Palette; onClick: () => void }) {
       style={{ border: 'none', background: 'transparent', color: props.palette.accent, fontSize: 17, cursor: 'pointer', width: 44, height: 44 }}
       aria-label="More"
     >
-      ⋯
+      <Icon name="ellipsis" size={17} />
     </button>
   )
 }
@@ -802,14 +798,18 @@ function iconButton(palette: Palette): React.CSSProperties {
 //（`memo_play/stop/seek` 只有这三下），所以那条线上既没有 scrubber 也没有已播时间，
 // 章节和分段点击更是无从跳起。现在音频字节就在手上，这些全部是真的。
 
+/**
+ * 详情页播放器。**钉在页底**（`PushPage` 的 `footer`，滚动区之外），所以文稿多长它都在。
+ *
+ * 它曾经住在滚动内容的末尾 + 靠宿主悬浮条补救「看不到」：结果是长文稿要滚到底才够得着，而悬浮条
+ * 又要等第一次交互才起来 —— 两条路一起失灵，播放区只剩一条光进度条。钉死是根治：不依赖另一层就位。
+ */
 function ClipPlayer(props: {
   palette: Palette
   t: T
   memo: Memo
   /** 把 seek 出口交给页面（章节 / 分段点击经它跳转）。 */
   onSeekReady: (seek: (seconds: number) => void) => void
-  overlayRendered: boolean
-  overlayUpdate?: (items: Record<string, any>) => void
   registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
 }) {
   const { palette, t, memo } = props
@@ -865,31 +865,20 @@ function ClipPlayer(props: {
     return () => props.registerPlayerCommand?.(null)
   })
 
-  // 播放条展示态。进度按 1% 量化后再推 —— `timeupdate` 每 ~250ms 一次，不量化就是白过桥。
-  const barProgress = duration > 0 ? Math.round((position / duration) * 100) / 100 : 0
-  const sentSignature = useRef('')
-  useEffect(() => {
-    if (!props.overlayRendered || !props.overlayUpdate) return
-    const signature = `${memo.id}|${playing}|${barProgress}|${memo.hasAudio}`
-    if (sentSignature.current === signature) return
-    sentSignature.current = signature
-    props.overlayUpdate({
-      player: {
-        hidden: !memo.hasAudio,
-        title: memo.title,
-        subtitle: clockFlat(position),
-        progress: barProgress,
-        controls: { toggle: { active: playing } },
-      },
-    })
+  // 钉在页底的一条，底下是滚动内容 —— 背景**必须不透明**（原来是 `alpha(surface, 0.9)`，
+  // 那是它还长在内容流末尾时的写法，钉住之后半透明会让文稿从波形底下透出来）。
+  // 上沿一条发丝线，与原生贴底工具条同款。
+  // ⚠️ `paddingBottom` 写在 `padding` 简写**之后** —— 反过来会被简写整个覆盖掉，安全区就白留了。
+  const dock = (top: number): React.CSSProperties => ({
+    background: palette.surface,
+    borderTop: `1px solid ${palette.line}`,
+    padding: `${top}px ${SPACE.s5}px ${SPACE.s3}px`,
+    paddingBottom: `calc(${SPACE.s3}px + env(safe-area-inset-bottom))`,
   })
-  // 离开详情页收起播放条（根视图那条 effect 是兜底，这条是主路径）。
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => { props.overlayUpdate?.({ player: { hidden: true } }) }, [])
 
   if (!memo.hasAudio) {
     return (
-      <div style={{ background: alpha(palette.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: 'center' }}>
+      <div style={{ ...dock(SPACE.s3), textAlign: 'center' }}>
         <Icon name="waveform.slash" size={20} color={palette.muted} />
         <div style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>{t('audioRemovedTitle')}</div>
         <div style={{ fontSize: 12, color: palette.muted }}>{t('audioRemovedBody')}</div>
@@ -898,7 +887,7 @@ function ClipPlayer(props: {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s4, padding: SPACE.s5, background: alpha(palette.surface, 0.9) }}>
+    <div style={{ ...dock(SPACE.s4), display: 'flex', flexDirection: 'column', gap: SPACE.s3 }}>
       <StaticWaveform palette={palette} peaks={peaks} progress={duration > 0 ? position / duration : 0} />
 
       <audio

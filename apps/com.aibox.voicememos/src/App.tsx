@@ -118,11 +118,17 @@ export default function App() {
   // —— 悬浮层（`aibox.overlay`）——
   //
   // 用户 2026-08-03 真机反馈：「录音按钮以及播放详情页的控制应该是悬浮的。目前需要直接滚动到
-  // 最下面才能看到。」录音键与播放条都是**跨页面常驻的控制**，属于 overlay 而不是页面内容。
-  // 宿主把它和底栏叠进同一个 safeAreaInset（自下而上：底栏 → bar → button）并扣掉自己的高度，
-  // 所以它压不到最后一行、也压不到底栏。`rendered:false` 时下面照旧渲染页内 FAB 与页内控制条。
+  // 最下面才能看到。」录音键是**跨页面常驻的控制**，属于 overlay 而不是页面内容。宿主把它和底栏叠进
+  // 同一个 safeAreaInset 并扣掉自己的高度，所以它压不到最后一行、也压不到底栏。
+  // `rendered:false` 时下面照旧渲染页内 FAB。
+  //
+  // ⚠️ **播放条不再走 overlay。** 那一轮把详情页的播放控制搬上悬浮层，是为了解决「要滚到最底才看得到」；
+  // 但悬浮条要等页面第一次交互才起得来，于是进详情页只剩一条光进度条、连暂停都没有
+  //（2026-08-04 反馈）。播放器现在钉在 `PushPage` 的 footer 里（滚动区之外），同样一直可见，
+  // 而且**不依赖另一层是否就位**。声明保留在 manifest 里，但页面不再驱动它 ——
+  // 音频元素随详情页卸载即停，跨页面的播放条本来也控不到任何东西。
   const beginRecordingRef = useRef<() => void>(() => undefined)
-  /** 详情页把「播放器指令入口」挂到这里；overlay 上的控件点击经它转成真正的 audio 操作。 */
+  /** 详情页把「播放器指令入口」挂到这里，留给宿主侧的播放控制（锁屏 / 未来的常驻条）使用。 */
   const playerCommandRef = useRef<((command: string) => void) | null>(null)
 
   const overlay = useOverlay((event) => {
@@ -137,10 +143,10 @@ export default function App() {
     overlay.update({ record: { hidden: !recordVisible, enabled: !starting } })
   }, [overlay.rendered, recordVisible, starting])
 
-  // 离开详情页时把播放条收起来（详情页自己在卸载时也发一次，这里是兜底）。
+  // 播放条恒隐（见上）。留这条 effect 是为了覆盖「装过旧版、宿主侧还留着展示态」的重入场景。
   useEffect(() => {
-    if (!overlay.rendered || route?.kind === 'detail') return
-    playerCommandRef.current = null
+    if (!overlay.rendered) return
+    if (route?.kind !== 'detail') playerCommandRef.current = null
     overlay.update({ player: { hidden: true } })
   }, [overlay.rendered, route])
 
@@ -500,7 +506,8 @@ export default function App() {
             <button
               key={id}
               type="button"
-              onClick={() => setTab(id)}
+              // 与宿主底栏同一条语义：切 Tab = 整条子页栈作废（见上面 tabs.selected 那条 effect）。
+              onClick={() => { setTab(id); subpages.reset() }}
               style={{
                 flex: 1, border: 'none', background: 'transparent', padding: '10px 0 12px', fontSize: 11,
                 cursor: 'pointer', color: tab === id ? palette.accent : palette.muted,
@@ -527,8 +534,6 @@ export default function App() {
           onContext={publishDetailContext}
           hostMenu={hostMenu.declared}
           onRefresh={store.refresh}
-          overlayRendered={overlay.rendered}
-          overlayUpdate={overlay.update}
           registerPlayerCommand={(handler) => { playerCommandRef.current = handler }}
           chrome={!hostChrome}
         />

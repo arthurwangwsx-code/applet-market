@@ -251,7 +251,13 @@ export default function App() {
         const result = await fetchSingleSource(feed, store.settings)
         return result.articles
       },
-      openArticle: (article) => performOpen(article, { store, settings: store.settings }),
+      // 打开失败（宿主没装浏览器 / 浏览器能力未被授权 / 降级链全不可用）必须**说出来**：
+      // 原来只是把返回值丢掉，用户看到的就是「点了没反应」。
+      openArticle: async (article) => {
+        const opened = await performOpen(article, { store, settings: store.settings })
+        if (!opened) broadcast.showNotice('news.x.openFailed')
+        return opened
+      },
       openCluster: (item) => navigate({ name: 'cluster', title: item.lead.title, articles: [item.lead, ...item.related] }),
       toggleSaved: (article) => (store.savedKeys.has(article.id) ? store.unsave(article.id) : store.save(article)),
       unsave: (id) => store.unsave(id),

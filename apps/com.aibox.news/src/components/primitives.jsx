@@ -216,7 +216,7 @@ export function ActionSheet({ visible, title, actions, cancelLabel, onClose }) {
 const LONG_PRESS_MS = 480
 
 export function useLongPress(onLongPress, onTap) {
-  const state = React.useRef({ timer: null, x: 0, y: 0, fired: false, touched: false })
+  const state = React.useRef({ timer: null, x: 0, y: 0, fired: false, touched: false, moved: false })
   const clear = () => {
     if (state.current.timer) { window.clearTimeout(state.current.timer); state.current.timer = null }
   }
@@ -227,6 +227,7 @@ export function useLongPress(onLongPress, onTap) {
       state.current.y = touch.clientY
       state.current.fired = false
       state.current.touched = true
+      state.current.moved = false
       clear()
       state.current.timer = window.setTimeout(() => {
         state.current.fired = true
@@ -235,11 +236,16 @@ export function useLongPress(onLongPress, onTap) {
     },
     onTouchMove(event) {
       const touch = event.touches[0]
-      if (Math.abs(touch.clientX - state.current.x) > 8 || Math.abs(touch.clientY - state.current.y) > 8) clear()
+      if (Math.abs(touch.clientX - state.current.x) > 8 || Math.abs(touch.clientY - state.current.y) > 8) {
+        // 手指走过 8px 就**不再是一次点击**：滚列表 / 横扫切主题时手指恰好落在某一行上，
+        // 松手时不能把它当成「点开这篇文章」。只清长按计时器是不够的。
+        state.current.moved = true
+        clear()
+      }
     },
     onTouchEnd() {
       clear()
-      if (!state.current.fired && onTap) onTap()
+      if (!state.current.fired && !state.current.moved && onTap) onTap()
     },
     onTouchCancel: clear,
     onContextMenu(event) { event.preventDefault() },

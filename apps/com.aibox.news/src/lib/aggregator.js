@@ -10,7 +10,7 @@ import { dedupe } from './dedup.js'
 import { normalizeURL } from './text.js'
 import { cluster } from './cluster.js'
 import { extract } from './extractor.js'
-import { httpGet, PAGE_MAX_BYTES } from './host.js'
+import { httpGet, FAILURE, PAGE_MAX_BYTES } from './host.js'
 
 export const FOREGROUND_TTL_MS = 300 * 1000
 export const SNAPSHOT_THROTTLE_MS = 15 * 1000
@@ -296,6 +296,29 @@ export class NewsAggregator {
   get unsuccessfulSourceCount() {
     if (!this.lastReport) return 0
     return this.lastReport.sourceStates.filter((row) => row.status !== 'success').length
+  }
+
+  /**
+   * 本轮刷新的**整体阻断原因**，供状态条与空态如实说明「为什么没有新闻」。
+   *
+   * 只在**一个来源都没成功**时才成立 —— 部分源失败是既有的「部分来源需要检查」态，不该升级成
+   * 「没有网络权限」。返回：
+   *  · `'permission'` 用户没授权网络（宿主回 `aibox/denied: user declined…`）——用户自己能修；
+   *  · `'blocked'`    域名不在 manifest 的 networkAllowed 里 —— 应用的声明缺口；
+   *  · `'offline'`    全部超时 / 连不上 —— 网络本身的问题；
+   *  · `null`         没有整体性阻断（照旧走原来的四态）。
+   */
+  get blockedReason() {
+    const report = this.lastReport
+    if (!report) return null
+    const states = report.sourceStates
+    if (states.length === 0) return null
+    if (states.some((row) => row.status === 'success')) return null
+    const failures = states.map((row) => row.failure)
+    if (failures.some((row) => row === FAILURE.permission)) return 'permission'
+    if (failures.some((row) => row === FAILURE.blocked)) return 'blocked'
+    if (failures.every((row) => row === FAILURE.network || row === FAILURE.timeout)) return 'offline'
+    return null
   }
 }
 

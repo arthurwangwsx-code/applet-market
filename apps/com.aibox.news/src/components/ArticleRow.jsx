@@ -5,6 +5,7 @@ import React from 'react'
 import Icon from './Icon.jsx'
 import { C, SPACE } from './theme.js'
 import { relative } from '../lib/format.js'
+import { imageURL } from '../lib/host.js'
 
 const THUMB = 80
 
@@ -33,7 +34,8 @@ function Thumbnail({ url, isRead, blockedLabel }) {
       </div>
       {failed ? null : (
         <img
-          src={url}
+          // 必须走 applet:// 字节通道 —— secure 模式的 CSP 直接挡死远端 https 图片。
+          src={imageURL(url, THUMB)}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}

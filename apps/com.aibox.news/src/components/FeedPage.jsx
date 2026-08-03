@@ -74,18 +74,33 @@ function TopicChips({ options, selectedIndex, counts, onSelect, t }) {
   )
 }
 
+/**
+ * 刷新状态条。原生是四态（正在更新 / 尚未更新 / 部分来源需要检查 / 资讯已更新）；
+ * 这里补上**第五态「被阻断」**：一条都没抓到且原因是权限 / 域名白名单 / 断网时，
+ * 必须如实说出真因并给出修法，而不是含混地记成「尚未更新」——用户会以为是没有新闻。
+ */
+const BLOCKED_META = {
+  permission: { titleKey: 'news.status.blocked.permission', hintKey: 'news.status.blocked.permission.hint', icon: 'lock.slash' },
+  blocked: { titleKey: 'news.status.blocked.allowlist', hintKey: 'news.status.blocked.allowlist.hint', icon: 'exclamationmark.triangle' },
+  offline: { titleKey: 'news.status.blocked.offline', hintKey: 'news.status.blocked.offline.hint', icon: 'wifi.slash' },
+}
+
 function RefreshStatusRow({ ctx, onOpenDiagnostics }) {
   const { agg, t, locale, now } = ctx
   const unsuccessful = agg.lastReport ? agg.unsuccessfulSourceCount : 0
+  const blocked = agg.isRefreshing ? null : BLOCKED_META[agg.blockedReason]
+
   let titleKey = 'news.status.ready'
   if (agg.isRefreshing) titleKey = 'news.status.refreshing'
+  else if (blocked) titleKey = blocked.titleKey
   else if (!agg.lastUpdated) titleKey = 'news.status.notUpdated'
   else if (unsuccessful > 0) titleKey = 'news.status.partial'
 
   let icon = 'checkmark.circle'
-  if (!agg.lastUpdated) icon = 'clock.badge.questionmark'
+  if (blocked) icon = blocked.icon
+  else if (!agg.lastUpdated) icon = 'clock.badge.questionmark'
   else if (unsuccessful > 0) icon = 'exclamationmark.triangle'
-  const color = unsuccessful > 0 ? C.orange : C.brand
+  const color = blocked ? C.danger : (unsuccessful > 0 ? C.orange : C.brand)
 
   return (
     <button
@@ -102,20 +117,31 @@ function RefreshStatusRow({ ctx, onOpenDiagnostics }) {
         {agg.isRefreshing ? <Spinner size={16} color={C.muted} /> : <Icon name={icon} size={16} color={color} />}
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '1 1 auto', minWidth: 0, textAlign: 'left' }}>
-        <span style={{ fontSize: 12, color: C.ink }}>{t(titleKey)}</span>
-        {agg.lastUpdated ? (
+        <span style={{ fontSize: 12, color: blocked ? C.danger : C.ink }}>{t(titleKey)}</span>
+        {blocked ? (
+          <span style={{ fontSize: 12, color: C.muted, lineHeight: 1.35 }}>{t(blocked.hintKey)}</span>
+        ) : (agg.lastUpdated ? (
           <span style={{ fontSize: 12, color: C.muted }}>
             {t('news.status.updated', relative(agg.lastUpdated, locale, now), agg.successfulSourceCount)}
           </span>
-        ) : null}
+        ) : null)}
       </span>
       <Icon name="chevron.right" size={12} color={C.muted} style={{ opacity: 0.6 }} />
     </button>
   )
 }
 
-function emptyDescriptor({ refreshing, query, topic, timelineEmpty }) {
+const BLOCKED_EMPTY = {
+  permission: { icon: 'lock.slash', key: 'news.empty.blocked.permission' },
+  blocked: { icon: 'exclamationmark.triangle', key: 'news.empty.blocked.allowlist' },
+  offline: { icon: 'wifi.slash', key: 'news.empty.blocked.offline' },
+}
+
+function emptyDescriptor({ refreshing, query, topic, timelineEmpty, blockedReason }) {
   if (refreshing) return { icon: 'arrow.triangle.2.circlepath', key: 'news.empty.loading' }
+  // 一条都没有 **且** 抓取整体被阻断时，空态必须说真因 —— 说「还没有新闻，下拉刷新」
+  // 等于把「没权限」谎报成「没内容」，用户会一直下拉一个永远不会成功的刷新。
+  if (timelineEmpty && BLOCKED_EMPTY[blockedReason]) return BLOCKED_EMPTY[blockedReason]
   if (String(query || '').trim()) return { icon: 'magnifyingglass', key: 'news.empty.search' }
   if (topic && !timelineEmpty) return { icon: 'tray', key: 'news.empty.topic' }
   return { icon: 'newspaper', key: 'news.empty.feed' }
@@ -132,6 +158,8 @@ function TopicPage({ items, ctx, topic, isSource, loadingSource, onRefresh, refr
     query: ctx.query,
     topic,
     timelineEmpty: ctx.agg.timeline.length === 0,
+    // 单源下钻页有自己的抓取链路，不套用整条时间线的阻断判定。
+    blockedReason: isSource ? null : ctx.agg.blockedReason,
   })
 
   return (

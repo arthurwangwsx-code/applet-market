@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-02T20:18:25Z",
+  "updatedAt": "2026-08-03T02:01:11Z",
   "appCount": 5,
   "apps": [
     {
@@ -126,9 +126,9 @@
       "icon": "newspaper.fill",
       "category": "information",
       "author": "AiBox",
-      "latestVersion": "1.0.0",
-      "latestReleasedAt": "2026-08-02T19:54:33Z",
-      "versionCount": 1,
+      "latestVersion": "1.0.1",
+      "latestReleasedAt": "2026-08-03T02:01:11Z",
+      "versionCount": 2,
       "capabilities": [
         "ai",
         "browser",

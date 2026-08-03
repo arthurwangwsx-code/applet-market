@@ -76,15 +76,21 @@ export const THEME_CSS = `
 .news-spin { animation: news-rotate 0.9s linear infinite; transform-origin: 50% 50%; }
 @keyframes news-rotate { to { transform: rotate(360deg); } }
 .news-chips::-webkit-scrollbar { display: none; }
-.news-pager-track { display: flex; width: 300%; will-change: transform; }
-/* 每一屏都是列向 flex：里面的 .news-scroll 才会被约束到分页器高度、自己滚动而不是撑破容器。 */
+/* 轨道自己也是 flex item（宿主是 display:flex）——必须显式 flex-shrink:0。
+   只写 width:300% 会被 flex 的默认 flex-shrink:1 压回 100%，于是每屏只剩 1/3 屏宽，
+   translate3d(-1/3) 之后当前页和下一页同屏并排出现（真机上表现为「两份状态条 + 两份空态」）。 */
+.news-pager-track { display: flex; flex: 0 0 auto; width: 300%; min-height: 0; will-change: transform; }
+/* 每一屏都是列向 flex：里面的 .news-scroll 才会被约束到分页器高度、自己滚动而不是撑破容器。
+   宽度用 calc(100%/3) 而不是 33.3333%：轨道是 300%，三屏必须**精确**等于宿主宽度，
+   否则每屏差 0.03% 会随页码累积成可见错位。 */
 .news-pager-slot {
-  width: 33.3333%;
-  flex: 0 0 33.3333%;
+  width: calc(100% / 3);
+  flex: 0 0 calc(100% / 3);
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 /* 面板 portal 到 body，不在 .news-root 里，故字体与前景色要自己带上。 */
 .news-sheet-backdrop {

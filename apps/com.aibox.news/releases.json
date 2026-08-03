@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T02:01:11Z",
+      "notes": "修复真机三处核心故障：① 横向分页器轨道被 flex-shrink 压回 1/3 屏宽，导致相邻主题页同屏并排渲染；② 首刷 6 路并发外联触发 6 次授权弹窗，任一次拒绝即锁死整个会话，表现为「永远没有新闻」——改为首次外联单飞，只弹一次；③ 网络被拒/被拦时如实显示「缺少网络访问权限」并给出修法，不再谎报「还没有新闻」。另修：滚动误触打开文章、打开文章无响应无提示、缩略图未走 applet:// 字节通道恒空白。",
+      "fileCount": 38,
+      "totalBytes": 256971,
+      "path": "apps/com.aibox.news/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Fixes three device-blocking bugs: (1) the horizontal pager track was shrunk to 1/3 screen width by flex-shrink, rendering adjacent topic pages side by side; (2) the first refresh fired 6 concurrent network calls and raised 6 consent prompts, where a single decline locked the whole session — the first call is now serialized so only one prompt appears; (3) denied or blocked network now reports 'Network permission missing' with a fix instead of claiming 'No news yet'. Also: scrolling no longer opens articles by accident, a hung article-open now reports failure, and thumbnails route through the applet:// image channel instead of being blocked by CSP."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "a6efa2a5d4dfbdfcb0752729c4307979f8b0d2ff5f6b55529dd1a2867d6d92bd"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-02T19:54:33Z",

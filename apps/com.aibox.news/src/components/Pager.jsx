@@ -82,7 +82,9 @@ const Pager = React.forwardRef(function Pager({ count, index, onIndex, renderPag
     settle(next, next > index ? 1 : (next < index ? -1 : 0))
   }
 
-  const offset = `calc(-33.3333% + ${drag}px)`
+  // translate 的百分比按**自身**尺寸算 —— 轨道是宿主的 300%，故一屏 = 100%/3，
+  // 与 `.news-pager-slot` 的 `calc(100% / 3)` 精确同宽（写死 33.3333% 会差出亚像素并累积）。
+  const offset = `calc(-100% / 3 + ${drag}px)`
   return (
     <div
       ref={hostRef}

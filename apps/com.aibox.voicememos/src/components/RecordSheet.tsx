@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { clockCentis } from '../lib/format'
-import { recordCancel, recordPause, recordResume, recordStatus, recordStop, type StoppedClip } from '../lib/memos'
+import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop, type StoppedClip } from '../lib/memos'
 import type { T } from '../lib/strings'
 import { SPACE, type Palette } from '../lib/theme'
 import { Icon, Sheet } from './primitives'
@@ -55,6 +55,8 @@ export function RecordSheet(props: {
   }, [props.open])
 
   const stop = async () => {
+    // 先给触感再收尾 —— 与原生同序：按下就有反馈，不等落库。
+    void haptic('medium')
     const clip = await recordStop()
     if (clip) props.onFinish(clip)
     else props.onCancel()

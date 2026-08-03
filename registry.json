@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T04:05:17Z",
+  "updatedAt": "2026-08-03T04:08:43Z",
   "appCount": 7,
   "apps": [
     {
@@ -196,9 +196,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.0.0",
-      "latestReleasedAt": "2026-08-03T04:02:10Z",
-      "versionCount": 1,
+      "latestVersion": "1.0.1",
+      "latestReleasedAt": "2026-08-03T04:08:43Z",
+      "versionCount": 2,
       "capabilities": [
         "ai",
         "audio",

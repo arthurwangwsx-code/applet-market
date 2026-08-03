@@ -13,9 +13,9 @@ import { Icon, PushPage, SecondaryButton } from './components/primitives'
 import { registerMemoActions } from './lib/actions'
 import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format'
 import {
-  capabilities, deleteClip, deleteMemo, fetchTranscript, hostRecordStart, listClips, loadArtifacts,
-  newID, recordStart, recorderAvailability, renameMemo, saveClip, seekMemo, startTranscription,
-  toggleFavourite,
+  capabilities, deleteClip, deleteMemo, fetchTranscript, haptic, hostRecordStart, listClips,
+  loadArtifacts, newID, recordStart, recorderAvailability, renameMemo, saveClip, seekMemo,
+  startTranscription, toggleFavourite,
 } from './lib/memos'
 import { makeT, type Lang } from './lib/strings'
 import { useMemoStore } from './lib/store'
@@ -103,6 +103,8 @@ export default function App() {
         setRecorder(await recorderAvailability())
         return
       }
+      // 起录成功给一次 medium 触感（权限被拒的早退路径上面已经 return 了，不给）。
+      void haptic('medium')
       setDraftTitle('')
       setRecordOpen(true)
     } finally {

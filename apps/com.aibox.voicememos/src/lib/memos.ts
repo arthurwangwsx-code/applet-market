@@ -377,6 +377,20 @@ async function erase(collection: string, id: string): Promise<void> {
   }
 }
 
+/**
+ * 触感（规格 §3）：**起录成功**与**按下停止**各给一次 medium；
+ * 权限被拒的早退路径**不给**触感 —— 那一下会让"没起录成功"感觉像成功了。
+ */
+export async function haptic(style: 'light' | 'medium' | 'heavy' = 'medium'): Promise<void> {
+  const bridge = api()
+  if (!bridge?.haptics) return
+  try {
+    await bridge.haptics.impact({ style })
+  } catch {
+    /* 模拟器上没有触感 */
+  }
+}
+
 export function newID(): string {
   const c = typeof globalThis !== 'undefined' ? (globalThis.crypto as Crypto | undefined) : undefined
   if (c && typeof c.randomUUID === 'function') return c.randomUUID()

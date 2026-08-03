@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-03T04:08:43Z",
+      "notes": "起录成功与按下停止各补一次触感反馈（与原生同序：按下就有反馈，不等落库）；起录期间锁住录音按钮，避免首次使用等授权框时二次点击拿到 aibox/busy 的假失败。",
+      "fileCount": 4,
+      "totalBytes": 186503,
+      "path": "apps/com.aibox.voicememos/releases/1.0.1",
+      "localizedNotes": {
+        "en": "Haptic feedback on record start and stop, matching the native ordering; the record button is locked while starting so a second tap during the first-use permission prompt no longer surfaces a bogus busy error."
+      },
+      "bundleSha256": "09752ca33a0a8c65a178b9c87bf2fffd80fe74ca5a89220d03f6bf7567ab8b98"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-03T04:02:10Z",

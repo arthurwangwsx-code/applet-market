@@ -595,6 +595,15 @@ async function erase(collection, id) {
   }
 }
 __name(erase, "erase");
+async function haptic(style = "medium") {
+  const bridge2 = api();
+  if (!bridge2?.haptics) return;
+  try {
+    await bridge2.haptics.impact({ style });
+  } catch {
+  }
+}
+__name(haptic, "haptic");
 function newID() {
   const c = typeof globalThis !== "undefined" ? globalThis.crypto : void 0;
   if (c && typeof c.randomUUID === "function") return c.randomUUID();
@@ -2646,6 +2655,7 @@ function RecordSheet(props) {
     };
   }, [props.open]);
   const stop = /* @__PURE__ */ __name(async () => {
+    void haptic("medium");
     const clip2 = await recordStop();
     if (clip2) props.onFinish(clip2);
     else props.onCancel();
@@ -3325,6 +3335,7 @@ function App() {
         setRecorder(await recorderAvailability());
         return;
       }
+      void haptic("medium");
       setDraftTitle("");
       setRecordOpen(true);
     } finally {

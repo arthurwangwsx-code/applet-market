@@ -63,7 +63,8 @@ export default function LocalLibrary({ ctx }) {
     return (
       <VirtualList
         items={list.map((track, i) => ({ ...track, key: track.localTrackId || `${i}` }))}
-        itemHeight={ROW_HEIGHT}
+        className="mu-scroll"
+        estimatedRowHeight={ROW_HEIGHT}
         header={(
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: `10px ${SPACE.s4}px` }}>
             <button type="button" className="mu-btn mu-press" onClick={() => setDrill(null)} style={{ color: C.accent }}>
@@ -72,7 +73,7 @@ export default function LocalLibrary({ ctx }) {
             <span style={{ fontSize: 17, fontWeight: 600 }}>{drill.title}</span>
           </div>
         )}
-        renderItem={(track, index) => (
+        renderRow={(track, index) => (
           <LocalTrackRow
             track={track}
             onClick={() => playFrom(list, index)}
@@ -91,7 +92,8 @@ export default function LocalLibrary({ ctx }) {
       items={mode === 'songs'
         ? tracks.map((track, i) => ({ ...track, key: track.localTrackId || `${i}` }))
         : rows.map((row) => ({ ...row, key: row.title }))}
-      itemHeight={mode === 'songs' ? ROW_HEIGHT : (mode === 'albums' ? 68 : 56)}
+      className="mu-scroll"
+      estimatedRowHeight={mode === 'songs' ? ROW_HEIGHT : (mode === 'albums' ? 68 : 56)}
       header={(
         <>
           <Toolbar t={t} scanning={state.scanning} onRescan={() => load({ scan: true })} />
@@ -122,7 +124,7 @@ export default function LocalLibrary({ ctx }) {
           </div>
         </>
       )}
-      renderItem={(row, index) => {
+      renderRow={(row, index) => {
         if (mode === 'songs') {
           return (
             <LocalTrackRow

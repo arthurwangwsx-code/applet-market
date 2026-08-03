@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.0.2",
+  "latestVersion": "1.0.3",
   "releases": [
+    {
+      "version": "1.0.3",
+      "releasedAt": "2026-08-03T05:09:44Z",
+      "notes": "本地资料库改用框架级虚拟列表 aibox/ui，删除内联的固定行高实现",
+      "fileCount": 34,
+      "totalBytes": 270320,
+      "path": "apps/com.aibox.music/releases/1.0.3",
+      "localizedNotes": {
+        "en": "Switch the local library list to the framework VirtualList from aibox/ui and drop the inline fixed-height implementation"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "07fa592951e2e4dbb56288e4242ecf9e1dcbb256f86d75ab19108e80f09a0767"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-08-03T04:05:17Z",

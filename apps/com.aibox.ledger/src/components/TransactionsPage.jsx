@@ -4,7 +4,9 @@
 import React from 'react'
 import Icon, { IconBadge } from './Icon.jsx'
 import { Card, Chip, Divider, EmptyState, Menu, SwipeRow } from './primitives.jsx'
-import { VirtualList } from './VirtualList.jsx'
+// 框架级虚拟列表（随运行时资产内置，不是 npm 包）。本地那份 133 行的同接口兜底已删除——
+// 它的文件头写着「等 aibox/ui 上架后换成这一行」，闸门早就放开了，只是没人回头采纳。
+import { VirtualList } from 'aibox/ui'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { KIND } from '../lib/store.js'
 import { groupByDay } from '../lib/entries.js'
@@ -278,9 +280,10 @@ export default function TransactionsPage({ ctx }) {
   return (
     <>
       <VirtualList
+        className="lg-scroll"
         style={{ flex: '1 1 auto' }}
         items={groups}
-        keyFor={(group) => group.day}
+        keyExtractor={(group) => group.day}
         estimatedRowHeight={140}
         restoreKey="transactions"
         header={header}

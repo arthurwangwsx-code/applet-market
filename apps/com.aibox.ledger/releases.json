@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.ledger",
-  "latestVersion": "1.0.2",
+  "latestVersion": "1.0.3",
   "releases": [
+    {
+      "version": "1.0.3",
+      "releasedAt": "2026-08-03T05:09:37Z",
+      "notes": "长列表改用框架级虚拟列表 aibox/ui（动态行高实测回填、行矩形接入原生手势层），删除本地兜底实现",
+      "fileCount": 47,
+      "totalBytes": 442395,
+      "path": "apps/com.aibox.ledger/releases/1.0.3",
+      "localizedNotes": {
+        "en": "Switch the transactions list to the framework VirtualList from aibox/ui and drop the local fallback"
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "ebfb5e9d85faa7ae6fb7bb13ff588083a82b52ebaf078be219ef1431f12c269b"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-08-03T04:05:16Z",

@@ -207,62 +207,14 @@ export function Artwork({
   )
 }
 
-/**
- * 虚拟列表。
- * 本应用**不能** `import { VirtualList } from 'aibox/ui'` —— 市场校验的离线裸模块白名单里没有它
- * （只有 react / react-dom / antd-mobile / chart.js），引用会在提交前被 validate.mjs 拒掉，
- * 运行时也会白屏。所以这里写一个**同接口**的等价实现；宿主哪天把 `aibox/ui` 放进白名单，
- * 只要接口一致就能整体替换。
- *
- * 接口：`<VirtualList items itemHeight renderItem overscan header footer />`
- */
-export function VirtualList({
-  items, itemHeight, renderItem, overscan = 6, header, footer, className = 'mu-scroll', style, onScroll,
-}) {
-  const ref = React.useRef(null)
-  const [scrollTop, setScrollTop] = React.useState(0)
-  const [viewport, setViewport] = React.useState(600)
-
-  React.useEffect(() => {
-    const element = ref.current
-    if (!element) return undefined
-    const measure = () => setViewport(element.clientHeight || 600)
-    measure()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
-  const total = items.length
-  const first = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan)
-  const visible = Math.min(total - first, Math.ceil(viewport / itemHeight) + overscan * 2)
-  const slice = items.slice(first, first + Math.max(0, visible))
-
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={style}
-      onScroll={(event) => {
-        setScrollTop(event.currentTarget.scrollTop)
-        if (onScroll) onScroll(event)
-      }}
-    >
-      {header}
-      <div style={{ height: total * itemHeight, position: 'relative' }}>
-        <div style={{ position: 'absolute', top: first * itemHeight, left: 0, right: 0 }}>
-          {slice.map((item, offset) => (
-            <div key={item.key || item.id || (first + offset)} style={{ height: itemHeight }}>
-              {renderItem(item, first + offset)}
-            </div>
-          ))}
-        </div>
-      </div>
-      {footer}
-    </div>
-  )
-}
+// 虚拟列表由框架提供（`aibox/ui`，随运行时资产内置，不是 npm 包）。这里曾有一份 ~55 行的同接口
+// 兜底，注释写着「宿主哪天把 aibox/ui 放进白名单就整体替换」—— 白名单早就放开了
+// （`AppletImportRules.bareWhitelist` 与 market 的 `BARE_IMPORT_ALLOWLIST` 两侧都有），
+// 只是没有任何机制把应用拉回来。框架版还多两样本地版给不了的：动态行高实测回填 + 把可见行矩形
+// 喂给原生手势层（§3.1）。
+//
+// 接口差异（换过来时调用方要改的两处）：`itemHeight` → `estimatedRowHeight`、`renderItem` → `renderRow`。
+export { VirtualList } from 'aibox/ui'
 
 /** 底部面板（自绘；宿主 sheet surface 不参与，纯页面内覆盖层）。 */
 export function Sheet({ open, onClose, title, leading, trailing, children }) {

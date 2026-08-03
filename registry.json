@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T04:25:12Z",
+  "updatedAt": "2026-08-03T05:09:44Z",
   "appCount": 7,
   "apps": [
     {
@@ -47,9 +47,9 @@
       "icon": "book.closed",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.0.2",
-      "latestReleasedAt": "2026-08-03T04:05:16Z",
-      "versionCount": 3,
+      "latestVersion": "1.0.3",
+      "latestReleasedAt": "2026-08-03T05:09:37Z",
+      "versionCount": 4,
       "capabilities": [
         "ai",
         "haptics",
@@ -88,9 +88,9 @@
       "icon": "music.note",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.0.2",
-      "latestReleasedAt": "2026-08-03T04:05:17Z",
-      "versionCount": 3,
+      "latestVersion": "1.0.3",
+      "latestReleasedAt": "2026-08-03T05:09:44Z",
+      "versionCount": 4,
       "capabilities": [
         "haptics",
         "music",

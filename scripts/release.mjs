@@ -4,6 +4,8 @@
 //   node scripts/release.mjs com.aibox.news 1.0.0 --notes "首个版本"
 //   node scripts/release.mjs com.aibox.news 1.0.1 --notes "修复分类计数" --min-host 1.1.0
 //   node scripts/release.mjs com.aibox.news 1.0.1 --force        # 覆盖已存在的同版本
+//   node scripts/release.mjs yank com.aibox.news 1.0.1 --reason "崩溃"   # 撤回一个已发布版本
+//   node scripts/release.mjs unyank com.aibox.news 1.0.1                 # 撤销撤回
 //
 // 发布前会先跑 validate.mjs；不绿就不发。
 
@@ -28,6 +30,7 @@ function parseArgs(argv) {
     else if (arg === '--notes') flags.notes = argv[++i]
     else if (arg === '--notes-en') flags.notesEN = argv[++i]
     else if (arg === '--min-host') flags.minHost = argv[++i]
+    else if (arg === '--reason') flags.reason = argv[++i]
     else if (arg.startsWith('-')) throw new Error(`未知参数 ${arg}`)
     else positional.push(arg)
   }
@@ -112,12 +115,73 @@ function runValidate(appId) {
   }
 }
 
+
+/**
+ * 撤回 / 撤销撤回一个已发布版本。
+ *
+ * ## 为什么是 yank 而不是删目录（协议 §7，裁定 D4）
+ *
+ * 删目录是**改写历史**：已经装了那一版的用户，客户端会认为市场「降级」了，而「用户装的到底是
+ * 哪一版」变成不可回答的问题——诊断复现、完整性校验全部依赖那些字节还在。
+ * 所以照抄 npm deprecate / crates.io yank 的成熟做法：**标记，不删除**。
+ *
+ * 语义（宿主侧由 `AppletMarketRelease.yanked` 消费）：
+ *  · `build-registry.mjs` 算 `latestVersion` 时跳过它 → 新用户不会再装到；
+ *  · 自动更新不会以它为目标；
+ *  · 详情页版本历史里显示为「已撤回」，仍可手动安装（这是降级路径，要额外确认）。
+ *
+ * ⚠️ 撤回**不会**让已经装了它的用户自动退回。用户侧的出口是应用详情页的「回到上一版」
+ *   （宿主 `AppletManifest.marketPreviousVersion`）。撤回只保证「不再扩散」。
+ */
+function yank(appId, version, { yanked, reason }) {
+  if (!appId || !version) {
+    throw new Error('用法：node scripts/release.mjs yank <appId> <version> [--reason "…"]')
+  }
+  const paths = appPaths(appId)
+  const dir = paths.releaseDir(version)
+  const releaseFile = path.join(dir, 'release.json')
+  const bundleFile = path.join(dir, 'bundle.json')
+  if (!fs.existsSync(releaseFile)) {
+    throw new Error(`${appId} 没有已发布的 ${version}（找不到 ${releaseFile}）`)
+  }
+  const published = listReleaseVersions(appId)
+  if (yanked && published.length === 1) {
+    warn(`${appId} 只有这一个版本；撤回后市场里它会变成一个装不到最新版的应用`)
+  }
+  // 两个文件都要改：`build-registry.mjs` 读 release.json 建索引，而 bundle.json 是宿主真正下载的
+  // 那一份——只改一个会让「索引说撤回了、包里没说」，正是 bundleSha256 要防的那种分叉。
+  for (const file of [releaseFile, bundleFile]) {
+    if (!fs.existsSync(file)) continue
+    const value = readJSON(file)
+    if (yanked) {
+      value.yanked = true
+      if (reason) value.yankedReason = reason
+      else delete value.yankedReason
+    } else {
+      delete value.yanked
+      delete value.yankedReason
+    }
+    writeJSON(file, value)
+  }
+  ok(`${yanked ? '已撤回' : '已撤销撤回'} ${appId} ${version}`)
+  if (yanked && reason) info(`理由：${reason}`)
+  rebuild({ quiet: true })
+  ok('registry.json / releases.json 已刷新')
+  info(`已装用户不会自动退回——他们的出口是应用详情页的「回到上一版」`)
+  info(`提交：git add -A && git commit -m "${yanked ? 'yank' : 'unyank'}(${appId}): ${version}"`)
+}
+
 function main() {
   const { positional, flags } = parseArgs(process.argv.slice(2))
   if (flags.dryRunLatest) return dryRunLatest()
+  if (positional[0] === 'yank' || positional[0] === 'unyank') {
+    return yank(positional[1], positional[2],
+                { yanked: positional[0] === 'yank', reason: flags.reason })
+  }
   const [appId, version] = positional
   if (!appId || !version) {
-    throw new Error('用法：node scripts/release.mjs <appId> <version> [--notes "…"] [--min-host x.y.z] [--force]')
+    throw new Error('用法：node scripts/release.mjs <appId> <version> [--notes "…"] [--min-host x.y.z] [--force]\n'
+      + '      撤回：node scripts/release.mjs yank <appId> <version> [--reason "…"]')
   }
   if (!parseSemver(version)) throw new Error(`版本号必须是 semver：${version}`)
 

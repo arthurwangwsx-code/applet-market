@@ -23,6 +23,9 @@
         "tabs",
         "toolbar"
       ],
+      "latestTotalBytes": 431597,
+      "latestFileCount": 46,
+      "runtimeKind": "source",
       "path": "apps/com.aibox.finance",
       "localizedNames": {
         "en": "Finance"
@@ -61,6 +64,9 @@
         "toolbar",
         "ui"
       ],
+      "latestTotalBytes": 442395,
+      "latestFileCount": 47,
+      "runtimeKind": "source",
       "path": "apps/com.aibox.ledger",
       "localizedNames": {
         "en": "Ledger"
@@ -102,6 +108,9 @@
         "toolbar",
         "ui"
       ],
+      "latestTotalBytes": 270320,
+      "latestFileCount": 34,
+      "runtimeKind": "source",
       "path": "apps/com.aibox.music",
       "localizedNames": {
         "en": "Music"
@@ -140,6 +149,9 @@
         "tools",
         "tts"
       ],
+      "latestTotalBytes": 269104,
+      "latestFileCount": 40,
+      "runtimeKind": "source",
       "path": "apps/com.aibox.news",
       "localizedNames": {
         "en": "News"
@@ -172,6 +184,9 @@
         "storage",
         "toast"
       ],
+      "latestTotalBytes": 28664,
+      "latestFileCount": 4,
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.timer",
       "localizedNames": {
         "en": "Timer"
@@ -210,6 +225,9 @@
         "ui",
         "voiceMemos"
       ],
+      "latestTotalBytes": 186503,
+      "latestFileCount": 4,
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",
       "localizedNames": {
         "en": "Voice Memos"
@@ -240,6 +258,9 @@
         "tts",
         "ui"
       ],
+      "latestTotalBytes": 166846,
+      "latestFileCount": 3,
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.wordstudy",
       "localizedNames": {
         "en": "Word Study"

@@ -33,6 +33,13 @@ function buildReleasesIndex(appId) {
     }
     if (release.localizedNotes) entry.localizedNotes = release.localizedNotes
     if (release.minHostVersion) entry.minHostVersion = release.minHostVersion
+    // 撤回标记住在 release.json 里（`release.mjs yank` 写的），索引只是把它透出去。
+    // **字节永远留在仓库里**：已装用户的完整性校验与诊断复现都依赖它，删目录会让
+    // 「用户装的到底是哪一版」变成不可回答的问题。撤回不是删除。
+    if (release.yanked) {
+      entry.yanked = true
+      if (release.yankedReason) entry.yankedReason = release.yankedReason
+    }
     if (fs.existsSync(bundleFile)) {
       entry.bundleSha256 = sha256(fs.readFileSync(bundleFile))
     }
@@ -40,13 +47,17 @@ function buildReleasesIndex(appId) {
   }
   if (releases.length === 0) return null
 
+  // latest 跳过已撤回的版本——撤回的意思就是「不要再让新用户装到它」。
+  // 全部都被撤回时回落到最新那一条：没有 latestVersion 的应用在客户端是一张点不动的卡片，
+  // 比诚实地显示一个「已撤回」的版本更糟。
+  const latest = releases.find((r) => !r.yanked) ?? releases[0]
   writeJSON(paths.releasesJSON, {
     schemaVersion: SCHEMA_VERSION,
     appId,
-    latestVersion: releases[0].version,
+    latestVersion: latest.version,
     releases,
   })
-  return releases[0]
+  return latest
 }
 
 function buildRegistryEntry(appId) {
@@ -84,14 +95,26 @@ function buildRegistryEntry(appId) {
     latestReleasedAt: latest.releasedAt,
     versionCount: listReleaseVersions(appId).length,
     capabilities,
+    // 协议 v1.1：装之前用户就该知道**要下多少**、**几个文件**、**跑起来要不要在设备上转译**。
+    // 这三条以前只能点进详情再拉一次 releases.json 才拿得到，于是列表阶段完全看不见体积。
+    latestTotalBytes: latest.totalBytes ?? 0,
+    latestFileCount: latest.fileCount ?? 0,
+    // **宿主的 `effectiveRuntimeKind`，不是本地打包判据**。
+    // 本地按「有没有 package.json」决定怎么打包；宿主按 manifest 的声明决定要不要转译。
+    // 这里要回答的是后者——未声明时宿主一律按 `source` 处理（会加载 296KB 转译器），
+    // 所以回落成 `source` 是如实转述宿主行为，不是猜测。
+    runtimeKind: manifest.runtimeKind ?? 'source',
     path: paths.relative,
   }
   if (meta.localizedNames) entry.localizedNames = meta.localizedNames
   if (meta.localizedSummaries) entry.localizedSummaries = meta.localizedSummaries
   if (meta.iconTintHex ?? manifest.iconTintHex) entry.iconTintHex = meta.iconTintHex ?? manifest.iconTintHex
   if (meta.tags?.length) entry.tags = meta.tags
-  if (latest.minHostVersion ?? meta.minHostVersion) {
-    entry.minHostVersion = latest.minHostVersion ?? meta.minHostVersion
+  // ⚠️ **只取 latest（= 冻结在包里的那一份）**，不回落 `app.json`。
+  // 安装门用的是 `bundle.minHostVersion`；`app.json` 后来加的要求旧包里并不存在，
+  // 回落会让 registry 展示一个包里没有的要求，列表提示与实际安装判定就此不一致。
+  if (latest.minHostVersion) {
+    entry.minHostVersion = latest.minHostVersion
   }
   if (meta.homepage) entry.homepage = meta.homepage
   return entry

@@ -1,3 +1,4 @@
+/// <reference path="./generated/aibox-global.d.ts" />
 /**
  * `@aibox/applet-sdk` —— AiBox 小应用的前端 SDK。
  *

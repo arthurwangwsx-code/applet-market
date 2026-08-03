@@ -4,7 +4,27 @@
 
 ---
 
-## 0. 三分钟起步
+## 0. 先选一条路
+
+| | **TypeScript + Vite（推荐）** | 纯 JSX（快速原型） |
+|---|---|---|
+| 适合 | 要发布、要维护、有业务逻辑的应用 | 试想法、一次性小工具、AI 在设备上直接写 |
+| 类型 | 全量 `aibox.*` 类型 + manifest action 编译期校验 | 无 |
+| 上传的是 | 构建产物，**设备上零转译** | 源码，每次加载浏览器内 Sucrase 转译 |
+| 改一行 | 要重新 `vite build` | 存盘即生效 |
+| manifest 与代码对齐 | tsc 保证 | 全靠自觉 |
+| 文档 | **[typescript-workflow.md](typescript-workflow.md)** | 本文 |
+
+**新应用默认走 TS 工程**：`cp -r apps/com.aibox.timer apps/com.aibox.<你的>`，
+timer 就是为 fork 准备的范例。完整流程见 [typescript-workflow.md](typescript-workflow.md)。
+
+纯 JSX 没有废弃，也不会废弃——它是 AI 在设备上直接改代码那条链路的形态，
+「零构建、存盘即生效」在那个场景里不可替代。本文其余部分讲的是这条路径，
+其中 §1 的运行时约束、§2 的平台能力、§3 的 manifest 两条路径**完全通用**。
+
+---
+
+## 0.1 三分钟起步（纯 JSX）
 
 ```bash
 node scripts/new-app.mjs com.aibox.weather --name "天气" --name-en "Weather" \
@@ -41,10 +61,18 @@ Sucrase 即时转译 JSX——**没有构建步骤**，你写的 `.jsx` 原样�
   没有 date-fns、没有 lodash、没有 axios。需要什么自己手写。
   （`validate.mjs` 会在提交前拦下来，别绕过它。）
 - **antd-mobile 子路径**：只能 `from 'antd-mobile'`，`from 'antd-mobile/es/components/button'` 会 404。
-- **`index.html`**：由系统托管、不落盘、**你写不了也不该写**。挂载、import map、CSP 全由宿主生成。
+- **`chart.js/auto` 与 `react/jsx-dev-runtime`**：都**不在** import map 里（2026-08-03 前市场白名单
+  误列了这两条，会放过一个装上就白屏的包，已修）。图表用
+  `import { Chart, registerables } from 'chart.js'` + `Chart.register(...registerables)`。
+- **`index.html`**：源码型应用**不要自己写**。挂载、import map、CSP 全由宿主外壳负责，
   你只写 `app.jsx`（`export default function App`）以及它 import 的文件。
-  历史上 AI 反复「去修 index.html」把离线 import map 换成 CDN URL，然后整个应用白屏——所以这条被
-  结构性锁死了。
+  历史上 AI 反复「去修 index.html」把离线 import map 换成 CDN URL，然后整个应用白屏。
+
+  > ⚠️ **但市场包必须自带 `index.html`。** 补默认外壳的逻辑只在 `.aiboxapplet` 导入路径
+  > （`AppletVerifySideload.commit`）里；**市场安装器 `AppletMarketInstaller.install` 是把包内
+  > 文件原样落盘、不做任何补齐**。所以 `manifest.entry` 指向的文件必须真的在包里，否则装上去
+  > 打开就是 404 空白页。`validate.mjs` 现在会检查这一条（构建型工程是硬错误；
+  > 源码型是提醒，因为存量包就是这个状态）。
 - **`Toast.show` 渲染为空**（antd-mobile 在这个宿主下的已知 quirk）。要弹提示用
   `Dialog.alert` / `Dialog.confirm`。
 - **页面直连网络**：CSP + ContentRuleList 双闸锁死。联网只能走 `aibox.net.fetch`。
@@ -208,3 +236,71 @@ CI 会检查索引与磁盘真值是否一致，漏提交会红。
 - [ ] 可选能力（AI / TTS / 浏览器）先探测再渲染入口
 - [ ] 底部内容不被 Tab 栏遮住（用 `env(safe-area-inset-bottom)`）
 - [ ] 中英双语都填了（如果面向双语用户）
+
+---
+
+## 7. 从纯 JSX 迁移到 TS 工程
+
+已发布的应用可以迁，**已发布版本不受影响**（发新版本即可，`data/` 用户数据在更新时保留）。
+
+```bash
+node scripts/migrate-to-ts.mjs <appId> --dry-run                       # 只出报告
+node scripts/migrate-to-ts.mjs <appId> --out .migrate-preview/<appId>  # 迁到副本 + 跑 tsc
+node scripts/migrate-to-ts.mjs <appId> --in-place --force              # 就地迁（会删旧 .jsx/.js）
+```
+
+### 工具做什么
+
+1. `.jsx → .tsx`、`.js → .ts`，相对 import 的扩展名同步去掉
+2. 入口 `app.jsx → src/App.tsx`，新建 `src/main.tsx`（自挂载 + default 导出，两种外壳都能跑）
+3. 生成 `package.json` / `tsconfig.json` / `vite.config.ts` / `index.html`
+4. **把手写的 `src/lib/host.js` 封装指向 SDK** —— 这是迁移的主要收益
+5. manifest 补 `"runtimeKind": "bundle"`
+6. 跑 `tsc --noEmit`，把类型错误如实列出来
+
+### 迁移的真正工作量在哪
+
+现有四个应用各自写了一份 `src/lib/host.js`，导出面惊人地一致：
+`hasNamespace` / `capabilities` / `storage` / `onEvent` / `aiAvailability` / `aiGenerate` /
+`registerAction` / `shareFile`……**四份独立实现的同一个东西**，正是 SDK 要取代的那一层。
+
+所以迁移不是逐个改写调用点（调用点全都 import 自这个封装），而是
+**删掉封装、把消费者指向 SDK**，只把应用自有的业务胶水（`openArticle`、`classifyMusicError`
+这类）留下。
+
+### 类型错误是预期的
+
+以 `com.aibox.news`（38 个文件）实测：
+
+| 档位 | 错误数 |
+|---|---|
+| 默认严格档 | 1025 |
+| 关掉 `noImplicitAny` + `strictNullChecks` | 478 |
+
+差额（~547 条）全是 `TS7006`/`TS7031`「参数隐式 any」——**加类型注解**就没了，是机械工作。
+剩下 478 条里 278 条是 `TS2339`「属性不存在」，那是 TS 在真的发现问题：
+未类型化的对象字面量在各处形状不一致。**这些正是迁移的价值所在，不是失败。**
+
+推荐节奏：
+1. 先用工具生成的 `tsconfig.json`（已关掉 `noUnusedLocals`/`noUnusedParameters`）让工程编起来
+2. 临时加 `"noImplicitAny": false`，先把 478 条真问题清掉
+3. 逐目录打开严格档（`lib/` → `components/` → 入口），每次一个目录
+4. 全绿后删掉 tsconfig 里的迁移期放宽段
+
+### 一个已发布应用换运行时形态，安全吗
+
+安全，三条依据：
+
+1. **发新版本即可**（如 `com.aibox.news` 1.0.0 → 1.1.0）。appId 不变，宿主按
+   `marketSourceID + marketAppID` 认「同一个应用」，走更新路径。
+2. **用户数据保留**：`AppletMarketInstaller.install` 在写完包内容后会把本机 `data/`
+   （`aibox.storage` 的 kv + db）复制回 staging，**用户数据永远赢**。源码文件全量换掉不影响它。
+3. **老宿主装到 `runtimeKind: "bundle"` 的包不会坏**：
+   - `AppletManifest` 用合成 Codable，不认识的键**静默忽略** → 老宿主把它当普通 manifest
+   - 转译决定权在**包自带的 `index.html`** 里，不在宿主：我们的外壳用原生 module 脚本，
+     根本不加载 es-module-shims，Sucrase 无从介入
+   - 即便退一万步走了转译钩子：钩子的判据是 `/\.(jsx|tsx|ts)(\?|$)/`，产物叫 `app.js`，**不匹配**
+
+   所以**不需要 `minHostVersion` 卡版本**。（实测补充：如果真把产物喂给 Sucrase，
+   它不是逐字节放行——会把 `?.` / `??` 降级成 helper 函数，产物 +9%，但语法仍合法、
+   import 保持不变。也就是说最坏情况是白付一次转译开销，不是坏掉。）

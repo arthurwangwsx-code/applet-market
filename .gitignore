@@ -1,3 +1,6 @@
 .DS_Store
 node_modules/
 *.log
+
+# 迁移预览产物（migrate-to-ts.mjs --out）
+.migrate-preview/

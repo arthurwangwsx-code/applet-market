@@ -284,6 +284,17 @@ function validateBuiltShape(appId, manifest, names) {
     if (/\bsrc=["']\/(?!\/)/.test(html)) {
       err(appId, 'dist/index.html 里有绝对路径引用（src="/…"）——宿主伺服在 applet://localhost/<appId>/ 下，绝对路径会跨出应用目录。设 base: "./"。')
     }
+    // bundle 形态用原生 module 脚本；出现 shim 标签说明这其实是源码型外壳被贴了 bundle 标签，
+    // 于是产物会被白白喂一遍 Sucrase（实测 +9% 体积、语义不变，纯浪费）。
+    // 按**标签**判而不是按字符串判：注释里提到 "es-module-shims" 这个名字是正常的。
+    if (/<script[^>]+type=["'](?:module-shim|importmap-shim)["']/.test(html)
+        || /<script[^>]+src=["'][^"']*es-module-shims/.test(html)) {
+      err(appId, 'dist/index.html 用的是源码型外壳（module-shim / es-module-shims），与 runtimeKind=bundle 矛盾。'
+        + '预构建产物应当用原生 <script type="module"> + 原生 importmap，一行都不该转译。')
+    }
+    if (!/<script[^>]+type=["']module["']/.test(html)) {
+      err(appId, 'dist/index.html 里没有原生 module 脚本标签 —— 没有任何东西会加载构建产物。')
+    }
   }
 }
 

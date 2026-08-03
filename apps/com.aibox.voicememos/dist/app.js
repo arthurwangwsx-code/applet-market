@@ -3,21 +3,22 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 import { useState, useEffect, useMemo, useCallback, useRef, createElement, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { jsx, jsxs, Fragment } from "react/jsx-runtime";
-function bridge() {
+import { useListGestures } from "aibox/ui";
+function bridge$1() {
   try {
     return typeof window !== "undefined" ? window.aibox : void 0;
   } catch {
     return void 0;
   }
 }
-__name(bridge, "bridge");
+__name(bridge$1, "bridge$1");
 function useBridgeEvent(namespace, event, handler, enabled = true) {
   const latest = useRef(handler);
   latest.current = handler;
   useEffect(() => {
     if (!enabled)
       return void 0;
-    const host = bridge();
+    const host = bridge$1();
     const ns = host?.[namespace];
     if (!ns || typeof ns.on !== "function")
       return void 0;
@@ -42,7 +43,7 @@ function useTabs() {
   const [state, setState] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    const host = bridge();
+    const host = bridge$1();
     if (!host?.tabs)
       return void 0;
     host.tabs.getState().then((next) => {
@@ -55,13 +56,13 @@ function useTabs() {
   }, []);
   useBridgeEvent("tabs", "changed", (payload) => setState(payload));
   const select = useCallback((id) => {
-    const host = bridge();
+    const host = bridge$1();
     if (!host?.tabs)
       return;
     host.tabs.select(id).then(setState).catch(() => void 0);
   }, []);
   const setBadge = useCallback((id, badge) => {
-    const host = bridge();
+    const host = bridge$1();
     if (!host?.tabs)
       return;
     host.tabs.update({ items: { [id]: { badge } } }).then(setState).catch(() => void 0);
@@ -99,7 +100,7 @@ function useScene() {
   const [state, setState] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    const host = bridge();
+    const host = bridge$1();
     if (!host?.scene)
       return void 0;
     host.scene.getState().then((next) => {
@@ -307,7 +308,7 @@ function normalizeError(value) {
 }
 __name(normalizeError, "normalizeError");
 function registerActions(handlers) {
-  const host = bridge();
+  const host = bridge$1();
   if (!host?.action || typeof host.action.register !== "function")
     return;
   for (const [name, handler] of Object.entries(handlers)) {
@@ -1106,6 +1107,7 @@ function Sheet(props) {
 }
 __name(Sheet, "Sheet");
 function PushPage(props) {
+  const chrome = props.chrome !== false;
   return /* @__PURE__ */ jsxs(
     "div",
     {
@@ -1118,7 +1120,7 @@ function PushPage(props) {
         flexDirection: "column"
       },
       children: [
-        /* @__PURE__ */ jsxs(
+        chrome ? /* @__PURE__ */ jsxs(
           "div",
           {
             style: {
@@ -1144,7 +1146,8 @@ function PushPage(props) {
               props.trailing
             ]
           }
-        ),
+        ) : null,
+        !chrome && props.trailing ? /* @__PURE__ */ jsx("div", { style: { display: "flex", justifyContent: "flex-end", padding: "6px 12px 0" }, children: props.trailing }) : null,
         /* @__PURE__ */ jsx("div", { style: { flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }, children: props.children })
       ]
     }
@@ -1413,9 +1416,87 @@ function filterIsActive(filter) {
   return filter.duration !== "any" || filter.date !== "all" || filter.favOnly || filter.withTranscript;
 }
 __name(filterIsActive, "filterIsActive");
+const HEARTBEAT_MS = 280;
+const MAX_ROWS = 120;
+function useRowGestures(regionId, config = {}) {
+  const { rendered, available, onVisibleRowsChange } = useListGestures(regionId, config);
+  const containerRef = useRef(null);
+  const reportRef = useRef(onVisibleRowsChange);
+  reportRef.current = onVisibleRowsChange;
+  useEffect(() => {
+    if (!rendered) return void 0;
+    let frame = 0;
+    const report = /* @__PURE__ */ __name(() => {
+      frame = 0;
+      const node2 = containerRef.current;
+      if (!node2) return;
+      const viewport = window.innerHeight || 0;
+      const rows = [];
+      const nodes = node2.querySelectorAll("[data-row-id]");
+      for (let i = 0; i < nodes.length && rows.length < MAX_ROWS; i += 1) {
+        const element = nodes[i];
+        const rect = element.getBoundingClientRect();
+        if (rect.height <= 0 || rect.bottom < -40 || rect.top > viewport + 40) continue;
+        rows.push({ id: element.getAttribute("data-row-id"), rect: [rect.left, rect.top, rect.width, rect.height] });
+      }
+      reportRef.current(rows);
+    }, "report");
+    const schedule = /* @__PURE__ */ __name(() => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(report);
+    }, "schedule");
+    report();
+    const timer = window.setInterval(report, HEARTBEAT_MS);
+    const node = containerRef.current;
+    if (node) node.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("scroll", schedule, { passive: true, capture: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      window.clearInterval(timer);
+      if (frame) window.cancelAnimationFrame(frame);
+      if (node) node.removeEventListener("scroll", schedule);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [rendered, regionId]);
+  const regionProps = useMemo(() => ({
+    ref: containerRef,
+    "data-region-id": regionId
+  }), [regionId]);
+  return { rendered, available, regionProps };
+}
+__name(useRowGestures, "useRowGestures");
 function MemoList(props) {
   const { palette: palette2, t } = props;
   const rows = useMemo(() => applyFilter(props.memos, props.filter, props.query), [props.memos, props.filter, props.query]);
+  const gestures = useRowGestures(props.regionId || "memos", {
+    contextMenu: [
+      { id: "share", title: t("shareAudio"), icon: "square.and.arrow.up" },
+      { id: "rename", title: t("rename"), icon: "pencil" },
+      { id: "transcribe", title: t("startTranscription"), icon: "waveform.and.mic" },
+      { id: "copy", title: t("copyTranscript"), icon: "doc.on.doc" },
+      { id: "fav", title: t("favourite"), icon: "star" },
+      { id: "delete", title: t("moveToTrash"), icon: "trash", role: "destructive" }
+    ],
+    leadingSwipe: [{ id: "fav", title: t("favourite"), icon: "star", tint: "accent" }],
+    trailingSwipe: [{ id: "delete", title: t("moveToTrash"), icon: "trash", role: "destructive" }],
+    // 逐行展示态：已转写的行不该出现「发起转录」，没转写的行不该出现「复制转写」，
+    // 已收藏的行标题要变成「取消收藏」——身份不变，只改显示（合同同 `aibox.menu`）。
+    rowOverrides: /* @__PURE__ */ __name((rowId) => {
+      const memo = rows.find((row) => row.id === rowId);
+      if (!memo) return null;
+      return {
+        transcribe: { hidden: memo.hasTranscript },
+        copy: { hidden: !memo.hasTranscript },
+        fav: { title: memo.isFavourite ? t("unfavourite") : t("favourite"), icon: memo.isFavourite ? "star.slash" : "star" },
+        share: { hidden: !memo.hasAudio }
+      };
+    }, "rowOverrides"),
+    onAction: /* @__PURE__ */ __name(({ rowId, actionId }) => {
+      const memo = rows.find((row) => row.id === rowId);
+      if (memo) props.onAction?.(memo, actionId);
+    }, "onAction")
+  });
   if (rows.length === 0) {
     const filtered = props.query.trim() !== "" || filterIsActive(props.filter);
     if (filtered && props.memos.length > 0) {
@@ -1432,7 +1513,7 @@ function MemoList(props) {
       /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: palette2.muted, marginTop: 6 }, children: props.scoped ? t("emptyScopedBody") : t("emptyBody") })
     ] });
   }
-  return /* @__PURE__ */ jsx("div", { children: rows.map((memo) => /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsx("div", { ...gestures.regionProps, children: rows.map((memo) => /* @__PURE__ */ jsx(
     MemoRow,
     {
       palette: palette2,
@@ -1440,8 +1521,9 @@ function MemoList(props) {
       dark: props.dark,
       memo,
       busy: props.busyIDs[memo.id],
+      rowId: memo.id,
       onOpen: /* @__PURE__ */ __name(() => props.onOpen(memo), "onOpen"),
-      onMenu: /* @__PURE__ */ __name(() => props.onMenu(memo), "onMenu")
+      onMenu: gestures.rendered ? void 0 : () => props.onMenu(memo)
     },
     memo.id
   )) });
@@ -1452,7 +1534,7 @@ function MemoRow(props) {
   const tint = memo.hasAudio ? palette2.accent : palette2.muted;
   let pressTimer = null;
   const startPress = /* @__PURE__ */ __name(() => {
-    pressTimer = window.setTimeout(props.onMenu, 550);
+    if (props.onMenu) pressTimer = window.setTimeout(props.onMenu, 550);
   }, "startPress");
   const endPress = /* @__PURE__ */ __name(() => {
     if (pressTimer !== null) {
@@ -1464,13 +1546,14 @@ function MemoRow(props) {
     "div",
     {
       role: "button",
+      "data-row-id": props.rowId,
       onClick: props.onOpen,
       onPointerDown: startPress,
       onPointerUp: endPress,
       onPointerLeave: endPress,
       onContextMenu: /* @__PURE__ */ __name((event) => {
         event.preventDefault();
-        props.onMenu();
+        props.onMenu?.();
       }, "onContextMenu"),
       style: {
         display: "flex",
@@ -1819,7 +1902,7 @@ function MemoDetail(props) {
     void runSummary(context, props.settings.defaultTemplate, setError);
   }, [artifacts?.memoID, text2, props.settings.autoSummarize]);
   const status = transcribing ? "inProgress" : transcript?.status ?? "none";
-  return /* @__PURE__ */ jsx(PushPage, { palette: palette2, title: memo.title, onBack: props.onBack, trailing: /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }), children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
+  return /* @__PURE__ */ jsx(PushPage, { palette: palette2, title: memo.title, onBack: props.onBack, chrome: props.chrome, trailing: /* @__PURE__ */ jsx(MoreButton, { palette: palette2, onClick: /* @__PURE__ */ __name(() => props.onMenu(context), "onClick") }), children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
     !memo.hasAudio ? /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }, children: [
       /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, fontWeight: 500, color: palette2.orange }, children: [
         /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 13 }),
@@ -1875,9 +1958,20 @@ function MemoDetail(props) {
         }
       ) }) : null
     ] }) : null,
-    /* @__PURE__ */ jsx(ClipPlayer, { palette: palette2, t, memo, onSeekReady: /* @__PURE__ */ __name((seek) => {
-      seekRef.current = seek;
-    }, "onSeekReady") })
+    /* @__PURE__ */ jsx(
+      ClipPlayer,
+      {
+        palette: palette2,
+        t,
+        memo,
+        onSeekReady: /* @__PURE__ */ __name((seek) => {
+          seekRef.current = seek;
+        }, "onSeekReady"),
+        overlayRendered: Boolean(props.overlayRendered),
+        overlayUpdate: props.overlayUpdate,
+        registerPlayerCommand: props.registerPlayerCommand
+      }
+    )
   ] }) });
 }
 __name(MemoDetail, "MemoDetail");
@@ -2389,6 +2483,53 @@ function ClipPlayer(props) {
       setPosition(value);
     });
   }, []);
+  const toggle = /* @__PURE__ */ __name(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      void audio.play();
+      setPlaying(true);
+    }
+  }, "toggle");
+  const skip = /* @__PURE__ */ __name((delta) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const value = Math.max(0, Math.min(duration || audio.duration || 0, position + delta));
+    audio.currentTime = value;
+    setPosition(value);
+  }, "skip");
+  useEffect(() => {
+    if (!props.registerPlayerCommand) return void 0;
+    props.registerPlayerCommand((command) => {
+      if (command === "toggle") toggle();
+      else if (command === "back15") skip(-15);
+      else if (command === "forward15") skip(15);
+    });
+    return () => props.registerPlayerCommand?.(null);
+  });
+  const barProgress = duration > 0 ? Math.round(position / duration * 100) / 100 : 0;
+  const sentSignature = useRef("");
+  useEffect(() => {
+    if (!props.overlayRendered || !props.overlayUpdate) return;
+    const signature = `${memo.id}|${playing}|${barProgress}|${memo.hasAudio}`;
+    if (sentSignature.current === signature) return;
+    sentSignature.current = signature;
+    props.overlayUpdate({
+      player: {
+        hidden: !memo.hasAudio,
+        title: memo.title,
+        subtitle: clockFlat(position),
+        progress: barProgress,
+        controls: { toggle: { active: playing } }
+      }
+    });
+  });
+  useEffect(() => () => {
+    props.overlayUpdate?.({ player: { hidden: true } });
+  }, []);
   if (!memo.hasAudio) {
     return /* @__PURE__ */ jsxs("div", { style: { background: alpha(palette2.surface, 0.9), padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s4}px`, textAlign: "center" }, children: [
       /* @__PURE__ */ jsx(Icon, { name: "waveform.slash", size: 20, color: palette2.muted }),
@@ -2429,7 +2570,7 @@ function ClipPlayer(props) {
         style: { width: "100%", accentColor: palette2.accent }
       }
     ),
-    /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: SPACE.s3 }, children: [
+    /* @__PURE__ */ jsxs("div", { style: { display: props.overlayRendered ? "none" : "flex", alignItems: "center", justifyContent: "center", gap: SPACE.s3 }, children: [
       /* @__PURE__ */ jsx("span", { style: { fontSize: 12, color: palette2.muted, minWidth: 38, fontFamily: "ui-monospace, monospace" }, children: clockFlat(position) }),
       /* @__PURE__ */ jsx(
         "button",
@@ -2796,6 +2937,164 @@ function roundRect(context, x, y, w, h, r) {
   context.fill();
 }
 __name(roundRect, "roundRect");
+const bridge = /* @__PURE__ */ __name(() => typeof window !== "undefined" ? window.aibox : void 0, "bridge");
+function hostNavigation() {
+  const api2 = bridge();
+  return api2 && api2.navigation || null;
+}
+__name(hostNavigation, "hostNavigation");
+function historyDepth() {
+  try {
+    const state = window.history.state;
+    const marked = state ? Number(state.__aiboxDepth) : NaN;
+    return Number.isFinite(marked) ? Math.max(0, marked) : null;
+  } catch {
+    return null;
+  }
+}
+__name(historyDepth, "historyDepth");
+async function hostPush(path, title) {
+  const nav = hostNavigation();
+  if (!nav || typeof nav.push !== "function") return false;
+  try {
+    await nav.push(title ? { route: path, title } : { route: path });
+  } catch {
+    return false;
+  }
+  if (typeof nav.getState === "function") {
+    try {
+      await nav.getState();
+    } catch {
+    }
+  }
+  return true;
+}
+__name(hostPush, "hostPush");
+function hostBack() {
+  const nav = hostNavigation();
+  if (nav && typeof nav.back === "function") {
+    try {
+      nav.back().catch(() => {
+      });
+    } catch {
+      return false;
+    }
+    return true;
+  }
+  if (typeof window !== "undefined" && window.history) {
+    window.history.back();
+    return true;
+  }
+  return false;
+}
+__name(hostBack, "hostBack");
+function hostPopToRoot() {
+  const nav = hostNavigation();
+  if (nav && typeof nav.popToRoot === "function") {
+    try {
+      nav.popToRoot().catch(() => {
+      });
+    } catch {
+    }
+    return;
+  }
+  const depth = historyDepth();
+  if (typeof window !== "undefined" && window.history && depth) window.history.go(-depth);
+}
+__name(hostPopToRoot, "hostPopToRoot");
+function setNavigationTitle(title) {
+  const nav = hostNavigation();
+  if (!nav || typeof nav.setTitle !== "function") return;
+  try {
+    const result = nav.setTitle(title);
+    if (result && typeof result.catch === "function") result.catch(() => {
+    });
+  } catch {
+  }
+}
+__name(setNavigationTitle, "setNavigationTitle");
+function useSubpageStack(options) {
+  const configRef = useRef(options);
+  configRef.current = options;
+  const [stack, setStack] = useState([]);
+  useEffect(() => {
+    const onPopState = /* @__PURE__ */ __name(() => {
+      const depth = historyDepth();
+      setStack((rows) => {
+        const target = depth === null ? rows.length - 1 : depth;
+        const clamped = Math.max(0, Math.min(rows.length, target));
+        return clamped === rows.length ? rows : rows.slice(0, clamped);
+      });
+    }, "onPopState");
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+  const push = useCallback((route) => {
+    const { pathFor, titleFor } = configRef.current;
+    void hostPush(pathFor(route), titleFor(route)).then(() => setStack((rows) => [...rows, route]));
+  }, []);
+  const back = useCallback(() => {
+    const depth = historyDepth();
+    if (depth !== null && depth > 0 && hostBack()) return;
+    setStack((rows) => rows.slice(0, -1));
+  }, []);
+  const reset = useCallback(() => {
+    const depth = historyDepth();
+    if (depth) hostPopToRoot();
+    setStack((rows) => rows.length === 0 ? rows : []);
+  }, []);
+  return { stack, route: stack.length > 0 ? stack[stack.length - 1] : null, push, back, reset };
+}
+__name(useSubpageStack, "useSubpageStack");
+function useOverlay(onInvoke) {
+  const [rendered, setRendered] = useState(false);
+  const handler = useRef(onInvoke);
+  handler.current = onInvoke;
+  useEffect(() => {
+    const api2 = bridge();
+    const overlay = api2 && api2.overlay;
+    if (!overlay || typeof overlay.getState !== "function") return void 0;
+    let cancelled = false;
+    const offs = [];
+    overlay.getState().then((state) => {
+      if (!cancelled) setRendered(!!(state && state.rendered));
+    }).catch(() => void 0);
+    if (typeof overlay.on === "function") {
+      try {
+        offs.push(overlay.on("invoke", (event) => handler.current(event || {})));
+      } catch {
+      }
+      try {
+        offs.push(overlay.on("changed", (state) => {
+          if (!cancelled) setRendered(!!(state && state.rendered));
+        }));
+      } catch {
+      }
+    }
+    return () => {
+      cancelled = true;
+      offs.forEach((off) => {
+        try {
+          if (typeof off === "function") off();
+        } catch {
+        }
+      });
+    };
+  }, []);
+  const update = useCallback((items) => {
+    const api2 = bridge();
+    const overlay = api2 && api2.overlay;
+    if (!overlay || typeof overlay.update !== "function") return;
+    try {
+      const result = overlay.update({ items });
+      if (result && typeof result.catch === "function") result.catch(() => {
+      });
+    } catch {
+    }
+  }, []);
+  return { rendered, update };
+}
+__name(useOverlay, "useOverlay");
 function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -3245,6 +3544,12 @@ function useMemoStore() {
   };
 }
 __name(useMemoStore, "useMemoStore");
+function routePath(route) {
+  if (route.kind === "detail") return `#/memo/${encodeURIComponent(route.memo.id)}`;
+  if (route.kind === "scoped") return `#/list/${route.scope}`;
+  return "#/trash";
+}
+__name(routePath, "routePath");
 function App() {
   const scene = useScene();
   const locale = useLocale();
@@ -3252,6 +3557,8 @@ function App() {
   const store = useMemoStore();
   const lang = locale.language.startsWith("zh") ? "zh" : "en";
   const t = useMemo(() => makeT(lang), [lang]);
+  const tRef = useRef(t);
+  tRef.current = t;
   const dark = scene?.appearance.effectiveColorScheme === "dark";
   const hostAccent = scene?.appearance.accentColor ?? null;
   const palette$1 = useMemo(() => {
@@ -3259,7 +3566,11 @@ function App() {
     return hostAccent ? { ...base, accent: hostAccent } : base;
   }, [dark, hostAccent]);
   const [tab, setTab] = useState("record");
-  const [route, setRoute] = useState({ kind: "root" });
+  const subpages = useSubpageStack({
+    pathFor: routePath,
+    titleFor: /* @__PURE__ */ __name((row) => routeTitle(row, tRef.current), "titleFor")
+  });
+  const route = subpages.route;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState(DEFAULT_FILTER);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -3275,6 +3586,36 @@ function App() {
   useEffect(() => {
     if (tabs.rendered && tabs.selected && tabs.selected !== tab) setTab(tabs.selected);
   }, [tabs.selected, tabs.rendered]);
+  const [hostChrome, setHostChrome] = useState(false);
+  useEffect(() => {
+    const api2 = window.aibox;
+    if (!api2?.toolbar?.getState) return;
+    void api2.toolbar.getState().then((state) => setHostChrome(!!(state && state.rendered))).catch(() => void 0);
+  }, []);
+  useEffect(() => {
+    const title = route ? routeTitle(route, t) : tabTitle(tab, t);
+    document.title = title;
+    setNavigationTitle(title);
+  }, [route, tab, t]);
+  const beginRecordingRef = useRef(() => void 0);
+  const playerCommandRef = useRef(null);
+  const overlay = useOverlay((event) => {
+    if (event.id === "record") {
+      beginRecordingRef.current();
+      return;
+    }
+    if (event.id === "player") playerCommandRef.current?.(event.controlId || "toggle");
+  });
+  const recordVisible = Boolean(tab === "record" && !route && recorder?.available && !recordOpen);
+  useEffect(() => {
+    if (!overlay.rendered) return;
+    overlay.update({ record: { hidden: !recordVisible, enabled: !starting } });
+  }, [overlay.rendered, recordVisible, starting]);
+  useEffect(() => {
+    if (!overlay.rendered || route?.kind === "detail") return;
+    playerCommandRef.current = null;
+    overlay.update({ player: { hidden: true } });
+  }, [overlay.rendered, route]);
   useEffect(() => {
     void (async () => setRecorder(await recorderAvailability()))();
   }, []);
@@ -3341,17 +3682,10 @@ function App() {
       setStarting(false);
     }
   }, [recorder, starting, store.settings.quality, t]);
-  const openMenu = useCallback(async (memo) => {
-    const actions = [
-      { id: "rename", title: t("rename") },
-      { id: "fav", title: memo.isFavourite ? t("unfavourite") : t("favourite") }
-    ];
-    if (!memo.hasTranscript && transcribable) actions.push({ id: "transcribe", title: t("startTranscription") });
-    if (memo.hasTranscript) actions.push({ id: "copy", title: t("copyTranscript") });
-    actions.push({ id: "share", title: t("shareAudio") });
-    actions.push({ id: "delete", title: t("moveToTrash"), destructive: true });
-    const picked = await actionSheet(actions);
-    if (!picked) return;
+  beginRecordingRef.current = () => {
+    void beginRecording();
+  };
+  const runRowAction = useCallback(async (memo, picked) => {
     if (picked === "rename") {
       const next = await promptText(t("renamePrompt"), memo.title);
       if (!next) return;
@@ -3385,9 +3719,21 @@ function App() {
       const clip2 = (await listClips()).find((item) => item.id === memo.id);
       if (clip2) await saveClip({ ...clip2, isTrashed: true, trashedAt: Date.now() });
       store.refresh();
-      if (route.kind === "detail") setRoute({ kind: "root" });
+      if (route?.kind === "detail") subpages.back();
     }
-  }, [t, store, route.kind, transcribable, runTranscription]);
+  }, [t, store, route, runTranscription, subpages]);
+  const openMenu = useCallback(async (memo) => {
+    const actions = [
+      { id: "rename", title: t("rename") },
+      { id: "fav", title: memo.isFavourite ? t("unfavourite") : t("favourite") }
+    ];
+    if (!memo.hasTranscript && transcribable) actions.push({ id: "transcribe", title: t("startTranscription") });
+    if (memo.hasTranscript) actions.push({ id: "copy", title: t("copyTranscript") });
+    actions.push({ id: "share", title: t("shareAudio") });
+    actions.push({ id: "delete", title: t("moveToTrash"), destructive: true });
+    const picked = await actionSheet(actions);
+    if (picked) await runRowAction(memo, picked);
+  }, [t, transcribable, runRowAction]);
   const openDetailMenu = useCallback(async (context) => {
     detailContext.current = context;
     setDetailArtifacts(context.artifacts);
@@ -3433,7 +3779,7 @@ function App() {
     }
   }, [t, locale.locale, exportLabels, openMenu]);
   const rootMemos = store.memos;
-  const scopedMemos = route.kind === "scoped" ? route.scope === "fav" ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos : [];
+  const scopedMemos = route?.kind === "scoped" ? route.scope === "fav" ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos : [];
   return /* @__PURE__ */ jsxs(
     "div",
     {
@@ -3501,14 +3847,17 @@ function App() {
                 filter,
                 scoped: false,
                 busyIDs,
-                onOpen: /* @__PURE__ */ __name((memo) => setRoute({ kind: "detail", memo }), "onOpen"),
+                onOpen: /* @__PURE__ */ __name((memo) => subpages.push({ kind: "detail", memo }), "onOpen"),
                 onMenu: openMenu,
+                onAction: /* @__PURE__ */ __name((memo, actionId) => {
+                  void runRowAction(memo, actionId);
+                }, "onAction"),
                 onClearFilter: /* @__PURE__ */ __name(() => setFilter(DEFAULT_FILTER), "onClearFilter")
               }
             ),
             /* @__PURE__ */ jsx("div", { style: { height: 96 } })
           ] }),
-          recorder?.available ? /* @__PURE__ */ jsx(
+          recorder?.available && !overlay.rendered ? /* @__PURE__ */ jsx(
             "div",
             {
               style: {
@@ -3554,8 +3903,8 @@ function App() {
             t,
             memos: rootMemos,
             trashCount: store.clips.filter((clip2) => clip2.isTrashed).length,
-            onScope: /* @__PURE__ */ __name((scope) => setRoute({ kind: "scoped", scope }), "onScope"),
-            onTrash: /* @__PURE__ */ __name(() => setRoute({ kind: "trash" }), "onTrash")
+            onScope: /* @__PURE__ */ __name((scope) => subpages.push({ kind: "scoped", scope }), "onScope"),
+            onTrash: /* @__PURE__ */ __name(() => subpages.push({ kind: "trash" }), "onTrash")
           }
         ) }) : null,
         tab === "settings" ? /* @__PURE__ */ jsx("main", { style: { flex: 1, overflowY: "auto" }, children: /* @__PURE__ */ jsx(SettingsTab, { palette: palette$1, t, dark: Boolean(dark), settings: store.settings, onChange: store.updateSettings, clips: store.clips }) }) : null,
@@ -3580,7 +3929,7 @@ function App() {
           },
           id
         )) }) : null,
-        route.kind === "detail" ? /* @__PURE__ */ jsx(
+        route?.kind === "detail" ? /* @__PURE__ */ jsx(
           MemoDetail,
           {
             palette: palette$1,
@@ -3588,12 +3937,18 @@ function App() {
             dark: Boolean(dark),
             memo: route.memo,
             settings: store.settings,
-            onBack: /* @__PURE__ */ __name(() => setRoute({ kind: "root" }), "onBack"),
+            onBack: subpages.back,
             onMenu: openDetailMenu,
-            onRefresh: store.refresh
+            onRefresh: store.refresh,
+            overlayRendered: overlay.rendered,
+            overlayUpdate: overlay.update,
+            registerPlayerCommand: /* @__PURE__ */ __name((handler) => {
+              playerCommandRef.current = handler;
+            }, "registerPlayerCommand"),
+            chrome: !hostChrome
           }
         ) : null,
-        route.kind === "scoped" ? /* @__PURE__ */ jsx(PushPage, { palette: palette$1, title: t("titleRecordings"), onBack: /* @__PURE__ */ __name(() => setRoute({ kind: "root" }), "onBack"), children: /* @__PURE__ */ jsx(
+        route?.kind === "scoped" ? /* @__PURE__ */ jsx(PushPage, { palette: palette$1, title: routeTitle(route, t), onBack: subpages.back, chrome: !hostChrome, children: /* @__PURE__ */ jsx(
           MemoList,
           {
             palette: palette$1,
@@ -3604,18 +3959,23 @@ function App() {
             filter: DEFAULT_FILTER,
             scoped: true,
             busyIDs,
-            onOpen: /* @__PURE__ */ __name((memo) => setRoute({ kind: "detail", memo }), "onOpen"),
+            regionId: "memos.scoped",
+            onOpen: /* @__PURE__ */ __name((memo) => subpages.push({ kind: "detail", memo }), "onOpen"),
             onMenu: openMenu,
+            onAction: /* @__PURE__ */ __name((memo, actionId) => {
+              void runRowAction(memo, actionId);
+            }, "onAction"),
             onClearFilter: /* @__PURE__ */ __name(() => void 0, "onClearFilter")
           }
         ) }) : null,
-        route.kind === "trash" ? /* @__PURE__ */ jsx(
+        route?.kind === "trash" ? /* @__PURE__ */ jsx(
           TrashPage,
           {
             palette: palette$1,
             t,
             store,
-            onBack: /* @__PURE__ */ __name(() => setRoute({ kind: "root" }), "onBack")
+            onBack: subpages.back,
+            chrome: !hostChrome
           }
         ) : null,
         /* @__PURE__ */ jsx(FilterSheet, { palette: palette$1, t, open: filterOpen, filter, onChange: setFilter, onClose: /* @__PURE__ */ __name(() => setFilterOpen(false), "onClose") }),
@@ -3685,6 +4045,18 @@ function App() {
   );
 }
 __name(App, "App");
+function routeTitle(route, t) {
+  if (route.kind === "detail") return route.memo.title;
+  if (route.kind === "scoped") return route.scope === "fav" ? t("smartFavourites") : t("smartAllRecordings");
+  return t("recentlyDeleted");
+}
+__name(routeTitle, "routeTitle");
+function tabTitle(tab, t) {
+  if (tab === "library") return t("tabFolders");
+  if (tab === "settings") return t("tabSettings");
+  return t("titleVoiceMemos");
+}
+__name(tabTitle, "tabTitle");
 function LibraryTab(props) {
   const { palette: palette2, t } = props;
   const rows = [
@@ -3755,6 +4127,7 @@ function TrashPage(props) {
       palette: palette2,
       title: t("recentlyDeleted"),
       onBack: props.onBack,
+      chrome: props.chrome,
       trailing: trashed.length ? /* @__PURE__ */ jsx(
         "button",
         {

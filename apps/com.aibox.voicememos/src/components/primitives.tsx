@@ -342,7 +342,14 @@ export function PushPage(props: {
   onBack: () => void
   trailing?: ReactNode
   children: ReactNode
+  /**
+   * 是否自绘顶栏。**宿主画了导航栏时必须传 false** —— 接上 `presentation.subpages` 之后
+   * 宿主有自己的返回键与标题（标题由 `navigation.push({title})` 交上去），再画一条就是两条顶栏，
+   * 而且那个自绘的 `‹` 会变成一颗位置怪异的孤零零把手。
+   */
+  chrome?: boolean
 }) {
+  const chrome = props.chrome !== false
   return (
     <div
       style={{
@@ -350,6 +357,7 @@ export function PushPage(props: {
         display: 'flex', flexDirection: 'column',
       }}
     >
+      {chrome ? (
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: SPACE.s2, padding: '10px 12px',
@@ -369,6 +377,10 @@ export function PushPage(props: {
         </div>
         {props.trailing}
       </div>
+      ) : null}
+      {!chrome && props.trailing ? (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 12px 0' }}>{props.trailing}</div>
+      ) : null}
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{props.children}</div>
     </div>
   )

@@ -177,19 +177,26 @@
         }
       ]
     },
+    "overlay": {
+      "items": [
+        {
+          "id": "player",
+          "kind": "bar",
+          "icon": "music.note",
+          "title": "未在播放",
+          "localizedTitles": { "en": "Not Playing" },
+          "hidden": true,
+          "controls": [
+            { "id": "toggle", "icon": "play.fill", "activeIcon": "pause.fill" },
+            { "id": "next", "icon": "forward.fill" }
+          ]
+        }
+      ]
+    },
     "toolbar": {
       "trailing": [
         { "id": "more", "icon": "ellipsis", "role": "hostMenu" }
-      ],
-      "search": {
-        "enabled": true,
-        "placeholder": "艺人、歌曲、歌词等",
-        "localizedPlaceholders": { "en": "Artists, Songs, Lyrics, and More" },
-        "scopes": [
-          { "id": "catalog", "title": "Apple Music" },
-          { "id": "library", "title": "资料库" }
-        ]
-      }
+      ]
     },
     "menu": {
       "mergePolicy": "appletFirst",

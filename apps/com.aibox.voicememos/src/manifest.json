@@ -32,9 +32,37 @@
       "page",
       "sheet",
       "fullscreen"
-    ]
+    ],
+    "subpages": true
   },
   "scene": {
+    "overlay": {
+      "items": [
+        {
+          "id": "player",
+          "kind": "bar",
+          "icon": "waveform",
+          "title": "\u672a\u64ad\u653e",
+          "localizedTitles": { "en": "Not Playing" },
+          "hidden": true,
+          "controls": [
+            { "id": "back15", "icon": "gobackward.15" },
+            { "id": "toggle", "icon": "play.fill", "activeIcon": "pause.fill" },
+            { "id": "forward15", "icon": "goforward.15" }
+          ]
+        },
+        {
+          "id": "record",
+          "kind": "button",
+          "icon": "record.circle",
+          "activeIcon": "stop.circle.fill",
+          "title": "\u5f55\u97f3",
+          "localizedTitles": { "en": "Record" },
+          "tint": "danger",
+          "hidden": true
+        }
+      ]
+    },
     "tabBar": {
       "items": [
         {

@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.0.3",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-03T13:27:55Z",
+      "notes": "迷你播放条改用宿主悬浮层（aibox.overlay）：与底栏叠进同一层，不再被底栏压住；移除底部搜索胶囊，设备底边交还底栏；队列与搜索结果的长按/滑动改走原生手势（aibox.list.*）；曲目菜单补上「加入资料库」「加入歌单」。",
+      "fileCount": 35,
+      "totalBytes": 287908,
+      "path": "apps/com.aibox.music/releases/1.1.0",
+      "localizedNotes": {
+        "en": "The mini player now uses the host overlay layer (aibox.overlay), stacked with the tab bar instead of hidden behind it; the bottom search field is gone so the tab bar owns the device edge; queue and search rows use native context menus and swipe actions (aibox.list.*); track menu gains Add to Library and Add to Playlist."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "7ddee2068f098c238913ae9ec53900c376cf597a4ddb05280c02ff8305d96495"
+    },
     {
       "version": "1.0.3",
       "releasedAt": "2026-08-03T05:09:44Z",

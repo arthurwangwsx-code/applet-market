@@ -39,6 +39,14 @@ export function MemoDetail(props: {
   onBack: () => void
   onMenu: (context: DetailContext) => void
   onRefresh: () => void
+  /** 宿主是否画了悬浮层。true = 播放控制交给常驻层，页内只留波形与进度条。 */
+  overlayRendered?: boolean
+  /** 把播放条的展示态推给宿主（title / progress / controls.toggle.active / hidden）。 */
+  overlayUpdate?: (items: Record<string, any>) => void
+  /** 把「播放器指令入口」交给根视图（overlay 上的控件点击经它落到真 `<audio>`）。 */
+  registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
+  /** 宿主画了导航栏（返回键 + 标题）就不自绘。 */
+  chrome?: boolean
 }) {
   const { palette, t, memo } = props
   const [transcript, setTranscript] = useState<MemoTranscript | null>(null)
@@ -128,7 +136,7 @@ export function MemoDetail(props: {
   const status = transcribing ? 'inProgress' : (transcript?.status ?? 'none')
 
   return (
-    <PushPage palette={palette} title={memo.title} onBack={props.onBack} trailing={<MoreButton palette={palette} onClick={() => props.onMenu(context)} />}>
+    <PushPage palette={palette} title={memo.title} onBack={props.onBack} chrome={props.chrome} trailing={<MoreButton palette={palette} onClick={() => props.onMenu(context)} />}>
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         {!memo.hasAudio ? (
           <div style={{ background: alpha(palette.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }}>
@@ -206,7 +214,15 @@ export function MemoDetail(props: {
           </Centered>
         ) : null}
 
-        <ClipPlayer palette={palette} t={t} memo={memo} onSeekReady={(seek) => { seekRef.current = seek }} />
+        <ClipPlayer
+          palette={palette}
+          t={t}
+          memo={memo}
+          onSeekReady={(seek) => { seekRef.current = seek }}
+          overlayRendered={Boolean(props.overlayRendered)}
+          overlayUpdate={props.overlayUpdate}
+          registerPlayerCommand={props.registerPlayerCommand}
+        />
       </div>
     </PushPage>
   )
@@ -765,6 +781,9 @@ function ClipPlayer(props: {
   memo: Memo
   /** 把 seek 出口交给页面（章节 / 分段点击经它跳转）。 */
   onSeekReady: (seek: (seconds: number) => void) => void
+  overlayRendered: boolean
+  overlayUpdate?: (items: Record<string, any>) => void
+  registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
 }) {
   const { palette, t, memo } = props
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -795,6 +814,51 @@ function ClipPlayer(props: {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const toggle = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (playing) { audio.pause(); setPlaying(false) } else { void audio.play(); setPlaying(true) }
+  }
+  const skip = (delta: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const value = Math.max(0, Math.min(duration || audio.duration || 0, position + delta))
+    audio.currentTime = value
+    setPosition(value)
+  }
+  // overlay 上的控件点击落到这里。处理器每轮重挂（要闭包到最新的 playing / position）。
+  useEffect(() => {
+    if (!props.registerPlayerCommand) return undefined
+    props.registerPlayerCommand((command) => {
+      if (command === 'toggle') toggle()
+      else if (command === 'back15') skip(-15)
+      else if (command === 'forward15') skip(15)
+    })
+    return () => props.registerPlayerCommand?.(null)
+  })
+
+  // 播放条展示态。进度按 1% 量化后再推 —— `timeupdate` 每 ~250ms 一次，不量化就是白过桥。
+  const barProgress = duration > 0 ? Math.round((position / duration) * 100) / 100 : 0
+  const sentSignature = useRef('')
+  useEffect(() => {
+    if (!props.overlayRendered || !props.overlayUpdate) return
+    const signature = `${memo.id}|${playing}|${barProgress}|${memo.hasAudio}`
+    if (sentSignature.current === signature) return
+    sentSignature.current = signature
+    props.overlayUpdate({
+      player: {
+        hidden: !memo.hasAudio,
+        title: memo.title,
+        subtitle: clockFlat(position),
+        progress: barProgress,
+        controls: { toggle: { active: playing } },
+      },
+    })
+  })
+  // 离开详情页收起播放条（根视图那条 effect 是兜底，这条是主路径）。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { props.overlayUpdate?.({ player: { hidden: true } }) }, [])
 
   if (!memo.hasAudio) {
     return (
@@ -837,7 +901,9 @@ function ClipPlayer(props: {
         style={{ width: '100%', accentColor: palette.accent }}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3 }}>
+      {/* 宿主画了悬浮播放条就不再画页内走带键 —— 两排播放键是「控件重复」而不是「随手可控」。
+          波形与进度条留在页内（它们是内容，不是常驻控制）。 */}
+      <div style={{ display: props.overlayRendered ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3 }}>
         <span style={{ fontSize: 12, color: palette.muted, minWidth: 38, fontFamily: 'ui-monospace, monospace' }}>
           {clockFlat(position)}
         </span>

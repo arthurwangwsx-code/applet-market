@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-03T12:20:39Z",
+  "updatedAt": "2026-08-03T13:28:07Z",
   "appCount": 7,
   "apps": [
     {
@@ -94,9 +94,9 @@
       "icon": "music.note",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.0.3",
-      "latestReleasedAt": "2026-08-03T05:09:44Z",
-      "versionCount": 4,
+      "latestVersion": "1.1.0",
+      "latestReleasedAt": "2026-08-03T13:27:55Z",
+      "versionCount": 5,
       "capabilities": [
         "haptics",
         "music",
@@ -108,8 +108,8 @@
         "toolbar",
         "ui"
       ],
-      "latestTotalBytes": 270320,
-      "latestFileCount": 34,
+      "latestTotalBytes": 287908,
+      "latestFileCount": 35,
       "runtimeKind": "source",
       "path": "apps/com.aibox.music",
       "localizedNames": {
@@ -211,9 +211,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "2.0.0",
-      "latestReleasedAt": "2026-08-03T12:20:39Z",
-      "versionCount": 3,
+      "latestVersion": "2.1.0",
+      "latestReleasedAt": "2026-08-03T13:28:07Z",
+      "versionCount": 4,
       "capabilities": [
         "ai",
         "audio",
@@ -224,7 +224,7 @@
         "tabs",
         "ui"
       ],
-      "latestTotalBytes": 188182,
+      "latestTotalBytes": 202566,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",

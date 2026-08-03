@@ -7,11 +7,18 @@
 import React from 'react'
 import Icon from './Icon.jsx'
 import { EmptyState, ListHeader, Segmented, Spinner, SwipeRow } from './primitives.jsx'
+import { useRowGestures } from '../lib/gestures.js'
 import { CollectionRow, SongRow } from './rows.jsx'
 import { C, SPACE } from './theme.js'
-import { music as callMusic, classifyMusicError } from '../lib/host.js'
+import { music as callMusic, classifyMusicError, openURL } from '../lib/host.js'
 
 const DEBOUNCE_MS = 300
+
+/** 手势层的行身份。歌曲与合集的 id 空间可能撞车，故带类型前缀。 */
+function rowKey(kind, item) {
+  if (!item) return ''
+  return `${kind}:${item.musicItemId || item.localTrackId || item.url || item.title || ''}`
+}
 
 export default function SearchPage({ ctx, query, onQueryChange, searchRendered }) {
   const { t, store, actions } = ctx
@@ -64,6 +71,61 @@ export default function SearchPage({ ctx, query, onQueryChange, searchRendered }
   const top = [songs[0], artists[0], albums[0]].filter(Boolean).slice(0, 3)
   if (top.length < 3 && playlists[0]) top.push(playlists[0])
 
+  // —— 原生行手势（`aibox.list.*`）——
+  //
+  // 结果里歌曲行与合集行的可用动作不同，但**身份必须一次声明完**（合同同 `aibox.menu`：
+  // 只能改显示状态、不能增删 id）。所以四项都声明，用逐行 `rowOverrides` 把不适用的那几项藏掉——
+  // 这正是 `rowOverrides` 存在的理由，不要靠给每种行各配一个 region。
+  const rowIndex = React.useMemo(() => {
+    const map = new Map()
+    songs.forEach((item) => map.set(rowKey('song', item), { kind: 'song', item }))
+    ;[...artists, ...albums, ...playlists].forEach((item) => map.set(rowKey('item', item), { kind: 'item', item }))
+    // 「顶级结果」里的那几条会**同时**出现在下面的分段里 —— 同一个 `data-row-id` 出现两次
+    // 就是两份矩形争同一个身份（宿主只认最后一份，菜单会弹在错误的那一行）。给它们独立后缀。
+    top.forEach((item) => {
+      const kind = item.type === 'song' ? 'song' : 'item'
+      map.set(`${rowKey(kind, item)}#top`, { kind, item })
+    })
+    return map
+  }, [songs, artists, albums, playlists, top])
+
+  const openExternal = (item) => {
+    const link = item.url || store.externalURL(item)
+    if (link) openURL(link)
+  }
+
+  const gestures = useRowGestures('search.results', {
+    contextMenu: [
+      { id: 'play', title: t('common.play'), icon: 'play.fill' },
+      { id: 'queue', title: t('common.addToQueue'), icon: 'text.append' },
+      { id: 'favorite', title: t('common.addToFavorites'), icon: 'heart' },
+      { id: 'open', title: t('common.openInAppleMusic'), icon: 'arrow.up.forward.app' },
+    ],
+    rowOverrides: (rowId) => {
+      const row = rowIndex.get(rowId)
+      if (!row) return null
+      const hasLink = !!(row.item && (row.item.url || store.externalURL(row.item)))
+      return {
+        queue: { hidden: row.kind !== 'song' },
+        favorite: { hidden: row.kind !== 'song' },
+        open: { hidden: !hasLink },
+      }
+    },
+    onAction: ({ rowId, actionId }) => {
+      const row = rowIndex.get(rowId)
+      if (!row) return
+      if (row.kind === 'song') {
+        if (actionId === 'play') playSong(row.item, songs)
+        else if (actionId === 'queue') actions.addToQueue(row.item)
+        else if (actionId === 'favorite') actions.toggleFavorite(row.item, true)
+        else if (actionId === 'open') openExternal(row.item)
+        return
+      }
+      if (actionId === 'play') actions.playCollection(row.item)
+      else if (actionId === 'open') openExternal(row.item)
+    },
+  })
+
   return (
     <div className="mu-scroll">
       {!searchRendered ? (
@@ -115,45 +177,46 @@ export default function SearchPage({ ctx, query, onQueryChange, searchRendered }
       ) : null}
 
       {hasResults ? (
-        <>
+        <div {...gestures.regionProps}>
           {top.length > 0 ? (
             <>
               <ListHeader>{t('search.topResults')}</ListHeader>
               {top.map((item) => (item.type === 'song' ? (
-                <SongRow key={`top-${item.musicItemId}`} track={item} onClick={() => playSong(item, songs)}
-                  onLongPress={() => actions.trackMenu(item, { group: songs })} />
+                <SongRow key={`top-${item.musicItemId}`} rowId={`${rowKey('song', item)}#top`} track={item}
+                  onClick={() => playSong(item, songs)}
+                  onLongPress={gestures.rendered ? undefined : () => actions.trackMenu(item, { group: songs })} />
               ) : (
-                <CollectionRow key={`top-${item.type}-${item.musicItemId}`} item={item}
+                <CollectionRow key={`top-${item.type}-${item.musicItemId}`} rowId={`${rowKey('item', item)}#top`} item={item}
                   onClick={() => { submit(); actions.openCollection(item) }}
-                  onLongPress={() => actions.collectionMenu(item)} />
+                  onLongPress={gestures.rendered ? undefined : () => actions.collectionMenu(item)} />
               )))}
             </>
           ) : null}
 
           <Group title={t('search.artists')} items={artists} render={(item) => (
-            <CollectionRow key={item.musicItemId} item={item}
+            <CollectionRow key={item.musicItemId} rowId={rowKey('item', item)} item={item}
               onClick={() => { submit(); actions.openCollection(item) }}
-              onLongPress={() => actions.collectionMenu(item)} />
+              onLongPress={gestures.rendered ? undefined : () => actions.collectionMenu(item)} />
           )} />
 
           <Group title={t('search.songs')} items={songs} render={(item) => (
-            <SongRow key={item.musicItemId || item.localTrackId} track={item}
+            <SongRow key={item.musicItemId || item.localTrackId} rowId={rowKey('song', item)} track={item}
               onClick={() => playSong(item, songs)}
-              onLongPress={() => actions.trackMenu(item, { group: songs })} />
+              onLongPress={gestures.rendered ? undefined : () => actions.trackMenu(item, { group: songs })} />
           )} />
 
           <Group title={t('search.albums')} items={albums} render={(item) => (
-            <CollectionRow key={item.musicItemId} item={item}
+            <CollectionRow key={item.musicItemId} rowId={rowKey('item', item)} item={item}
               onClick={() => { submit(); actions.openCollection(item) }}
-              onLongPress={() => actions.collectionMenu(item)} />
+              onLongPress={gestures.rendered ? undefined : () => actions.collectionMenu(item)} />
           )} />
 
           <Group title={t('search.playlists')} items={playlists} render={(item) => (
-            <CollectionRow key={item.musicItemId} item={item}
+            <CollectionRow key={item.musicItemId} rowId={rowKey('item', item)} item={item}
               onClick={() => { submit(); actions.openCollection(item) }}
-              onLongPress={() => actions.collectionMenu(item)} />
+              onLongPress={gestures.rendered ? undefined : () => actions.collectionMenu(item)} />
           )} />
-        </>
+        </div>
       ) : null}
 
       {!String(query || '').trim() && !state.loading ? (

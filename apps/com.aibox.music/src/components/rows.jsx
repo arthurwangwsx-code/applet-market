@@ -8,11 +8,12 @@ import { C, SPACE } from './theme.js'
 import { duration as fmtDuration, losslessBadge, trackSubtitle } from '../lib/format.js'
 
 /** 队列行（§2.4）：36×36 封面；当前行叠 waveform / play.fill，标题用 accent。 */
-export function QueueRow({ track, isCurrent, isPlaying, onClick, onLongPress, trailing }) {
+export function QueueRow({ track, isCurrent, isPlaying, onClick, onLongPress, trailing, rowId }) {
   const press = useLongPress(() => onLongPress && onLongPress())
   return (
     <div
       className="mu-press"
+      data-row-id={rowId}
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `6px ${SPACE.s4}px` }}
       {...press.bind}
       onClick={() => { if (!press.consumed() && onClick) onClick() }}
@@ -56,12 +57,13 @@ export function QueueRow({ track, isCurrent, isPlaying, onClick, onLongPress, tr
 }
 
 /** 搜索/收藏里的歌曲行（§2.6）：40×40 封面 + 右侧 play.circle.fill。 */
-export function SongRow({ track, onClick, onLongPress, trailing, artworkSize = 40 }) {
+export function SongRow({ track, onClick, onLongPress, trailing, artworkSize = 40, rowId }) {
   const press = useLongPress(() => onLongPress && onLongPress())
   return (
     <div
       className="mu-press"
       aria-label="audioSongRow"
+      data-row-id={rowId}
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `6px ${SPACE.s4}px` }}
       {...press.bind}
       onClick={() => { if (!press.consumed() && onClick) onClick() }}
@@ -77,13 +79,14 @@ export function SongRow({ track, onClick, onLongPress, trailing, artworkSize = 4
 }
 
 /** 合集行（艺人 / 专辑 / 歌单）：44×44 封面，**艺人是圆形**。 */
-export function CollectionRow({ item, onClick, onLongPress }) {
+export function CollectionRow({ item, onClick, onLongPress, rowId }) {
   const press = useLongPress(() => onLongPress && onLongPress())
   const circular = item.type === 'artist'
   return (
     <div
       className="mu-press"
       aria-label="audioCollectionRow"
+      data-row-id={rowId}
       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `8px ${SPACE.s4}px` }}
       {...press.bind}
       onClick={() => { if (!press.consumed() && onClick) onClick() }}

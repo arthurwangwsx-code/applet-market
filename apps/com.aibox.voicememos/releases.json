@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "2.0.0",
+  "latestVersion": "2.1.0",
   "releases": [
+    {
+      "version": "2.1.0",
+      "releasedAt": "2026-08-03T13:28:07Z",
+      "notes": "录音键与播放控制条改用宿主悬浮层（aibox.overlay），不再埋在内容流末尾、也不再被底栏压住；接入系统页栈（presentation.subpages），返回是系统自己的左滑、每个子页的标题由页面自己定义；列表行长按与滑动改走原生手势（aibox.list.*），长按不再同时弹出系统文本菜单和自绘菜单。",
+      "fileCount": 4,
+      "totalBytes": 202566,
+      "path": "apps/com.aibox.voicememos/releases/2.1.0",
+      "localizedNotes": {
+        "en": "The record button and playback controls now live in the host overlay layer (aibox.overlay) instead of at the end of the scroll; navigation uses the system page stack (presentation.subpages) so back is the real interactive swipe and each subpage names its own title; list rows use native context menus and swipe actions (aibox.list.*), so long-press no longer raises the system text menu and an app-drawn menu at once."
+      },
+      "bundleSha256": "c259e9f73d1ff6273e1aeb058a3a46824b89a7e3bf7fc821544712e3b78eafe2"
+    },
     {
       "version": "2.0.0",
       "releasedAt": "2026-08-03T12:20:39Z",

@@ -25,6 +25,8 @@ export const capabilities = {
   get toolbar() { return hasNamespace('toolbar', 'on') },
   get net() { return hasNamespace('net', 'fetch') },
   get storage() { return hasNamespace('storage', 'get') },
+  get overlay() { return hasNamespace('overlay', 'getState') },
+  get listGestures() { return hasNamespace('list', 'configure') },
 }
 
 // MARK: - music（19 个宿主工具的一等投影）
@@ -272,6 +274,28 @@ export const toolbar = {
   },
   update(items) { fireAndForget('toolbar', 'update', { items }) },
   setSearch(patch) { fireAndForget('toolbar', 'setSearch', patch) },
+}
+
+/**
+ * 悬浮层（`aibox.overlay`，合同 app-shell-and-market.md §2.5）。
+ *
+ * 迷你播放条**不再自绘**：宿主把它和底栏叠进同一个 `safeAreaInset`，自下而上是
+ * 底栏 → bar → button，于是「被底栏压住」在结构上就不可能发生，而不是靠这里算 padding。
+ * 宿主没画（card/sheet/drawer 形态、声明越界）时 `getState().rendered === false`，
+ * 页面据此把 `<MiniBar>` 放回内容流——降级路径必须一直留着。
+ */
+export const overlay = {
+  async getState() {
+    const api = bridge()
+    if (!api || !api.overlay || typeof api.overlay.getState !== 'function') return null
+    try {
+      return await api.overlay.getState()
+    } catch (error) {
+      return null
+    }
+  },
+  update(items) { fireAndForget('overlay', 'update', { items }) },
+  reset() { fireAndForget('overlay', 'reset', {}) },
 }
 
 export function setNavigationTitle(title) {

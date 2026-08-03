@@ -29,7 +29,7 @@ import { fetchLyrics } from './lib/lyrics.js'
 import { backfillArtworkURL, artworkDataURL, dominantColor, sizedArtworkURL } from './lib/artwork.js'
 import { playArgs, stableKey } from './lib/format.js'
 import {
-  actionSheet, confirm, haptics, music as callMusic, openURL,
+  actionSheet, confirm, haptics, music as callMusic, openURL, overlay,
   onEvent, onNamespaceEvent, registerAction, setNavigationTitle, shareText, tabs, toolbar,
 } from './lib/host.js'
 import { ACTION_HANDLERS } from './lib/actions.js'
@@ -95,7 +95,9 @@ export default function App() {
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [picker, setPicker] = React.useState(null)
   const [query, setQuery] = React.useState('')
-  const [shell, setShell] = React.useState({ tabsRendered: false, toolbarRendered: false, searchRendered: false })
+  const [shell, setShell] = React.useState({
+    tabsRendered: false, toolbarRendered: false, searchRendered: false, overlayRendered: false,
+  })
   const [mode, setMode] = React.useState('album')
   const [lyrics, setLyrics] = React.useState({ state: 'none', synced: false, lines: [] })
   const [artwork, setArtwork] = React.useState({ url: null, color: null })
@@ -265,6 +267,45 @@ export default function App() {
     tabs.select(next)
   }, [])
 
+  // —— 悬浮层（`aibox.overlay`）：迷你播放条交给宿主画 ——
+  //
+  // 为什么不再自绘：自绘的条挂在页面内容流末尾，宿主底栏是另一层 `safeAreaInset` ——
+  // 两层各算各的安全区，结果就是用户看到的「迷你播放器被底栏压住大半」。
+  // 交给宿主后底栏与 bar 叠进**同一个** inset（自下而上：底栏 → bar），压不到彼此是结构性的。
+  // 宿主没画（card/sheet/drawer 形态）时 `rendered:false`，下面照旧渲染 `<MiniBar>`。
+  const overlayInvoke = React.useRef(null)
+  overlayInvoke.current = (event) => {
+    const controlID = event && event.controlId
+    if (controlID === 'toggle') { haptics.impact('light'); music.togglePlayPause(); return }
+    if (controlID === 'next') { haptics.impact('light'); music.transport('next'); return }
+    // 点条本体 = 展开到「正在播放」页（与原生 mini 条同语义）。
+    selectTab('player')
+  }
+
+  React.useEffect(() => {
+    let cancelled = false
+    const offs = []
+    const wire = async () => {
+      const state = await overlay.getState()
+      if (cancelled) return
+      const rendered = !!(state && state.rendered)
+      setShell((current) => (current.overlayRendered === rendered
+        ? current : { ...current, overlayRendered: rendered }))
+      offs.push(onNamespaceEvent('overlay', 'invoke', (payload) => {
+        if (overlayInvoke.current) overlayInvoke.current(payload || {})
+      }))
+      // `rendered` 会在挂载之后翻转（形态切换、控制器重建都会重发 changed）——
+      // 只在启动那一刻判断一次，自绘迷你条就会永远缺席或永远多一条（tabs 那条同款教训）。
+      offs.push(onNamespaceEvent('overlay', 'changed', (payload) => {
+        const next = !!(payload && payload.rendered)
+        setShell((current) => (current.overlayRendered === next
+          ? current : { ...current, overlayRendered: next }))
+      }))
+    }
+    wire()
+    return () => { cancelled = true; offs.forEach((off) => off && off()) }
+  }, [])
+
   const favoriteKeys = React.useMemo(
     () => new Set(favorites.rows.map((row) => stableKey(row)).filter(Boolean)),
     [favorites.rows],
@@ -278,6 +319,27 @@ export default function App() {
     await callMusic('library', { action: on ? 'favorite' : 'unfavorite', ...playArgs(track) })
     refreshFavorites()
   }, [favoriteKeys, refreshFavorites])
+
+  // 「加入歌单」——对标原生 `AudioAddToPlaylistSheet`：列歌单 → 原生选择器 → `add_tracks`。
+  // 走的是既有的 `music_playlist` 工具，不需要新宿主能力。
+  const addToPlaylist = React.useCallback(async (track) => {
+    const listed = await callMusic('playlist', { action: 'list' })
+    const rows = (listed.json && Array.isArray(listed.json.playlists)) ? listed.json.playlists : []
+    if (rows.length === 0) { showNotice(t('common.noPlaylists')); return }
+    const picked = await actionSheet({
+      title: t('common.pickPlaylist'),
+      actions: [
+        ...rows.slice(0, 20).map((row) => ({
+          id: String(row.musicItemId || row.id || ''),
+          title: row.title || row.name || '',
+        })).filter((row) => row.id && row.title),
+        { id: 'cancel', title: t('common.cancel'), role: 'cancel' },
+      ],
+    })
+    if (!picked || picked === 'cancel') return
+    const result = await callMusic('playlist', { action: 'add_tracks', id: picked, tracks: [playArgs(track)] })
+    showNotice(result.ok ? t('common.addedToPlaylist') : (result.error || t('err.generic')))
+  }, [t, showNotice])
 
   const actions = React.useMemo(() => ({
     navigate,
@@ -331,12 +393,19 @@ export default function App() {
       const key = stableKey(track)
       const isFavorite = favoriteKeys.has(key)
       const link = store.externalURL(track)
+      // Apple Music 曲目才有「加入资料库 / 加入歌单」（本地曲目在服务端没有对应条目）——
+      // 与原生 AudioTrackActionsMenu 的 `track.source.isAppleMusic` 分支同判据。
+      const isCatalog = !!track.musicItemId
       const picked = await actionSheet({
         title: track.title,
         actions: [
           { id: 'play', title: t('common.play') },
           { id: 'queue', title: t('common.addToQueue') },
           { id: 'favorite', title: isFavorite ? t('common.removeFromFavorites') : t('common.addToFavorites') },
+          ...(isCatalog ? [
+            { id: 'addToLibrary', title: t('common.addToLibrary') },
+            { id: 'addToPlaylist', title: t('common.addToPlaylist') },
+          ] : []),
           ...(link ? [{ id: 'open', title: t('common.openInAppleMusic') }] : []),
           ...(options.queueIndex !== undefined
             ? [{ id: 'remove', title: t('common.remove'), role: 'destructive' }] : []),
@@ -348,6 +417,12 @@ export default function App() {
       else if (picked === 'favorite') toggleFavorite(track, !isFavorite)
       else if (picked === 'open' && link) openURL(link)
       else if (picked === 'remove') music.removeFromQueue(options.queueIndex)
+      else if (picked === 'addToLibrary') {
+        const result = await callMusic('library', { action: 'add_to_library', ...playArgs(track) })
+        showNotice(result.ok ? t('common.addedToLibrary') : (result.error || t('err.generic')))
+      } else if (picked === 'addToPlaylist') {
+        await addToPlaylist(track)
+      }
     },
     collectionMenu: async (item) => {
       const picked = await actionSheet({
@@ -363,7 +438,7 @@ export default function App() {
         if (!result.ok) showNotice(result.error || t('err.generic'))
       } else if (picked === 'open' && item.url) openURL(item.url)
     },
-  }), [music, store, navigate, back, showNotice, t, toggleFavorite, favoriteKeys])
+  }), [music, store, navigate, back, showNotice, t, toggleFavorite, favoriteKeys, addToPlaylist])
 
   const ctx = React.useMemo(() => ({
     t,
@@ -379,6 +454,29 @@ export default function App() {
 
   const { route } = subpages
   const showMini = showMiniFor(tab, current) && !route
+
+  // 悬浮层的展示态。**只能改展示状态**（合同 §2.5.3）：id、层数、控件都是 manifest 冻结的。
+  // 进度按 1% 量化后再比较——`displayProgress()` 每 100ms 变一次，不量化就是每秒 10 次过桥。
+  const overlayProgress = Math.round(Math.max(0, Math.min(1, music.displayProgress())) * 100) / 100
+  const overlaySignature = [
+    shell.overlayRendered, showMini, current ? current.title : '', current ? current.artist : '',
+    music.status.isPlaying, overlayProgress,
+  ].join('')
+  const overlaySent = React.useRef(null)
+  React.useEffect(() => {
+    if (!shell.overlayRendered) return
+    if (overlaySent.current === overlaySignature) return
+    overlaySent.current = overlaySignature
+    overlay.update({
+      player: {
+        hidden: !showMini,
+        title: (current && current.title) || t('np.notPlaying'),
+        subtitle: (current && current.artist) || null,
+        progress: overlayProgress,
+        controls: { toggle: { active: !!music.status.isPlaying } },
+      },
+    })
+  }, [overlaySignature]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // —— 宿主 ⋯ 菜单（scene.menu）——
   //
@@ -495,7 +593,9 @@ export default function App() {
 
       <Notice message={notice} />
 
-      {showMini ? (
+      {/* 宿主画了悬浮层就**不再自绘**迷你条 —— 两条一起出现就是「第二条底栏」。
+          `rendered:false`（card/sheet/drawer 形态、声明越界）时这条降级路径必须还在。 */}
+      {showMini && !shell.overlayRendered ? (
         <MiniBar
           track={{ ...current, artworkUrl: artwork.url }}
           isPlaying={music.status.isPlaying}

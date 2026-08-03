@@ -10,6 +10,7 @@ import type { T } from '../lib/strings'
 import { RADIUS, SPACE, alpha, favouriteTint, type Palette } from '../lib/theme'
 import { DEFAULT_FILTER, filterIsActive, type Memo, type MemoFilter } from '../lib/types'
 import { Icon, SecondaryButton, Sheet } from './primitives'
+import { useRowGestures } from '../lib/gestures'
 
 export function MemoList(props: {
   palette: Palette
@@ -21,11 +22,49 @@ export function MemoList(props: {
   scoped: boolean
   onOpen: (memo: Memo) => void
   onMenu: (memo: Memo) => void
+  onAction?: (memo: Memo, actionId: string) => void
   onClearFilter: () => void
   busyIDs: Record<string, string>
+  /** 手势区域 id。同一页面里出现两张列表（根页 / 智能列表下钻）时必须各给一个。 */
+  regionId?: string
 }) {
   const { palette, t } = props
   const rows = useMemo(() => applyFilter(props.memos, props.filter, props.query), [props.memos, props.filter, props.query])
+
+  // —— 原生行手势（`aibox.list.*`）——
+  //
+  // 原生 VoiceMemos 的这张列表是：**左滑收藏 / 右滑删除 / 长按上下文菜单**。此前小应用只有
+  // 一个自绘的 550ms 长按 → 于是真机上长按会**同时**弹出 WebKit 的文本选中菜单和应用自绘菜单。
+  // 接上手势层后长按走真 `UIContextMenuInteraction`，那条冲突从根上消失（框架还会给区域贴
+  // `-webkit-touch-callout:none`）。`rendered:false` 时下面的自绘长按照旧生效。
+  const gestures = useRowGestures(props.regionId || 'memos', {
+    contextMenu: [
+      { id: 'share', title: t('shareAudio'), icon: 'square.and.arrow.up' },
+      { id: 'rename', title: t('rename'), icon: 'pencil' },
+      { id: 'transcribe', title: t('startTranscription'), icon: 'waveform.and.mic' },
+      { id: 'copy', title: t('copyTranscript'), icon: 'doc.on.doc' },
+      { id: 'fav', title: t('favourite'), icon: 'star' },
+      { id: 'delete', title: t('moveToTrash'), icon: 'trash', role: 'destructive' },
+    ],
+    leadingSwipe: [{ id: 'fav', title: t('favourite'), icon: 'star', tint: 'accent' }],
+    trailingSwipe: [{ id: 'delete', title: t('moveToTrash'), icon: 'trash', role: 'destructive' }],
+    // 逐行展示态：已转写的行不该出现「发起转录」，没转写的行不该出现「复制转写」，
+    // 已收藏的行标题要变成「取消收藏」——身份不变，只改显示（合同同 `aibox.menu`）。
+    rowOverrides: (rowId: string) => {
+      const memo = rows.find((row) => row.id === rowId)
+      if (!memo) return null
+      return {
+        transcribe: { hidden: memo.hasTranscript },
+        copy: { hidden: !memo.hasTranscript },
+        fav: { title: memo.isFavourite ? t('unfavourite') : t('favourite'), icon: memo.isFavourite ? 'star.slash' : 'star' },
+        share: { hidden: !memo.hasAudio },
+      }
+    },
+    onAction: ({ rowId, actionId }: { rowId: string; actionId: string }) => {
+      const memo = rows.find((row) => row.id === rowId)
+      if (memo) props.onAction?.(memo, actionId)
+    },
+  })
 
   if (rows.length === 0) {
     const filtered = props.query.trim() !== '' || filterIsActive(props.filter)
@@ -55,7 +94,7 @@ export function MemoList(props: {
   }
 
   return (
-    <div>
+    <div {...gestures.regionProps}>
       {rows.map((memo) => (
         <MemoRow
           key={memo.id}
@@ -64,8 +103,9 @@ export function MemoList(props: {
           dark={props.dark}
           memo={memo}
           busy={props.busyIDs[memo.id]}
+          rowId={memo.id}
           onOpen={() => props.onOpen(memo)}
-          onMenu={() => props.onMenu(memo)}
+          onMenu={gestures.rendered ? undefined : () => props.onMenu(memo)}
         />
       ))}
     </div>
@@ -79,22 +119,25 @@ function MemoRow(props: {
   memo: Memo
   busy?: string
   onOpen: () => void
-  onMenu: () => void
+  onMenu?: () => void
+  rowId: string
 }) {
   const { palette, t, memo } = props
   const tint = memo.hasAudio ? palette.accent : palette.muted
   let pressTimer: number | null = null
-  const startPress = () => { pressTimer = window.setTimeout(props.onMenu, 550) }
+  // 手势层在场时 `onMenu` 是 undefined —— 自绘长按整条停用，不与原生 context menu 打架。
+  const startPress = () => { if (props.onMenu) pressTimer = window.setTimeout(props.onMenu, 550) }
   const endPress = () => { if (pressTimer !== null) { window.clearTimeout(pressTimer); pressTimer = null } }
 
   return (
     <div
       role="button"
+      data-row-id={props.rowId}
       onClick={props.onOpen}
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
-      onContextMenu={(event) => { event.preventDefault(); props.onMenu() }}
+      onContextMenu={(event) => { event.preventDefault(); props.onMenu?.() }}
       style={{
         display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: `8px ${SPACE.s4}px`,
         borderBottom: `1px solid ${palette.line}`, cursor: 'pointer',

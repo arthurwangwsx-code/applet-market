@@ -10,6 +10,7 @@ import { FilterSheet, MemoList, Toggle, applyFilter } from './components/MemoLis
 import { MemoDetail, type DetailContext } from './components/MemoDetail'
 import { RecordSheet } from './components/RecordSheet'
 import { Icon, PushPage } from './components/primitives'
+import { setNavigationTitle, useOverlay, useSubpageStack } from './lib/shell'
 import { registerMemoActions } from './lib/actions'
 import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format'
 import {
@@ -27,10 +28,16 @@ import {
 type TabID = 'record' | 'library' | 'settings'
 
 type Route =
-  | { kind: 'root' }
   | { kind: 'detail'; memo: Memo }
   | { kind: 'scoped'; scope: 'all' | 'fav' }
   | { kind: 'trash' }
+
+/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
+function routePath(route: Route): string {
+  if (route.kind === 'detail') return `#/memo/${encodeURIComponent(route.memo.id)}`
+  if (route.kind === 'scoped') return `#/list/${route.scope}`
+  return '#/trash'
+}
 
 export default function App() {
   const scene = useScene()
@@ -40,6 +47,9 @@ export default function App() {
 
   const lang: Lang = locale.language.startsWith('zh') ? 'zh' : 'en'
   const t = useMemo(() => makeT(lang), [lang])
+  // 子页标题在 push 那一刻要用最新的翻译函数，而 push 回调是稳定的 —— 经 ref 取值。
+  const tRef = useRef(t)
+  tRef.current = t
   const dark = scene?.appearance.effectiveColorScheme === 'dark'
   const hostAccent = scene?.appearance.accentColor ?? null
   const palette = useMemo(() => {
@@ -48,7 +58,15 @@ export default function App() {
   }, [dark, hostAccent])
 
   const [tab, setTab] = useState<TabID>('record')
-  const [route, setRoute] = useState<Route>({ kind: 'root' })
+  // 子页栈 = 宿主原生页栈的镜像（`presentation.subpages`）。进详情走 `aibox.navigation.push`，
+  // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop、能实时看到上一页。
+  // 用户要求：「页面导航要用系统的，这样回退才是最自然的。另外，菜单的标题要在阅读页面自己定义。」
+  // —— 标题由 `titleFor` 在 push 那一刻交给宿主，宿主记进标题栈，返回时自动还原。
+  const subpages = useSubpageStack<Route>({
+    pathFor: routePath,
+    titleFor: (row) => routeTitle(row, tRef.current),
+  })
+  const route = subpages.route
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<MemoFilter>(DEFAULT_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
@@ -76,6 +94,52 @@ export default function App() {
     if (tabs.rendered && tabs.selected && tabs.selected !== tab) setTab(tabs.selected as TabID)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.selected, tabs.rendered])
+
+  // 宿主画了导航栏（含返回键与 ⋯）就**不再自绘** —— 两条顶栏叠起来是这一轮反复出现的形状。
+  const [hostChrome, setHostChrome] = useState(false)
+  useEffect(() => {
+    const api = (window as any).aibox
+    if (!api?.toolbar?.getState) return
+    void api.toolbar.getState()
+      .then((state: any) => setHostChrome(!!(state && state.rendered)))
+      .catch(() => undefined)
+  }, [])
+
+  // 顶栏标题：根页用 Tab 名，子页用页面自己定义的标题（用户明确要求「标题要在阅读页面自己定义」）。
+  useEffect(() => {
+    const title = route ? routeTitle(route, t) : tabTitle(tab, t)
+    document.title = title
+    setNavigationTitle(title)
+  }, [route, tab, t])
+
+  // —— 悬浮层（`aibox.overlay`）——
+  //
+  // 用户 2026-08-03 真机反馈：「录音按钮以及播放详情页的控制应该是悬浮的。目前需要直接滚动到
+  // 最下面才能看到。」录音键与播放条都是**跨页面常驻的控制**，属于 overlay 而不是页面内容。
+  // 宿主把它和底栏叠进同一个 safeAreaInset（自下而上：底栏 → bar → button）并扣掉自己的高度，
+  // 所以它压不到最后一行、也压不到底栏。`rendered:false` 时下面照旧渲染页内 FAB 与页内控制条。
+  const beginRecordingRef = useRef<() => void>(() => undefined)
+  /** 详情页把「播放器指令入口」挂到这里；overlay 上的控件点击经它转成真正的 audio 操作。 */
+  const playerCommandRef = useRef<((command: string) => void) | null>(null)
+
+  const overlay = useOverlay((event) => {
+    if (event.id === 'record') { beginRecordingRef.current(); return }
+    if (event.id === 'player') playerCommandRef.current?.(event.controlId || 'toggle')
+  })
+
+  // 录音键的展示态。**只能改展示状态**：id、层数在 manifest 里冻结。
+  const recordVisible = Boolean(tab === 'record' && !route && recorder?.available && !recordOpen)
+  useEffect(() => {
+    if (!overlay.rendered) return
+    overlay.update({ record: { hidden: !recordVisible, enabled: !starting } })
+  }, [overlay.rendered, recordVisible, starting])
+
+  // 离开详情页时把播放条收起来（详情页自己在卸载时也发一次，这里是兜底）。
+  useEffect(() => {
+    if (!overlay.rendered || route?.kind === 'detail') return
+    playerCommandRef.current = null
+    overlay.update({ player: { hidden: true } })
+  }, [overlay.rendered, route])
 
   // 能力探测：录音不可用就把 FAB 整个藏掉，不留一个点了报错的按钮。转写同理。
   useEffect(() => {
@@ -158,22 +222,13 @@ export default function App() {
       setStarting(false)
     }
   }, [recorder, starting, store.settings.quality, t])
+  beginRecordingRef.current = () => { void beginRecording() }
 
-  const openMenu = useCallback(async (memo: Memo) => {
-    const actions: { id: string; title: string; destructive?: boolean }[] = [
-      { id: 'rename', title: t('rename') },
-      { id: 'fav', title: memo.isFavourite ? t('unfavourite') : t('favourite') },
-    ]
-    // 转写入口只在**能转**的时候出现。`engine-missing` 那一档整条不渲染——
-    // 一个点了只会弹「这个构建没有转写引擎」的菜单项，比没有这一项更糟。
-    if (!memo.hasTranscript && transcribable) actions.push({ id: 'transcribe', title: t('startTranscription') })
-    if (memo.hasTranscript) actions.push({ id: 'copy', title: t('copyTranscript') })
-    actions.push({ id: 'share', title: t('shareAudio') })
-    actions.push({ id: 'delete', title: t('moveToTrash'), destructive: true })
-
-    const picked = await actionSheet(actions)
-    if (!picked) return
-
+  /**
+   * 一条录音的行级动作。**原生上下文菜单（`aibox.list.*`）与自绘 action sheet 共用这一份**——
+   * 两条路各写一遍处理器，就是「同一条录音从不同入口长按看到不一样的行为」的来源。
+   */
+  const runRowAction = useCallback(async (memo: Memo, picked: string) => {
     if (picked === 'rename') {
       const next = await promptText(t('renamePrompt'), memo.title)
       if (!next) return
@@ -209,9 +264,25 @@ export default function App() {
       // 软删（可恢复），与原生「移到最近删除」同语义。
       if (clip) await saveClip({ ...clip, isTrashed: true, trashedAt: Date.now() })
       store.refresh()
-      if (route.kind === 'detail') setRoute({ kind: 'root' })
+      if (route?.kind === 'detail') subpages.back()
     }
-  }, [t, store, route.kind, transcribable, runTranscription])
+  }, [t, store, route, runTranscription, subpages])
+
+  /** 自绘长按菜单（手势层 `rendered:false` 时的降级路径）。动作集与原生上下文菜单逐条一致。 */
+  const openMenu = useCallback(async (memo: Memo) => {
+    const actions: { id: string; title: string; destructive?: boolean }[] = [
+      { id: 'rename', title: t('rename') },
+      { id: 'fav', title: memo.isFavourite ? t('unfavourite') : t('favourite') },
+    ]
+    // 转写入口只在**能转**的时候出现。`engine-missing` 那一档整条不渲染——
+    // 一个点了只会弹「这个构建没有转写引擎」的菜单项，比没有这一项更糟。
+    if (!memo.hasTranscript && transcribable) actions.push({ id: 'transcribe', title: t('startTranscription') })
+    if (memo.hasTranscript) actions.push({ id: 'copy', title: t('copyTranscript') })
+    actions.push({ id: 'share', title: t('shareAudio') })
+    actions.push({ id: 'delete', title: t('moveToTrash'), destructive: true })
+    const picked = await actionSheet(actions)
+    if (picked) await runRowAction(memo, picked)
+  }, [t, transcribable, runRowAction])
 
   const openDetailMenu = useCallback(async (context: DetailContext) => {
     detailContext.current = context
@@ -262,7 +333,7 @@ export default function App() {
 
   const rootMemos = store.memos
   // 2.0.0 只剩一个来源，「本机剪辑」这一段等同于「全部」，故智能列表只留 全部 / 收藏。
-  const scopedMemos = route.kind === 'scoped'
+  const scopedMemos = route?.kind === 'scoped'
     ? route.scope === 'fav' ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos
     : []
 
@@ -316,15 +387,17 @@ export default function App() {
               filter={filter}
               scoped={false}
               busyIDs={busyIDs}
-              onOpen={(memo) => setRoute({ kind: 'detail', memo })}
+              onOpen={(memo) => subpages.push({ kind: 'detail', memo })}
               onMenu={openMenu}
+              onAction={(memo, actionId) => { void runRowAction(memo, actionId) }}
               onClearFilter={() => setFilter(DEFAULT_FILTER)}
             />
             <div style={{ height: 96 }} />
           </main>
 
-          {/* FAB 只在列表根页渲染。录音能力不可用时整块不出现。 */}
-          {recorder?.available ? (
+          {/* FAB 只在列表根页渲染。录音能力不可用时整块不出现。
+              宿主画了悬浮层就交给它 —— 页内 FAB 是 `rendered:false` 的降级路径（合同 §2.5.5）。 */}
+          {recorder?.available && !overlay.rendered ? (
             <div
               style={{
                 position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -359,8 +432,8 @@ export default function App() {
             t={t}
             memos={rootMemos}
             trashCount={store.clips.filter((clip) => clip.isTrashed).length}
-            onScope={(scope) => setRoute({ kind: 'scoped', scope })}
-            onTrash={() => setRoute({ kind: 'trash' })}
+            onScope={(scope) => subpages.push({ kind: 'scoped', scope })}
+            onTrash={() => subpages.push({ kind: 'trash' })}
           />
         </main>
       ) : null}
@@ -392,21 +465,25 @@ export default function App() {
         </nav>
       ) : null}
 
-      {route.kind === 'detail' ? (
+      {route?.kind === 'detail' ? (
         <MemoDetail
           palette={palette}
           t={t}
           dark={Boolean(dark)}
           memo={route.memo}
           settings={store.settings}
-          onBack={() => setRoute({ kind: 'root' })}
+          onBack={subpages.back}
           onMenu={openDetailMenu}
           onRefresh={store.refresh}
+          overlayRendered={overlay.rendered}
+          overlayUpdate={overlay.update}
+          registerPlayerCommand={(handler) => { playerCommandRef.current = handler }}
+          chrome={!hostChrome}
         />
       ) : null}
 
-      {route.kind === 'scoped' ? (
-        <PushPage palette={palette} title={t('titleRecordings')} onBack={() => setRoute({ kind: 'root' })}>
+      {route?.kind === 'scoped' ? (
+        <PushPage palette={palette} title={routeTitle(route, t)} onBack={subpages.back} chrome={!hostChrome}>
           <MemoList
             palette={palette}
             t={t}
@@ -416,19 +493,22 @@ export default function App() {
             filter={DEFAULT_FILTER}
             scoped
             busyIDs={busyIDs}
-            onOpen={(memo) => setRoute({ kind: 'detail', memo })}
+            regionId="memos.scoped"
+            onOpen={(memo) => subpages.push({ kind: 'detail', memo })}
             onMenu={openMenu}
+            onAction={(memo, actionId) => { void runRowAction(memo, actionId) }}
             onClearFilter={() => undefined}
           />
         </PushPage>
       ) : null}
 
-      {route.kind === 'trash' ? (
+      {route?.kind === 'trash' ? (
         <TrashPage
           palette={palette}
           t={t}
           store={store}
-          onBack={() => setRoute({ kind: 'root' })}
+          onBack={subpages.back}
+          chrome={!hostChrome}
         />
       ) : null}
 
@@ -489,6 +569,19 @@ export default function App() {
       />
     </div>
   )
+}
+
+/** 子页标题 —— 阅读页自己定义（用户要求），push 那一刻交给宿主，返回时宿主自动还原上一层。 */
+function routeTitle(route: Route, t: T): string {
+  if (route.kind === 'detail') return route.memo.title
+  if (route.kind === 'scoped') return route.scope === 'fav' ? t('smartFavourites') : t('smartAllRecordings')
+  return t('recentlyDeleted')
+}
+
+function tabTitle(tab: TabID, t: T): string {
+  if (tab === 'library') return t('tabFolders')
+  if (tab === 'settings') return t('tabSettings')
+  return t('titleVoiceMemos')
 }
 
 // —— 文件夹 Tab（智能列表段可实现，用户文件夹段不行） ——
@@ -555,6 +648,7 @@ function TrashPage(props: {
   t: T
   store: ReturnType<typeof useMemoStore>
   onBack: () => void
+  chrome?: boolean
 }) {
   const { palette, t } = props
   const trashed = props.store.clips.filter((clip) => clip.isTrashed)
@@ -563,6 +657,7 @@ function TrashPage(props: {
       palette={palette}
       title={t('recentlyDeleted')}
       onBack={props.onBack}
+      chrome={props.chrome}
       trailing={
         trashed.length ? (
           <button

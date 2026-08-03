@@ -9,6 +9,7 @@ import Icon from './Icon.jsx'
 import { EmptyState, ListHeader, SwipeRow } from './primitives.jsx'
 import { QueueRow } from './rows.jsx'
 import { C, SPACE } from './theme.js'
+import { useRowGestures } from '../lib/gestures.js'
 
 const ROW = 52
 
@@ -23,6 +24,46 @@ export default function QueuePage({ ctx }) {
   const upNext = index >= 0 ? tracks.slice(index + 1) : tracks.slice()
   const currentKey = current ? (current.musicItemId ? `am:${current.musicItemId}` : `url:${current.url}`) : null
   const mostPlayed = store.mostPlayed(8, currentKey)
+
+  // —— 原生行手势（`aibox.list.*`）——
+  //
+  // 长按走真 `UIContextMenuInteraction`（有缩略图预览、毛玻璃、触觉曲线），左滑走原生滑动条
+  // （有橡皮筋与阈值触发）。这些正是「像不像原生」的全部内容，自绘做不出来。
+  // `rendered:false`（宿主没实现 / 形态不支持）时下面照旧用 `SwipeRow` + `useLongPress`。
+  // 编辑态要用自己的拖拽把手，此时关掉手势层（否则长按与拖动打架）。
+  const upNextGestures = useRowGestures('queue.upNext', {
+    enabled: !editing,
+    contextMenu: [
+      { id: 'play', title: t('common.play'), icon: 'play.fill' },
+      { id: 'favorite', title: t('common.addToFavorites'), icon: 'heart' },
+      { id: 'more', title: t('common.more'), icon: 'ellipsis' },
+      { id: 'remove', title: t('common.remove'), icon: 'trash', role: 'destructive' },
+    ],
+    trailingSwipe: [{ id: 'remove', title: t('common.remove'), icon: 'trash', role: 'destructive' }],
+    onAction: ({ rowId, actionId }) => {
+      const absolute = Number(rowId)
+      const track = music.queue.tracks[absolute]
+      if (!track) return
+      if (actionId === 'play') actions.playQueueIndex(absolute)
+      else if (actionId === 'favorite') actions.toggleFavorite(track, true)
+      else if (actionId === 'remove') actions.removeQueue(absolute)
+      else if (actionId === 'more') actions.trackMenu(track, { queueIndex: absolute })
+    },
+  })
+
+  // 「最常播放」段：与原生 `frequentRow.contextMenu` 逐条对齐（播放 / 加入队列）。
+  const frequentGestures = useRowGestures('queue.mostPlayed', {
+    contextMenu: [
+      { id: 'play', title: t('common.play'), icon: 'play.fill' },
+      { id: 'queue', title: t('common.addToQueue'), icon: 'text.append' },
+    ],
+    onAction: ({ rowId, actionId }) => {
+      const row = mostPlayed.find((item) => item.key === rowId)
+      if (!row) return
+      if (actionId === 'play') actions.playTrack(row.track, mostPlayed.map((item) => item.track))
+      else if (actionId === 'queue') actions.addToQueue(row.track)
+    },
+  })
 
   const ordered = React.useMemo(() => {
     if (!drag) return upNext
@@ -70,16 +111,19 @@ export default function QueuePage({ ctx }) {
       {upNext.length > 0 ? (
         <>
           <ListHeader>{t('queue.playingNext')}</ListHeader>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} {...upNextGestures.regionProps}>
             {ordered.map((track, position) => {
               const absolute = index + 1 + position
               const row = (
                 <QueueRow
+                  rowId={String(absolute)}
                   track={track}
                   isCurrent={false}
                   isPlaying={false}
                   onClick={editing ? undefined : () => actions.playQueueIndex(absolute)}
-                  onLongPress={() => actions.trackMenu(track, { queueIndex: absolute })}
+                  onLongPress={upNextGestures.rendered
+                    ? undefined
+                    : () => actions.trackMenu(track, { queueIndex: absolute })}
                   trailing={editing ? (
                     <span
                       className="mu-press"
@@ -110,6 +154,10 @@ export default function QueuePage({ ctx }) {
                   ) : undefined}
                 />
               )
+              // 手势层在场时不再套自绘 SwipeRow —— 两套滑动叠在一起就是「滑不动 / 滑两下」。
+              if (upNextGestures.rendered) {
+                return <React.Fragment key={`${track.id || track.title}-${absolute}`}>{row}</React.Fragment>
+              }
               return (
                 <SwipeRow
                   key={`${track.id || track.title}-${absolute}`}
@@ -127,14 +175,16 @@ export default function QueuePage({ ctx }) {
       {mostPlayed.length > 0 ? (
         <>
           <ListHeader>{t('queue.mostPlayed')}</ListHeader>
+          <div {...frequentGestures.regionProps}>
           {mostPlayed.map((row) => (
             <QueueRow
               key={row.key}
+              rowId={row.key}
               track={row.track}
               isCurrent={false}
               isPlaying={false}
               onClick={() => actions.playTrack(row.track, mostPlayed.map((item) => item.track))}
-              onLongPress={() => actions.trackMenu(row.track)}
+              onLongPress={frequentGestures.rendered ? undefined : () => actions.trackMenu(row.track)}
               trailing={(
                 <button
                   type="button"
@@ -147,6 +197,7 @@ export default function QueuePage({ ctx }) {
               )}
             />
           ))}
+          </div>
         </>
       ) : null}
 

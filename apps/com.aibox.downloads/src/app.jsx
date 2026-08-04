@@ -15,10 +15,10 @@
 
 import React from 'react'
 import { THEME_CSS, C, SPACE } from './components/theme.js'
-import { Button, Card, EmptyState, Notice, SectionHeader } from './components/primitives.jsx'
-import Icon from './components/Icon.jsx'
-import TaskRow from './components/TaskRow.jsx'
-import AddSheet from './components/AddSheet.jsx'
+import { Button, Card, EmptyState, Notice, SectionHeader } from './components/primitives.js'
+import Icon from './components/Icon.js'
+import TaskRow from './components/TaskRow.js'
+import AddSheet from './components/AddSheet.js'
 import { capabilities, downloads, onEvent, readClipboard, tap, confirm } from './lib/host.js'
 import { addDownloads, registerActions, uiHooks } from './lib/actions.js'
 

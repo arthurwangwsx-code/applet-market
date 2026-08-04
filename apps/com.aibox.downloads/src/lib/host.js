@@ -6,12 +6,12 @@
 // 第 3 条对下载这条线尤其重要：真正的传输永远在宿主侧，浏览器里根本没有等价物。
 // 所以内存实现**假装**在下载（定时推进 fraction），只为让布局、空态、按钮态在无宿主时也能验。
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+// 桥探测、事件、剪贴板、对话框一律走 SDK：它们是**所有应用共享的同一份实现**。
+// 本文件只保留这个应用自己的东西——无宿主兜底的假下载引擎、状态筛选、以及 download 命名空间的调用。
+import { available, bridge, events, system, ui } from '@aibox/applet-sdk'
 
 export function hasNamespace(name, method) {
-  const api = bridge()
-  if (!api || !api[name]) return false
-  return method ? typeof api[name][method] === 'function' : true
+  return available(name, method)
 }
 
 export const capabilities = {
@@ -180,30 +180,21 @@ export function matchesState(filter, state) {
 
 /** 订阅一条宿主事件；回一个退订函数。无宿主时对接内存实现的变更通知。 */
 export function onEvent(name, handler) {
-  const api = bridge()
-  if (!api || !api.events) {
+  // 无宿主预览时对接内存实现的变更通知——这条是本应用特有的（真正的传输永远在宿主侧，
+  // 浏览器里没有等价物），所以它留在应用里、没进 SDK。
+  if (!available('events', 'on')) {
     if (name === 'download.progress') {
       fakeListeners.add(handler)
       return () => fakeListeners.delete(handler)
     }
     return () => {}
   }
-  const off = api.events.on(name, handler)
-  return typeof off === 'function' ? off : () => api.events.off(name, handler)
+  return events.on(name, handler)
 }
 
 // ---------------------------------------------------------------- 其它能力
 
-export async function readClipboard() {
-  const api = bridge()
-  if (!capabilities.clipboard) return ''
-  try {
-    const text = await api.clipboard.read({})
-    return typeof text === 'string' ? text : (text && text.text) || ''
-  } catch (error) {
-    return ''
-  }
-}
+export const readClipboard = system.readClipboard
 
 export function tap(style) {
   const api = bridge()
@@ -211,16 +202,15 @@ export function tap(style) {
   try { api.haptics.impact({ style: style || 'light' }) } catch (error) { /* 触感失败无所谓 */ }
 }
 
-export async function confirm(options) {
-  const api = bridge()
-  if (!capabilities.ui) return true
-  try {
-    const result = await api.ui.confirm(options)
-    return !!result && result.actionId !== 'cancel' && !result.cancelled
-  } catch (error) {
-    return false
-  }
-}
+/**
+ * 确认框。**语义已按 SDK 统一：问不出来 = 没确认（false）。**
+ *
+ * 迁移时发现的真 bug：本应用此前写的是「`ui` 不可用就 return true」，而 manifest 的
+ * `permissions.capabilities` 里**从来没有声明过 `ui`** —— 于是 `capabilities.ui` 恒为 false，
+ * 这个确认框**一次都没弹出来过**，每次都直接按「用户同意」放行。
+ * 修法是两条一起：manifest 补上 `ui` 声明（让框真的弹出来）+ 语义交给 SDK（问不出来按未确认）。
+ */
+export const confirm = ui.confirm
 
 export const storage = {
   async get(key, fallback) {

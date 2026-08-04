@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-04T10:10:54Z",
+  "updatedAt": "2026-08-04T11:35:03Z",
   "appCount": 11,
   "apps": [
     {
@@ -42,9 +42,9 @@
       "icon": "arrow.down.circle.fill",
       "category": "tools",
       "author": "AiBox",
-      "latestVersion": "1.0.3",
-      "latestReleasedAt": "2026-08-03T15:04:26Z",
-      "versionCount": 4,
+      "latestVersion": "1.1.0",
+      "latestReleasedAt": "2026-08-04T11:35:03Z",
+      "versionCount": 5,
       "capabilities": [
         "clipboard",
         "download",
@@ -53,11 +53,12 @@
         "share",
         "storage",
         "tabs",
-        "toolbar"
+        "toolbar",
+        "ui"
       ],
-      "latestTotalBytes": 61456,
-      "latestFileCount": 10,
-      "runtimeKind": "source",
+      "latestTotalBytes": 94580,
+      "latestFileCount": 12,
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.downloads",
       "localizedNames": {
         "en": "Downloads"

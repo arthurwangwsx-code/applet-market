@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.downloads",
-  "latestVersion": "1.0.3",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-04T11:35:03Z",
+      "notes": "TS 构建管线：桥胶水改用 SDK；补上从未声明过的 ui 权限——确认框此前一次都没弹出来过",
+      "fileCount": 12,
+      "totalBytes": 94580,
+      "path": "apps/com.aibox.downloads/releases/1.1.0",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "94213c93afdc4338b66c4c1408fdfc808398270ba3bd4b873d86f998f76c1dc2"
+    },
     {
       "version": "1.0.3",
       "releasedAt": "2026-08-03T15:04:26Z",

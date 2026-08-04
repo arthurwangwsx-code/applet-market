@@ -2,7 +2,7 @@
   "_doc": "每个应用私有 host.js 的行数。只减不增；迁到 SDK 后把该应用从这里删掉。",
   "linesByApp": {
     "com.aibox.bilibili": 292,
-    "com.aibox.downloads": 240,
+    "com.aibox.downloads": 230,
     "com.aibox.finance": 156,
     "com.aibox.ledger": 198,
     "com.aibox.music": 309,

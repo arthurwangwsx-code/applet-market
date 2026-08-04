@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    // 产物必须是**保结构的多文件 ESM**：宿主的源码型运行时按路径逐个伺服，不做打包。
+    "module": "ESNext",
+    // bundler 解析：允许在 import 里写 `./foo.js` 而实际文件是 `foo.tsx`（产物里那个 `.js` 才是对的）。
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // 迁移期：`.jsx`/`.js` 原样通过（只转 JSX、不检查），这样一个应用可以先换工具链、再逐文件加类型。
+    "allowJs": true,
+    "checkJs": false,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": false,
+
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true
+  }
+}

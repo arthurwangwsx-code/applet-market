@@ -4,8 +4,8 @@
 // 引擎明明支持四种——把它画出来，是这一轮泛化在用户面前的唯一证据。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Button, Chip, Sheet } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Button, Chip, Sheet } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 
 const DESTINATIONS = [

@@ -1,0 +1,14 @@
+{
+  "name": "@aibox/applet-tsbuild",
+  "private": true,
+  "version": "1.0.0",
+  "description": "源码型小应用的 TS→JS 构建：类型与 lint 在开发期，端上产物仍是保结构的多文件 ESM。",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "bin": { "aibox-tsbuild": "./bin/aibox-tsbuild.mjs" },
+  "dependencies": { "esbuild": "^0.25.0", "typescript": "^5.9.3" }
+}

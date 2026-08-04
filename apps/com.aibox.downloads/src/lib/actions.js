@@ -4,7 +4,7 @@
 // （`applet_invoke` 拉起一个无头 WebView，只跑模块顶层代码然后立刻调 action）。
 
 import { downloads, matchesState } from './host.js'
-import { extractURLs } from '../components/AddSheet.jsx'
+import { extractURLs } from '../components/AddSheet.js'
 
 /** UI 动作的回调挂载点。页面挂载时填，卸载时清；无头时恒为空（那三个动作本来就 headless:false）。 */
 export const uiHooks = { pauseAll: null, resumeAll: null, clearFinished: null, refresh: null }

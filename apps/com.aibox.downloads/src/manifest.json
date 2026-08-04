@@ -18,11 +18,12 @@
     "ai": false,
     "networkAllowed": [],
     "capabilities": [
-      "download",
       "clipboard",
-      "share",
+      "download",
+      "haptics",
       "open",
-      "haptics"
+      "share",
+      "ui"
     ]
   },
   "presentation": {
@@ -245,5 +246,6 @@
         }
       ]
     }
-  }
+  },
+  "runtimeKind": "bundle"
 }

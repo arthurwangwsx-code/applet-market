@@ -4,8 +4,8 @@
 // 少任何一个都会让用户去点开详情页找答案——那是这类界面最常见的失败。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { IconButton, ProgressBar } from './primitives.jsx'
+import Icon from './Icon.js'
+import { IconButton, ProgressBar } from './primitives.js'
 import { C, SPACE, formatBytes, formatETA, formatSpeed, stateColor } from './theme.js'
 
 const STATE_LABEL = {

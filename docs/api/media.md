@@ -27,6 +27,8 @@ Play an audio file from this applet's assets/data/cache directories.
 
 **返回** `{id,channel,state}`
 
+**返回类型** `{ channel: "music" | "voice" | "sfx" | "ambient"; id: string; state: "playing" }`
+
 ```js
 await aibox.media.play({path:'assets/audio/welcome.m4a',channel:'voice'})
 ```
@@ -47,6 +49,8 @@ Pause one playback handle.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.media.resume()`
 
 Resume one playback handle.
@@ -62,6 +66,8 @@ Resume one playback handle.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.media.stop()`
 
@@ -79,6 +85,8 @@ Stop one playback handle.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.media.stopAll()`
 
 Stop all audio, optionally limited to one channel.
@@ -95,6 +103,8 @@ Stop all audio, optionally limited to one channel.
 
 **返回** `integer`
 
+**返回类型** `number`
+
 ### `aibox.media.getState()`
 
 Read playback state for one handle.
@@ -109,7 +119,9 @@ Read playback state for one handle.
 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
-**返回** `{id,state,currentTime,duration,channel}`
+**返回** `{id,state,currentTime,duration,channel} | {state:'stopped'}`
+
+**返回类型** `{ channel: string; currentTime: number; duration: number; id: string; state: "playing" | "paused" } | { state: "stopped" }`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift`
 

@@ -10,6 +10,7 @@
           "summary": "Return this applet's effective permission profile and bridge protocol version.",
           "parametersJSON": "{}",
           "resultSummary": "{protocol, tier, developerFullAccess, declaredCapabilities, toolRequirements}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.access.summary()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -19,6 +20,7 @@
           "summary": "Explain exactly which permission gate allows or blocks a capability or host tool.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"tool\":{\"type\":\"string\"},\"capability\":{\"type\":\"string\"},\"method\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{target, allowed, code, failedGate, gates, remedies}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.access.explain({ tool: 'health_metric' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -37,6 +39,7 @@
           "summary": "Return structured data to the current caller.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"data\":{}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.action.result({ ok: true })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -55,6 +58,7 @@
           "summary": "Probe whether the model is usable right now (no consent prompt, no quota spent).",
           "parametersJSON": "{}",
           "resultSummary": "{available:boolean, reason?:string, intents:string[]}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const a = await aibox.ai.availability(); if (!a.available) useOfflineUI()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -64,6 +68,7 @@
           "summary": "Legacy one-liner; same as generate({prompt}).",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"prompt\"],\"properties\":{\"prompt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.complete('Summarize this')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -73,6 +78,7 @@
           "summary": "L1 — free-form text. Use when a human reads the answer.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"system\":{\"type\":\"string\",\"description\":\"Instructions/persona; keep byte-identical across turns for prefix caching.\"},\"prompt\":{\"type\":\"string\",\"description\":\"Single-turn shorthand; use this or messages.\"},\"messages\":{\"type\":\"array\",\"description\":\"Multi-turn transcript.\",\"items\":{\"type\":\"object\",\"required\":[\"role\",\"content\"],\"properties\":{\"role\":{\"type\":\"string\",\"enum\":[\"system\",\"user\",\"assistant\"]},\"content\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"],\"description\":\"Model tier hint; applets never name a model id.\"},\"maxTokens\":{\"type\":\"integer\"},\"temperature\":{\"type\":\"number\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.generate({ system: 'You are terse.', prompt: draft, intent: 'fast', maxTokens: 300 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -82,6 +88,7 @@
           "summary": "L2 — a typed object shaped by a JSON Schema, already parsed (no JSON.parse). Use when your code consumes the answer.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"prompt\",\"schema\"],\"properties\":{\"system\":{\"type\":\"string\"},\"prompt\":{\"type\":\"string\"},\"schema\":{\"type\":\"object\",\"description\":\"JSON Schema object for the answer; enum on a property makes an illegal value unrepresentable.\"},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"maxTokens\":{\"type\":\"integer\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "object matching schema",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "const r = await aibox.ai.decide({ prompt: receipt, schema: { type:'object', properties:{ amount:{type:'number'}, merchant:{type:'string'} }, required:['amount'] } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -91,6 +98,7 @@
           "summary": "L2 — pick one of the candidates your code computed. Required for move/option decisions: candidates become an enum, so an out-of-range answer cannot occur, and it degrades to fallback:true instead of failing.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"rules\",\"state\",\"candidates\"],\"properties\":{\"rules\":{\"type\":\"string\",\"description\":\"Invariant rules; keep byte-identical across turns (prefix-cache boundary).\"},\"state\":{\"type\":\"string\",\"description\":\"What changed this turn. Never include information the model is not entitled to see.\"},\"candidates\":{\"type\":\"array\",\"description\":\"Legal options computed by the applet.\",\"items\":{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"},\"label\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "{actionId:string, reason?:string, fallback:boolean}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "const d = await aibox.ai.chooseAction({ rules: RULES, state: renderState(), candidates: legal.map(m => ({ id: m.id, label: m.label })), intent: 'fast', timeoutMs: 8000 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -100,6 +108,7 @@
           "summary": "L1 streaming — same input as generate, but returns an async-iterable you can render as it arrives. Use for anything long enough that a spinner would feel slow. Structured output (decide/chooseAction) is never streamed.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"system\":{\"type\":\"string\"},\"prompt\":{\"type\":\"string\"},\"messages\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"role\",\"content\"],\"properties\":{\"role\":{\"type\":\"string\",\"enum\":[\"system\",\"user\",\"assistant\"]},\"content\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"intent\":{\"type\":\"string\",\"enum\":[\"fast\",\"balanced\",\"reasoning\"]},\"maxTokens\":{\"type\":\"integer\"},\"temperature\":{\"type\":\"number\"},\"timeoutMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "async-iterable of string deltas, with .cancel()",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "const s = aibox.ai.generateStream({ prompt }); for await (const d of s) out.textContent += d",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -109,6 +118,7 @@
           "summary": "This applet's AI spend so far; gate expensive features before hitting aibox/quota-exceeded.",
           "parametersJSON": "{}",
           "resultSummary": "{usedToday, dailyLimit, usedSession, sessionLimit}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const u = await aibox.ai.usage()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -118,6 +128,7 @@
           "summary": "L3 sugar over generate: condense text.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"style\":{\"type\":\"string\",\"description\":\"e.g. bullets, paragraph, tldr\"},\"maxWords\":{\"type\":\"integer\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.summarize(article, { style: 'bullets', maxWords: 120 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -127,6 +138,7 @@
           "summary": "L3 sugar over generate: restyle text.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"tone\":{\"type\":\"string\",\"description\":\"e.g. polite, concise\"},\"purpose\":{\"type\":\"string\",\"description\":\"e.g. email, chat\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.rewrite(text, { tone: 'polite', purpose: 'email' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -136,6 +148,7 @@
           "summary": "L3 sugar over generate: translate text.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"options\"],\"properties\":{\"text\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"required\":[\"to\"],\"properties\":{\"to\":{\"type\":\"string\",\"description\":\"BCP-47 tag or plain language name.\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.translate(text, { to: 'en' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -145,6 +158,7 @@
           "summary": "L3 sugar over decide: return exactly one of the given labels (enum-constrained).",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"labels\"],\"properties\":{\"text\":{\"type\":\"string\"},\"labels\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}",
           "resultSummary": "one of labels",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.classify(note, ['work', 'life', 'study'])",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -154,6 +168,7 @@
           "summary": "L3 sugar over decide: pull named fields out of text into an object.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\",\"fieldsSpec\"],\"properties\":{\"text\":{\"type\":\"string\"},\"fieldsSpec\":{\"type\":\"object\",\"description\":\"Field name to type hint, e.g. {amount:'number', merchant:'string'}.\"}},\"additionalProperties\":false}",
           "resultSummary": "object with the requested fields",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "await aibox.ai.extract(receipt, { amount: 'number', merchant: 'string', date: 'string' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -172,6 +187,7 @@
           "summary": "List installed applets and their declared action names.",
           "parametersJSON": "{}",
           "resultSummary": "{id,name,icon,summary,actions:string[]}[]",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"name\",\"icon\",\"summary\",\"actions\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}}",
           "effect": "read",
           "example": "await aibox.apps.list()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
@@ -180,7 +196,8 @@
           "name": "describe",
           "summary": "Read one applet's action/event contract.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"app\"],\"properties\":{\"app\":{\"type\":\"string\"}},\"additionalProperties\":false}",
-          "resultSummary": "{id,name,summary,actions,events}",
+          "resultSummary": "{id,name,icon,summary,actions,events,automations}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"id\",\"name\",\"icon\",\"summary\",\"actions\",\"events\",\"automations\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":true,\"description\":\"manifest 里 actions 的一条（合同声明，形状随 AppletActionDescriptor）\"}},\"events\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":true}},\"automations\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":true}}},\"additionalProperties\":false}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
@@ -190,6 +207,7 @@
           "summary": "Headlessly invoke a registered action on another applet.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"app\",\"action\"],\"properties\":{\"app\":{\"type\":\"string\",\"description\":\"Applet id or name.\"},\"action\":{\"type\":\"string\"},\"input\":{},\"waitMs\":{\"type\":\"integer\",\"minimum\":300,\"maximum\":6000}},\"additionalProperties\":false}",
           "resultSummary": "{appId,action,result}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"appId\",\"action\",\"result\"],\"properties\":{\"appId\":{\"type\":\"string\"},\"action\":{\"type\":\"string\"},\"result\":{\"description\":\"被调 applet 的 action 返回值；形状由那个应用的合同决定，可能为 null\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.apps.invoke({ app:'expense-manager', action:'addExpense', input:{amount:35} })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
@@ -198,7 +216,8 @@
           "name": "emit",
           "summary": "Publish one event declared by the current applet and run matching event automations.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"event\"],\"properties\":{\"event\":{\"type\":\"string\"},\"payload\":{}},\"additionalProperties\":false}",
-          "resultSummary": "{event,accepted,automationsRun}",
+          "resultSummary": "{event,accepted,automationsRun,payload}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"event\",\"accepted\",\"automationsRun\",\"payload\"],\"properties\":{\"event\":{\"type\":\"string\"},\"accepted\":{\"type\":\"boolean\"},\"automationsRun\":{\"type\":\"integer\"},\"payload\":{\"description\":\"原样回传的事件载荷，未传时为 null\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.apps.emit({ event:'expenseAdded', payload:{id} })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AppsCapabilityAdapter.swift"
@@ -217,6 +236,7 @@
           "summary": "Probe whether recording can start right now. Never prompts and never opens the microphone — call it on mount and hide the record button when unavailable.",
           "parametersJSON": "{}",
           "resultSummary": "{available, microphone, supportsBackgroundRecording, busy, reason}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\",\"microphone\",\"supportsBackgroundRecording\",\"busy\"],\"properties\":{\"available\":{\"type\":\"boolean\"},\"microphone\":{\"type\":\"string\",\"enum\":[\"granted\",\"denied\",\"undetermined\"]},\"supportsBackgroundRecording\":{\"type\":\"boolean\"},\"busy\":{\"type\":\"boolean\"},\"reason\":{\"type\":\"string\",\"enum\":[\"usage-description-missing\",\"microphone-denied\",\"busy\",\"not-recording\",\"destination-unwritable\",\"engine-failure\",\"platform-unsupported\"]}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const a = await aibox.audio.availability(); if (!a.available) hideRecordButton(a.reason)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -226,6 +246,7 @@
           "summary": "Start recording. Shows no host UI. Fails with aibox/busy if any recording is already running.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"format\":{\"type\":\"string\",\"enum\":[\"m4a\",\"wav\"],\"description\":\"m4a is AAC (default, small); wav is 16-bit PCM for when you want to decode samples in JS.\"},\"sampleRate\":{\"type\":\"integer\",\"minimum\":8000,\"maximum\":48000,\"description\":\"Default 44100.\"},\"bitrate\":{\"type\":\"integer\",\"description\":\"AAC bits per second; default 128000. Ignored for wav.\"},\"channels\":{\"type\":\"integer\",\"enum\":[1,2],\"description\":\"Default 1 — speech gains nothing from stereo and doubles the size.\"}},\"additionalProperties\":false}",
           "resultSummary": "{started, discarded, format, sampleRate, channels, supportsBackgroundRecording} — started:false with discarded:true means you called recordStop while the permission prompt was still up, so nothing was captured",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"started\",\"discarded\",\"format\",\"sampleRate\",\"channels\",\"supportsBackgroundRecording\"],\"properties\":{\"started\":{\"enum\":[true]},\"discarded\":{\"enum\":[false]},\"format\":{\"type\":\"string\",\"enum\":[\"m4a\",\"wav\"]},\"sampleRate\":{\"type\":\"integer\"},\"channels\":{\"type\":\"integer\"},\"supportsBackgroundRecording\":{\"type\":\"boolean\"}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"started\",\"discarded\",\"durationMs\"],\"properties\":{\"started\":{\"enum\":[false]},\"discarded\":{\"enum\":[true]},\"durationMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}]}",
           "effect": "external",
           "example": "await aibox.audio.recordStart({ format:'m4a', sampleRate:44100, bitrate:128000, channels:1 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -235,6 +256,7 @@
           "summary": "Pause the recording. Returns false when there is nothing of yours to pause, or after an interruption (that file is already finalized).",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.audio.recordPause()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -244,6 +266,7 @@
           "summary": "Resume a paused recording.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.audio.recordResume()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -252,7 +275,8 @@
           "name": "recordStop",
           "summary": "Stop and finalize. Returns an applet resource handle you can play with <audio src=ref.url> or decode with AudioContext. Clips shorter than 500ms are discarded (discarded:true) and nothing is written.",
           "parametersJSON": "{}",
-          "resultSummary": "{handle, url, name, mimeType, size, durationMs, byteCount, format, sampleRate, channels, interrupted} | {discarded:true, durationMs}",
+          "resultSummary": "{handle, url, name, mimeType, size, createdAt, durationMs, byteCount, format, sampleRate, channels, interrupted, discarded} | {discarded:true, durationMs}",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"handle\",\"url\",\"name\",\"mimeType\",\"size\",\"createdAt\",\"durationMs\",\"byteCount\",\"format\",\"sampleRate\",\"channels\",\"interrupted\",\"discarded\"],\"properties\":{\"handle\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"mimeType\":{\"type\":\"string\"},\"size\":{\"type\":\"integer\"},\"createdAt\":{\"type\":\"string\"},\"durationMs\":{\"type\":\"integer\"},\"byteCount\":{\"type\":\"integer\"},\"format\":{\"type\":\"string\",\"enum\":[\"m4a\",\"wav\"]},\"sampleRate\":{\"type\":\"integer\"},\"channels\":{\"type\":\"integer\"},\"interrupted\":{\"type\":\"boolean\"},\"discarded\":{\"enum\":[false]}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"discarded\",\"durationMs\"],\"properties\":{\"discarded\":{\"enum\":[true]},\"durationMs\":{\"type\":\"integer\"}},\"additionalProperties\":false}]}",
           "effect": "localWrite",
           "example": "const r = await aibox.audio.recordStop(); if (!r.discarded) player.src = r.url",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -262,6 +286,7 @@
           "summary": "Discard the recording and delete the file. Nothing is stored.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.audio.recordCancel()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -271,6 +296,7 @@
           "summary": "Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) already normalized to 0…1 with the same curve the native recorder uses, oldest first — pad the left with zeros and draw the newest at the right edge.",
           "parametersJSON": "{}",
           "resultSummary": "{state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"state\",\"recording\",\"paused\",\"interrupted\",\"elapsedMs\",\"byteCount\",\"levels\",\"levelsHz\",\"averageDb\",\"peakDb\"],\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"idle\",\"recording\",\"paused\",\"interrupted\"]},\"recording\":{\"type\":\"boolean\"},\"paused\":{\"type\":\"boolean\"},\"interrupted\":{\"type\":\"boolean\"},\"elapsedMs\":{\"type\":\"integer\"},\"byteCount\":{\"type\":\"integer\"},\"levels\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"levelsHz\":{\"type\":\"number\"},\"averageDb\":{\"type\":\"number\"},\"peakDb\":{\"type\":\"number\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const s = await aibox.audio.recordStatus(); drawWaveform(s.levels)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -280,6 +306,7 @@
           "summary": "Probe whether transcribe() can run for a locale. Never prompts and never transcribes — call it before showing a transcribe button. state tells you WHY it is unavailable: engine-missing (this build has no transcription engine), not-authorized, unsupported-locale, unsupported-os, needs-model-download (transcribe() will download it on first use, so this state is still worth offering).",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN. Defaults to the device locale.\"}},\"additionalProperties\":false}",
           "resultSummary": "{available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\",\"state\",\"locale\",\"engine\"],\"properties\":{\"available\":{\"type\":\"boolean\"},\"state\":{\"type\":\"string\",\"enum\":[\"available\",\"needs-model-download\",\"unsupported-os\",\"not-authorized\",\"unsupported-locale\",\"engine-missing\"]},\"locale\":{\"type\":\"string\"},\"engine\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const a = await aibox.audio.transcribeAvailability({ locale:'zh-CN' }); if (!a.available && a.state !== 'needs-model-download') hideTranscribeButton(a.state)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -289,6 +316,7 @@
           "summary": "Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pass the handle from recordStop() or picker.file() — never a file path (you do not have one, and the host resolves the handle itself). Long files take minutes; one transcription per applet at a time. First use may prompt for speech recognition and may download the locale model.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"handle\":{\"type\":\"string\",\"description\":\"A resource:// handle belonging to this applet (from aibox.audio.recordStop or aibox.picker.file).\"},\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag. Always pass it when you know the spoken language — a mismatched recognizer transcribes look-alike words in the wrong language.\"},\"segments\":{\"type\":\"boolean\",\"description\":\"Include timestamped segments. Default true; pass false when you only need the text and want a smaller payload.\"}},\"required\":[\"handle\"],\"additionalProperties\":false}",
           "resultSummary": "{text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"text\",\"locale\",\"segmentCount\"],\"properties\":{\"text\":{\"type\":\"string\"},\"locale\":{\"type\":\"string\"},\"segmentCount\":{\"type\":\"integer\"},\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"text\",\"start\",\"duration\",\"end\"],\"properties\":{\"text\":{\"type\":\"string\"},\"start\":{\"type\":\"number\"},\"duration\":{\"type\":\"number\"},\"end\":{\"type\":\"number\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "const r = await aibox.audio.recordStop(); const t = await aibox.audio.transcribe({ handle:r.handle, locale:'zh-CN' }); show(t.text)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AudioRecordingCapabilityAdapter.swift"
@@ -307,6 +335,7 @@
           "summary": "Open an http/https URL. mode inApp keeps the user inside the app (default); system uses SFSafari so Safari logins/passkeys apply; external hands off to the default browser app. Unavailable modes degrade inApp → system → external instead of failing.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"inApp\",\"system\",\"external\"]}},\"additionalProperties\":false}",
           "resultSummary": "{opened:boolean, mode:string}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"opened\",\"mode\"],\"properties\":{\"opened\":{\"type\":\"boolean\"},\"mode\":{\"type\":\"string\",\"enum\":[\"inApp\",\"system\",\"external\"]}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "await aibox.browser.open({ url, mode: 'inApp' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
@@ -316,6 +345,7 @@
           "summary": "Open a link straight into Reader with content you already extracted, so the host does not fetch and parse it a second time.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"publishedAt\":{\"type\":\"string\"},\"content\":{\"type\":\"string\",\"description\":\"Pre-extracted article HTML; omit to let the host extract on arrival.\"}},\"additionalProperties\":false}",
           "resultSummary": "{opened:boolean, mode:string, reader:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"opened\",\"mode\",\"reader\"],\"properties\":{\"opened\":{\"type\":\"boolean\"},\"mode\":{\"type\":\"string\",\"enum\":[\"inApp\",\"system\",\"external\"]},\"reader\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "await aibox.browser.openArticle({ url, title, content: extractedHTML })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
@@ -325,6 +355,7 @@
           "summary": "Which modes this host can actually serve right now, and whether Reader exists. Hide entry points the host cannot honor instead of letting a tap do nothing.",
           "parametersJSON": "{}",
           "resultSummary": "{modes:string[], reader:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"modes\",\"reader\"],\"properties\":{\"modes\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"inApp\",\"system\",\"external\"]}},\"reader\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const info = await aibox.browser.availability()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/BrowserCapabilityAdapter.swift"
@@ -343,6 +374,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.calendar.events({ action: 'list' })",
           "toolName": "schedule_events",
@@ -353,6 +385,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "schedule_subscribe",
@@ -372,6 +405,7 @@
           "summary": "Set the collaboration mode for this applet.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]}},\"additionalProperties\":false}",
           "resultSummary": "ConversationBinding",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"appletID\",\"conversationIdentity\",\"mode\",\"updatedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"conversationIdentity\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"snapshot\":{\"type\":\"object\",\"required\":[\"appletID\",\"consoleErrors\",\"revision\",\"capturedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formStateJSON\":{\"type\":\"string\"},\"selectedElement\":{\"type\":\"object\",\"required\":[\"selector\",\"tag\",\"attributes\"],\"properties\":{\"selector\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"component\":{\"type\":\"string\"},\"sourceHint\":{\"type\":\"string\"},\"attributes\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"},\"width\":{\"type\":\"number\"},\"height\":{\"type\":\"number\"}},\"additionalProperties\":false},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"revision\":{\"type\":\"integer\"},\"capturedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false},\"updatedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.chat.bind({ mode:'diagnose' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -381,6 +415,7 @@
           "summary": "Update the compact current-page snapshot without sending a chat message.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formState\":{},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"selectedElement\":{\"type\":\"object\"}},\"additionalProperties\":false}",
           "resultSummary": "ContextSnapshot",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"appletID\",\"consoleErrors\",\"revision\",\"capturedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formStateJSON\":{\"type\":\"string\"},\"selectedElement\":{\"type\":\"object\",\"required\":[\"selector\",\"tag\",\"attributes\"],\"properties\":{\"selector\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"component\":{\"type\":\"string\"},\"sourceHint\":{\"type\":\"string\"},\"attributes\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"},\"width\":{\"type\":\"number\"},\"height\":{\"type\":\"number\"}},\"additionalProperties\":false},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"revision\":{\"type\":\"integer\"},\"capturedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.chat.snapshot({ route:location.hash, pageTitle:document.title, visibleText:document.body.innerText.slice(0,1200) })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -390,6 +425,7 @@
           "summary": "Read the current collaboration binding and compact snapshot.",
           "parametersJSON": "{}",
           "resultSummary": "ConversationBinding",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"appletID\",\"conversationIdentity\",\"mode\",\"updatedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"conversationIdentity\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"snapshot\":{\"type\":\"object\",\"required\":[\"appletID\",\"consoleErrors\",\"revision\",\"capturedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formStateJSON\":{\"type\":\"string\"},\"selectedElement\":{\"type\":\"object\",\"required\":[\"selector\",\"tag\",\"attributes\"],\"properties\":{\"selector\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"component\":{\"type\":\"string\"},\"sourceHint\":{\"type\":\"string\"},\"attributes\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"},\"width\":{\"type\":\"number\"},\"height\":{\"type\":\"number\"}},\"additionalProperties\":false},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"revision\":{\"type\":\"integer\"},\"capturedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false},\"updatedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -398,7 +434,8 @@
           "name": "selectElement",
           "summary": "Record a user-selected DOM element for precise AI edits.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"element\"],\"properties\":{\"element\":{\"type\":\"object\"}},\"additionalProperties\":false}",
-          "resultSummary": "SelectedElement",
+          "resultSummary": "ContextSnapshot（回传更新后的整份快照）",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"appletID\",\"consoleErrors\",\"revision\",\"capturedAt\"],\"properties\":{\"appletID\":{\"type\":\"string\"},\"route\":{\"type\":\"string\"},\"pageTitle\":{\"type\":\"string\"},\"visibleText\":{\"type\":\"string\"},\"formStateJSON\":{\"type\":\"string\"},\"selectedElement\":{\"type\":\"object\",\"required\":[\"selector\",\"tag\",\"attributes\"],\"properties\":{\"selector\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"component\":{\"type\":\"string\"},\"sourceHint\":{\"type\":\"string\"},\"attributes\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"},\"width\":{\"type\":\"number\"},\"height\":{\"type\":\"number\"}},\"additionalProperties\":false},\"consoleErrors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"revision\":{\"type\":\"integer\"},\"capturedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -408,6 +445,7 @@
           "summary": "Report build/diagnostic progress for the chat card and Studio.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"phase\"],\"properties\":{\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"phase\":{\"type\":\"string\",\"enum\":[\"idle\",\"planning\",\"editing\",\"running\",\"testing\",\"completed\",\"failed\"]},\"progress\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"message\":{\"type\":\"string\"},\"changedFiles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"errors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}",
           "resultSummary": "CollaborationEnvelope",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"id\",\"appletID\",\"mode\",\"phase\",\"changedFiles\",\"errors\",\"updatedAt\"],\"properties\":{\"id\":{\"type\":\"string\"},\"appletID\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"phase\":{\"type\":\"string\",\"enum\":[\"idle\",\"planning\",\"editing\",\"running\",\"testing\",\"completed\",\"failed\"]},\"progress\":{\"type\":\"number\"},\"message\":{\"type\":\"string\"},\"changedFiles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"errors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"updatedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -417,6 +455,7 @@
           "summary": "Read the latest collaboration progress envelope.",
           "parametersJSON": "{}",
           "resultSummary": "CollaborationEnvelope|null",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"id\",\"appletID\",\"mode\",\"phase\",\"changedFiles\",\"errors\",\"updatedAt\"],\"properties\":{\"id\":{\"type\":\"string\"},\"appletID\":{\"type\":\"string\"},\"mode\":{\"type\":\"string\",\"enum\":[\"use\",\"build\",\"diagnose\",\"automate\"]},\"phase\":{\"type\":\"string\",\"enum\":[\"idle\",\"planning\",\"editing\",\"running\",\"testing\",\"completed\",\"failed\"]},\"progress\":{\"type\":\"number\"},\"message\":{\"type\":\"string\"},\"changedFiles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"errors\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"updatedAt\":{\"type\":\"string\",\"description\":\"ISO8601\"}},\"additionalProperties\":false},{\"type\":\"null\"}]}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -426,6 +465,7 @@
           "summary": "Explicitly hand the current compact snapshot to the docked AI conversation; optionally send a visible suggested prompt.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"suggestedPrompt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "external",
           "example": "await aibox.chat.shareContext({ suggestedPrompt:'Analyze the selected component and improve its layout.' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/CollaborationCapabilityAdapter.swift"
@@ -444,6 +484,7 @@
           "summary": "Read clipboard text.",
           "parametersJSON": "{}",
           "resultSummary": "string",
+          "resultSchemaJSON": "{\"type\":\"string\"}",
           "effect": "read",
           "example": "await aibox.clipboard.read()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ClipboardCapabilityAdapter.swift"
@@ -453,6 +494,7 @@
           "summary": "Replace clipboard text.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.clipboard.write({ text: 'Copied' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ClipboardCapabilityAdapter.swift"
@@ -471,6 +513,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.contacts.find({ query: 'Arthur' })",
           "toolName": "people_find",
@@ -481,6 +524,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "people_create",
@@ -500,6 +544,7 @@
           "summary": "Bytes used and remaining across this applet's private data (kv + db + imports). Check it before bulk writes and use it to drive your own eviction policy — the host sets the budget, you decide what to drop.",
           "parametersJSON": "{}",
           "resultSummary": "{usedBytes, limitBytes, remainingBytes, layers:{kv,db,imports,other}}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"usedBytes\",\"limitBytes\",\"remainingBytes\",\"layers\"],\"properties\":{\"usedBytes\":{\"type\":\"integer\"},\"limitBytes\":{\"type\":\"integer\"},\"remainingBytes\":{\"type\":\"integer\"},\"layers\":{\"type\":\"object\",\"required\":[\"kv\",\"db\",\"imports\",\"other\"],\"properties\":{\"kv\":{\"type\":\"integer\"},\"db\":{\"type\":\"integer\"},\"imports\":{\"type\":\"integer\"},\"other\":{\"type\":\"integer\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const u = await aibox.data.usage(); if (u.remainingBytes < 1e6) await trimOldRecords()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
@@ -509,6 +554,7 @@
           "summary": "Which version last wrote the data on disk versus the version running now. This is the migration hook: when changed is true, migrate from previous to current, then call acknowledgeVersion(). The host knows nothing about your schema.",
           "parametersJSON": "{}",
           "resultSummary": "{current, previous, isFirstRun, changed, firstSeenAt?}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"current\",\"previous\",\"isFirstRun\",\"changed\"],\"properties\":{\"current\":{\"type\":\"string\"},\"previous\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"isFirstRun\":{\"type\":\"boolean\"},\"changed\":{\"type\":\"boolean\"},\"firstSeenAt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const v = await aibox.data.version(); if (v.changed) { await migrate(v.previous, v.current); await aibox.data.acknowledgeVersion() }",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
@@ -518,6 +564,7 @@
           "summary": "Mark the current version's data as migrated. Idempotent; until you call it, version() keeps reporting the same transition, so a failed migration is retried instead of silently skipped.",
           "parametersJSON": "{}",
           "resultSummary": "{current, previous, isFirstRun, changed}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"current\",\"previous\",\"isFirstRun\",\"changed\"],\"properties\":{\"current\":{\"type\":\"string\"},\"previous\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"isFirstRun\":{\"type\":\"boolean\"},\"changed\":{\"type\":\"boolean\"},\"firstSeenAt\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.data.acknowledgeVersion()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
@@ -527,6 +574,7 @@
           "summary": "The data snapshot the host captured before the last update, if any. Read it to tell the user a rollback point exists; the host keeps exactly one.",
           "parametersJSON": "{}",
           "resultSummary": "{version?, capturedAt?, bytes} | null",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"bytes\"],\"properties\":{\"bytes\":{\"type\":\"integer\"},\"version\":{\"type\":\"string\"},\"capturedAt\":{\"type\":\"string\"}},\"additionalProperties\":false},{\"type\":\"null\"}]}",
           "effect": "read",
           "example": "const s = await aibox.data.snapshot(); if (s) showRollbackHint(s.capturedAt)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DataCapabilityAdapter.swift"
@@ -545,6 +593,7 @@
           "summary": "List collection names.",
           "parametersJSON": "{}",
           "resultSummary": "string[]",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"string\"}}",
           "effect": "read",
           "example": "await aibox.db.collections()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -554,6 +603,7 @@
           "summary": "Insert or replace one JSON object; returns metadata including _id.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"document\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"document\":{\"type\":\"object\"}},\"additionalProperties\":false}",
           "resultSummary": "stored document",
+          "resultSchemaJSON": "{\"type\":\"object\",\"description\":\"文档；键由 applet 自己决定，`_id` 由容器写入\",\"additionalProperties\":true}",
           "effect": "localWrite",
           "example": "await aibox.db.insert({ collection:'tasks', document:{ title:'Ship', done:false } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -563,6 +613,7 @@
           "summary": "Read one document by _id.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "document|null",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"description\":\"文档；键由 applet 自己决定，`_id` 由容器写入\",\"additionalProperties\":true},{\"type\":\"null\"}]}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -572,6 +623,7 @@
           "summary": "Patch one document; JSON null removes a field.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\",\"patch\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"patch\":{\"type\":\"object\"},\"merge\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "resultSummary": "updated document",
+          "resultSchemaJSON": "{\"type\":\"object\",\"description\":\"文档；键由 applet 自己决定，`_id` 由容器写入\",\"additionalProperties\":true}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -581,6 +633,7 @@
           "summary": "Delete one document by _id.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"id\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -590,6 +643,7 @@
           "summary": "\"Delete every document matching `where`; returns how many were removed. \"\n                      + \"Use this instead of looping remove() — each single remove rewrites the whole collection file, \"\n                      + \"so deleting 500 documents one by one is 500 full-table writes. `where` must be non-empty; \"\n                      + \"to empty a collection call clear().\"",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"where\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\",\"minProperties\":1}},\"additionalProperties\":false}",
           "resultSummary": "number (documents removed)",
+          "resultSchemaJSON": "{\"type\":\"integer\"}",
           "effect": "localWrite",
           "example": "await aibox.db.removeWhere({ collection:'clips', where:{ _createdAt:{ $lt:'2026-05-01' } } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -599,6 +653,7 @@
           "summary": "\"Query documents, with stable sorting and pagination. \" + Self.operatorHelp",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"},\"sortBy\":{\"type\":\"string\"},\"descending\":{\"type\":\"boolean\"},\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":500}},\"additionalProperties\":false}",
           "resultSummary": "document[] (at most 500 — page with offset, or use count/aggregate for totals)",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"description\":\"文档；键由 applet 自己决定，`_id` 由容器写入\",\"additionalProperties\":true}}",
           "effect": "read",
           "example": "await aibox.db.query({ collection:'tx', where:{ date:{$gte:'2026-08-01'}, kind:{$in:['food','rent']} }, sortBy:'date', descending:true })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -608,6 +663,7 @@
           "summary": "\"Count matching documents without transferring them. \" + Self.operatorHelp",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"}},\"additionalProperties\":false}",
           "resultSummary": "number",
+          "resultSchemaJSON": "{\"type\":\"integer\"}",
           "effect": "read",
           "example": "await aibox.db.count({ collection:'tx', where:{ amount:{$gt:1000} } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -617,6 +673,7 @@
           "summary": "\"Group and reduce documents natively. \"\n                      + \"Prefer this over query()+reduce in JS: a monthly total over 3000 rows needs no rows to cross the bridge \"\n                      + \"(and query() caps at 500 anyway). Each result row has _group and _count plus your named metrics. \"\n                      + \"Omit groupBy to reduce the whole collection into one row. \" + Self.operatorHelp",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"metrics\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"where\":{\"type\":\"object\"},\"groupBy\":{\"type\":\"string\"},\"metrics\":{\"type\":\"object\",\"minProperties\":1,\"additionalProperties\":{\"type\":\"object\",\"minProperties\":1,\"maxProperties\":1,\"properties\":{\"$sum\":{\"type\":\"string\"},\"$avg\":{\"type\":\"string\"},\"$min\":{\"type\":\"string\"},\"$max\":{\"type\":\"string\"},\"$count\":{\"type\":\"boolean\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "Array<{_group, _count, ...metrics}> sorted by _group; $avg/$min/$max are null when no value qualifies",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"_group\",\"_count\"],\"properties\":{\"_group\":{\"description\":\"分组键值\"},\"_count\":{\"type\":\"integer\"}},\"additionalProperties\":true}}",
           "effect": "read",
           "example": "await aibox.db.aggregate({ collection:'tx', where:{ date:{$gte:'2026-08-01',$lt:'2026-09-01'} }, groupBy:'category', metrics:{ total:{$sum:'amount'}, n:{$count:true} } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -626,6 +683,7 @@
           "summary": "\"Case- and accent-insensitive substring scan across string fields. \"\n                      + \"Omit `fields` to scan every non-underscore string field. Combine with `where` to scope it. \"\n                      + \"NOTE: this is a linear substring scan, not an inverted index, and results are NOT ranked — \"\n                      + \"they come back in collection order. That is deliberate: tokenizer-based ranking drops CJK text \"\n                      + \"(no word boundaries), and at the 20k-document cap a scan is milliseconds.\"",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\",\"text\"],\"properties\":{\"collection\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"fields\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"where\":{\"type\":\"object\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":500}},\"additionalProperties\":false}",
           "resultSummary": "document[] in collection order (unranked)",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"description\":\"文档；键由 applet 自己决定，`_id` 由容器写入\",\"additionalProperties\":true}}",
           "effect": "read",
           "example": "await aibox.db.search({ collection:'notes', text:'蛋白质', fields:['title','body'] })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -635,6 +693,7 @@
           "summary": "Delete every document in one collection.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"collection\"],\"properties\":{\"collection\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift"
@@ -653,6 +712,7 @@
           "summary": "Read the current device state.",
           "parametersJSON": "{}",
           "resultSummary": "{model, systemName, systemVersion, idiom, locale, timeZone, batteryLevel?, batteryState, freeDiskBytes?}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"model\",\"systemName\",\"systemVersion\",\"idiom\",\"locale\",\"timeZone\",\"batteryState\"],\"properties\":{\"model\":{\"type\":\"string\"},\"systemName\":{\"type\":\"string\"},\"systemVersion\":{\"type\":\"string\"},\"idiom\":{\"type\":\"string\",\"enum\":[\"phone\",\"pad\",\"mac\",\"tv\",\"carPlay\",\"vision\",\"unspecified\"]},\"locale\":{\"type\":\"string\"},\"timeZone\":{\"type\":\"string\"},\"batteryLevel\":{\"type\":\"number\",\"description\":\"0…1；未知时该键缺席（模拟器 / 未开监控）\"},\"batteryState\":{\"type\":\"string\",\"enum\":[\"charging\",\"full\",\"unplugged\",\"unknown\"]},\"freeDiskBytes\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "await aibox.device.info()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DeviceInfoCapabilityAdapter.swift"
@@ -671,6 +731,7 @@
           "summary": "Queue one download and get its taskId back immediately. Resumable, survives app termination. headers are passed through verbatim (Referer/Cookie/User-Agent for sites that reject plain requests).",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\",\"description\":\"Saved name including extension. Defaults to the last path component of the URL.\"},\"destination\":{\"type\":\"object\",\"description\":\"Where the file lands. Omit for the app sandbox Downloads folder, which always works and needs no permission.\",\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"sandbox\",\"externalFiles\",\"iCloud\",\"vault\"]},\"path\":{\"type\":\"string\",\"description\":\"Relative folder inside the chosen root.\"},\"vault\":{\"type\":\"string\",\"description\":\"Vault name for kind 'vault'; omit for the active vault.\"}},\"additionalProperties\":false},\"headers\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}},\"priority\":{\"type\":\"string\",\"enum\":[\"low\",\"normal\",\"high\"]},\"groupId\":{\"type\":\"string\",\"description\":\"Tie several downloads into one logical task so cancelAll of that group works.\"},\"expectedBytes\":{\"type\":\"integer\",\"description\":\"Size hint so the progress bar is meaningful before the first byte arrives.\"}},\"additionalProperties\":false}",
           "resultSummary": "{taskId, artifactRef}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"taskId\",\"artifactRef\"],\"properties\":{\"taskId\":{\"type\":\"string\"},\"artifactRef\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "const { taskId } = await aibox.download.enqueue({ url, filename: 'lecture.mp4', destination: { kind:'sandbox', path:'Lectures' } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -680,6 +741,7 @@
           "summary": "Your downloads, newest state first-hand. Never includes other apps' tasks.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\",\"active\",\"finished\"]},\"groupId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "DownloadTask[] — {taskId,url,filename,state,bytesReceived,totalBytes,fraction,speed,eta,outputPath,artifactRef,groupId,error}",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"taskId\",\"url\",\"filename\",\"state\",\"bytesReceived\"],\"properties\":{\"taskId\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\"},\"state\":{\"type\":\"string\",\"enum\":[\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\"]},\"bytesReceived\":{\"type\":\"integer\"},\"totalBytes\":{\"type\":\"integer\"},\"fraction\":{\"type\":\"number\"},\"speed\":{\"type\":\"number\"},\"eta\":{\"type\":\"number\"},\"outputPath\":{\"type\":\"string\"},\"artifactRef\":{\"type\":\"string\"},\"groupId\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}},\"additionalProperties\":false}}",
           "effect": "read",
           "example": "const tasks = await aibox.download.list({ state: 'active' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -689,6 +751,7 @@
           "summary": "One task's snapshot; null when the id is not yours or no longer exists.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "DownloadTask|null",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"taskId\",\"url\",\"filename\",\"state\",\"bytesReceived\"],\"properties\":{\"taskId\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\"},\"state\":{\"type\":\"string\",\"enum\":[\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\"]},\"bytesReceived\":{\"type\":\"integer\"},\"totalBytes\":{\"type\":\"integer\"},\"fraction\":{\"type\":\"number\"},\"speed\":{\"type\":\"number\"},\"eta\":{\"type\":\"number\"},\"outputPath\":{\"type\":\"string\"},\"artifactRef\":{\"type\":\"string\"},\"groupId\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}},\"additionalProperties\":false},{\"type\":\"null\"}]}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -698,6 +761,7 @@
           "summary": "Pause one download; resume data is written to disk so it continues from where it stopped.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -707,6 +771,7 @@
           "summary": "Resume a paused or failed download.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -716,6 +781,7 @@
           "summary": "Cancel one download; the record stays in the list as cancelled.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -725,6 +791,7 @@
           "summary": "Drop one record from the list entirely (cancels it first if running).",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -734,6 +801,7 @@
           "summary": "Pause every download of YOURS. Other apps and the host queue are untouched.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -743,6 +811,7 @@
           "summary": "Resume every paused/failed download of yours.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -752,6 +821,7 @@
           "summary": "Cancel every active download of yours.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -761,6 +831,7 @@
           "summary": "Remove your completed/failed/cancelled records. Does NOT delete downloaded files.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -770,6 +841,7 @@
           "summary": "Start pushing 'download.progress' events for your tasks to aibox.events. Strongly preferred over polling: a 10-download queue polled once a second is dozens of bridge round-trips per second. Events stop automatically when your applet closes.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.download.subscribe(); aibox.events.on('download.progress', t => update(t))",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -779,6 +851,7 @@
           "summary": "Stop the progress event stream.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -788,6 +861,7 @@
           "summary": "Hand a finished file to the host's opener (Quick Look / the system app for that type). The file never enters your sandbox.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -797,6 +871,7 @@
           "summary": "Present the native share sheet for a finished file.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"taskId\"],\"properties\":{\"taskId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -806,6 +881,7 @@
           "summary": "Probe whether the download engine is usable right now. No consent prompt.",
           "parametersJSON": "{}",
           "resultSummary": "{available:boolean, reason?:string}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\",\"reason\"],\"properties\":{\"available\":{\"type\":\"boolean\"},\"reason\":{\"type\":\"string\",\"description\":\"不可用原因；可用时为空串\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const a = await aibox.download.availability(); if (!a.available) hideDownloadUI()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DownloadCapabilityAdapter.swift"
@@ -824,6 +900,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_boxes",
@@ -834,6 +911,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_list",
@@ -844,6 +922,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_read",
@@ -854,6 +933,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_read_binary",
@@ -864,6 +944,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_stat",
@@ -874,6 +955,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_search",
@@ -884,6 +966,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_tree",
@@ -894,6 +977,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_glob",
@@ -904,6 +988,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_write",
@@ -914,6 +999,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_write_binary",
@@ -924,6 +1010,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_append",
@@ -934,6 +1021,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_create_dir",
@@ -944,6 +1032,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_transfer",
@@ -954,6 +1043,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_delete",
@@ -964,6 +1054,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_create_box",
@@ -974,6 +1065,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "fs_rename_box",
@@ -984,6 +1076,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "fs_describe_box",
@@ -1003,6 +1096,7 @@
           "summary": "Play an impact haptic.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"style\":{\"type\":\"string\",\"enum\":[\"light\",\"medium\",\"heavy\",\"soft\",\"rigid\"]}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.haptics.impact({ style: 'light' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
@@ -1012,6 +1106,7 @@
           "summary": "Play a selection tick.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.haptics.selection()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
@@ -1021,6 +1116,7 @@
           "summary": "Play a success, warning, or error pattern.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"success\",\"warning\",\"error\"]}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.haptics.notify({ type: 'success' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/HapticsCapabilityAdapter.swift"
@@ -1039,6 +1135,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.health.metric({ metric: 'steps', range: 'today' })",
           "toolName": "health_metric",
@@ -1049,6 +1146,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.health.summary({ range: 'today' })",
           "toolName": "health_summary",
@@ -1059,6 +1157,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "media_activity",
@@ -1069,6 +1168,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "media_workouts",
@@ -1088,6 +1188,7 @@
           "summary": "List this applet's automations and last run status.",
           "parametersJSON": "{}",
           "resultSummary": "Automation[]",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"trigger\",\"action\",\"enabled\",\"createdAt\",\"updatedAt\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"trigger\":{\"type\":\"object\",\"required\":[\"kind\"],\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"once\",\"interval\",\"daily\",\"event\",\"appLaunch\",\"appForeground\",\"appletOpen\"]},\"at\":{\"type\":\"string\",\"description\":\"ISO8601\"},\"intervalSeconds\":{\"type\":\"integer\"},\"hour\":{\"type\":\"integer\"},\"minute\":{\"type\":\"integer\"},\"event\":{\"type\":\"string\"}},\"additionalProperties\":false},\"action\":{\"type\":\"string\"},\"inputJSON\":{\"type\":\"string\"},\"catchUpWindowSeconds\":{\"type\":\"integer\"},\"enabled\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\"},\"updatedAt\":{\"type\":\"string\"},\"lastRunAt\":{\"type\":\"string\"},\"lastResultJSON\":{\"type\":\"string\"},\"lastError\":{\"type\":\"string\"},\"consecutiveFailures\":{\"type\":\"integer\"},\"nextRetryAt\":{\"type\":\"string\"},\"leaseUntil\":{\"type\":\"string\"},\"lastInvocationID\":{\"type\":\"string\"},\"pendingOccurrenceID\":{\"type\":\"string\"},\"lastSkippedAt\":{\"type\":\"string\"},\"lastSkipReason\":{\"type\":\"string\"}},\"additionalProperties\":false}}",
           "effect": "read",
           "example": "await aibox.jobs.list()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1097,6 +1198,7 @@
           "summary": "Create or update an automation.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"action\",\"trigger\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"action\":{\"type\":\"string\"},\"input\":{},\"enabled\":{\"type\":\"boolean\"},\"trigger\":{\"type\":\"object\",\"required\":[\"kind\"],\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"once\",\"interval\",\"daily\",\"event\",\"appLaunch\",\"appForeground\",\"appletOpen\"]},\"at\":{\"type\":\"string\",\"description\":\"ISO8601 for once.\"},\"intervalSeconds\":{\"type\":\"integer\",\"minimum\":60},\"hour\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":23},\"minute\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":59},\"event\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "resultSummary": "Automation",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"id\",\"trigger\",\"action\",\"enabled\",\"createdAt\",\"updatedAt\"],\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"trigger\":{\"type\":\"object\",\"required\":[\"kind\"],\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"once\",\"interval\",\"daily\",\"event\",\"appLaunch\",\"appForeground\",\"appletOpen\"]},\"at\":{\"type\":\"string\",\"description\":\"ISO8601\"},\"intervalSeconds\":{\"type\":\"integer\"},\"hour\":{\"type\":\"integer\"},\"minute\":{\"type\":\"integer\"},\"event\":{\"type\":\"string\"}},\"additionalProperties\":false},\"action\":{\"type\":\"string\"},\"inputJSON\":{\"type\":\"string\"},\"catchUpWindowSeconds\":{\"type\":\"integer\"},\"enabled\":{\"type\":\"boolean\"},\"createdAt\":{\"type\":\"string\"},\"updatedAt\":{\"type\":\"string\"},\"lastRunAt\":{\"type\":\"string\"},\"lastResultJSON\":{\"type\":\"string\"},\"lastError\":{\"type\":\"string\"},\"consecutiveFailures\":{\"type\":\"integer\"},\"nextRetryAt\":{\"type\":\"string\"},\"leaseUntil\":{\"type\":\"string\"},\"lastInvocationID\":{\"type\":\"string\"},\"pendingOccurrenceID\":{\"type\":\"string\"},\"lastSkippedAt\":{\"type\":\"string\"},\"lastSkipReason\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.jobs.register({ name:'Nightly summary', action:'summarizeDay', trigger:{kind:'daily',hour:20,minute:0} })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1106,6 +1208,7 @@
           "summary": "Remove one automation.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1115,6 +1218,7 @@
           "summary": "Run one automation immediately.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1124,6 +1228,7 @@
           "summary": "Run every currently due automation for this applet.",
           "parametersJSON": "{}",
           "resultSummary": "{count:number}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"count\"],\"properties\":{\"count\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1133,6 +1238,7 @@
           "summary": "Read the next calculable due time for every enabled automation.",
           "parametersJSON": "{}",
           "resultSummary": "{id,nextAt:string|null}[]",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"nextAt\"],\"properties\":{\"id\":{\"type\":\"string\"},\"nextAt\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"additionalProperties\":false}}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift"
@@ -1151,6 +1257,7 @@
           "summary": "Read the current application lifecycle and environment state, including whether this applet is currently visible and whether the host suspends its rendering when occluded.",
           "parametersJSON": "{}",
           "resultSummary": "{state,locale,contentSizeCategory,lowPowerMode,visible,occluded,surfaceActivity,hostSuspendsWhenOccluded}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.lifecycle.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1169,6 +1276,7 @@
           "summary": "Read whether the host actually attached the gesture layer, plus the declared actions of one region. Always readable — this is the degradation probe.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"regionId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{rendered, regions:string[], configured?, contextMenu?, leadingSwipe?, trailingSwipe?, rows?}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const s = await aibox.list.getState('feed'); if (!s.rendered) useOwnLongPressMenu()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1178,6 +1286,7 @@
           "summary": "Declare the row actions of one region. Identity (ids, role, tint) is fixed here; per-row differences go through setRows overrides. Re-configuring the same regionId replaces the declaration and drops the stale row rectangles.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\"],\"properties\":{\"regionId\":{\"type\":\"string\",\"maxLength\":64},\"contextMenu\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\",\"description\":\"SF Symbol name.\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}},\"leadingSwipe\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}},\"trailingSwipe\":{\"type\":\"array\",\"maxItems\":12,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\",\"maxLength\":60},\"icon\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"normal\",\"destructive\"]},\"tint\":{\"type\":\"string\",\"enum\":[\"default\",\"accent\",\"danger\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "{rendered, regions, configured, contextMenu, leadingSwipe, trailingSwipe, rows}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "const s = await aibox.list.configure({ regionId:'feed', contextMenu:[{id:'save',title:'Save',icon:'bookmark'},{id:'delete',title:'Delete',icon:'trash',role:'destructive'}], trailingSwipe:[{id:'delete',title:'Delete',icon:'trash',role:'destructive'}] }); if (!s.rendered) useOwnLongPressMenu()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1187,6 +1296,7 @@
           "summary": "Report the currently VISIBLE row rectangles. rect is [x, y, width, height] in CSS points in viewport coordinates — exactly getBoundingClientRect(); never multiply by devicePixelRatio and never add scrollTop. Rectangles expire after 600ms, so re-report on every scroll frame (VirtualList and useListGestures already do). Per-row 'actions' overrides may change title/icon/enabled/hidden only — never identity.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\",\"rows\"],\"properties\":{\"regionId\":{\"type\":\"string\"},\"rows\":{\"type\":\"array\",\"maxItems\":120,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"rect\"],\"properties\":{\"id\":{\"type\":\"string\"},\"rect\":{\"type\":\"array\",\"minItems\":4,\"maxItems\":4,\"items\":{\"type\":\"number\"},\"description\":\"[x, y, width, height] in CSS points, viewport coordinates.\"},\"actions\":{\"type\":\"object\",\"description\":\"Per-row display overrides keyed by declared action id.\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "{accepted:boolean, regionId, rows?, generation?, reason?}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "aibox.list.setRows('feed', [{ id:'a1', rect:[0,120,390,96], actions:{ delete:{ hidden: item.pinned } } }])",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1196,6 +1306,7 @@
           "summary": "Drop a region when its list unmounts. Idempotent.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"regionId\"],\"properties\":{\"regionId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{released:boolean, regionId}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.list.release('feed')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1214,6 +1325,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.location.current({})",
           "toolName": "whereabouts_current",
@@ -1224,6 +1336,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "whereabouts_placemark",
@@ -1234,6 +1347,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "whereabouts_permission",
@@ -1244,6 +1358,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "whereabouts_geocode",
@@ -1254,6 +1369,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "whereabouts_places",
@@ -1264,6 +1380,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "whereabouts_geofence",
@@ -1283,6 +1400,7 @@
           "summary": "Play an audio file from this applet's assets/data/cache directories.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"path\"],\"properties\":{\"path\":{\"type\":\"string\"},\"channel\":{\"type\":\"string\",\"enum\":[\"music\",\"voice\",\"sfx\",\"ambient\"]},\"volume\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},\"loop\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "resultSummary": "{id,channel,state}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"id\",\"channel\",\"state\"],\"properties\":{\"id\":{\"type\":\"string\"},\"channel\":{\"type\":\"string\",\"enum\":[\"music\",\"voice\",\"sfx\",\"ambient\"]},\"state\":{\"type\":\"string\",\"enum\":[\"playing\"]}},\"additionalProperties\":false}",
           "effect": "presentation",
           "example": "await aibox.media.play({path:'assets/audio/welcome.m4a',channel:'voice'})",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1292,6 +1410,7 @@
           "summary": "Pause one playback handle.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1301,6 +1420,7 @@
           "summary": "Resume one playback handle.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1310,6 +1430,7 @@
           "summary": "Stop one playback handle.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1319,6 +1440,7 @@
           "summary": "Stop all audio, optionally limited to one channel.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"channel\":{\"type\":\"string\",\"enum\":[\"music\",\"voice\",\"sfx\",\"ambient\"]}},\"additionalProperties\":false}",
           "resultSummary": "integer",
+          "resultSchemaJSON": "{\"type\":\"integer\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1327,7 +1449,8 @@
           "name": "getState",
           "summary": "Read playback state for one handle.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
-          "resultSummary": "{id,state,currentTime,duration,channel}",
+          "resultSummary": "{id,state,currentTime,duration,channel} | {state:'stopped'}",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"id\",\"state\",\"currentTime\",\"duration\",\"channel\"],\"properties\":{\"id\":{\"type\":\"string\"},\"state\":{\"type\":\"string\",\"enum\":[\"playing\",\"paused\"]},\"currentTime\":{\"type\":\"number\"},\"duration\":{\"type\":\"number\"},\"channel\":{\"type\":\"string\"}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"state\"],\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"stopped\"]}},\"additionalProperties\":false}]}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/MediaCapabilityAdapter.swift"
@@ -1346,6 +1469,7 @@
           "summary": "Read the effective business menu and host-menu policy.",
           "parametersJSON": "{}",
           "resultSummary": "{declared,mergePolicy,hostPlacement,hostItems,items}",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"declared\",\"items\"],\"properties\":{\"declared\":{\"enum\":[false]},\"items\":{\"type\":\"object\",\"additionalProperties\":false}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"declared\",\"mergePolicy\",\"hostPlacement\",\"hostItems\",\"items\"],\"properties\":{\"declared\":{\"enum\":[true]},\"mergePolicy\":{\"type\":\"string\",\"enum\":[\"appletFirst\",\"hostFirst\"]},\"hostPlacement\":{\"type\":\"string\",\"enum\":[\"submenu\",\"inline\",\"hidden\"]},\"hostItems\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"reload\",\"editWithAI\",\"viewCode\",\"console\",\"captureContext\",\"selectElement\",\"details\",\"export\"]}},\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"title\",\"icon\",\"enabled\",\"hidden\"],\"properties\":{\"title\":{\"type\":\"string\"},\"icon\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"enabled\":{\"type\":\"boolean\"},\"hidden\":{\"type\":\"boolean\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}]}",
           "effect": "read",
           "example": "await aibox.menu.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1355,6 +1479,7 @@
           "summary": "Update title, icon, enabled or hidden for declared item ids; action identity cannot change.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "menu state",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"declared\",\"items\"],\"properties\":{\"declared\":{\"enum\":[false]},\"items\":{\"type\":\"object\",\"additionalProperties\":false}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"declared\",\"mergePolicy\",\"hostPlacement\",\"hostItems\",\"items\"],\"properties\":{\"declared\":{\"enum\":[true]},\"mergePolicy\":{\"type\":\"string\",\"enum\":[\"appletFirst\",\"hostFirst\"]},\"hostPlacement\":{\"type\":\"string\",\"enum\":[\"submenu\",\"inline\",\"hidden\"]},\"hostItems\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"reload\",\"editWithAI\",\"viewCode\",\"console\",\"captureContext\",\"selectElement\",\"details\",\"export\"]}},\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"title\",\"icon\",\"enabled\",\"hidden\"],\"properties\":{\"title\":{\"type\":\"string\"},\"icon\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"enabled\":{\"type\":\"boolean\"},\"hidden\":{\"type\":\"boolean\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}]}",
           "effect": "presentation",
           "example": "await aibox.menu.update({ items:{ save:{ enabled:hasChanges, title:hasChanges?'Save':'Saved' } } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1364,6 +1489,7 @@
           "summary": "Clear all runtime menu overrides and restore manifest values.",
           "parametersJSON": "{}",
           "resultSummary": "menu state",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"object\",\"required\":[\"declared\",\"items\"],\"properties\":{\"declared\":{\"enum\":[false]},\"items\":{\"type\":\"object\",\"additionalProperties\":false}},\"additionalProperties\":false},{\"type\":\"object\",\"required\":[\"declared\",\"mergePolicy\",\"hostPlacement\",\"hostItems\",\"items\"],\"properties\":{\"declared\":{\"enum\":[true]},\"mergePolicy\":{\"type\":\"string\",\"enum\":[\"appletFirst\",\"hostFirst\"]},\"hostPlacement\":{\"type\":\"string\",\"enum\":[\"submenu\",\"inline\",\"hidden\"]},\"hostItems\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"reload\",\"editWithAI\",\"viewCode\",\"console\",\"captureContext\",\"selectElement\",\"details\",\"export\"]}},\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"title\",\"icon\",\"enabled\",\"hidden\"],\"properties\":{\"title\":{\"type\":\"string\"},\"icon\":{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"enabled\":{\"type\":\"boolean\"},\"hidden\":{\"type\":\"boolean\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}]}",
           "effect": "presentation",
           "example": "await aibox.menu.reset()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1382,6 +1508,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_search",
@@ -1392,6 +1519,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_play",
@@ -1402,6 +1530,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_transport",
@@ -1412,6 +1541,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_status",
@@ -1422,6 +1552,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "music_queue",
@@ -1432,6 +1563,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_album",
@@ -1442,6 +1574,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_get",
@@ -1452,6 +1585,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "music_library",
@@ -1462,6 +1596,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_local",
@@ -1472,6 +1607,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_lyrics",
@@ -1482,6 +1618,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_seek",
@@ -1492,6 +1629,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_set_volume",
@@ -1502,6 +1640,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_set_repeat",
@@ -1512,6 +1651,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_set_shuffle",
@@ -1522,6 +1662,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_sleep_timer",
@@ -1532,6 +1673,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "music_recommendations",
@@ -1542,6 +1684,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "music_effects",
@@ -1552,6 +1695,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "music_playlist",
@@ -1562,6 +1706,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "music_playlist_delete",
@@ -1581,6 +1726,7 @@
           "summary": "Read route depth, native title, confirmation copy and swipe-back policy.",
           "parametersJSON": "{}",
           "resultSummary": "{depth,url,title,closeConfirmation,closeConfirmationTitle,closeConfirmationMessage,swipeBack}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.navigation.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1590,6 +1736,7 @@
           "summary": "Push one Web History route and optionally update the native title.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"},\"title\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "navigation state",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.navigation.push({ route:'#/match', title:'Match' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1599,6 +1746,7 @@
           "summary": "Replace the current Web History route without increasing depth.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"route\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"},\"title\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "navigation state",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1608,6 +1756,7 @@
           "summary": "Go back one or more applet Web History entries.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"steps\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1617,6 +1766,7 @@
           "summary": "Return to the applet's Web History root.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1626,6 +1776,7 @@
           "summary": "Synchronize browser history state with the native container.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"depth\"],\"properties\":{\"depth\":{\"type\":\"integer\",\"minimum\":0},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1635,6 +1786,7 @@
           "summary": "Set the native navigation title.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"title\"],\"properties\":{\"title\":{\"type\":\"string\",\"maxLength\":120}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.navigation.setTitle('3D Arena')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1644,6 +1796,7 @@
           "summary": "Configure a retention confirmation shown by native back/close controls.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"enabled\"],\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"title\":{\"type\":\"string\",\"maxLength\":120},\"message\":{\"type\":\"string\",\"maxLength\":500}},\"additionalProperties\":false}",
           "resultSummary": "navigation state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.navigation.setCloseConfirmation({ enabled:true, title:'Leave match?', message:'Current progress will be lost.' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1653,6 +1806,7 @@
           "summary": "Allow automatic swipe-back behavior or disable all left-edge/back-forward swipe gestures.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"policy\"],\"properties\":{\"policy\":{\"type\":\"string\",\"enum\":[\"automatic\",\"disabled\"]}},\"additionalProperties\":false}",
           "resultSummary": "navigation state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.navigation.setSwipeBack('disabled')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1662,6 +1816,7 @@
           "summary": "Ask the native container to close this visible applet, honoring its configured retention confirmation.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.navigation.close()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1680,6 +1835,7 @@
           "summary": "Perform an HTTP request. Defaults to UTF-8 text truncated at 200KB; set responseType 'base64' for binary or non-UTF-8 payloads and decode with TextDecoder, and raise maxBytes for large ones. Always check the returned truncated flag.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"method\":{\"type\":\"string\",\"enum\":[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"HEAD\"]},\"headers\":{\"type\":\"object\",\"description\":\"Passed through verbatim, including Referer and User-Agent which browser fetch forbids.\"},\"body\":{\"type\":\"string\"},\"responseType\":{\"type\":\"string\",\"enum\":[\"text\",\"base64\",\"json\"],\"description\":\"text (default) decodes UTF-8 and yields '' for other charsets; base64 returns raw bytes; json parses for you.\"},\"maxBytes\":{\"type\":\"integer\",\"description\":\"Response cap; default 200000, maximum 10485760.\"}},\"additionalProperties\":false}},\"additionalProperties\":false}",
           "resultSummary": "{status, headers, body, contentType, truncated, bytes}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": "const r = await aibox.net.fetch(url, { headers: { Referer: 'https://finance.sina.com.cn' }, responseType: 'base64' }); const gbk = new TextDecoder('gb18030').decode(Uint8Array.from(atob(r.body), c => c.charCodeAt(0)))",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1698,6 +1854,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": "await aibox.notifications.schedule({ title: 'Break', afterMinutes: 25 })",
           "toolName": "notify_schedule",
@@ -1717,6 +1874,7 @@
           "summary": "Open an http, https, mailto, or tel URL.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "external",
           "example": "await aibox.open.url('https://example.com')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/OpenURLCapabilityAdapter.swift"
@@ -1735,6 +1893,7 @@
           "summary": "Read the effective overlay items and whether the host actually rendered them (card/sheet/drawer surfaces do not). Always readable — this is the degradation probe.",
           "parametersJSON": "{}",
           "resultSummary": "{declared, rendered, items:[{id,kind,icon,activeIcon,title,subtitle,tint,progress,active,enabled,hidden,controls:[{id,icon,activeIcon,tint,active,enabled}]}]}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const s = await aibox.overlay.getState(); if (!s.rendered) renderInlineControlsAtEndOfContent()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1744,6 +1903,7 @@
           "summary": "Update the display state of declared overlay ids: icon, activeIcon, title, subtitle, tint, progress, active, enabled, hidden, and the same fields on declared controls. Layers and controls cannot be added, removed or renamed by id.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"icon\":{\"type\":[\"string\",\"null\"]},\"activeIcon\":{\"type\":[\"string\",\"null\"]},\"title\":{\"type\":[\"string\",\"null\"]},\"subtitle\":{\"type\":[\"string\",\"null\"]},\"tint\":{\"type\":[\"string\",\"null\"],\"enum\":[\"default\",\"accent\",\"danger\",null]},\"progress\":{\"type\":[\"number\",\"null\"],\"minimum\":0,\"maximum\":1},\"active\":{\"type\":[\"boolean\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]},\"controls\":{\"type\":[\"object\",\"null\"],\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"icon\":{\"type\":[\"string\",\"null\"]},\"activeIcon\":{\"type\":[\"string\",\"null\"]},\"tint\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"active\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "overlay state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.overlay.update({ items: { record: { active: true, title: '00:12' }, player: { title: song.name, progress: 0.42, controls: { toggle: { active: true } } } } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1753,6 +1913,7 @@
           "summary": "Clear all runtime overlay overrides and restore manifest values.",
           "parametersJSON": "{}",
           "resultSummary": "overlay state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.overlay.reset()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1771,6 +1932,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "media_photo_search",
@@ -1781,6 +1943,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "media_photo_view",
@@ -1791,6 +1954,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "media_ocr",
@@ -1801,6 +1965,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "media_save_image",
@@ -1811,6 +1976,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": null,
           "toolName": "media_photo_act",
@@ -1830,6 +1996,7 @@
           "summary": "Present the system document picker.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"types\":{\"type\":\"array\",\"maxItems\":20,\"items\":{\"type\":\"string\"}},\"multiple\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "resultSummary": "{items:ResourceRef[],cancelled:boolean}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.picker.file({ types:['text/plain','.md'], multiple:false })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1839,6 +2006,7 @@
           "summary": "Present the system photo picker without granting broad photo-library access.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10}},\"additionalProperties\":false}",
           "resultSummary": "{items:ResourceRef[],cancelled:boolean}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.picker.photo({ limit:1 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1857,6 +2025,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.reminders.items({ action: 'list' })",
           "toolName": "schedule_reminders",
@@ -1876,6 +2045,7 @@
           "summary": "List imported resource handles owned by this applet.",
           "parametersJSON": "{}",
           "resultSummary": "ResourceRef[]",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.resource.list()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1885,6 +2055,7 @@
           "summary": "Read metadata for an applet resource handle.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "ResourceRef",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1894,6 +2065,7 @@
           "summary": "Read a UTF-8 resource up to 1 MB; use the applet URL for larger/binary data.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "string",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1903,6 +2075,7 @@
           "summary": "Delete an imported resource owned by this applet.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1921,6 +2094,7 @@
           "summary": "Read effective presentation, appearance, safe areas and orientation.",
           "parametersJSON": "{}",
           "resultSummary": "{requested,effective,current,allowed,requestable,appearance,orientation,safeArea}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.scene.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1930,6 +2104,7 @@
           "summary": "Switch this visible applet to an allowed page, fullscreen, sheet or drawer surface.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"surface\"],\"properties\":{\"surface\":{\"type\":\"string\",\"enum\":[\"page\",\"fullscreen\",\"sheet\",\"drawer\"]}},\"additionalProperties\":false}",
           "resultSummary": "{requested,effective,current,allowed,requestable}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.scene.requestPresentation({ surface:'fullscreen' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1939,6 +2114,7 @@
           "summary": "Request one orientation declared by manifest.scene.orientation on a visible page/fullscreen surface.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"orientation\"],\"properties\":{\"orientation\":{\"type\":\"string\",\"enum\":[\"portrait\",\"landscapeLeft\",\"landscapeRight\"]}},\"additionalProperties\":false}",
           "resultSummary": "scene state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.scene.requestOrientation('landscapeRight')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -1957,6 +2133,7 @@
           "summary": "Store one credential under a key. Empty value removes it.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\",\"value\"],\"properties\":{\"key\":{\"type\":\"string\"},\"value\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{stored:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"stored\"],\"properties\":{\"stored\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.secrets.set('apiKey', key)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -1966,6 +2143,7 @@
           "summary": "Read one credential back. Returns null when absent.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "string or null",
+          "resultSchemaJSON": "{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}",
           "effect": "read",
           "example": "const key = await aibox.secrets.get('apiKey')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -1975,6 +2153,7 @@
           "summary": "Delete one credential.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -1984,6 +2163,7 @@
           "summary": "List the credential keys this applet has stored. Values are never returned.",
           "parametersJSON": "{}",
           "resultSummary": "string[]",
+          "resultSchemaJSON": "{\"type\":\"array\",\"items\":{\"type\":\"string\"}}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -1993,6 +2173,7 @@
           "summary": "Whether this applet holds session cookies for a host — i.e. whether the user is logged in. Check this on launch to decide between the logged-in and guest UI; do NOT keep your own 'isLoggedIn' flag in storage, it will drift from the real cookie state.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"host\":{\"type\":\"string\",\"description\":\"Optional host filter, e.g. 'bilibili.com'. Omit to ask about any host.\"}},\"additionalProperties\":false}",
           "resultSummary": "{hasSession:boolean, hosts:string[]}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"hasSession\",\"hosts\"],\"properties\":{\"hasSession\":{\"type\":\"boolean\"},\"hosts\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const { hasSession } = await aibox.secrets.hasSession({ host: 'bilibili.com' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -2002,6 +2183,7 @@
           "summary": "Log out: drop the session cookies. Pass a host to drop only that site's, omit to drop all of them. Credentials stored via set() are untouched.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"host\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{cleared:integer}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"cleared\"],\"properties\":{\"cleared\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "effect": "localWrite",
           "example": "await aibox.secrets.clearSession({ host: 'bilibili.com' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -2011,6 +2193,7 @@
           "summary": "Whether the keychain actually accepts writes in this build. False on unsigned simulator builds — surface it instead of letting logins silently fail to persist.",
           "parametersJSON": "{}",
           "resultSummary": "{available:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\"],\"properties\":{\"available\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift"
@@ -2029,6 +2212,7 @@
           "summary": "Share text with an optional URL.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.share.text({ text: 'Look at this', url: 'https://example.com' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ShareCapabilityAdapter.swift"
@@ -2038,6 +2222,7 @@
           "summary": "Export content as a real named file and hand it to the share sheet. Use this for CSV/JSON/OPML exports — text shares the content as a message body, not as a file. Max 10MB; filename must be a bare name.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"filename\",\"content\"],\"properties\":{\"filename\":{\"type\":\"string\",\"description\":\"Bare file name with extension, e.g. ledger-2026-08.csv. No slashes, no .., no leading dot.\"},\"content\":{\"type\":\"string\",\"description\":\"utf8 text, or base64 bytes when encoding is base64.\"},\"mimeType\":{\"type\":\"string\",\"description\":\"Advisory; the file extension wins when they disagree.\"},\"encoding\":{\"type\":\"string\",\"enum\":[\"utf8\",\"base64\"],\"description\":\"Default utf8. Use base64 for binary.\"}},\"additionalProperties\":false}",
           "resultSummary": "{shared:boolean, filename:string, bytes:number, warning?:string}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.share.file({ filename: 'ledger-2026-08.csv', content: csvText, mimeType: 'text/csv' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ShareCapabilityAdapter.swift"
@@ -2056,6 +2241,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": null,
           "toolName": "shortcut_run",
@@ -2066,6 +2252,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": null,
           "toolName": "shortcut_open",
@@ -2085,6 +2272,7 @@
           "summary": "Probe whether recognition can run right now. Never prompts and never opens the microphone — call it on mount and hide the mic button when unavailable.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN.\"}},\"additionalProperties\":false}",
           "resultSummary": "{available, supportsOnDevice, microphone, speech, locale, reason}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\",\"supportsOnDevice\",\"microphone\",\"speech\",\"locale\"],\"properties\":{\"available\":{\"type\":\"boolean\"},\"supportsOnDevice\":{\"type\":\"boolean\"},\"microphone\":{\"type\":\"string\",\"enum\":[\"granted\",\"denied\",\"undetermined\"]},\"speech\":{\"type\":\"string\",\"enum\":[\"granted\",\"denied\",\"undetermined\"]},\"locale\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\",\"enum\":[\"usage-description-missing\",\"recognizer-unavailable\",\"locale-unsupported\",\"on-device-unsupported\",\"microphone-denied\",\"speech-denied\",\"busy\",\"engine-failure\",\"platform-unsupported\"]}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const a = await aibox.speech.availability({ locale:'en-US' }); if (!a.available) hideMic(a.reason)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
@@ -2094,6 +2282,7 @@
           "summary": "Open the microphone and resolve with the recognized text. Resolves when you call stop(), when maxDurationMs elapses, or when the engine finalizes. For push-to-talk, call recognize() WITHOUT awaiting on press and stop() on release, then await the recognize promise.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 tag. Always pass it for read-aloud practice: a mismatched recognizer transcribes look-alike words in the wrong language and every score is wrong.\"},\"maxDurationMs\":{\"type\":\"integer\",\"minimum\":1000,\"maximum\":120000,\"description\":\"Hard stop; default 10000. Reaching it finalizes (it does not discard).\"},\"onPartial\":{\"type\":\"boolean\",\"description\":\"Keep interim results flowing; read them from status().partial. Default true.\"}},\"additionalProperties\":false}",
           "resultSummary": "{transcript, confidence, locale, cancelled, timedOut, onDevice}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"transcript\",\"confidence\",\"locale\",\"cancelled\",\"timedOut\",\"onDevice\"],\"properties\":{\"transcript\":{\"type\":\"string\"},\"confidence\":{\"type\":\"number\"},\"locale\":{\"type\":\"string\"},\"cancelled\":{\"type\":\"boolean\"},\"timedOut\":{\"type\":\"boolean\"},\"onDevice\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "const r = await aibox.speech.recognize({ locale:'en-US', maxDurationMs:10000 }); if (!r.cancelled) score(r.transcript)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
@@ -2103,6 +2292,7 @@
           "summary": "Stop capturing and let the pending recognize() resolve with the final text.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.speech.stop()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
@@ -2112,6 +2302,7 @@
           "summary": "Abandon the pending recognize(); it resolves with cancelled:true and an empty transcript.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.speech.cancel()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
@@ -2121,6 +2312,7 @@
           "summary": "Poll the in-flight session: elapsed time and the interim transcript so far.",
           "parametersJSON": "{}",
           "resultSummary": "{recognizing, elapsedMs, partial, locale}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"recognizing\",\"elapsedMs\",\"partial\",\"locale\"],\"properties\":{\"recognizing\":{\"type\":\"boolean\"},\"elapsedMs\":{\"type\":\"integer\"},\"partial\":{\"type\":\"string\"},\"locale\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const s = await aibox.speech.status(); caption.textContent = s.partial",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechRecognitionCapabilityAdapter.swift"
@@ -2139,6 +2331,7 @@
           "summary": "Read one value.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "JSON value or null",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.storage.get('theme')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2148,6 +2341,7 @@
           "summary": "Persist one JSON value.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\",\"value\"],\"properties\":{\"key\":{\"type\":\"string\"},\"value\":{}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": "await aibox.storage.set('theme', 'dark')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2157,6 +2351,7 @@
           "summary": "List stored keys.",
           "parametersJSON": "{}",
           "resultSummary": "string[]",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.storage.list()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2166,6 +2361,7 @@
           "summary": "Remove one stored key.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"key\"],\"properties\":{\"key\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": "await aibox.storage.remove('theme')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2184,6 +2380,7 @@
           "summary": "Read the effective tab items, the selected id, and whether the host actually rendered the bar (card/sheet/drawer surfaces do not).",
           "parametersJSON": "{}",
           "resultSummary": "{declared, style, items:[{id,title,icon,selectedIcon,badge,enabled,hidden}], selected, rendered}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const state = await aibox.tabs.getState(); if (!state.rendered) useInlineSegmentedControl()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2193,6 +2390,7 @@
           "summary": "Switch tabs from code; identical to a user tap, including the changed event.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "tabs state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.tabs.select('saved')",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2202,6 +2400,7 @@
           "summary": "Update title, icon, badge, enabled or hidden for declared tab ids. Tabs cannot be added, removed or renamed by id.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"badge\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "tabs state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.tabs.update({ items: { subs: { badge: '3' }, saved: { hidden: true } } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2211,6 +2410,7 @@
           "summary": "Clear all runtime tab overrides and restore manifest values.",
           "parametersJSON": "{}",
           "resultSummary": "tabs state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.tabs.reset()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2229,6 +2429,7 @@
           "summary": "Show a transient message.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"message\"],\"properties\":{\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": "await aibox.toast.show({ message: 'Saved' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/ToastCapabilityAdapter.swift"
@@ -2247,6 +2448,7 @@
           "summary": "Read the effective toolbar items and search state, including whether the host actually rendered them (fullscreen has no navigation bar).",
           "parametersJSON": "{}",
           "resultSummary": "{declared, rendered, leading, trailing, items, search:{declared,rendered,placeholder,scopes,query,scope,active}}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "const state = await aibox.toolbar.getState()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2256,6 +2458,7 @@
           "summary": "Update title, icon, badge, enabled or hidden for declared item ids; action identity, role and placement cannot change.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"properties\":{\"title\":{\"type\":[\"string\",\"null\"]},\"icon\":{\"type\":[\"string\",\"null\"]},\"badge\":{\"type\":[\"string\",\"null\"]},\"enabled\":{\"type\":[\"boolean\",\"null\"]},\"hidden\":{\"type\":[\"boolean\",\"null\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "toolbar state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.toolbar.update({ items: { ai: { enabled: hasSelection, badge: '2' } } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2265,6 +2468,7 @@
           "summary": "Clear all runtime toolbar overrides and restore manifest values.",
           "parametersJSON": "{}",
           "resultSummary": "toolbar state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.toolbar.reset()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2274,6 +2478,7 @@
           "summary": "Clear, prefill or dismiss the declared search field from code.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":[\"string\",\"null\"]},\"scope\":{\"type\":\"string\"},\"active\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "resultSummary": "search state",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.toolbar.setSearch({ query: '', active: false })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2292,6 +2497,7 @@
           "summary": "List the tools this applet may call.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "ToolSummary[]",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.tools.list({ limit: 50 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
@@ -2301,6 +2507,7 @@
           "summary": "Search allowed tools by capability or task.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"query\"],\"properties\":{\"query\":{\"type\":\"string\"},\"limit\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "resultSummary": "ToolSummary[]",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.tools.search({ query: 'calendar create' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
@@ -2310,6 +2517,7 @@
           "summary": "Get one tool's full description and JSON Schema.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "ToolDefinition",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": "await aibox.tools.describe({ name: 'calendar_create' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
@@ -2319,6 +2527,7 @@
           "summary": "Call one allowed active tool.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"},\"argumentsJSON\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "ToolCallResult",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.tools.call({ name: 'calendar_create', arguments: { title: 'Review', start: '2026-07-21T10:00:00+08:00', end: '2026-07-21T10:30:00+08:00' } })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
@@ -2328,6 +2537,7 @@
           "summary": "Call up to eight tools and return results in order.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"calls\"],\"properties\":{\"calls\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"name\"],\"properties\":{\"name\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "ToolCallResult[]",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": "await aibox.tools.callBatch({ calls: [{ name: 'weather_current', arguments: {} }] })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/AgentToolsCapabilityAdapter.swift"
@@ -2346,6 +2556,7 @@
           "summary": "Speak text aloud. Returns as soon as speaking starts (it does not wait for the end).",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"text\"],\"properties\":{\"text\":{\"type\":\"string\"},\"lang\":{\"type\":\"string\",\"description\":\"BCP-47 tag such as en-US or zh-CN. Omit to auto-detect from the text — do not pass the wrong one, a mismatched voice reads nothing.\"},\"rate\":{\"type\":\"number\",\"description\":\"0…1, default 0.5 (system default speed).\"},\"pitch\":{\"type\":\"number\",\"description\":\"0.5…2.0, default 1.\"}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": "await aibox.tts.speak({ text: 'Hello', lang: 'en-US' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechCapabilityAdapter.swift"
@@ -2355,6 +2566,7 @@
           "summary": "Stop what this applet is currently speaking.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.tts.stop()",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SpeechCapabilityAdapter.swift"
@@ -2373,6 +2585,7 @@
           "summary": "Show a native alert and resolve when the user dismisses it.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{actionId, value, cancelled}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.ui.alert({ title: 'Saved', message: 'Your changes were stored.' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2382,6 +2595,7 @@
           "summary": "Show a native confirmation dialog.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"default\",\"cancel\",\"destructive\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "{actionId, value, cancelled}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.ui.confirm({ title: 'Delete?', actions: [{id:'cancel',title:'Cancel',role:'cancel'},{id:'delete',title:'Delete',role:'destructive'}] })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2391,6 +2605,7 @@
           "summary": "Show a native text prompt.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"placeholder\":{\"type\":\"string\"},\"defaultValue\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "resultSummary": "{actionId, value:string|null, cancelled}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": "await aibox.ui.prompt({ title: 'Name', placeholder: 'Project name' })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2400,6 +2615,7 @@
           "summary": "Show a native action sheet with up to eight actions.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"actions\"],\"properties\":{\"title\":{\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"actions\":{\"type\":\"array\",\"maxItems\":8,\"items\":{\"type\":\"object\",\"required\":[\"id\",\"title\"],\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"role\":{\"type\":\"string\",\"enum\":[\"default\",\"cancel\",\"destructive\"]}},\"additionalProperties\":false}}},\"additionalProperties\":false}",
           "resultSummary": "{actionId, value, cancelled}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletCapabilityAdapter.swift"
@@ -2418,6 +2634,7 @@
           "summary": "Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"sourceURL\":{\"type\":\"string\",\"description\":\"The page url you passed to video.resolve. Preferred.\"},\"formatID\":{\"type\":\"string\",\"description\":\"id of the chosen format from resolve; omit to let the host pick the best playable one.\"},\"url\":{\"type\":\"string\",\"description\":\"A direct media URL. Only for streams you did not get from resolve.\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\",\"description\":\"Optional .srt sidecar subtitle URL.\"},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Seconds to resume from.\"},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
           "resultSummary": "{playing:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"playing\"],\"properties\":{\"playing\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "presentation",
           "example": "const r = await aibox.video.resolve({ url: pageURL })\nconst best = r.formats.filter(f => f.playable)[0]\nawait aibox.video.play({ sourceURL: pageURL, formatID: best.id, resumeFrom: 120 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2427,6 +2644,7 @@
           "summary": "Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"items\"],\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"subtitleURL\":{\"type\":\"string\"}}}},\"startAt\":{\"type\":\"integer\",\"minimum\":0},\"resumeFrom\":{\"type\":\"number\",\"minimum\":0},\"presentation\":{\"type\":\"string\",\"enum\":[\"immersive\",\"embedded\"]}},\"additionalProperties\":false}",
           "resultSummary": "{playing:boolean, count:integer}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"playing\",\"count\"],\"properties\":{\"playing\":{\"type\":\"boolean\"},\"count\":{\"type\":\"integer\"}},\"additionalProperties\":false}",
           "effect": "presentation",
           "example": "await aibox.video.playQueue({ items: parts.map(p => ({url: p.url, title: p.title})), startAt: 0 })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2436,6 +2654,7 @@
           "summary": "Pause playback. Does nothing if what is playing was not started by your applet.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2445,6 +2664,7 @@
           "summary": "Resume playback. Does nothing if what is playing was not started by your applet.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2454,6 +2674,7 @@
           "summary": "Stop playback and dismiss the player. Only affects playback your applet started.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2463,6 +2684,7 @@
           "summary": "Jump to a position in seconds. Clamped to the video duration by the host.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"seconds\"],\"properties\":{\"seconds\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2472,6 +2694,7 @@
           "summary": "Play the next item in the queue. No-op without a queue.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2481,6 +2704,7 @@
           "summary": "Play the previous item in the queue. No-op without a queue.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2490,6 +2714,7 @@
           "summary": "Current playback snapshot. mine tells you whether the host is playing something YOUR applet started — check it before showing your own progress UI, because the user may be watching something else entirely.",
           "parametersJSON": "{}",
           "resultSummary": "{state:'idle'|'loading'|'playing'|'paused'|'failed', url, title, currentTime, duration, queueIndex, queueCount, mine:boolean, error}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"state\",\"currentTime\",\"duration\",\"queueIndex\",\"queueCount\",\"mine\"],\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"idle\",\"loading\",\"playing\",\"paused\",\"failed\"]},\"currentTime\":{\"type\":\"number\"},\"duration\":{\"type\":\"number\"},\"queueIndex\":{\"type\":\"integer\"},\"queueCount\":{\"type\":\"integer\"},\"mine\":{\"type\":\"boolean\"},\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const s = await aibox.video.status(); if (s.mine) setProgress(s.currentTime / s.duration)",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2499,6 +2724,7 @@
           "summary": "Start pushing 'video.progress' events (~2Hz) to aibox.events. Strongly preferred over polling status(). Events stop automatically when your applet closes.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": "await aibox.video.subscribe(); aibox.events.on('video.progress', s => setProgress(s))",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2508,6 +2734,7 @@
           "summary": "Stop the progress event stream.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "localWrite",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2516,7 +2743,8 @@
           "name": "resolve",
           "summary": "Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The page or media URL to resolve.\"}},\"additionalProperties\":false}",
-          "resultSummary": "{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error}",
+          "resultSummary": "{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, id, formats:[…]}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"title\",\"extractor\",\"id\",\"formats\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"title\":{\"type\":\"string\"},\"extractor\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"formats\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"kind\",\"quality\",\"playable\"],\"properties\":{\"id\":{\"type\":\"string\"},\"kind\":{\"type\":\"string\",\"enum\":[\"direct\",\"hls\",\"dash\"]},\"quality\":{\"type\":\"string\"},\"playable\":{\"type\":\"boolean\"},\"width\":{\"type\":\"integer\"},\"height\":{\"type\":\"integer\"},\"fps\":{\"type\":\"number\"},\"bitrate\":{\"type\":\"integer\"},\"bytes\":{\"type\":\"integer\"},\"url\":{\"type\":\"string\"}},\"additionalProperties\":false}},\"uploader\":{\"type\":\"string\"},\"durationSeconds\":{\"type\":\"number\"},\"thumbnailURL\":{\"type\":\"string\"}},\"additionalProperties\":false}",
           "effect": "external",
           "example": "const r = await aibox.video.resolve({ url: pageURL })\nconst best = r.formats.filter(f => f.playable)[0]\nif (best) await aibox.video.play({ url: best.url, title: r.title })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2526,6 +2754,7 @@
           "summary": "Open a native video area pinned to the TOP of your page, and play there instead of taking over the whole screen. THIS IS THE ONE YOU WANT for a video app: your page content keeps scrolling underneath (description, episodes, related), the app stays PORTRAIT, and the user gets landscape only by tapping the player's own fullscreen button. Call stage() first, then play(). Playing without a stage takes over the screen in landscape, which is almost never what a page wants.",
           "parametersJSON": "{\"type\":\"object\",\"properties\":{\"aspect\":{\"type\":\"string\",\"description\":\"Aspect ratio like '16:9' (default) or '4:3'.\"},\"backgroundAudio\":{\"type\":\"boolean\",\"description\":\"Keep AUDIO playing when the app goes to the background — video pauses, sound continues. Default true.\"},\"pictureInPicture\":{\"type\":\"boolean\",\"description\":\"Allow the floating picture-in-picture window after leaving the app. Separate from backgroundAudio: PiP keeps the PICTURE, backgroundAudio keeps only the SOUND. Default true.\"},\"gestureControls\":{\"type\":\"boolean\",\"description\":\"Swipe for volume/brightness and double-tap to play-pause. Default true.\"}},\"additionalProperties\":false}",
           "resultSummary": "{rendered:boolean, available:boolean, aspect:string, backgroundAudio:boolean, gestureControls:boolean, pictureInPicture:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"rendered\",\"available\",\"aspect\",\"backgroundAudio\",\"gestureControls\",\"pictureInPicture\"],\"properties\":{\"rendered\":{\"type\":\"boolean\"},\"available\":{\"type\":\"boolean\"},\"aspect\":{\"type\":\"string\"},\"backgroundAudio\":{\"type\":\"boolean\"},\"gestureControls\":{\"type\":\"boolean\"},\"pictureInPicture\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "presentation",
           "example": "await aibox.video.stage({ aspect: '16:9' })\nawait aibox.video.play({ sourceURL: pageURL, formatID: best.id })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2535,6 +2764,7 @@
           "summary": "Close the video area. Does NOT stop playback — the user may want it to continue as picture-in-picture or background audio. Call video.stop for that.",
           "parametersJSON": "{}",
           "resultSummary": "boolean",
+          "resultSchemaJSON": "{\"type\":\"boolean\"}",
           "effect": "presentation",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2544,6 +2774,7 @@
           "summary": "What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played, `stage` = the in-page video area is supported. Hide the entry points this build cannot honor instead of letting a tap do nothing.",
           "parametersJSON": "{}",
           "resultSummary": "{available:boolean, resolve:boolean, dash:boolean, stage:boolean}",
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\",\"resolve\",\"dash\",\"stage\"],\"properties\":{\"available\":{\"type\":\"boolean\"},\"resolve\":{\"type\":\"boolean\"},\"dash\":{\"type\":\"boolean\"},\"stage\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
@@ -2562,6 +2793,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "memo_list",
@@ -2572,6 +2804,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "memo_get",
@@ -2582,6 +2815,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "presentation",
           "example": null,
           "toolName": "memo_record_start",
@@ -2592,6 +2826,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_record_control",
@@ -2602,6 +2837,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "memo_record_status",
@@ -2612,6 +2848,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "meta",
           "example": null,
           "toolName": "memo_transcribe",
@@ -2622,6 +2859,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "memo_get_transcript",
@@ -2632,6 +2870,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_play",
@@ -2642,6 +2881,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_stop_playback",
@@ -2652,6 +2892,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_seek",
@@ -2662,6 +2903,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "read",
           "example": null,
           "toolName": "memo_waveform",
@@ -2672,6 +2914,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_import",
@@ -2682,6 +2925,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_rename",
@@ -2692,6 +2936,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_delete",
@@ -2702,6 +2947,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_move",
@@ -2712,6 +2958,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "localWrite",
           "example": null,
           "toolName": "memo_toggle_favourite",
@@ -2722,6 +2969,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "memo_summarize",
@@ -2732,6 +2980,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "memo_get_action_items",
@@ -2742,6 +2991,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "memo_ask",
@@ -2752,6 +3002,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "memo_clean_transcript",
@@ -2762,6 +3013,7 @@
           "summary": "",
           "parametersJSON": null,
           "resultSummary": "{ok, text, permission, details?, progress, artifacts}",
+          "resultSchemaJSON": null,
           "effect": "external",
           "example": null,
           "toolName": "memo_get_chapters",
@@ -2820,5 +3072,24 @@
     "scene",
     "tabs",
     "toolbar"
+  ],
+  "handwritten": [
+    "storage",
+    "net",
+    "ai",
+    "access",
+    "lifecycle",
+    "scene",
+    "navigation",
+    "ui",
+    "picker",
+    "resource",
+    "tools",
+    "action",
+    "tabs",
+    "toolbar",
+    "overlay",
+    "list",
+    "share"
   ]
 }

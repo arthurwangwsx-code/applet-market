@@ -24,6 +24,8 @@ Show a transient message.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.toast.show({ message: 'Saved' })
 ```

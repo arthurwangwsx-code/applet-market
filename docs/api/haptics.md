@@ -24,6 +24,8 @@ Play an impact haptic.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.haptics.impact({ style: 'light' })
 ```
@@ -39,6 +41,8 @@ Play a selection tick.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.haptics.selection()
@@ -59,6 +63,8 @@ Play a success, warning, or error pattern.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.haptics.notify({ type: 'success' })

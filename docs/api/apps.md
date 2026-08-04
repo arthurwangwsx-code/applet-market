@@ -20,6 +20,8 @@ List installed applets and their declared action names.
 
 **返回** `{id,name,icon,summary,actions:string[]}[]`
 
+**返回类型** `Array<{ actions: Array<string>; icon: string; id: string; name: string; summary: string }>`
+
 ```js
 await aibox.apps.list()
 ```
@@ -38,7 +40,9 @@ Read one applet's action/event contract.
 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
-**返回** `{id,name,summary,actions,events}`
+**返回** `{id,name,icon,summary,actions,events,automations}`
+
+**返回类型** `{ actions: Array<Record<string, unknown>>; automations: Array<Record<string, unknown>>; events: Array<Record<string, unknown>>; icon: string; id: string; name: string; summary: string }`
 
 ### `aibox.apps.invoke()`
 
@@ -59,6 +63,8 @@ Headlessly invoke a registered action on another applet.
 
 **返回** `{appId,action,result}`
 
+**返回类型** `{ action: string; appId: string; result: unknown }`
+
 ```js
 await aibox.apps.invoke({ app:'expense-manager', action:'addExpense', input:{amount:35} })
 ```
@@ -78,7 +84,9 @@ Publish one event declared by the current applet and run matching event automati
 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
-**返回** `{event,accepted,automationsRun}`
+**返回** `{event,accepted,automationsRun,payload}`
+
+**返回类型** `{ accepted: boolean; automationsRun: number; event: string; payload: unknown }`
 
 ```js
 await aibox.apps.emit({ event:'expenseAdded', payload:{id} })

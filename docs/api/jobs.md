@@ -20,6 +20,8 @@ List this applet's automations and last run status.
 
 **返回** `Automation[]`
 
+**返回类型** `Array<{ action: string; catchUpWindowSeconds?: number; consecutiveFailures?: number; createdAt: string; enabled: boolean; id: string; inputJSON?: string; lastError?: string; lastInvocationID?: string; lastResultJSON?: string; lastRunAt?: string; lastSkipReason?: string; lastSkippedAt?: string; leaseUntil?: string; name?: string; nextRetryAt?: string; pendingOccurrenceID?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number }; updatedAt: string }>`
+
 ```js
 await aibox.jobs.list()
 ```
@@ -51,6 +53,8 @@ Create or update an automation.
 
 **返回** `Automation`
 
+**返回类型** `{ action: string; catchUpWindowSeconds?: number; consecutiveFailures?: number; createdAt: string; enabled: boolean; id: string; inputJSON?: string; lastError?: string; lastInvocationID?: string; lastResultJSON?: string; lastRunAt?: string; lastSkipReason?: string; lastSkippedAt?: string; leaseUntil?: string; name?: string; nextRetryAt?: string; pendingOccurrenceID?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number }; updatedAt: string }`
+
 ```js
 await aibox.jobs.register({ name:'Nightly summary', action:'summarizeDay', trigger:{kind:'daily',hour:20,minute:0} })
 ```
@@ -71,6 +75,8 @@ Remove one automation.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.jobs.run()`
 
 Run one automation immediately.
@@ -87,6 +93,8 @@ Run one automation immediately.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.jobs.runDue()`
 
 Run every currently due automation for this applet.
@@ -99,6 +107,8 @@ Run every currently due automation for this applet.
 
 **返回** `{count:number}`
 
+**返回类型** `{ count: number }`
+
 ### `aibox.jobs.next()`
 
 Read the next calculable due time for every enabled automation.
@@ -110,6 +120,8 @@ Read the next calculable due time for every enabled automation.
 无参数。
 
 **返回** `{id,nextAt:string|null}[]`
+
+**返回类型** `Array<{ id: string; nextAt: string | unknown }>`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/JobsCapabilityAdapter.swift`
 

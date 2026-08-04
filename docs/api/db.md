@@ -20,6 +20,8 @@ List collection names.
 
 **返回** `string[]`
 
+**返回类型** `Array<string>`
+
 ```js
 await aibox.db.collections()
 ```
@@ -40,6 +42,8 @@ Insert or replace one JSON object; returns metadata including _id.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `stored document`
+
+**返回类型** `Record<string, unknown>`
 
 ```js
 await aibox.db.insert({ collection:'tasks', document:{ title:'Ship', done:false } })
@@ -62,6 +66,8 @@ Read one document by _id.
 
 **返回** `document|null`
 
+**返回类型** `Record<string, unknown> | unknown`
+
 ### `aibox.db.update()`
 
 Patch one document; JSON null removes a field.
@@ -81,6 +87,8 @@ Patch one document; JSON null removes a field.
 
 **返回** `updated document`
 
+**返回类型** `Record<string, unknown>`
+
 ### `aibox.db.remove()`
 
 Delete one document by _id.
@@ -97,6 +105,8 @@ Delete one document by _id.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.db.removeWhere()`
 
@@ -117,6 +127,8 @@ Delete one document by _id.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `number (documents removed)`
+
+**返回类型** `number`
 
 ```js
 await aibox.db.removeWhere({ collection:'clips', where:{ _createdAt:{ $lt:'2026-05-01' } } })
@@ -143,6 +155,8 @@ await aibox.db.removeWhere({ collection:'clips', where:{ _createdAt:{ $lt:'2026-
 
 **返回** `document[] (at most 500 — page with offset, or use count/aggregate for totals)`
 
+**返回类型** `Array<Record<string, unknown>>`
+
 ```js
 await aibox.db.query({ collection:'tx', where:{ date:{$gte:'2026-08-01'}, kind:{$in:['food','rent']} }, sortBy:'date', descending:true })
 ```
@@ -163,6 +177,8 @@ await aibox.db.query({ collection:'tx', where:{ date:{$gte:'2026-08-01'}, kind:{
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `number`
+
+**返回类型** `number`
 
 ```js
 await aibox.db.count({ collection:'tx', where:{ amount:{$gt:1000} } })
@@ -195,6 +211,8 @@ await aibox.db.count({ collection:'tx', where:{ amount:{$gt:1000} } })
 
 **返回** `Array<{_group, _count, ...metrics}> sorted by _group; $avg/$min/$max are null when no value qualifies`
 
+**返回类型** `Array<{ _count: number; _group: unknown }>`
+
 ```js
 await aibox.db.aggregate({ collection:'tx', where:{ date:{$gte:'2026-08-01',$lt:'2026-09-01'} }, groupBy:'category', metrics:{ total:{$sum:'amount'}, n:{$count:true} } })
 ```
@@ -223,6 +241,8 @@ await aibox.db.aggregate({ collection:'tx', where:{ date:{$gte:'2026-08-01',$lt:
 
 **返回** `document[] in collection order (unranked)`
 
+**返回类型** `Array<Record<string, unknown>>`
+
 ```js
 await aibox.db.search({ collection:'notes', text:'蛋白质', fields:['title','body'] })
 ```
@@ -242,6 +262,8 @@ Delete every document in one collection.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/DatabaseCapabilityAdapter.swift`
 

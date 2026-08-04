@@ -25,6 +25,8 @@ Open an http/https URL. mode inApp keeps the user inside the app (default); syst
 
 **返回** `{opened:boolean, mode:string}`
 
+**返回类型** `{ mode: "inApp" | "system" | "external"; opened: boolean }`
+
 ```js
 await aibox.browser.open({ url, mode: 'inApp' })
 ```
@@ -50,6 +52,8 @@ Open a link straight into Reader with content you already extracted, so the host
 
 **返回** `{opened:boolean, mode:string, reader:boolean}`
 
+**返回类型** `{ mode: "inApp" | "system" | "external"; opened: boolean; reader: boolean }`
+
 ```js
 await aibox.browser.openArticle({ url, title, content: extractedHTML })
 ```
@@ -65,6 +69,8 @@ Which modes this host can actually serve right now, and whether Reader exists. H
 无参数。
 
 **返回** `{modes:string[], reader:boolean}`
+
+**返回类型** `{ modes: Array<"inApp" | "system" | "external">; reader: boolean }`
 
 ```js
 const info = await aibox.browser.availability()

@@ -9,9 +9,7 @@
   },
   "workspaces": [
     "packages/*",
-    "apps/com.aibox.timer",
-    "apps/com.aibox.wordstudy",
-    "apps/com.aibox.voicememos"
+    "apps/*"
   ],
   "scripts": {
     "validate": "node scripts/validate.mjs",
@@ -20,7 +18,10 @@
     "release": "node scripts/release.mjs",
     "sdk:types": "node scripts/gen-sdk-types.mjs",
     "sdk:types:check": "node scripts/gen-sdk-types.mjs --check",
-    "sdk:build": "npm run build --workspace @aibox/applet-sdk"
+    "sdk:build": "npm run build --workspace @aibox/applet-sdk",
+    "audit:result-schema": "node scripts/audit-result-schema.mjs",
+    "audit:host-forks": "node scripts/audit-host-forks.mjs",
+    "audit": "npm run audit:result-schema && npm run audit:host-forks"
   },
   "devDependencies": {
     "sucrase": "^3.35.1",

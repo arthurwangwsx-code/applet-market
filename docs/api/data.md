@@ -20,6 +20,8 @@ Bytes used and remaining across this applet's private data (kv + db + imports). 
 
 **返回** `{usedBytes, limitBytes, remainingBytes, layers:{kv,db,imports,other}}`
 
+**返回类型** `{ layers: { db: number; imports: number; kv: number; other: number }; limitBytes: number; remainingBytes: number; usedBytes: number }`
+
 ```js
 const u = await aibox.data.usage(); if (u.remainingBytes < 1e6) await trimOldRecords()
 ```
@@ -35,6 +37,8 @@ Which version last wrote the data on disk versus the version running now. This i
 无参数。
 
 **返回** `{current, previous, isFirstRun, changed, firstSeenAt?}`
+
+**返回类型** `{ changed: boolean; current: string; firstSeenAt?: string; isFirstRun: boolean; previous: string | unknown }`
 
 ```js
 const v = await aibox.data.version(); if (v.changed) { await migrate(v.previous, v.current); await aibox.data.acknowledgeVersion() }
@@ -52,6 +56,8 @@ Mark the current version's data as migrated. Idempotent; until you call it, vers
 
 **返回** `{current, previous, isFirstRun, changed}`
 
+**返回类型** `{ changed: boolean; current: string; firstSeenAt?: string; isFirstRun: boolean; previous: string | unknown }`
+
 ```js
 await aibox.data.acknowledgeVersion()
 ```
@@ -67,6 +73,8 @@ The data snapshot the host captured before the last update, if any. Read it to t
 无参数。
 
 **返回** `{version?, capturedAt?, bytes} | null`
+
+**返回类型** `{ bytes: number; capturedAt?: string; version?: string } | unknown`
 
 ```js
 const s = await aibox.data.snapshot(); if (s) showRollbackHint(s.capturedAt)

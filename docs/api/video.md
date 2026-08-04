@@ -30,6 +30,8 @@ Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass t
 
 **返回** `{playing:boolean}`
 
+**返回类型** `{ playing: boolean }`
+
 ```js
 const r = await aibox.video.resolve({ url: pageURL })
 const best = r.formats.filter(f => f.playable)[0]
@@ -58,6 +60,8 @@ Play a list of videos starting at startAt, so next/previous walk the list. Use t
 
 **返回** `{playing:boolean, count:integer}`
 
+**返回类型** `{ count: number; playing: boolean }`
+
 ```js
 await aibox.video.playQueue({ items: parts.map(p => ({url: p.url, title: p.title})), startAt: 0 })
 ```
@@ -74,6 +78,8 @@ Pause playback. Does nothing if what is playing was not started by your applet.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.resume()`
 
 Resume playback. Does nothing if what is playing was not started by your applet.
@@ -86,6 +92,8 @@ Resume playback. Does nothing if what is playing was not started by your applet.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.stop()`
 
 Stop playback and dismiss the player. Only affects playback your applet started.
@@ -97,6 +105,8 @@ Stop playback and dismiss the player. Only affects playback your applet started.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.video.seek()`
 
@@ -114,6 +124,8 @@ Jump to a position in seconds. Clamped to the video duration by the host.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.next()`
 
 Play the next item in the queue. No-op without a queue.
@@ -125,6 +137,8 @@ Play the next item in the queue. No-op without a queue.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.video.previous()`
 
@@ -138,6 +152,8 @@ Play the previous item in the queue. No-op without a queue.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.status()`
 
 Current playback snapshot. mine tells you whether the host is playing something YOUR applet started — check it before showing your own progress UI, because the user may be watching something else entirely.
@@ -149,6 +165,8 @@ Current playback snapshot. mine tells you whether the host is playing something 
 无参数。
 
 **返回** `{state:'idle'|'loading'|'playing'|'paused'|'failed', url, title, currentTime, duration, queueIndex, queueCount, mine:boolean, error}`
+
+**返回类型** `{ currentTime: number; duration: number; error?: string; mine: boolean; queueCount: number; queueIndex: number; state: "idle" | "loading" | "playing" | "paused" | "failed"; title?: string; url?: string }`
 
 ```js
 const s = await aibox.video.status(); if (s.mine) setProgress(s.currentTime / s.duration)
@@ -166,6 +184,8 @@ Start pushing 'video.progress' events (~2Hz) to aibox.events. Strongly preferred
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.video.subscribe(); aibox.events.on('video.progress', s => setProgress(s))
 ```
@@ -182,6 +202,8 @@ Stop the progress event stream.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.resolve()`
 
 Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play.
@@ -196,7 +218,9 @@ Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u
 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
-**返回** `{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error}`
+**返回** `{ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, id, formats:[…]}`
+
+**返回类型** `{ durationSeconds?: number; extractor: string; formats: Array<{ bitrate?: number; bytes?: number; fps?: number; height?: number; id: string; kind: "direct" | "hls" | "dash"; playable: boolean; quality: string; url?: string; width?: number }>; id: string; ok: boolean; thumbnailURL?: string; title: string; uploader?: string }`
 
 ```js
 const r = await aibox.video.resolve({ url: pageURL })
@@ -223,6 +247,8 @@ Open a native video area pinned to the TOP of your page, and play there instead 
 
 **返回** `{rendered:boolean, available:boolean, aspect:string, backgroundAudio:boolean, gestureControls:boolean, pictureInPicture:boolean}`
 
+**返回类型** `{ aspect: string; available: boolean; backgroundAudio: boolean; gestureControls: boolean; pictureInPicture: boolean; rendered: boolean }`
+
 ```js
 await aibox.video.stage({ aspect: '16:9' })
 await aibox.video.play({ sourceURL: pageURL, formatID: best.id })
@@ -240,6 +266,8 @@ Close the video area. Does NOT stop playback — the user may want it to continu
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.video.availability()`
 
 What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played, `stage` = the in-page video area is supported. Hide the entry points this build cannot honor instead of letting a tap do nothing.
@@ -251,6 +279,8 @@ What this build can actually do: `available` = there is a video engine, `resolve
 无参数。
 
 **返回** `{available:boolean, resolve:boolean, dash:boolean, stage:boolean}`
+
+**返回类型** `{ available: boolean; dash: boolean; resolve: boolean; stage: boolean }`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift`
 

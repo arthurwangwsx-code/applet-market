@@ -20,6 +20,8 @@ Read clipboard text.
 
 **返回** `string`
 
+**返回类型** `string`
+
 ```js
 await aibox.clipboard.read()
 ```
@@ -39,6 +41,8 @@ Replace clipboard text.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.clipboard.write({ text: 'Copied' })

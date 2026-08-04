@@ -35,4 +35,9 @@ export { tabsAreRendered, searchIsRendered, tabsState, selectTab, setTabBadge, s
 export type { TabsState, ToolbarState, ToolbarSearchState, SceneState, NavigationState } from './shell';
 export { defineManifest } from './manifest';
 export type { AppletManifestDeclaration, AppletActionDeclaration, AppletRuntimeKind } from './manifest';
+export * as events from './events';
+export * as ui from './ui';
+export * as system from './system';
+export * as intelligence from './intelligence';
+export type { DialogAction } from './ui';
 //# sourceMappingURL=index.d.ts.map

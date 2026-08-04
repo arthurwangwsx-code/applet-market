@@ -24,6 +24,8 @@ Set the collaboration mode for this applet.
 
 **返回** `ConversationBinding`
 
+**返回类型** `{ appletID: string; conversationIdentity: string; mode: "use" | "build" | "diagnose" | "automate"; snapshot?: { appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }; updatedAt: string }`
+
 ```js
 await aibox.chat.bind({ mode:'diagnose' })
 ```
@@ -49,6 +51,8 @@ Update the compact current-page snapshot without sending a chat message.
 
 **返回** `ContextSnapshot`
 
+**返回类型** `{ appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }`
+
 ```js
 await aibox.chat.snapshot({ route:location.hash, pageTitle:document.title, visibleText:document.body.innerText.slice(0,1200) })
 ```
@@ -65,6 +69,8 @@ Read the current collaboration binding and compact snapshot.
 
 **返回** `ConversationBinding`
 
+**返回类型** `{ appletID: string; conversationIdentity: string; mode: "use" | "build" | "diagnose" | "automate"; snapshot?: { appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }; updatedAt: string }`
+
 ### `aibox.chat.selectElement()`
 
 Record a user-selected DOM element for precise AI edits.
@@ -79,7 +85,9 @@ Record a user-selected DOM element for precise AI edits.
 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
-**返回** `SelectedElement`
+**返回** `ContextSnapshot（回传更新后的整份快照）`
+
+**返回类型** `{ appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }`
 
 ### `aibox.chat.report()`
 
@@ -102,6 +110,8 @@ Report build/diagnostic progress for the chat card and Studio.
 
 **返回** `CollaborationEnvelope`
 
+**返回类型** `{ appletID: string; changedFiles: Array<string>; errors: Array<string>; id: string; message?: string; mode: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number; updatedAt: string }`
+
 ### `aibox.chat.progress()`
 
 Read the latest collaboration progress envelope.
@@ -113,6 +123,8 @@ Read the latest collaboration progress envelope.
 无参数。
 
 **返回** `CollaborationEnvelope|null`
+
+**返回类型** `{ appletID: string; changedFiles: Array<string>; errors: Array<string>; id: string; message?: string; mode: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number; updatedAt: string } | unknown`
 
 ### `aibox.chat.shareContext()`
 
@@ -129,6 +141,8 @@ Explicitly hand the current compact snapshot to the docked AI conversation; opti
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.chat.shareContext({ suggestedPrompt:'Analyze the selected component and improve its layout.' })

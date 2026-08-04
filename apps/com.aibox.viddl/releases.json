@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.0.2",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-04T10:10:54Z",
+      "notes": "迁到 bundle + SDK：删掉私有桥胶水分叉，语义由 SDK 统一（confirm 不可用回 false、openURL 一律封顶）",
+      "fileCount": 4,
+      "totalBytes": 54656,
+      "path": "apps/com.aibox.viddl/releases/1.1.0",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "78a49071a4075f89a9b81780cfb6a3239c86f8a3ddafc6b273bbc118a27c37de"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-08-03T15:08:09Z",

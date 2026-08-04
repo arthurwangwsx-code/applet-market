@@ -508,43 +508,43 @@ declare namespace aibox {
 
   namespace apps {
     /** List installed applets and their declared action names. Result: {id,name,icon,summary,actions:string[]}[] */
-    function list(input?: Record<string, never>): Promise<unknown>
-    /** Read one applet's action/event contract. Result: {id,name,summary,actions,events} */
-    function describe(input: { app: string }): Promise<unknown>
+    function list(input?: Record<string, never>): Promise<Array<{ actions: Array<string>; icon: string; id: string; name: string; summary: string }>>
+    /** Read one applet's action/event contract. Result: {id,name,icon,summary,actions,events,automations} */
+    function describe(input: { app: string }): Promise<{ actions: Array<Record<string, unknown>>; automations: Array<Record<string, unknown>>; events: Array<Record<string, unknown>>; icon: string; id: string; name: string; summary: string }>
     /** Headlessly invoke a registered action on another applet. Result: {appId,action,result} */
-    function invoke(input: { action: string; app: string; input?: unknown; waitMs?: number }): Promise<unknown>
-    /** Publish one event declared by the current applet and run matching event automations. Result: {event,accepted,automationsRun} */
-    function emit(input: { event: string; payload?: unknown }): Promise<unknown>
+    function invoke(input: { action: string; app: string; input?: unknown; waitMs?: number }): Promise<{ action: string; appId: string; result: unknown }>
+    /** Publish one event declared by the current applet and run matching event automations. Result: {event,accepted,automationsRun,payload} */
+    function emit(input: { event: string; payload?: unknown }): Promise<{ accepted: boolean; automationsRun: number; event: string; payload: unknown }>
   }
 
   namespace audio {
     /** Probe whether recording can start right now. Never prompts and never opens the microphone — call it on mount and hide the record button when unavailable. Result: {available, microphone, supportsBackgroundRecording, busy, reason} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean; busy: boolean; microphone: "granted" | "denied" | "undetermined"; reason?: "usage-description-missing" | "microphone-denied" | "busy" | "not-recording" | "destination-unwritable" | "engine-failure" | "platform-unsupported"; supportsBackgroundRecording: boolean }>
     /** Start recording. Shows no host UI. Fails with aibox/busy if any recording is already running. Result: {started, discarded, format, sampleRate, channels, supportsBackgroundRecording} — started:false with discarded:true means you called recordStop while the permission prompt was still up, so nothing was captured */
-    function recordStart(input?: { bitrate?: number; channels?: 1 | 2; format?: "m4a" | "wav"; sampleRate?: number }): Promise<unknown>
+    function recordStart(input?: { bitrate?: number; channels?: 1 | 2; format?: "m4a" | "wav"; sampleRate?: number }): Promise<{ channels: number; discarded: false; format: "m4a" | "wav"; sampleRate: number; started: true; supportsBackgroundRecording: boolean } | { discarded: true; durationMs: number; started: false }>
     /** Pause the recording. Returns false when there is nothing of yours to pause, or after an interruption (that file is already finalized). Result: boolean */
-    function recordPause(input?: Record<string, never>): Promise<unknown>
+    function recordPause(input?: Record<string, never>): Promise<boolean>
     /** Resume a paused recording. Result: boolean */
-    function recordResume(input?: Record<string, never>): Promise<unknown>
-    /** Stop and finalize. Returns an applet resource handle you can play with <audio src=ref.url> or decode with AudioContext. Clips shorter than 500ms are discarded (discarded:true) and nothing is written. Result: {handle, url, name, mimeType, size, durationMs, byteCount, format, sampleRate, channels, interrupted} | {discarded:true, durationMs} */
-    function recordStop(input?: Record<string, never>): Promise<unknown>
+    function recordResume(input?: Record<string, never>): Promise<boolean>
+    /** Stop and finalize. Returns an applet resource handle you can play with <audio src=ref.url> or decode with AudioContext. Clips shorter than 500ms are discarded (discarded:true) and nothing is written. Result: {handle, url, name, mimeType, size, createdAt, durationMs, byteCount, format, sampleRate, channels, interrupted, discarded} | {discarded:true, durationMs} */
+    function recordStop(input?: Record<string, never>): Promise<{ byteCount: number; channels: number; createdAt: string; discarded: false; durationMs: number; format: "m4a" | "wav"; handle: string; interrupted: boolean; mimeType: string; name: string; sampleRate: number; size: number; url: string } | { discarded: true; durationMs: number }>
     /** Discard the recording and delete the file. Nothing is stored. Result: boolean */
-    function recordCancel(input?: Record<string, never>): Promise<unknown>
+    function recordCancel(input?: Record<string, never>): Promise<boolean>
     /** Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) already normalized to 0…1 with the same curve the native recorder uses, oldest first — pad the left with zeros and draw the newest at the right edge. Result: {state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb} */
-    function recordStatus(input?: Record<string, never>): Promise<unknown>
+    function recordStatus(input?: Record<string, never>): Promise<{ averageDb: number; byteCount: number; elapsedMs: number; interrupted: boolean; levels: Array<number>; levelsHz: number; paused: boolean; peakDb: number; recording: boolean; state: "idle" | "recording" | "paused" | "interrupted" }>
     /** Probe whether transcribe() can run for a locale. Never prompts and never transcribes — call it before showing a transcribe button. state tells you WHY it is unavailable: engine-missing (this build has no transcription engine), not-authorized, unsupported-locale, unsupported-os, needs-model-download (transcribe() will download it on first use, so this state is still worth offering). Result: {available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing */
-    function transcribeAvailability(input?: { locale?: string }): Promise<unknown>
+    function transcribeAvailability(input?: { locale?: string }): Promise<{ available: boolean; engine: boolean; locale: string; state: "available" | "needs-model-download" | "unsupported-os" | "not-authorized" | "unsupported-locale" | "engine-missing" }>
     /** Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pass the handle from recordStop() or picker.file() — never a file path (you do not have one, and the host resolves the handle itself). Long files take minutes; one transcription per applet at a time. First use may prompt for speech recognition and may download the locale model. Result: {text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds */
-    function transcribe(input: { handle: string; locale?: string; segments?: boolean }): Promise<unknown>
+    function transcribe(input: { handle: string; locale?: string; segments?: boolean }): Promise<{ locale: string; segmentCount: number; segments?: Array<{ duration: number; end: number; start: number; text: string }>; text: string }>
   }
 
   namespace browser {
     /** Open an http/https URL. mode inApp keeps the user inside the app (default); system uses SFSafari so Safari logins/passkeys apply; external hands off to the default browser app. Unavailable modes degrade inApp → system → external instead of failing. Result: {opened:boolean, mode:string} */
-    function open(input: { mode?: "inApp" | "system" | "external"; url: string }): Promise<unknown>
+    function open(input: { mode?: "inApp" | "system" | "external"; url: string }): Promise<{ mode: "inApp" | "system" | "external"; opened: boolean }>
     /** Open a link straight into Reader with content you already extracted, so the host does not fetch and parse it a second time. Result: {opened:boolean, mode:string, reader:boolean} */
-    function openArticle(input: { content?: string; excerpt?: string; publishedAt?: string; siteName?: string; title?: string; url: string }): Promise<unknown>
+    function openArticle(input: { content?: string; excerpt?: string; publishedAt?: string; siteName?: string; title?: string; url: string }): Promise<{ mode: "inApp" | "system" | "external"; opened: boolean; reader: boolean }>
     /** Which modes this host can actually serve right now, and whether Reader exists. Hide entry points the host cannot honor instead of letting a tap do nothing. Result: {modes:string[], reader:boolean} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ modes: Array<"inApp" | "system" | "external">; reader: boolean }>
   }
 
   namespace calendar {
@@ -556,26 +556,26 @@ declare namespace aibox {
 
   namespace chat {
     /** Set the collaboration mode for this applet. Result: ConversationBinding */
-    function bind(input?: { mode?: "use" | "build" | "diagnose" | "automate" }): Promise<unknown>
+    function bind(input?: { mode?: "use" | "build" | "diagnose" | "automate" }): Promise<{ appletID: string; conversationIdentity: string; mode: "use" | "build" | "diagnose" | "automate"; snapshot?: { appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }; updatedAt: string }>
     /** Update the compact current-page snapshot without sending a chat message. Result: ContextSnapshot */
-    function snapshot(input?: { consoleErrors?: Array<string>; formState?: unknown; pageTitle?: string; route?: string; selectedElement?: Record<string, unknown>; visibleText?: string }): Promise<unknown>
+    function snapshot(input?: { consoleErrors?: Array<string>; formState?: unknown; pageTitle?: string; route?: string; selectedElement?: Record<string, unknown>; visibleText?: string }): Promise<{ appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }>
     /** Read the current collaboration binding and compact snapshot. Result: ConversationBinding */
-    function context(input?: Record<string, never>): Promise<unknown>
-    /** Record a user-selected DOM element for precise AI edits. Result: SelectedElement */
-    function selectElement(input: { element: Record<string, unknown> }): Promise<unknown>
+    function context(input?: Record<string, never>): Promise<{ appletID: string; conversationIdentity: string; mode: "use" | "build" | "diagnose" | "automate"; snapshot?: { appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }; updatedAt: string }>
+    /** Record a user-selected DOM element for precise AI edits. Result: ContextSnapshot（回传更新后的整份快照） */
+    function selectElement(input: { element: Record<string, unknown> }): Promise<{ appletID: string; capturedAt: string; consoleErrors: Array<string>; formStateJSON?: string; pageTitle?: string; revision: number; route?: string; selectedElement?: { attributes: Record<string, unknown>; component?: string; height?: number; selector: string; sourceHint?: string; tag: string; text?: string; width?: number; x?: number; y?: number }; visibleText?: string }>
     /** Report build/diagnostic progress for the chat card and Studio. Result: CollaborationEnvelope */
-    function report(input: { changedFiles?: Array<string>; errors?: Array<string>; message?: string; mode?: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number }): Promise<unknown>
+    function report(input: { changedFiles?: Array<string>; errors?: Array<string>; message?: string; mode?: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number }): Promise<{ appletID: string; changedFiles: Array<string>; errors: Array<string>; id: string; message?: string; mode: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number; updatedAt: string }>
     /** Read the latest collaboration progress envelope. Result: CollaborationEnvelope|null */
-    function progress(input?: Record<string, never>): Promise<unknown>
+    function progress(input?: Record<string, never>): Promise<{ appletID: string; changedFiles: Array<string>; errors: Array<string>; id: string; message?: string; mode: "use" | "build" | "diagnose" | "automate"; phase: "idle" | "planning" | "editing" | "running" | "testing" | "completed" | "failed"; progress?: number; updatedAt: string } | unknown>
     /** Explicitly hand the current compact snapshot to the docked AI conversation; optionally send a visible suggested prompt. Result: boolean */
-    function shareContext(input?: { suggestedPrompt?: string }): Promise<unknown>
+    function shareContext(input?: { suggestedPrompt?: string }): Promise<boolean>
   }
 
   namespace clipboard {
     /** Read clipboard text. Result: string */
-    function read(input?: Record<string, never>): Promise<unknown>
+    function read(input?: Record<string, never>): Promise<string>
     /** Replace clipboard text. Result: boolean */
-    function write(input: { text: string }): Promise<unknown>
+    function write(input: { text: string }): Promise<boolean>
   }
 
   namespace contacts {
@@ -587,88 +587,88 @@ declare namespace aibox {
 
   namespace data {
     /** Bytes used and remaining across this applet's private data (kv + db + imports). Check it before bulk writes and use it to drive your own eviction policy — the host sets the budget, you decide what to drop. Result: {usedBytes, limitBytes, remainingBytes, layers:{kv,db,imports,other}} */
-    function usage(input?: Record<string, never>): Promise<unknown>
+    function usage(input?: Record<string, never>): Promise<{ layers: { db: number; imports: number; kv: number; other: number }; limitBytes: number; remainingBytes: number; usedBytes: number }>
     /** Which version last wrote the data on disk versus the version running now. This is the migration hook: when changed is true, migrate from previous to current, then call acknowledgeVersion(). The host knows nothing about your schema. Result: {current, previous, isFirstRun, changed, firstSeenAt?} */
-    function version(input?: Record<string, never>): Promise<unknown>
+    function version(input?: Record<string, never>): Promise<{ changed: boolean; current: string; firstSeenAt?: string; isFirstRun: boolean; previous: string | unknown }>
     /** Mark the current version's data as migrated. Idempotent; until you call it, version() keeps reporting the same transition, so a failed migration is retried instead of silently skipped. Result: {current, previous, isFirstRun, changed} */
-    function acknowledgeVersion(input?: Record<string, never>): Promise<unknown>
+    function acknowledgeVersion(input?: Record<string, never>): Promise<{ changed: boolean; current: string; firstSeenAt?: string; isFirstRun: boolean; previous: string | unknown }>
     /** The data snapshot the host captured before the last update, if any. Read it to tell the user a rollback point exists; the host keeps exactly one. Result: {version?, capturedAt?, bytes} | null */
-    function snapshot(input?: Record<string, never>): Promise<unknown>
+    function snapshot(input?: Record<string, never>): Promise<{ bytes: number; capturedAt?: string; version?: string } | unknown>
   }
 
   namespace db {
     /** List collection names. Result: string[] */
-    function collections(input?: Record<string, never>): Promise<unknown>
+    function collections(input?: Record<string, never>): Promise<Array<string>>
     /** Insert or replace one JSON object; returns metadata including _id. Result: stored document */
-    function insert(input: { collection: string; document: Record<string, unknown> }): Promise<unknown>
+    function insert(input: { collection: string; document: Record<string, unknown> }): Promise<Record<string, unknown>>
     /** Read one document by _id. Result: document|null */
-    function get(input: { collection: string; id: string }): Promise<unknown>
+    function get(input: { collection: string; id: string }): Promise<Record<string, unknown> | unknown>
     /** Patch one document; JSON null removes a field. Result: updated document */
-    function update(input: { collection: string; id: string; merge?: boolean; patch: Record<string, unknown> }): Promise<unknown>
+    function update(input: { collection: string; id: string; merge?: boolean; patch: Record<string, unknown> }): Promise<Record<string, unknown>>
     /** Delete one document by _id. Result: boolean */
-    function remove(input: { collection: string; id: string }): Promise<unknown>
+    function remove(input: { collection: string; id: string }): Promise<boolean>
     /** "Delete every document matching `where`; returns how many were removed. "
                       + "Use this instead of looping remove() — each single remove rewrites the whole collection file, "
                       + "so deleting 500 documents one by one is 500 full-table writes. `where` must be non-empty; "
                       + "to empty a collection call clear()." Result: number (documents removed) */
-    function removeWhere(input: { collection: string; where: Record<string, unknown> }): Promise<unknown>
+    function removeWhere(input: { collection: string; where: Record<string, unknown> }): Promise<number>
     /** "Query documents, with stable sorting and pagination. " + Self.operatorHelp Result: document[] (at most 500 — page with offset, or use count/aggregate for totals) */
-    function query(input: { collection: string; descending?: boolean; limit?: number; offset?: number; sortBy?: string; where?: Record<string, unknown> }): Promise<unknown>
+    function query(input: { collection: string; descending?: boolean; limit?: number; offset?: number; sortBy?: string; where?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>>
     /** "Count matching documents without transferring them. " + Self.operatorHelp Result: number */
-    function count(input: { collection: string; where?: Record<string, unknown> }): Promise<unknown>
+    function count(input: { collection: string; where?: Record<string, unknown> }): Promise<number>
     /** "Group and reduce documents natively. "
                       + "Prefer this over query()+reduce in JS: a monthly total over 3000 rows needs no rows to cross the bridge "
                       + "(and query() caps at 500 anyway). Each result row has _group and _count plus your named metrics. "
                       + "Omit groupBy to reduce the whole collection into one row. " + Self.operatorHelp Result: Array<{_group, _count, ...metrics}> sorted by _group; $avg/$min/$max are null when no value qualifies */
-    function aggregate(input: { collection: string; groupBy?: string; metrics: Record<string, unknown>; where?: Record<string, unknown> }): Promise<unknown>
+    function aggregate(input: { collection: string; groupBy?: string; metrics: Record<string, unknown>; where?: Record<string, unknown> }): Promise<Array<{ _count: number; _group: unknown }>>
     /** "Case- and accent-insensitive substring scan across string fields. "
                       + "Omit `fields` to scan every non-underscore string field. Combine with `where` to scope it. "
                       + "NOTE: this is a linear substring scan, not an inverted index, and results are NOT ranked — "
                       + "they come back in collection order. That is deliberate: tokenizer-based ranking drops CJK text "
                       + "(no word boundaries), and at the 20k-document cap a scan is milliseconds." Result: document[] in collection order (unranked) */
-    function search(input: { collection: string; fields?: Array<string>; limit?: number; text: string; where?: Record<string, unknown> }): Promise<unknown>
+    function search(input: { collection: string; fields?: Array<string>; limit?: number; text: string; where?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>>
     /** Delete every document in one collection. Result: boolean */
-    function clear(input: { collection: string }): Promise<unknown>
+    function clear(input: { collection: string }): Promise<boolean>
   }
 
   namespace device {
     /** Read the current device state. Result: {model, systemName, systemVersion, idiom, locale, timeZone, batteryLevel?, batteryState, freeDiskBytes?} */
-    function info(input?: Record<string, never>): Promise<unknown>
+    function info(input?: Record<string, never>): Promise<{ batteryLevel?: number; batteryState: "charging" | "full" | "unplugged" | "unknown"; freeDiskBytes?: number; idiom: "phone" | "pad" | "mac" | "tv" | "carPlay" | "vision" | "unspecified"; locale: string; model: string; systemName: string; systemVersion: string; timeZone: string }>
   }
 
   namespace download {
     /** Queue one download and get its taskId back immediately. Resumable, survives app termination. headers are passed through verbatim (Referer/Cookie/User-Agent for sites that reject plain requests). Result: {taskId, artifactRef} */
-    function enqueue(input: { destination?: { kind?: "sandbox" | "externalFiles" | "iCloud" | "vault"; path?: string; vault?: string }; expectedBytes?: number; filename?: string; groupId?: string; headers?: Record<string, unknown>; priority?: "low" | "normal" | "high"; url: string }): Promise<unknown>
+    function enqueue(input: { destination?: { kind?: "sandbox" | "externalFiles" | "iCloud" | "vault"; path?: string; vault?: string }; expectedBytes?: number; filename?: string; groupId?: string; headers?: Record<string, unknown>; priority?: "low" | "normal" | "high"; url: string }): Promise<{ artifactRef: string; taskId: string }>
     /** Your downloads, newest state first-hand. Never includes other apps' tasks. Result: DownloadTask[] — {taskId,url,filename,state,bytesReceived,totalBytes,fraction,speed,eta,outputPath,artifactRef,groupId,error} */
-    function list(input?: { groupId?: string; state?: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "active" | "finished" }): Promise<unknown>
+    function list(input?: { groupId?: string; state?: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled" | "active" | "finished" }): Promise<Array<{ artifactRef?: string; bytesReceived: number; error?: string; eta?: number; filename: string; fraction?: number; groupId?: string; outputPath?: string; speed?: number; state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled"; taskId: string; totalBytes?: number; url: string }>>
     /** One task's snapshot; null when the id is not yours or no longer exists. Result: DownloadTask|null */
-    function status(input: { taskId: string }): Promise<unknown>
+    function status(input: { taskId: string }): Promise<{ artifactRef?: string; bytesReceived: number; error?: string; eta?: number; filename: string; fraction?: number; groupId?: string; outputPath?: string; speed?: number; state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled"; taskId: string; totalBytes?: number; url: string } | unknown>
     /** Pause one download; resume data is written to disk so it continues from where it stopped. Result: boolean */
-    function pause(input: { taskId: string }): Promise<unknown>
+    function pause(input: { taskId: string }): Promise<boolean>
     /** Resume a paused or failed download. Result: boolean */
-    function resume(input: { taskId: string }): Promise<unknown>
+    function resume(input: { taskId: string }): Promise<boolean>
     /** Cancel one download; the record stays in the list as cancelled. Result: boolean */
-    function cancel(input: { taskId: string }): Promise<unknown>
+    function cancel(input: { taskId: string }): Promise<boolean>
     /** Drop one record from the list entirely (cancels it first if running). Result: boolean */
-    function remove(input: { taskId: string }): Promise<unknown>
+    function remove(input: { taskId: string }): Promise<boolean>
     /** Pause every download of YOURS. Other apps and the host queue are untouched. Result: boolean */
-    function pauseAll(input?: Record<string, never>): Promise<unknown>
+    function pauseAll(input?: Record<string, never>): Promise<boolean>
     /** Resume every paused/failed download of yours. Result: boolean */
-    function resumeAll(input?: Record<string, never>): Promise<unknown>
+    function resumeAll(input?: Record<string, never>): Promise<boolean>
     /** Cancel every active download of yours. Result: boolean */
-    function cancelAll(input?: Record<string, never>): Promise<unknown>
+    function cancelAll(input?: Record<string, never>): Promise<boolean>
     /** Remove your completed/failed/cancelled records. Does NOT delete downloaded files. Result: boolean */
-    function clearFinished(input?: Record<string, never>): Promise<unknown>
+    function clearFinished(input?: Record<string, never>): Promise<boolean>
     /** Start pushing 'download.progress' events for your tasks to aibox.events. Strongly preferred over polling: a 10-download queue polled once a second is dozens of bridge round-trips per second. Events stop automatically when your applet closes. Result: boolean */
-    function subscribe(input?: Record<string, never>): Promise<unknown>
+    function subscribe(input?: Record<string, never>): Promise<boolean>
     /** Stop the progress event stream. Result: boolean */
-    function unsubscribe(input?: Record<string, never>): Promise<unknown>
+    function unsubscribe(input?: Record<string, never>): Promise<boolean>
     /** Hand a finished file to the host's opener (Quick Look / the system app for that type). The file never enters your sandbox. Result: boolean */
-    function openIn(input: { taskId: string }): Promise<unknown>
+    function openIn(input: { taskId: string }): Promise<boolean>
     /** Present the native share sheet for a finished file. Result: boolean */
-    function share(input: { taskId: string }): Promise<unknown>
+    function share(input: { taskId: string }): Promise<boolean>
     /** Probe whether the download engine is usable right now. No consent prompt. Result: {available:boolean, reason?:string} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean; reason: string }>
   }
 
   // files 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。
@@ -712,11 +712,11 @@ declare namespace aibox {
 
   namespace haptics {
     /** Play an impact haptic. Result: boolean */
-    function impact(input?: { style?: "light" | "medium" | "heavy" | "soft" | "rigid" }): Promise<unknown>
+    function impact(input?: { style?: "light" | "medium" | "heavy" | "soft" | "rigid" }): Promise<boolean>
     /** Play a selection tick. Result: boolean */
-    function selection(input?: Record<string, never>): Promise<unknown>
+    function selection(input?: Record<string, never>): Promise<boolean>
     /** Play a success, warning, or error pattern. Result: boolean */
-    function notify(input?: { type?: "success" | "warning" | "error" }): Promise<unknown>
+    function notify(input?: { type?: "success" | "warning" | "error" }): Promise<boolean>
   }
 
   namespace health {
@@ -732,28 +732,17 @@ declare namespace aibox {
 
   namespace jobs {
     /** List this applet's automations and last run status. Result: Automation[] */
-    function list(input?: Record<string, never>): Promise<unknown>
+    function list(input?: Record<string, never>): Promise<Array<{ action: string; catchUpWindowSeconds?: number; consecutiveFailures?: number; createdAt: string; enabled: boolean; id: string; inputJSON?: string; lastError?: string; lastInvocationID?: string; lastResultJSON?: string; lastRunAt?: string; lastSkipReason?: string; lastSkippedAt?: string; leaseUntil?: string; name?: string; nextRetryAt?: string; pendingOccurrenceID?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number }; updatedAt: string }>>
     /** Create or update an automation. Result: Automation */
-    function register(input: { action: string; enabled?: boolean; id?: string; input?: unknown; name?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number } }): Promise<unknown>
+    function register(input: { action: string; enabled?: boolean; id?: string; input?: unknown; name?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number } }): Promise<{ action: string; catchUpWindowSeconds?: number; consecutiveFailures?: number; createdAt: string; enabled: boolean; id: string; inputJSON?: string; lastError?: string; lastInvocationID?: string; lastResultJSON?: string; lastRunAt?: string; lastSkipReason?: string; lastSkippedAt?: string; leaseUntil?: string; name?: string; nextRetryAt?: string; pendingOccurrenceID?: string; trigger: { at?: string; event?: string; hour?: number; intervalSeconds?: number; kind: "once" | "interval" | "daily" | "event" | "appLaunch" | "appForeground" | "appletOpen"; minute?: number }; updatedAt: string }>
     /** Remove one automation. Result: boolean */
-    function remove(input: { id: string }): Promise<unknown>
+    function remove(input: { id: string }): Promise<boolean>
     /** Run one automation immediately. Result: boolean */
-    function run(input: { id: string }): Promise<unknown>
+    function run(input: { id: string }): Promise<boolean>
     /** Run every currently due automation for this applet. Result: {count:number} */
-    function runDue(input?: Record<string, never>): Promise<unknown>
+    function runDue(input?: Record<string, never>): Promise<{ count: number }>
     /** Read the next calculable due time for every enabled automation. Result: {id,nextAt:string|null}[] */
-    function next(input?: Record<string, never>): Promise<unknown>
-  }
-
-  namespace list {
-    /** Read whether the host actually attached the gesture layer, plus the declared actions of one region. Always readable — this is the degradation probe. Result: {rendered, regions:string[], configured?, contextMenu?, leadingSwipe?, trailingSwipe?, rows?} */
-    function getState(input?: { regionId?: string }): Promise<unknown>
-    /** Declare the row actions of one region. Identity (ids, role, tint) is fixed here; per-row differences go through setRows overrides. Re-configuring the same regionId replaces the declaration and drops the stale row rectangles. Result: {rendered, regions, configured, contextMenu, leadingSwipe, trailingSwipe, rows} */
-    function configure(input: { contextMenu?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }>; leadingSwipe?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }>; regionId: string; trailingSwipe?: Array<{ icon?: string; id: string; role?: "normal" | "destructive"; tint?: "default" | "accent" | "danger"; title: string }> }): Promise<unknown>
-    /** Report the currently VISIBLE row rectangles. rect is [x, y, width, height] in CSS points in viewport coordinates — exactly getBoundingClientRect(); never multiply by devicePixelRatio and never add scrollTop. Rectangles expire after 600ms, so re-report on every scroll frame (VirtualList and useListGestures already do). Per-row 'actions' overrides may change title/icon/enabled/hidden only — never identity. Result: {accepted:boolean, regionId, rows?, generation?, reason?} */
-    function setRows(input: { regionId: string; rows: Array<{ actions?: Record<string, unknown>; id: string; rect: Array<number> }> }): Promise<unknown>
-    /** Drop a region when its list unmounts. Idempotent. Result: {released:boolean, regionId} */
-    function release(input: { regionId: string }): Promise<unknown>
+    function next(input?: Record<string, never>): Promise<Array<{ id: string; nextAt: string | unknown }>>
   }
 
   namespace location {
@@ -773,26 +762,17 @@ declare namespace aibox {
 
   namespace media {
     /** Play an audio file from this applet's assets/data/cache directories. Result: {id,channel,state} */
-    function play(input: { channel?: "music" | "voice" | "sfx" | "ambient"; loop?: boolean; path: string; volume?: number }): Promise<unknown>
+    function play(input: { channel?: "music" | "voice" | "sfx" | "ambient"; loop?: boolean; path: string; volume?: number }): Promise<{ channel: "music" | "voice" | "sfx" | "ambient"; id: string; state: "playing" }>
     /** Pause one playback handle. Result: boolean */
-    function pause(input: { id: string }): Promise<unknown>
+    function pause(input: { id: string }): Promise<boolean>
     /** Resume one playback handle. Result: boolean */
-    function resume(input: { id: string }): Promise<unknown>
+    function resume(input: { id: string }): Promise<boolean>
     /** Stop one playback handle. Result: boolean */
-    function stop(input: { id: string }): Promise<unknown>
+    function stop(input: { id: string }): Promise<boolean>
     /** Stop all audio, optionally limited to one channel. Result: integer */
-    function stopAll(input?: { channel?: "music" | "voice" | "sfx" | "ambient" }): Promise<unknown>
-    /** Read playback state for one handle. Result: {id,state,currentTime,duration,channel} */
-    function getState(input: { id: string }): Promise<unknown>
-  }
-
-  namespace menu {
-    /** Read the effective business menu and host-menu policy. Result: {declared,mergePolicy,hostPlacement,hostItems,items} */
-    function getState(input?: Record<string, never>): Promise<unknown>
-    /** Update title, icon, enabled or hidden for declared item ids; action identity cannot change. Result: menu state */
-    function update(input: { items: Record<string, unknown> }): Promise<unknown>
-    /** Clear all runtime menu overrides and restore manifest values. Result: menu state */
-    function reset(input?: Record<string, never>): Promise<unknown>
+    function stopAll(input?: { channel?: "music" | "voice" | "sfx" | "ambient" }): Promise<number>
+    /** Read playback state for one handle. Result: {id,state,currentTime,duration,channel} | {state:'stopped'} */
+    function getState(input: { id: string }): Promise<{ channel: string; currentTime: number; duration: number; id: string; state: "playing" | "paused" } | { state: "stopped" }>
   }
 
   namespace music {
@@ -843,16 +823,7 @@ declare namespace aibox {
 
   namespace open {
     /** Open an http, https, mailto, or tel URL. Result: boolean */
-    function url(input: { url: string }): Promise<unknown>
-  }
-
-  namespace overlay {
-    /** Read the effective overlay items and whether the host actually rendered them (card/sheet/drawer surfaces do not). Always readable — this is the degradation probe. Result: {declared, rendered, items:[{id,kind,icon,activeIcon,title,subtitle,tint,progress,active,enabled,hidden,controls:[{id,icon,activeIcon,tint,active,enabled}]}]} */
-    function getState(input?: Record<string, never>): Promise<unknown>
-    /** Update the display state of declared overlay ids: icon, activeIcon, title, subtitle, tint, progress, active, enabled, hidden, and the same fields on declared controls. Layers and controls cannot be added, removed or renamed by id. Result: overlay state */
-    function update(input: { items: Record<string, unknown> }): Promise<unknown>
-    /** Clear all runtime overlay overrides and restore manifest values. Result: overlay state */
-    function reset(input?: Record<string, never>): Promise<unknown>
+    function url(input: { url: string }): Promise<boolean>
   }
 
   namespace photos {
@@ -875,19 +846,19 @@ declare namespace aibox {
 
   namespace secrets {
     /** Store one credential under a key. Empty value removes it. Result: {stored:boolean} */
-    function set(input: { key: string; value: string }): Promise<unknown>
+    function set(input: { key: string; value: string }): Promise<{ stored: boolean }>
     /** Read one credential back. Returns null when absent. Result: string or null */
-    function get(input: { key: string }): Promise<unknown>
+    function get(input: { key: string }): Promise<string | unknown>
     /** Delete one credential. Result: boolean */
-    function remove(input: { key: string }): Promise<unknown>
+    function remove(input: { key: string }): Promise<boolean>
     /** List the credential keys this applet has stored. Values are never returned. Result: string[] */
-    function keys(input?: Record<string, never>): Promise<unknown>
+    function keys(input?: Record<string, never>): Promise<Array<string>>
     /** Whether this applet holds session cookies for a host — i.e. whether the user is logged in. Check this on launch to decide between the logged-in and guest UI; do NOT keep your own 'isLoggedIn' flag in storage, it will drift from the real cookie state. Result: {hasSession:boolean, hosts:string[]} */
-    function hasSession(input?: { host?: string }): Promise<unknown>
+    function hasSession(input?: { host?: string }): Promise<{ hasSession: boolean; hosts: Array<string> }>
     /** Log out: drop the session cookies. Pass a host to drop only that site's, omit to drop all of them. Credentials stored via set() are untouched. Result: {cleared:integer} */
-    function clearSession(input?: { host?: string }): Promise<unknown>
+    function clearSession(input?: { host?: string }): Promise<{ cleared: number }>
     /** Whether the keychain actually accepts writes in this build. False on unsigned simulator builds — surface it instead of letting logins silently fail to persist. Result: {available:boolean} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean }>
   }
 
   namespace shortcuts {
@@ -899,60 +870,60 @@ declare namespace aibox {
 
   namespace speech {
     /** Probe whether recognition can run right now. Never prompts and never opens the microphone — call it on mount and hide the mic button when unavailable. Result: {available, supportsOnDevice, microphone, speech, locale, reason} */
-    function availability(input?: { locale?: string }): Promise<unknown>
+    function availability(input?: { locale?: string }): Promise<{ available: boolean; locale: string; microphone: "granted" | "denied" | "undetermined"; reason?: "usage-description-missing" | "recognizer-unavailable" | "locale-unsupported" | "on-device-unsupported" | "microphone-denied" | "speech-denied" | "busy" | "engine-failure" | "platform-unsupported"; speech: "granted" | "denied" | "undetermined"; supportsOnDevice: boolean }>
     /** Open the microphone and resolve with the recognized text. Resolves when you call stop(), when maxDurationMs elapses, or when the engine finalizes. For push-to-talk, call recognize() WITHOUT awaiting on press and stop() on release, then await the recognize promise. Result: {transcript, confidence, locale, cancelled, timedOut, onDevice} */
-    function recognize(input?: { locale?: string; maxDurationMs?: number; onPartial?: boolean }): Promise<unknown>
+    function recognize(input?: { locale?: string; maxDurationMs?: number; onPartial?: boolean }): Promise<{ cancelled: boolean; confidence: number; locale: string; onDevice: boolean; timedOut: boolean; transcript: string }>
     /** Stop capturing and let the pending recognize() resolve with the final text. Result: boolean */
-    function stop(input?: Record<string, never>): Promise<unknown>
+    function stop(input?: Record<string, never>): Promise<boolean>
     /** Abandon the pending recognize(); it resolves with cancelled:true and an empty transcript. Result: boolean */
-    function cancel(input?: Record<string, never>): Promise<unknown>
+    function cancel(input?: Record<string, never>): Promise<boolean>
     /** Poll the in-flight session: elapsed time and the interim transcript so far. Result: {recognizing, elapsedMs, partial, locale} */
-    function status(input?: Record<string, never>): Promise<unknown>
+    function status(input?: Record<string, never>): Promise<{ elapsedMs: number; locale: string; partial: string; recognizing: boolean }>
   }
 
   namespace toast {
     /** Show a transient message. Result: boolean */
-    function show(input: { message: string }): Promise<unknown>
+    function show(input: { message: string }): Promise<boolean>
   }
 
   namespace tts {
     /** Speak text aloud. Returns as soon as speaking starts (it does not wait for the end). Result: boolean */
-    function speak(input: { lang?: string; pitch?: number; rate?: number; text: string }): Promise<unknown>
+    function speak(input: { lang?: string; pitch?: number; rate?: number; text: string }): Promise<boolean>
     /** Stop what this applet is currently speaking. Result: boolean */
-    function stop(input?: Record<string, never>): Promise<unknown>
+    function stop(input?: Record<string, never>): Promise<boolean>
   }
 
   namespace video {
     /** Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not. Result: {playing:boolean} */
-    function play(input?: { formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<unknown>
+    function play(input?: { formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<{ playing: boolean }>
     /** Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part. Result: {playing:boolean, count:integer} */
-    function playQueue(input: { items: Array<{ subtitleURL?: string; title?: string; url: string }>; presentation?: "immersive" | "embedded"; resumeFrom?: number; startAt?: number }): Promise<unknown>
+    function playQueue(input: { items: Array<{ subtitleURL?: string; title?: string; url: string }>; presentation?: "immersive" | "embedded"; resumeFrom?: number; startAt?: number }): Promise<{ count: number; playing: boolean }>
     /** Pause playback. Does nothing if what is playing was not started by your applet. Result: boolean */
-    function pause(input?: Record<string, never>): Promise<unknown>
+    function pause(input?: Record<string, never>): Promise<boolean>
     /** Resume playback. Does nothing if what is playing was not started by your applet. Result: boolean */
-    function resume(input?: Record<string, never>): Promise<unknown>
+    function resume(input?: Record<string, never>): Promise<boolean>
     /** Stop playback and dismiss the player. Only affects playback your applet started. Result: boolean */
-    function stop(input?: Record<string, never>): Promise<unknown>
+    function stop(input?: Record<string, never>): Promise<boolean>
     /** Jump to a position in seconds. Clamped to the video duration by the host. Result: boolean */
-    function seek(input: { seconds: number }): Promise<unknown>
+    function seek(input: { seconds: number }): Promise<boolean>
     /** Play the next item in the queue. No-op without a queue. Result: boolean */
-    function next(input?: Record<string, never>): Promise<unknown>
+    function next(input?: Record<string, never>): Promise<boolean>
     /** Play the previous item in the queue. No-op without a queue. Result: boolean */
-    function previous(input?: Record<string, never>): Promise<unknown>
+    function previous(input?: Record<string, never>): Promise<boolean>
     /** Current playback snapshot. mine tells you whether the host is playing something YOUR applet started — check it before showing your own progress UI, because the user may be watching something else entirely. Result: {state:'idle'|'loading'|'playing'|'paused'|'failed', url, title, currentTime, duration, queueIndex, queueCount, mine:boolean, error} */
-    function status(input?: Record<string, never>): Promise<unknown>
+    function status(input?: Record<string, never>): Promise<{ currentTime: number; duration: number; error?: string; mine: boolean; queueCount: number; queueIndex: number; state: "idle" | "loading" | "playing" | "paused" | "failed"; title?: string; url?: string }>
     /** Start pushing 'video.progress' events (~2Hz) to aibox.events. Strongly preferred over polling status(). Events stop automatically when your applet closes. Result: boolean */
-    function subscribe(input?: Record<string, never>): Promise<unknown>
+    function subscribe(input?: Record<string, never>): Promise<boolean>
     /** Stop the progress event stream. Result: boolean */
-    function unsubscribe(input?: Record<string, never>): Promise<unknown>
-    /** Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play. Result: {ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error} */
-    function resolve(input: { url: string }): Promise<unknown>
+    function unsubscribe(input?: Record<string, never>): Promise<boolean>
+    /** Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play. Result: {ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, id, formats:[…]} */
+    function resolve(input: { url: string }): Promise<{ durationSeconds?: number; extractor: string; formats: Array<{ bitrate?: number; bytes?: number; fps?: number; height?: number; id: string; kind: "direct" | "hls" | "dash"; playable: boolean; quality: string; url?: string; width?: number }>; id: string; ok: boolean; thumbnailURL?: string; title: string; uploader?: string }>
     /** Open a native video area pinned to the TOP of your page, and play there instead of taking over the whole screen. THIS IS THE ONE YOU WANT for a video app: your page content keeps scrolling underneath (description, episodes, related), the app stays PORTRAIT, and the user gets landscape only by tapping the player's own fullscreen button. Call stage() first, then play(). Playing without a stage takes over the screen in landscape, which is almost never what a page wants. Result: {rendered:boolean, available:boolean, aspect:string, backgroundAudio:boolean, gestureControls:boolean, pictureInPicture:boolean} */
-    function stage(input?: { aspect?: string; backgroundAudio?: boolean; gestureControls?: boolean; pictureInPicture?: boolean }): Promise<unknown>
+    function stage(input?: { aspect?: string; backgroundAudio?: boolean; gestureControls?: boolean; pictureInPicture?: boolean }): Promise<{ aspect: string; available: boolean; backgroundAudio: boolean; gestureControls: boolean; pictureInPicture: boolean; rendered: boolean }>
     /** Close the video area. Does NOT stop playback — the user may want it to continue as picture-in-picture or background audio. Call video.stop for that. Result: boolean */
-    function dismissStage(input?: Record<string, never>): Promise<unknown>
+    function dismissStage(input?: Record<string, never>): Promise<boolean>
     /** What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played, `stage` = the in-page video area is supported. Hide the entry points this build cannot honor instead of letting a tap do nothing. Result: {available:boolean, resolve:boolean, dash:boolean, stage:boolean} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean; dash: boolean; resolve: boolean; stage: boolean }>
   }
 
   // voiceMemos 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。

@@ -26,3 +26,11 @@ export { queryAll, removeMany, databaseAvailable } from './db';
 export { registerAction, registerActions, actionResult } from './actions';
 export { tabsAreRendered, searchIsRendered, tabsState, selectTab, setTabBadge, sceneState, setTitle, setCloseConfirmation, haptic, } from './shell';
 export { defineManifest } from './manifest';
+// --- 桥胶水并集（2026-08-04 收编）------------------------------------------------
+// 这四组曾经散在 8 份应用私有的 `host.js` 里，各写各的、语义还不一致
+// （confirm 不可用回 null 还是 false、openURL 要不要封顶、图片走 applet:// 还是 data:）。
+// 收进来的是**并集且补全**，不是可配置框架——差异部分原本就只是「各自只实现了当时用到的子集」。
+export * as events from './events';
+export * as ui from './ui';
+export * as system from './system';
+export * as intelligence from './intelligence';

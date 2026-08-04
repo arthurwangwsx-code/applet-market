@@ -33,6 +33,8 @@ Queue one download and get its taskId back immediately. Resumable, survives app 
 
 **返回** `{taskId, artifactRef}`
 
+**返回类型** `{ artifactRef: string; taskId: string }`
+
 ```js
 const { taskId } = await aibox.download.enqueue({ url, filename: 'lecture.mp4', destination: { kind:'sandbox', path:'Lectures' } })
 ```
@@ -54,6 +56,8 @@ Your downloads, newest state first-hand. Never includes other apps' tasks.
 
 **返回** `DownloadTask[] — {taskId,url,filename,state,bytesReceived,totalBytes,fraction,speed,eta,outputPath,artifactRef,groupId,error}`
 
+**返回类型** `Array<{ artifactRef?: string; bytesReceived: number; error?: string; eta?: number; filename: string; fraction?: number; groupId?: string; outputPath?: string; speed?: number; state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled"; taskId: string; totalBytes?: number; url: string }>`
+
 ```js
 const tasks = await aibox.download.list({ state: 'active' })
 ```
@@ -74,6 +78,8 @@ One task's snapshot; null when the id is not yours or no longer exists.
 
 **返回** `DownloadTask|null`
 
+**返回类型** `{ artifactRef?: string; bytesReceived: number; error?: string; eta?: number; filename: string; fraction?: number; groupId?: string; outputPath?: string; speed?: number; state: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled"; taskId: string; totalBytes?: number; url: string } | unknown`
+
 ### `aibox.download.pause()`
 
 Pause one download; resume data is written to disk so it continues from where it stopped.
@@ -89,6 +95,8 @@ Pause one download; resume data is written to disk so it continues from where it
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.download.resume()`
 
@@ -106,6 +114,8 @@ Resume a paused or failed download.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.cancel()`
 
 Cancel one download; the record stays in the list as cancelled.
@@ -121,6 +131,8 @@ Cancel one download; the record stays in the list as cancelled.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.download.remove()`
 
@@ -138,6 +150,8 @@ Drop one record from the list entirely (cancels it first if running).
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.pauseAll()`
 
 Pause every download of YOURS. Other apps and the host queue are untouched.
@@ -149,6 +163,8 @@ Pause every download of YOURS. Other apps and the host queue are untouched.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.download.resumeAll()`
 
@@ -162,6 +178,8 @@ Resume every paused/failed download of yours.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.cancelAll()`
 
 Cancel every active download of yours.
@@ -173,6 +191,8 @@ Cancel every active download of yours.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.download.clearFinished()`
 
@@ -186,6 +206,8 @@ Remove your completed/failed/cancelled records. Does NOT delete downloaded files
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.subscribe()`
 
 Start pushing 'download.progress' events for your tasks to aibox.events. Strongly preferred over polling: a 10-download queue polled once a second is dozens of bridge round-trips per second. Events stop automatically when your applet closes.
@@ -197,6 +219,8 @@ Start pushing 'download.progress' events for your tasks to aibox.events. Strongl
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.download.subscribe(); aibox.events.on('download.progress', t => update(t))
@@ -214,6 +238,8 @@ Stop the progress event stream.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.openIn()`
 
 Hand a finished file to the host's opener (Quick Look / the system app for that type). The file never enters your sandbox.
@@ -229,6 +255,8 @@ Hand a finished file to the host's opener (Quick Look / the system app for that 
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ### `aibox.download.share()`
 
@@ -246,6 +274,8 @@ Present the native share sheet for a finished file.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.download.availability()`
 
 Probe whether the download engine is usable right now. No consent prompt.
@@ -257,6 +287,8 @@ Probe whether the download engine is usable right now. No consent prompt.
 无参数。
 
 **返回** `{available:boolean, reason?:string}`
+
+**返回类型** `{ available: boolean; reason: string }`
 
 ```js
 const a = await aibox.download.availability(); if (!a.available) hideDownloadUI()

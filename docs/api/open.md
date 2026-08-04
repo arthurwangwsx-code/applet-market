@@ -24,6 +24,8 @@ Open an http, https, mailto, or tel URL.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.open.url('https://example.com')
 ```

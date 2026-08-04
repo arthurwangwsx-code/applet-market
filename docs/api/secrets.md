@@ -25,6 +25,8 @@ Store one credential under a key. Empty value removes it.
 
 **返回** `{stored:boolean}`
 
+**返回类型** `{ stored: boolean }`
+
 ```js
 await aibox.secrets.set('apiKey', key)
 ```
@@ -44,6 +46,8 @@ Read one credential back. Returns null when absent.
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `string or null`
+
+**返回类型** `string | unknown`
 
 ```js
 const key = await aibox.secrets.get('apiKey')
@@ -65,6 +69,8 @@ Delete one credential.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ### `aibox.secrets.keys()`
 
 List the credential keys this applet has stored. Values are never returned.
@@ -76,6 +82,8 @@ List the credential keys this applet has stored. Values are never returned.
 无参数。
 
 **返回** `string[]`
+
+**返回类型** `Array<string>`
 
 ### `aibox.secrets.hasSession()`
 
@@ -92,6 +100,8 @@ Whether this applet holds session cookies for a host — i.e. whether the user i
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `{hasSession:boolean, hosts:string[]}`
+
+**返回类型** `{ hasSession: boolean; hosts: Array<string> }`
 
 ```js
 const { hasSession } = await aibox.secrets.hasSession({ host: 'bilibili.com' })
@@ -113,6 +123,8 @@ Log out: drop the session cookies. Pass a host to drop only that site's, omit to
 
 **返回** `{cleared:integer}`
 
+**返回类型** `{ cleared: number }`
+
 ```js
 await aibox.secrets.clearSession({ host: 'bilibili.com' })
 ```
@@ -128,6 +140,8 @@ Whether the keychain actually accepts writes in this build. False on unsigned si
 无参数。
 
 **返回** `{available:boolean}`
+
+**返回类型** `{ available: boolean }`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/SecretsCapabilityAdapter.swift`
 

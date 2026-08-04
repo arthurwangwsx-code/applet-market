@@ -26,6 +26,8 @@ Probe whether recognition can run right now. Never prompts and never opens the m
 
 **返回** `{available, supportsOnDevice, microphone, speech, locale, reason}`
 
+**返回类型** `{ available: boolean; locale: string; microphone: "granted" | "denied" | "undetermined"; reason?: "usage-description-missing" | "recognizer-unavailable" | "locale-unsupported" | "on-device-unsupported" | "microphone-denied" | "speech-denied" | "busy" | "engine-failure" | "platform-unsupported"; speech: "granted" | "denied" | "undetermined"; supportsOnDevice: boolean }`
+
 ```js
 const a = await aibox.speech.availability({ locale:'en-US' }); if (!a.available) hideMic(a.reason)
 ```
@@ -48,6 +50,8 @@ Open the microphone and resolve with the recognized text. Resolves when you call
 
 **返回** `{transcript, confidence, locale, cancelled, timedOut, onDevice}`
 
+**返回类型** `{ cancelled: boolean; confidence: number; locale: string; onDevice: boolean; timedOut: boolean; transcript: string }`
+
 ```js
 const r = await aibox.speech.recognize({ locale:'en-US', maxDurationMs:10000 }); if (!r.cancelled) score(r.transcript)
 ```
@@ -63,6 +67,8 @@ Stop capturing and let the pending recognize() resolve with the final text.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.speech.stop()
@@ -80,6 +86,8 @@ Abandon the pending recognize(); it resolves with cancelled:true and an empty tr
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.speech.cancel()
 ```
@@ -95,6 +103,8 @@ Poll the in-flight session: elapsed time and the interim transcript so far.
 无参数。
 
 **返回** `{recognizing, elapsedMs, partial, locale}`
+
+**返回类型** `{ elapsedMs: number; locale: string; partial: string; recognizing: boolean }`
 
 ```js
 const s = await aibox.speech.status(); caption.textContent = s.partial

@@ -1,0 +1,25 @@
+{
+  "name": "@aibox-app/viddl",
+  "private": true,
+  "version": "1.0.0",
+  "description": "视频下载 —— AiBox 小应用。",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "build:ci": "vite build --mode production"
+  },
+  "dependencies": {
+    "@aibox/applet-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@aibox/applet-vite": "^1.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "antd-mobile": "^5.38.1"
+  }
+}

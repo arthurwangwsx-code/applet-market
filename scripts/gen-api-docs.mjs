@@ -21,6 +21,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resultType } from './lib/schema-type.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MARKET_ROOT = path.resolve(HERE, '..');
@@ -294,6 +295,9 @@ function parseMethod(text, symbols, source) {
     summary: evalExpr(args.summary, symbols) ?? '',
     parametersJSON: evalExpr(args.parametersJSON, symbols) ?? '{}',
     resultSummary: evalExpr(args.resultSummary, symbols) ?? 'unknown',
+    // 机器可读的返回 schema（与 parametersJSON 对称）。未声明 → null → 生成器退回 Promise<unknown>。
+    // 覆盖率由 audit-result-schema.mjs 棘轮推进；别用 resultSummary 猜，猜出来的类型比没有类型更糟。
+    resultSchemaJSON: evalExpr(args.resultSchemaJSON, symbols) ?? null,
     effect: evalExpr(args.effect, symbols) ?? 'read',
     example: evalExpr(args.example, symbols),
     source,
@@ -367,6 +371,21 @@ function extractDeclarationSets(src) {
   };
 }
 
+/**
+ * 手写 TS 签名覆盖的命名空间（Swift `handwrittenTypeScriptNamespaces`）。
+ *
+ * 为什么要进快照：这批命名空间的类型来自手写块，**补 `resultSchemaJSON` 不会改变它们的类型**，
+ * 只会改文档。不区分的话覆盖率是个会骗人的数——把 66 条「补了也不产生类型」的欠账
+ * 和 92 条真欠账混在一起，谁看都以为进度差不多。分开之后，棘轮才盯得住真正吃 `Promise<unknown>` 的那批。
+ */
+function extractHandwrittenNamespaces(src) {
+  const body = arrayLiteralAfter(src, 'static let handwrittenTypeScriptNamespaces: Set<String> = [');
+  if (!body) return [];
+  return splitTopLevel(body)
+    .map((s) => evalExpr(s, {}))
+    .filter((s) => s && /^[A-Za-z]+$/.test(s));
+}
+
 /** 单个 *CapabilityAdapter.swift 里的 descriptor 属性。 */
 function extractAdapterDescriptor(src, source) {
   const symbols = collectSymbols(src);
@@ -413,6 +432,9 @@ function extractProjections(src, source) {
           summary: '',
           parametersJSON: null, // 运行时取真实 ToolDefinition.parametersJSON
           resultSummary: '{ok, text, permission, details?, progress, artifacts}',
+          // 投影方法的返回是宿主工具的统一信封，形状由 `HostToolProjectionCapabilityAdapter` 保证，
+          // 不逐条声明——棘轮把这一整类记为「按类型豁免」，见 audit-result-schema.mjs 的 envelope 档。
+          resultSchemaJSON: null,
           effect: evalExpr(pArgs.effect, symbols) ?? 'read',
           example: evalExpr(pArgs.example, symbols),
           toolName: evalExpr(pArgs.toolName, symbols),
@@ -442,6 +464,7 @@ function hostPaths(hostRoot) {
     catalog: path.join(kit, 'AppletCapabilityAdapter.swift'),
     capabilities: path.join(kit, 'Capabilities'),
     projection: path.join(kit, 'Capabilities/HostToolProjectionCapabilityAdapter.swift'),
+    developerSDKTypeScript: path.join(kit, 'AppletDeveloperSDK+TypeScript.swift'),
   };
 }
 
@@ -460,6 +483,8 @@ function extract(hostRoot) {
   const catalogSrc = read(p.catalog);
   const namespaces = extractBuiltIns(catalogSrc, rel(p.catalog));
   const sets = extractDeclarationSets(catalogSrc);
+  // 手写签名集合住在 AppletDeveloperSDK+TypeScript.swift（生成器与它同源，避免第二份清单）。
+  const handwritten = extractHandwrittenNamespaces(read(p.developerSDKTypeScript));
 
   const files = fs.readdirSync(p.capabilities).filter((f) => f.endsWith('.swift')).sort();
   for (const file of files) {
@@ -489,6 +514,7 @@ function extract(hostRoot) {
     namespaces: namespaces.map((n) => ({ ...n, group: NAMESPACE_GROUP[n.namespace] })),
     declarable: sets.declarable,
     alwaysAvailable: sets.alwaysAvailable,
+    handwritten,
   };
 }
 
@@ -581,6 +607,11 @@ function renderMethod(ns, m) {
   lines.push(renderParams(m.parametersJSON, m.toolName));
   lines.push('');
   lines.push(`**返回** \`${m.resultSummary}\``);
+  if (m.resultSchemaJSON) {
+    // 有机器可读返回 schema 的方法，SDK 与 `.aibox/aibox.d.ts` 里就是具体类型而不是 unknown。
+    lines.push('');
+    lines.push(`**返回类型** \`${resultType(m.resultSchemaJSON)}\``);
+  }
   if (m.example) {
     lines.push('');
     lines.push('```js');

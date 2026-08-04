@@ -27,6 +27,8 @@ Speak text aloud. Returns as soon as speaking starts (it does not wait for the e
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.tts.speak({ text: 'Hello', lang: 'en-US' })
 ```
@@ -42,6 +44,8 @@ Stop what this applet is currently speaking.
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.tts.stop()

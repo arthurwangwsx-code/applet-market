@@ -46,8 +46,23 @@ jobs:
         # docs/api/ 全部由宿主的 AppletCapabilityDescriptor 生成（descriptor 是唯一真值）。
         # CI 里没有宿主 Swift 源码，所以这一跑只校验 capabilities.snapshot.json -> Markdown 这一段：
         # 能抓住「有人手改了生成内容」和「漏提交 snapshot」。
-        # 「宿主改了能力却没重新生成」要靠本地跑同一条命令（那时宿主源码在场，会走完整链路）。
+        # 「宿主改了能力却没重新生成」由**宿主仓库**的两道闸门守：
+        #   · pre-commit 第 20 条（改了 AppletPluginKit 就跑完整链路的 --check）
+        #   · AppletPluginKitTests/AppletCapabilitySnapshotGateTests（descriptor 集合 + 返回 schema 指纹）
         run: node scripts/gen-api-docs.mjs --check
+
+      - name: 返回类型覆盖率棘轮（新增桥方法必须带 resultSchemaJSON）
+        # 返回侧没有机器可读 schema，应用侧就会长出各自的替代品——手写 aibox-extra.d.ts、
+        # 按英文文案子串反推枚举，两者都真实发生过。棘轮只减不增。
+        run: node scripts/audit-result-schema.mjs
+
+      - name: host.js 分叉棘轮（新应用不得再抄一份桥胶水）
+        # 同一件事有多个答案，是 AI 继承劣化实现的结构性原因。实测一天内从 4 份涨到 8 份。
+        run: node scripts/audit-host-forks.mjs
+
+      - name: 文档事实基线不得过期
+        # 手写文档里的统计数字一天就会错（39→47 命名空间、4→8 份分叉）。数字改成生成的，并在这里守住。
+        run: node scripts/gen-facts.mjs --check
 
   build-tooling:
     runs-on: ubuntu-latest

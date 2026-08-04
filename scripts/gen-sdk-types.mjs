@@ -29,6 +29,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parametersType, hasRequired, resultType } from './lib/schema-type.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MARKET_ROOT = path.resolve(HERE, '..');
@@ -71,60 +72,35 @@ function extractSwiftMultiline(source, constName) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. JSON Schema -> TypeScript（与 Swift `generatedSchemaType` 逐条对齐）
+// 2. JSON Schema -> TypeScript（实现在 lib/schema-type.mjs，与 Swift `generatedSchemaType` 逐条对齐）
 // ---------------------------------------------------------------------------
 
-function schemaType(schema) {
-  if (Array.isArray(schema?.enum) && schema.enum.length > 0) {
-    return schema.enum
-      .map((value) => (typeof value === 'string' ? JSON.stringify(value) : String(value)))
-      .join(' | ');
+// 手写块覆盖的命名空间**不再维护第二份清单**——从抽取到的手写 TS 文本里反推。
+//
+// 为什么改：原先这里有一份硬编码 `HANDWRITTEN`，注释写着「与 Swift 的集合逐字一致」，
+// 而实际上它漏了 `overlay` 与 `list`（Swift 有、这里没有）。后果不是少一条：
+// 生成块与手写块**同名 namespace 会被 TypeScript 合并**，两份签名并成重载，于是
+// `aibox.list.setRows({ regionId, rows })` 这种**错的单对象调用**照样过 tsc，
+// 而真值是两个位置参数 `setRows(regionId, rows)` —— 编译绿、真机炸。
+// 手抄清单迟早会漂，所以把「谁是手写的」这件事变成**从文本推导**，不再有第二处真值。
+function handwrittenNamespaces(...blocks) {
+  const found = new Set();
+  for (const block of blocks) {
+    if (!block) continue;
+    // 顶层（两空格缩进）的 `namespace X {`、`const X: T`、`interface XNamespace` 三种形态。
+    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?namespace\s+([A-Za-z_$][\w$]*)\s*\{/gm)) found.add(m[1]);
+    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:/gm)) found.add(m[1]);
   }
-  switch (schema?.type) {
-    case 'string': return 'string';
-    case 'integer':
-    case 'number': return 'number';
-    case 'boolean': return 'boolean';
-    case 'array': return `Array<${schemaType(schema.items ?? {})}>`;
-    case 'object': {
-      const properties = schema.properties ?? {};
-      const required = new Set(schema.required ?? []);
-      const keys = Object.keys(properties).sort();
-      if (keys.length === 0) return 'Record<string, unknown>';
-      const fields = keys.map((key) => `${key}${required.has(key) ? '' : '?'}: ${schemaType(properties[key])}`);
-      return `{ ${fields.join('; ')} }`;
-    }
-    default: return 'unknown';
-  }
+  return found;
 }
-
-function parametersType(parametersJSON) {
-  if (!parametersJSON || parametersJSON === '{}') return 'Record<string, never>';
-  let parsed;
-  try { parsed = JSON.parse(parametersJSON); } catch { return 'Record<string, never>'; }
-  return schemaType(parsed);
-}
-
-function hasRequired(parametersJSON) {
-  try {
-    const parsed = JSON.parse(parametersJSON ?? '{}');
-    return Array.isArray(parsed.required) && parsed.required.length > 0;
-  } catch { return false; }
-}
-
-// 被 platformTypeScript / aiTypeScript 手写覆盖的命名空间，与 Swift `generatedNativeTypeScript`
-// 的 `handwritten` 集合逐字一致。多一个会覆盖掉更好的手写签名，少一个会漏掉整条命名空间。
-const HANDWRITTEN = new Set([
-  'storage', 'net', 'ai', 'access', 'lifecycle', 'scene', 'navigation', 'ui', 'picker',
-  'resource', 'tools', 'action', 'tabs', 'toolbar', 'share',
-]);
 
 // ECMAScript 保留字。descriptor 里**真的有**这样的方法名（`files.delete`、`voiceMemos.delete`、
 // `voiceMemos.import`），而 `namespace X { function delete(…) }` 是语法错误。
 //
-// ⚠️ 宿主生成的虚拟文件 `.aibox/aibox.d.ts` 目前也踩了这个坑（Swift 侧 `generatedNativeTypeScript`
-// 无条件 emit `function <name>`）——那份文件是模型的 API 文档，在 `files` 之后整块都解析不出来。
-// 已在交付报告里作为宿主缺陷上报。这里用 `interface + const` 绕开：接口的成员名允许是关键字。
+// 用 `interface + const` 绕开：接口的成员名允许是关键字。
+// （宿主侧 `generatedNativeTypeScript` 曾无条件 emit `function <name>`，导致虚拟文件
+//  `.aibox/aibox.d.ts` 在 `files` 之后整块解析不出来——模型正是照那份文件写代码。
+//  2026-08-04 已按同一手法修好，两侧现在形态一致。）
 const RESERVED_WORDS = new Set([
   'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do',
   'else', 'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import',
@@ -136,19 +112,20 @@ function interfaceName(namespace) {
   return `${namespace.charAt(0).toUpperCase()}${namespace.slice(1)}Namespace`;
 }
 
-function generatedNamespaces(snapshot) {
+function generatedNamespaces(snapshot, handwritten) {
   const blocks = [];
   for (const entry of snapshot.namespaces) {
-    if (HANDWRITTEN.has(entry.namespace)) continue;
+    if (handwritten.has(entry.namespace)) continue;
     const needsInterface = entry.methods.some((method) => RESERVED_WORDS.has(method.name));
     const signatures = entry.methods.map((method) => {
       const input = parametersType(method.parametersJSON);
       const optional = hasRequired(method.parametersJSON) ? '' : '?';
+      const result = resultType(method.resultSchemaJSON);
       const doc = `    /** ${method.summary} Result: ${method.resultSummary} */`;
       const name = needsInterface && RESERVED_WORDS.has(method.name) ? `"${method.name}"` : method.name;
       const decl = needsInterface
-        ? `    ${name}(input${optional}: ${input}): Promise<unknown>`
-        : `    function ${method.name}(input${optional}: ${input}): Promise<unknown>`;
+        ? `    ${name}(input${optional}: ${input}): Promise<${result}>`
+        : `    function ${method.name}(input${optional}: ${input}): Promise<${result}>`;
       return `${doc}\n${decl}`;
     });
     if (needsInterface) {
@@ -215,6 +192,14 @@ function indent(block, spaces) {
 }
 
 function render({ platform, ai, snapshot }) {
+  // 手写块覆盖了哪些命名空间，从手写文本自身推导（连 TOOLS_BLOCK 一起，它也是手写的）。
+  // 推导失败（一个都没找到）说明抽取器与 Swift 常量的形态对不上了 —— 硬失败，
+  // 不要生成一份「手写块与生成块同名合并成重载」的 .d.ts：那种文件会让错误调用过 tsc。
+  const handwritten = handwrittenNamespaces(platform, ai, TOOLS_BLOCK);
+  if (handwritten.size === 0) {
+    throw new Error('未能从手写 TS 块里推导出任何命名空间——抽取器可能已失效，拒绝生成');
+  }
+
   const header = [
     '// 本文件由 applet-market/scripts/gen-sdk-types.mjs 生成，请勿手改。',
     '// 真值：',
@@ -249,7 +234,7 @@ function render({ platform, ai, snapshot }) {
     '',
     indent(platform, 0),
     '',
-    generatedNamespaces(snapshot),
+    generatedNamespaces(snapshot, handwritten),
     '',
     indent(ai, 0),
     '',

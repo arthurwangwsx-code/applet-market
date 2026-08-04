@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.viddl",
+  "version": "1.1.0",
+  "releasedAt": "2026-08-04T10:10:54Z",
+  "notes": "迁到 bundle + SDK：删掉私有桥胶水分叉，语义由 SDK 统一（confirm 不可用回 false、openURL 一律封顶）",
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "视频下载",
+    "localizedNames": {
+      "en": "Video Downloads"
+    },
+    "icon": "arrow.down.to.line",
+    "iconTintHex": "E64340",
+    "summary": "解析视频页、选画质、离线资料库",
+    "localizedSummaries": {
+      "en": "Parse a video page, pick a quality, keep an offline library"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": false,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [],
+      "capabilities": [
+        "tools",
+        "download",
+        "clipboard",
+        "share",
+        "haptics"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "viddl_app_inspect",
+        "name": "inspect",
+        "displayName": "解析视频",
+        "summary": "Reads a video page or stream URL and reports what can be downloaded: title, uploader, duration, and every available quality with its format id, container, codecs and size. Nothing is downloaded. Pass the chosen format id to the fetch action. Supports Bilibili, YouTube, direct media links, m3u8 streams and generic pages with an embedded video.",
+        "keywords": [
+          "video",
+          "inspect video",
+          "what qualities",
+          "video formats",
+          "resolutions available",
+          "解析视频",
+          "视频画质",
+          "有哪些清晰度",
+          "看看这个视频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The video page or stream URL.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"formats\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true,
+        "execution": {
+          "mode": "concurrent",
+          "timeoutMilliseconds": 45000,
+          "requiresNetworkConnectivity": true
+        }
+      },
+      {
+        "id": "viddl_app_fetch",
+        "name": "fetch",
+        "displayName": "下载视频",
+        "summary": "Downloads a video the user is entitled to save, for offline viewing. Give the page or stream \"url\"; add \"formatId\" (from the inspect action) to choose a quality, otherwise the best one is used. Set \"audioOnly\" to keep only the audio track as .m4a. Returns a jobId immediately — videos are large, so track it with the library action. HLS sources produce an in-app offline package rather than a portable mp4.",
+        "keywords": [
+          "download video",
+          "save video",
+          "offline video",
+          "download in 1080p",
+          "audio only",
+          "下载视频",
+          "保存视频",
+          "离线观看",
+          "只要音频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"formatId\":{\"type\":\"string\",\"description\":\"Format id from the inspect action. Omit for best quality.\"},\"audioOnly\":{\"type\":\"boolean\",\"description\":\"Keep only the audio track as .m4a. Default false.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"jobId\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 30000,
+          "requiresNetworkConnectivity": true
+        }
+      },
+      {
+        "id": "viddl_app_library",
+        "name": "library",
+        "displayName": "视频资料库",
+        "summary": "Lists downloaded videos and in-flight video downloads with their state and progress, or acts on one of them. \"action\": \"list\" (default) / \"status\" / \"pause\" / \"resume\" / \"cancel\" / \"retry\" / \"play\" / \"export\" — everything except list and status needs a \"jobId\". \"export\" turns an HLS offline package into a portable mp4; direct downloads are already mp4.",
+        "keywords": [
+          "downloaded videos",
+          "video library",
+          "video download progress",
+          "pause video download",
+          "play downloaded video",
+          "视频资料库",
+          "已下载的视频",
+          "视频下载进度",
+          "播放下载的视频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"status\",\"pause\",\"resume\",\"cancel\",\"retry\",\"play\",\"export\"]},\"jobId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 30000
+        }
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "library",
+            "title": "资料库",
+            "localizedTitles": {
+              "en": "Library"
+            },
+            "icon": "film",
+            "selectedIcon": "film.fill"
+          },
+          {
+            "id": "downloading",
+            "title": "下载中",
+            "localizedTitles": {
+              "en": "Downloading"
+            },
+            "icon": "arrow.down.circle",
+            "selectedIcon": "arrow.down.circle.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "add",
+            "icon": "plus",
+            "tint": "accent"
+          },
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ]
+      }
+    },
+    "toolRequirements": {
+      "mode": "allowlist",
+      "prefixes": [
+        "viddl"
+      ],
+      "tools": []
+    },
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 54656,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 1772,
+      "sha256": "4c69786a9207f34cd554f133b8469b2bb75b6cb1a4e0f9802540ef01a13de1cc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 43572,
+      "sha256": "e12ce2b987c76e8e83d2031229daa564ac9f222bd7270fbea56bb7e308cbab1e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2981,
+      "sha256": "c432d39192ed3dd459df5206f3171618aec79d0d86edd0d947c1a8631c43800b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 6331,
+      "sha256": "ba5946d526d56ff55c448d8aa428866443b87f681377505521566f0989530401",
+      "encoding": "utf8"
+    }
+  ]
+}

@@ -20,6 +20,8 @@ Read the current device state.
 
 **返回** `{model, systemName, systemVersion, idiom, locale, timeZone, batteryLevel?, batteryState, freeDiskBytes?}`
 
+**返回类型** `{ batteryLevel?: number; batteryState: "charging" | "full" | "unplugged" | "unknown"; freeDiskBytes?: number; idiom: "phone" | "pad" | "mac" | "tv" | "carPlay" | "vision" | "unspecified"; locale: string; model: string; systemName: string; systemVersion: string; timeZone: string }`
+
 ```js
 await aibox.device.info()
 ```

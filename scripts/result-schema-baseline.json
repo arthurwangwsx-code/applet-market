@@ -1,0 +1,5 @@
+{
+  "_doc": "未声明 resultSchemaJSON 的方法数（按命名空间）。只减不增；由 scripts/audit-result-schema.mjs 维护。",
+  "_generatedFrom": "docs/api/capabilities.snapshot.json",
+  "untypedByNamespace": {}
+}

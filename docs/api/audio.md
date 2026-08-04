@@ -20,6 +20,8 @@ Probe whether recording can start right now. Never prompts and never opens the m
 
 **返回** `{available, microphone, supportsBackgroundRecording, busy, reason}`
 
+**返回类型** `{ available: boolean; busy: boolean; microphone: "granted" | "denied" | "undetermined"; reason?: "usage-description-missing" | "microphone-denied" | "busy" | "not-recording" | "destination-unwritable" | "engine-failure" | "platform-unsupported"; supportsBackgroundRecording: boolean }`
+
 ```js
 const a = await aibox.audio.availability(); if (!a.available) hideRecordButton(a.reason)
 ```
@@ -43,6 +45,8 @@ Start recording. Shows no host UI. Fails with aibox/busy if any recording is alr
 
 **返回** `{started, discarded, format, sampleRate, channels, supportsBackgroundRecording} — started:false with discarded:true means you called recordStop while the permission prompt was still up, so nothing was captured`
 
+**返回类型** `{ channels: number; discarded: false; format: "m4a" | "wav"; sampleRate: number; started: true; supportsBackgroundRecording: boolean } | { discarded: true; durationMs: number; started: false }`
+
 ```js
 await aibox.audio.recordStart({ format:'m4a', sampleRate:44100, bitrate:128000, channels:1 })
 ```
@@ -58,6 +62,8 @@ Pause the recording. Returns false when there is nothing of yours to pause, or a
 无参数。
 
 **返回** `boolean`
+
+**返回类型** `boolean`
 
 ```js
 await aibox.audio.recordPause()
@@ -75,6 +81,8 @@ Resume a paused recording.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.audio.recordResume()
 ```
@@ -89,7 +97,9 @@ Stop and finalize. Returns an applet resource handle you can play with <audio sr
 
 无参数。
 
-**返回** `{handle, url, name, mimeType, size, durationMs, byteCount, format, sampleRate, channels, interrupted} | {discarded:true, durationMs}`
+**返回** `{handle, url, name, mimeType, size, createdAt, durationMs, byteCount, format, sampleRate, channels, interrupted, discarded} | {discarded:true, durationMs}`
+
+**返回类型** `{ byteCount: number; channels: number; createdAt: string; discarded: false; durationMs: number; format: "m4a" | "wav"; handle: string; interrupted: boolean; mimeType: string; name: string; sampleRate: number; size: number; url: string } | { discarded: true; durationMs: number }`
 
 ```js
 const r = await aibox.audio.recordStop(); if (!r.discarded) player.src = r.url
@@ -107,6 +117,8 @@ Discard the recording and delete the file. Nothing is stored.
 
 **返回** `boolean`
 
+**返回类型** `boolean`
+
 ```js
 await aibox.audio.recordCancel()
 ```
@@ -122,6 +134,8 @@ Poll while recording. levels holds the most recent 120 samples (20 Hz, ~6s) alre
 无参数。
 
 **返回** `{state, recording, paused, interrupted, elapsedMs, byteCount, levels, levelsHz, averageDb, peakDb}`
+
+**返回类型** `{ averageDb: number; byteCount: number; elapsedMs: number; interrupted: boolean; levels: Array<number>; levelsHz: number; paused: boolean; peakDb: number; recording: boolean; state: "idle" | "recording" | "paused" | "interrupted" }`
 
 ```js
 const s = await aibox.audio.recordStatus(); drawWaveform(s.levels)
@@ -142,6 +156,8 @@ Probe whether transcribe() can run for a locale. Never prompts and never transcr
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `{available, state, locale, engine} — state is one of available | needs-model-download | not-authorized | unsupported-locale | unsupported-os | engine-missing`
+
+**返回类型** `{ available: boolean; engine: boolean; locale: string; state: "available" | "needs-model-download" | "unsupported-os" | "not-authorized" | "unsupported-locale" | "engine-missing" }`
 
 ```js
 const a = await aibox.audio.transcribeAvailability({ locale:'zh-CN' }); if (!a.available && a.state !== 'needs-model-download') hideTranscribeButton(a.state)
@@ -164,6 +180,8 @@ Transcribe an audio resource of YOUR OWN into text plus timestamped segments. Pa
 未列出的字段会被拒绝（`additionalProperties: false`）。
 
 **返回** `{text, locale, segments:[{text, start, duration, end}], segmentCount} — start/duration/end are seconds`
+
+**返回类型** `{ locale: string; segmentCount: number; segments?: Array<{ duration: number; end: number; start: number; text: string }>; text: string }`
 
 ```js
 const r = await aibox.audio.recordStop(); const t = await aibox.audio.transcribe({ handle:r.handle, locale:'zh-CN' }); show(t.text)

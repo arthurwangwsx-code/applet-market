@@ -20,6 +20,8 @@ Read the effective business menu and host-menu policy.
 
 **返回** `{declared,mergePolicy,hostPlacement,hostItems,items}`
 
+**返回类型** `{ declared: false; items: Record<string, unknown> } | { declared: true; hostItems: Array<"reload" | "editWithAI" | "viewCode" | "console" | "captureContext" | "selectElement" | "details" | "export">; hostPlacement: "submenu" | "inline" | "hidden"; items: Record<string, unknown>; mergePolicy: "appletFirst" | "hostFirst" }`
+
 ```js
 await aibox.menu.getState()
 ```
@@ -44,6 +46,8 @@ Update title, icon, enabled or hidden for declared item ids; action identity can
 
 **返回** `menu state`
 
+**返回类型** `{ declared: false; items: Record<string, unknown> } | { declared: true; hostItems: Array<"reload" | "editWithAI" | "viewCode" | "console" | "captureContext" | "selectElement" | "details" | "export">; hostPlacement: "submenu" | "inline" | "hidden"; items: Record<string, unknown>; mergePolicy: "appletFirst" | "hostFirst" }`
+
 ```js
 await aibox.menu.update({ items:{ save:{ enabled:hasChanges, title:hasChanges?'Save':'Saved' } } })
 ```
@@ -59,6 +63,8 @@ Clear all runtime menu overrides and restore manifest values.
 无参数。
 
 **返回** `menu state`
+
+**返回类型** `{ declared: false; items: Record<string, unknown> } | { declared: true; hostItems: Array<"reload" | "editWithAI" | "viewCode" | "console" | "captureContext" | "selectElement" | "details" | "export">; hostPlacement: "submenu" | "inline" | "hidden"; items: Record<string, unknown>; mergePolicy: "appletFirst" | "hostFirst" }`
 
 ```js
 await aibox.menu.reset()

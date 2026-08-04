@@ -21,7 +21,7 @@ import { Button, Card, EmptyState, Notice, ProgressBar, SectionHeader, IconButto
 import Icon from './components/Icon.jsx'
 import InspectSheet from './components/InspectSheet.jsx'
 import {
-  capabilities, onEvent, onNamespaceEvent, queue, readClipboard, tap, toolAllowed,
+  capabilities, onEvent, onNamespaceEvent, queue, readClipboard, tap, toolAllowed, toolBlockReason,
 } from './lib/host.js'
 import { fetchVideo, inspectVideo, isLibraryDenied, libraryAction, registerActions, uiHooks } from './lib/actions.js'
 
@@ -173,11 +173,18 @@ export default function App() {
   const [adding, setAdding] = React.useState(false)
   const [notice, setNotice] = React.useState(null)
   const [extractorReady, setExtractorReady] = React.useState(true)
+  // 不可用时的**真实原因**（宿主没装模块 vs 没授权 —— 两者的下一步动作完全不同）。
+  const [blockHint, setBlockHint] = React.useState('')
   const { jobs, bytes, loaded, refresh, denied } = useJobs()
 
   // 解析面不可用时（Lean 变体解链了 MODULE_VIDEODOWNLOAD）**整块入口不渲染**，
   // 而不是留一个点了报错的按钮——「合法留 ≠ 必须留」。
-  React.useEffect(() => { toolAllowed('viddl_inspect').then(setExtractorReady) }, [])
+  React.useEffect(() => {
+    toolBlockReason('viddl_inspect').then((verdict) => {
+      setExtractorReady(verdict.ok)
+      setBlockHint(verdict.ok ? '' : verdict.hint)
+    })
+  }, [])
   // 轮询侧探到 denied 也要把入口收掉——两条路径指向同一个事实。
   React.useEffect(() => { if (denied) setExtractorReady(false) }, [denied])
 
@@ -285,7 +292,7 @@ export default function App() {
           <EmptyState
             icon="exclamationmark.circle"
             title="解析能力不可用"
-            hint="这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。"
+            hint={blockHint || '视频解析工具当前不可用。'}
           />
         </div>
       ) : null}

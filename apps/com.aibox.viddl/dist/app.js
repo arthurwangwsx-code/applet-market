@@ -561,18 +561,6 @@ async function readClipboard$1() {
   }
 }
 __name(readClipboard$1, "readClipboard$1");
-async function toolAllowed$1(name) {
-  const host = bridge();
-  if (!host?.access?.explain)
-    return false;
-  try {
-    const decision = await host.access.explain({ tool: name });
-    return Boolean(decision.allowed);
-  } catch {
-    return false;
-  }
-}
-__name(toolAllowed$1, "toolAllowed$1");
 async function callTool$1(name, args = {}) {
   const host = bridge();
   if (!host?.tools?.call)
@@ -625,7 +613,33 @@ const capabilities = {
     return available("haptics", "impact");
   }
 };
-const toolAllowed = toolAllowed$1;
+async function toolBlockReason(name) {
+  const api = bridge();
+  if (!api || !api.access || typeof api.access.explain !== "function") {
+    return { ok: false, reason: "unknown", hint: "这个宿主没有工具网关。" };
+  }
+  try {
+    const verdict = await api.access.explain({ tool: name });
+    if (verdict && verdict.allowed) return { ok: true, reason: null, hint: "" };
+    const failed = (verdict && verdict.gates ? verdict.gates : []).filter((g) => !g.passed).map((g) => g.name);
+    if (failed.includes("active")) {
+      return { ok: false, reason: "not-active", hint: "这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。" };
+    }
+    if (failed.includes("localGrant")) {
+      return { ok: false, reason: "not-granted", hint: "还没有把视频解析工具授权给这个小应用。到「设置 ▸ 能力中心 ▸ 视频下载 ▸ 工具」里勾上 viddl 系列工具就能用了。" };
+    }
+    if (failed.includes("declared") || failed.includes("requirement")) {
+      return { ok: false, reason: "not-declared", hint: "这个版本的小应用没有声明要用视频解析工具，请更新到新版本。" };
+    }
+    if (failed.includes("bridgeable") || failed.includes("hostPolicy")) {
+      return { ok: false, reason: "blocked", hint: "当前宿主策略不允许小应用调用视频解析工具。" };
+    }
+    return { ok: false, reason: "unknown", hint: verdict && verdict.remedies && verdict.remedies[0] || "视频解析工具当前不可用。" };
+  } catch (error) {
+    return { ok: false, reason: "unknown", hint: "视频解析工具当前不可用。" };
+  }
+}
+__name(toolBlockReason, "toolBlockReason");
 async function callTool(name, args) {
   const result = await callTool$1(name, args || {});
   return result.ok ? result : { ok: false, error: result.text, text: result.text };
@@ -893,9 +907,13 @@ function App() {
   const [adding, setAdding] = React.useState(false);
   const [notice, setNotice] = React.useState(null);
   const [extractorReady, setExtractorReady] = React.useState(true);
+  const [blockHint, setBlockHint] = React.useState("");
   const { jobs, bytes, loaded, refresh, denied } = useJobs();
   React.useEffect(() => {
-    toolAllowed("viddl_inspect").then(setExtractorReady);
+    toolBlockReason("viddl_inspect").then((verdict) => {
+      setExtractorReady(verdict.ok);
+      setBlockHint(verdict.ok ? "" : verdict.hint);
+    });
   }, []);
   React.useEffect(() => {
     if (denied) setExtractorReady(false);
@@ -1004,7 +1022,7 @@ function App() {
       {
         icon: "exclamationmark.circle",
         title: "解析能力不可用",
-        hint: "这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。"
+        hint: blockHint || "视频解析工具当前不可用。"
       }
     ) }) : null,
     /* @__PURE__ */ jsx("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s5}px` }, children: !loaded ? null : visible.length === 0 ? extractorReady ? /* @__PURE__ */ jsx(

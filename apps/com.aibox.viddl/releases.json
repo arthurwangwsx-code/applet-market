@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.1.1",
   "releases": [
+    {
+      "version": "1.1.1",
+      "releasedAt": "2026-08-04T12:17:01Z",
+      "notes": "解析不可用的提示按真实原因分叉：宿主没装模块 / 没授权 / 未声明 各说各的，不再一律怪模块",
+      "fileCount": 4,
+      "totalBytes": 56122,
+      "path": "apps/com.aibox.viddl/releases/1.1.1",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "6080f56af2727a14dd7c25b076a6d286ee85cb0bb998c62a120cb952b45e0c93"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-04T10:10:54Z",

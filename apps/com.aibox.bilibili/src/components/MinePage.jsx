@@ -14,7 +14,7 @@
 
 import React from 'react'
 import * as ui from 'aibox/ui'
-import { EmptyState, PrimaryButton, Spinner } from './primitives.jsx'
+import { EmptyState, PrimaryButton, SectionTitle, SettingSwitch, Spinner } from './primitives.jsx'
 import VideoCard from './VideoCard.jsx'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
@@ -22,6 +22,7 @@ import {
   clearSession, hasSession, imageURL, secretsWritable, toast,
 } from '../lib/host.js'
 import { formatCount } from '../lib/format.js'
+import { DEFAULTS, loadSettings, updateSetting } from '../lib/settings.js'
 
 const POLL_MS = 2000
 
@@ -52,6 +53,7 @@ export default function MinePage({ onOpen }) {
   const [hint, setHint] = React.useState('')
   const [historyList, setHistory] = React.useState([])
   const [canPersist, setCanPersist] = React.useState(true)
+  const [settings, setSettings] = React.useState(DEFAULTS)
   const pollTimer = React.useRef(null)
 
   const refresh = React.useCallback(async () => {
@@ -74,6 +76,7 @@ export default function MinePage({ onOpen }) {
   React.useEffect(() => {
     refresh()
     secretsWritable().then(setCanPersist)
+    loadSettings().then(setSettings)
     return () => { if (pollTimer.current) clearInterval(pollTimer.current) }
   }, [refresh])
 
@@ -112,6 +115,40 @@ export default function MinePage({ onOpen }) {
     toast('已退出登录')
   }, [])
 
+
+  /** 播放设置。**登录与否都显示** —— 这些偏好和账号无关，
+   *  而未登录恰恰是用户最可能第一次翻到这一页的时候。 */
+  const settingsSection = (
+    <div style={{ borderTop: `8px solid ${C.surface}` }}>
+      <SectionTitle>播放设置</SectionTitle>
+      <SettingSwitch
+        title="后台播放音频"
+        detail="退出应用或回到桌面后，画面暂停但声音继续 —— 想「听视频」时用。"
+        value={settings.backgroundAudio}
+        onChange={async (v) => setSettings(await updateSetting('backgroundAudio', v))}
+      />
+      <SettingSwitch
+        title="画中画"
+        detail="离开应用后保留一个浮窗继续播。与上一项不同：这个留画面、会占住屏幕一角。"
+        value={settings.pictureInPicture}
+        onChange={async (v) => setSettings(await updateSetting('pictureInPicture', v))}
+      />
+      <SettingSwitch
+        title="手势控制"
+        detail="在画面左半边上下滑调亮度、右半边调音量，双击暂停或继续。"
+        value={settings.gestureControls}
+        onChange={async (v) => setSettings(await updateSetting('gestureControls', v))}
+      />
+      <div style={{
+        padding: `${SPACE.s2}px ${SPACE.s4}px ${SPACE.s4}px`,
+        fontSize: 11, color: C.faint, lineHeight: 1.6,
+      }}>
+        改动在下一次点播放时生效。视频在页面顶部内嵌播放、保持竖屏；
+        要横屏点播放器右下角的全屏按钮。
+      </div>
+    </div>
+  )
+
   if (phase === 'checking') return <Spinner label="检查登录状态" />
 
   if (phase === 'qr' && qr) {
@@ -149,7 +186,7 @@ export default function MinePage({ onOpen }) {
 
   if (phase === 'guest') {
     return (
-      <div>
+      <div className="bl-scroll" style={{ height: '100%', overflowY: 'auto' }}>
         <EmptyState
           title="还没有登录"
           detail={'登录后可以看观看历史、个性化推荐和更高的清晰度。'
@@ -157,6 +194,8 @@ export default function MinePage({ onOpen }) {
           actionLabel="扫码登录"
           onAction={startLogin}
         />
+        {settingsSection}
+        <div style={{ height: SPACE.s6 }} />
       </div>
     )
   }
@@ -196,6 +235,8 @@ export default function MinePage({ onOpen }) {
           historyList.map((video) => <VideoCard key={video.bvid} video={video} onOpen={onOpen} />)
         )}
       </div>
+
+      {settingsSection}
       <div style={{ height: SPACE.s6 }} />
     </div>
   )

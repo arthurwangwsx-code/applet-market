@@ -108,12 +108,18 @@ export async function capabilities() {
  * **必须先开舞台再 play**：舞台开着时播放内嵌在这块区域，页面保持竖屏、内容在下面滚；
  * 没开舞台就 play 会接管整屏并转横屏 —— 对一个「边看边翻清晰度/相似视频」的页面是错的。
  */
-export async function openStage() {
+export async function openStage(settings) {
   const api = bridge()
   if (!api?.video?.stage) return { rendered: false, available: false }
   try {
-    // 后台音频默认开：「退出去还能继续听」是这类应用最常见的用法。
-    return await api.video.stage({ aspect: '16:9', backgroundAudio: true, pictureInPicture: true })
+    // 参数来自**用户偏好**（「我的 → 播放设置」），不写死 ——
+    // 「只想听」和「边做别的边看」是两种诉求，写死必然让一半人被迫接受另一半的行为。
+    return await api.video.stage({
+      aspect: '16:9',
+      backgroundAudio: settings?.backgroundAudio !== false,
+      pictureInPicture: settings?.pictureInPicture !== false,
+      gestureControls: settings?.gestureControls !== false,
+    })
   } catch {
     return { rendered: false, available: false }
   }

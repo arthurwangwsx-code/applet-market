@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.youtube",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-04T05:40:14Z",
+      "notes": "新增「我的」页：最近观看 + 播放设置（后台音频 / 画中画 / 手势控制），底部加 Tab",
+      "fileCount": 14,
+      "totalBytes": 62395,
+      "path": "apps/com.aibox.youtube/releases/1.2.0",
+      "bundleSha256": "b641477225865598f2c88f461ed4650210ba440ee068ddf5eedfdf710c663ebd"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-04T05:15:25Z",

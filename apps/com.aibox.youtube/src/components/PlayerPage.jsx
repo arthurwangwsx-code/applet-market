@@ -18,6 +18,7 @@ import {
   openInBrowser, openStage, play, resolve, savePref, share, toast,
 } from '../lib/host.js'
 import { formatDuration, qualityLabel } from '../lib/format.js'
+import { loadSettings } from '../lib/settings.js'
 
 const PROGRESS_KEY = 'watch-progress'
 const HISTORY_KEY = 'watch-history'
@@ -106,7 +107,8 @@ export default function PlayerPage({ video, onOpen }) {
     try {
       // **先开舞台再播**：舞台开着时宿主把播放器嵌在页面顶部（保持竖屏、内容照常滚），
       // 否则会接管整屏并转横屏。开舞台幂等，重复调只更新参数。
-      const stage = await openStage()
+      // 每次起播都重读偏好：用户可能刚在「我的」里改过，不该等重进页面才生效。
+      const stage = await openStage(await loadSettings())
       setStageOn(!!stage?.rendered)
       const saved = await loadPref(PROGRESS_KEY, {})
       await play({

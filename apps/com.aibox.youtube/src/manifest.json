@@ -82,5 +82,29 @@
       ],
       "effect": "mediaPlayback"
     }
-  ]
+  ],
+  "scene": {
+    "tabBar": {
+      "style": "glass",
+      "items": [
+        {
+          "id": "search",
+          "title": "搜索",
+          "localizedTitles": {
+            "en": "Search"
+          },
+          "icon": "magnifyingglass"
+        },
+        {
+          "id": "mine",
+          "title": "我的",
+          "localizedTitles": {
+            "en": "Mine"
+          },
+          "icon": "person",
+          "selectedIcon": "person.fill"
+        }
+      ]
+    }
+  }
 }

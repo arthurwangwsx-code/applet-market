@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-04T05:15:25Z",
+  "updatedAt": "2026-08-04T05:40:14Z",
   "appCount": 11,
   "apps": [
     {
@@ -11,9 +11,9 @@
       "icon": "play.tv.fill",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.1",
-      "latestReleasedAt": "2026-08-04T05:09:44Z",
-      "versionCount": 4,
+      "latestVersion": "1.2.0",
+      "latestReleasedAt": "2026-08-04T05:40:13Z",
+      "versionCount": 5,
       "capabilities": [
         "browser",
         "clipboard",
@@ -26,8 +26,8 @@
         "toast",
         "video"
       ],
-      "latestTotalBytes": 89702,
-      "latestFileCount": 15,
+      "latestTotalBytes": 95395,
+      "latestFileCount": 16,
       "runtimeKind": "source",
       "path": "apps/com.aibox.bilibili",
       "localizedNames": {
@@ -385,9 +385,9 @@
       "icon": "play.rectangle.fill",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.0",
-      "latestReleasedAt": "2026-08-04T05:15:25Z",
-      "versionCount": 2,
+      "latestVersion": "1.2.0",
+      "latestReleasedAt": "2026-08-04T05:40:14Z",
+      "versionCount": 3,
       "capabilities": [
         "browser",
         "clipboard",
@@ -395,11 +395,12 @@
         "net",
         "share",
         "storage",
+        "tabs",
         "toast",
         "video"
       ],
-      "latestTotalBytes": 52216,
-      "latestFileCount": 12,
+      "latestTotalBytes": 62395,
+      "latestFileCount": 14,
       "runtimeKind": "source",
       "path": "apps/com.aibox.youtube",
       "localizedNames": {

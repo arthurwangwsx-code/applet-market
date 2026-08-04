@@ -108,3 +108,54 @@ export function StatItem({ label, value }) {
     </div>
   )
 }
+
+/**
+ * 设置开关行。
+ *
+ * 自己写而不是用 antd-mobile 的 Switch：这一行要同时承载标题、说明和开关，
+ * 而说明文字是这些开关能不能被正确理解的关键（「后台播放」和「画中画」的区别
+ * 光看标题是说不清的）。
+ */
+export function SettingSwitch({ title, detail, value, onChange }) {
+  return (
+    <div
+      className="yt-press"
+      onClick={() => onChange(!value)}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: SPACE.s3,
+        padding: `${SPACE.s3}px ${SPACE.s4}px`,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, color: C.text }}>{title}</div>
+        {detail ? (
+          <div style={{ fontSize: 12, color: C.faint, marginTop: 3, lineHeight: 1.5 }}>{detail}</div>
+        ) : null}
+      </div>
+      {/* 自绘开关：36×22，与系统 UISwitch 的观感接近，且不依赖组件库主题 */}
+      <div style={{
+        width: 44, height: 26, borderRadius: 13, flexShrink: 0, marginTop: 2,
+        background: value ? C.brand : 'rgba(120,120,128,0.32)',
+        transition: 'background 180ms', position: 'relative',
+      }}>
+        <div style={{
+          position: 'absolute', top: 2, left: value ? 20 : 2,
+          width: 22, height: 22, borderRadius: 11, background: '#fff',
+          transition: 'left 180ms', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }} />
+      </div>
+    </div>
+  )
+}
+
+/** 分组标题。 */
+export function SectionTitle({ children }) {
+  return (
+    <div style={{
+      padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s2}px`,
+      fontSize: 13, fontWeight: 600, color: C.sub,
+    }}>
+      {children}
+    </div>
+  )
+}

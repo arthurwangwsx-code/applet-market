@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.bilibili",
-  "latestVersion": "1.1.1",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-04T05:40:13Z",
+      "notes": "「我的」加播放设置：后台播放音频 / 画中画 / 手势控制三个开关，未登录也能配置",
+      "fileCount": 16,
+      "totalBytes": 95395,
+      "path": "apps/com.aibox.bilibili/releases/1.2.0",
+      "bundleSha256": "559dbc73e8f8537fd4e329c56e710a5ac6bf9f86c1d254abf53a2cc14a20d7b3"
+    },
     {
       "version": "1.1.1",
       "releasedAt": "2026-08-04T05:09:44Z",

@@ -308,6 +308,38 @@ function normalizeError(value) {
   });
 }
 __name(normalizeError, "normalizeError");
+const PAGE = 500;
+function requireDB() {
+  const host = bridge$1();
+  if (!host?.db || typeof host.db.query !== "function") {
+    throw new AiboxError("aibox/unavailable", "aibox/unavailable: aibox.db is not available in this build.");
+  }
+  return host.db;
+}
+__name(requireDB, "requireDB");
+async function queryAll(collection, options = {}) {
+  const db2 = requireDB();
+  const out = [];
+  const { where, sortBy, descending, max } = options;
+  for (let offset = 0; ; offset += PAGE) {
+    const request = { collection, limit: PAGE, offset };
+    if (where)
+      request.where = where;
+    if (sortBy)
+      request.sortBy = sortBy;
+    if (descending !== void 0)
+      request.descending = descending;
+    const page = await db2.query(request);
+    const rows = Array.isArray(page) ? page : [];
+    out.push(...rows);
+    if (max !== void 0 && out.length >= max)
+      return out.slice(0, max);
+    if (rows.length < PAGE)
+      break;
+  }
+  return out;
+}
+__name(queryAll, "queryAll");
 function registerActions(handlers) {
   const host = bridge$1();
   if (!host?.action || typeof host.action.register !== "function")
@@ -743,11 +775,9 @@ function bucket(collection) {
 }
 __name(bucket, "bucket");
 async function readAll(collection) {
-  const store = db();
-  if (!store) return [...bucket(collection).values()];
+  if (!db()) return [...bucket(collection).values()];
   try {
-    const rows = await store.query({ collection, limit: 2e3 });
-    return Array.isArray(rows) ? rows : [];
+    return await queryAll(collection);
   } catch {
     return [];
   }

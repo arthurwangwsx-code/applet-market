@@ -27,6 +27,8 @@ export type { AccessDecision, CapabilityProbe } from './capabilities';
 export { fetchText, fetchJSON, fetchBytes, fetchWithMeta, base64ToBytes, imageURL, } from './net';
 export type { NetMethod, NetMeta, NetRequestOptions, TextRequestOptions } from './net';
 export * as storage from './storage';
+export { queryAll, removeMany, databaseAvailable } from './db';
+export type { QueryAllOptions } from './db';
 export { registerAction, registerActions, actionResult } from './actions';
 export type { AppletActionMap, ActionName, ActionInput, ActionOutput, ActionHandler, ActionHandlers, } from './actions';
 export { tabsAreRendered, searchIsRendered, tabsState, selectTab, setTabBadge, sceneState, setTitle, setCloseConfirmation, haptic, } from './shell';

@@ -24,7 +24,7 @@
 //
 // ⚠️ 老用户在宿主录音库里的数据**原地不动**，本应用不读也不删它。
 //    2.0.0 是一次干净的切线，不是数据迁移。
-import { normalizeError } from '@aibox/applet-sdk'
+import { normalizeError, queryAll } from '@aibox/applet-sdk'
 import { hashText, snippetOf } from './format'
 import type {
   LocalClip, Memo, MemoArtifacts, SummaryTemplate, TranscriptSegment,
@@ -276,12 +276,18 @@ function bucket(collection: string): Map<string, Doc> {
   return value
 }
 
-async function readAll<T>(collection: string): Promise<(T & { _id: string })[]> {
-  const store = db()
-  if (!store) return [...bucket(collection).values()] as (T & { _id: string })[]
+/**
+ * 读回一个 collection 的全部文档。
+ *
+ * **曾经这里写的是 `store.query({ collection, limit: 2000 })`，而宿主单次上限是 500 且超出不报错**
+ * （`min(500, limit)`）——录音超过 500 条之后列表就停止增长，且与「真的只有 500 条」不可区分。
+ * 改用 SDK 的 `queryAll`（分页到表尾）。同一份错误实现在 `com.aibox.wordstudy` 里也有一份，
+ * 故修在 SDK 而不是各修各的。
+ */
+async function readAll<T extends object>(collection: string): Promise<(T & { _id: string })[]> {
+  if (!db()) return [...bucket(collection).values()] as unknown as (T & { _id: string })[]
   try {
-    const rows = await store.query({ collection, limit: 2000 })
-    return Array.isArray(rows) ? (rows as (T & { _id: string })[]) : []
+    return await queryAll<T>(collection)
   } catch {
     return []
   }

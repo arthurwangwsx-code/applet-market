@@ -4,7 +4,7 @@
 //   · Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletDeveloperSDK.swift（aiTypeScript）
 //   · applet-market/docs/api/capabilities.snapshot.json（descriptor 快照，由 gen-api-docs.mjs 抽取）
 // 重新生成： npm run sdk:types      漂移检查： npm run sdk:types:check
-// 命名空间：45 个（宿主恒有 16 个、可声明 26 个）
+// 命名空间：47 个（宿主恒有 16 个、可声明 28 个）
 
 /* eslint-disable */
 declare namespace aibox {
@@ -607,10 +607,26 @@ declare namespace aibox {
     function update(input: { collection: string; id: string; merge?: boolean; patch: Record<string, unknown> }): Promise<unknown>
     /** Delete one document by _id. Result: boolean */
     function remove(input: { collection: string; id: string }): Promise<unknown>
-    /** Query by exact field equality, with stable sorting and pagination. Result: document[] */
+    /** "Delete every document matching `where`; returns how many were removed. "
+                      + "Use this instead of looping remove() — each single remove rewrites the whole collection file, "
+                      + "so deleting 500 documents one by one is 500 full-table writes. `where` must be non-empty; "
+                      + "to empty a collection call clear()." Result: number (documents removed) */
+    function removeWhere(input: { collection: string; where: Record<string, unknown> }): Promise<unknown>
+    /** "Query documents, with stable sorting and pagination. " + Self.operatorHelp Result: document[] (at most 500 — page with offset, or use count/aggregate for totals) */
     function query(input: { collection: string; descending?: boolean; limit?: number; offset?: number; sortBy?: string; where?: Record<string, unknown> }): Promise<unknown>
-    /** Count documents matching exact field equality. Result: number */
+    /** "Count matching documents without transferring them. " + Self.operatorHelp Result: number */
     function count(input: { collection: string; where?: Record<string, unknown> }): Promise<unknown>
+    /** "Group and reduce documents natively. "
+                      + "Prefer this over query()+reduce in JS: a monthly total over 3000 rows needs no rows to cross the bridge "
+                      + "(and query() caps at 500 anyway). Each result row has _group and _count plus your named metrics. "
+                      + "Omit groupBy to reduce the whole collection into one row. " + Self.operatorHelp Result: Array<{_group, _count, ...metrics}> sorted by _group; $avg/$min/$max are null when no value qualifies */
+    function aggregate(input: { collection: string; groupBy?: string; metrics: Record<string, unknown>; where?: Record<string, unknown> }): Promise<unknown>
+    /** "Case- and accent-insensitive substring scan across string fields. "
+                      + "Omit `fields` to scan every non-underscore string field. Combine with `where` to scope it. "
+                      + "NOTE: this is a linear substring scan, not an inverted index, and results are NOT ranked — "
+                      + "they come back in collection order. That is deliberate: tokenizer-based ranking drops CJK text "
+                      + "(no word boundaries), and at the 20k-document cap a scan is milliseconds." Result: document[] in collection order (unranked) */
+    function search(input: { collection: string; fields?: Array<string>; limit?: number; text: string; where?: Record<string, unknown> }): Promise<unknown>
     /** Delete every document in one collection. Result: boolean */
     function clear(input: { collection: string }): Promise<unknown>
   }
@@ -857,6 +873,23 @@ declare namespace aibox {
     function items(input?: Record<string, never>): Promise<unknown>
   }
 
+  namespace secrets {
+    /** Store one credential under a key. Empty value removes it. Result: {stored:boolean} */
+    function set(input: { key: string; value: string }): Promise<unknown>
+    /** Read one credential back. Returns null when absent. Result: string or null */
+    function get(input: { key: string }): Promise<unknown>
+    /** Delete one credential. Result: boolean */
+    function remove(input: { key: string }): Promise<unknown>
+    /** List the credential keys this applet has stored. Values are never returned. Result: string[] */
+    function keys(input?: Record<string, never>): Promise<unknown>
+    /** Whether this applet holds session cookies for a host — i.e. whether the user is logged in. Check this on launch to decide between the logged-in and guest UI; do NOT keep your own 'isLoggedIn' flag in storage, it will drift from the real cookie state. Result: {hasSession:boolean, hosts:string[]} */
+    function hasSession(input?: { host?: string }): Promise<unknown>
+    /** Log out: drop the session cookies. Pass a host to drop only that site's, omit to drop all of them. Credentials stored via set() are untouched. Result: {cleared:integer} */
+    function clearSession(input?: { host?: string }): Promise<unknown>
+    /** Whether the keychain actually accepts writes in this build. False on unsigned simulator builds — surface it instead of letting logins silently fail to persist. Result: {available:boolean} */
+    function availability(input?: Record<string, never>): Promise<unknown>
+  }
+
   namespace shortcuts {
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
     function run(input?: Record<string, never>): Promise<unknown>
@@ -887,6 +920,35 @@ declare namespace aibox {
     function speak(input: { lang?: string; pitch?: number; rate?: number; text: string }): Promise<unknown>
     /** Stop what this applet is currently speaking. Result: boolean */
     function stop(input?: Record<string, never>): Promise<unknown>
+  }
+
+  namespace video {
+    /** Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not. Result: {playing:boolean} */
+    function play(input?: { formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<unknown>
+    /** Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part. Result: {playing:boolean, count:integer} */
+    function playQueue(input: { items: Array<{ subtitleURL?: string; title?: string; url: string }>; presentation?: "immersive" | "embedded"; resumeFrom?: number; startAt?: number }): Promise<unknown>
+    /** Pause playback. Does nothing if what is playing was not started by your applet. Result: boolean */
+    function pause(input?: Record<string, never>): Promise<unknown>
+    /** Resume playback. Does nothing if what is playing was not started by your applet. Result: boolean */
+    function resume(input?: Record<string, never>): Promise<unknown>
+    /** Stop playback and dismiss the player. Only affects playback your applet started. Result: boolean */
+    function stop(input?: Record<string, never>): Promise<unknown>
+    /** Jump to a position in seconds. Clamped to the video duration by the host. Result: boolean */
+    function seek(input: { seconds: number }): Promise<unknown>
+    /** Play the next item in the queue. No-op without a queue. Result: boolean */
+    function next(input?: Record<string, never>): Promise<unknown>
+    /** Play the previous item in the queue. No-op without a queue. Result: boolean */
+    function previous(input?: Record<string, never>): Promise<unknown>
+    /** Current playback snapshot. mine tells you whether the host is playing something YOUR applet started — check it before showing your own progress UI, because the user may be watching something else entirely. Result: {state:'idle'|'loading'|'playing'|'paused'|'failed', url, title, currentTime, duration, queueIndex, queueCount, mine:boolean, error} */
+    function status(input?: Record<string, never>): Promise<unknown>
+    /** Start pushing 'video.progress' events (~2Hz) to aibox.events. Strongly preferred over polling status(). Events stop automatically when your applet closes. Result: boolean */
+    function subscribe(input?: Record<string, never>): Promise<unknown>
+    /** Stop the progress event stream. Result: boolean */
+    function unsubscribe(input?: Record<string, never>): Promise<unknown>
+    /** Turn a video PAGE url (Bilibili, YouTube, a page with an embedded player, an m3u8…) into playable stream urls, using the host's own extractor stack. Use this instead of reimplementing site parsing in JS. Each returned format carries `playable`: FALSE means this build cannot play that one (DASH split streams need a merge backend that may not be compiled in) — filter on it and never offer the user a quality that would just go black. Pass a playable format's `url` straight to video.play. Result: {ok:boolean, title, uploader, durationSeconds, thumbnailURL, extractor, formats:[{id,kind:'direct'|'hls'|'dash',quality,width,height,fps,bitrate,bytes,url,playable:boolean}], error} */
+    function resolve(input: { url: string }): Promise<unknown>
+    /** What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing. Result: {available:boolean, resolve:boolean, dash:boolean} */
+    function availability(input?: Record<string, never>): Promise<unknown>
   }
 
   // voiceMemos 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。
@@ -1152,7 +1214,7 @@ interface Window {
 }
 
 /** 宿主可声明的扩展能力命名空间（manifest.permissions.capabilities 的取值域）。 */
-declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "download" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "voiceMemos"
+declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "download" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "secrets" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "video" | "voiceMemos"
 
 /** 容器恒可用命名空间：无需也不该写进 manifest.permissions.capabilities。 */
 declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "data" | "db" | "jobs" | "lifecycle" | "list" | "menu" | "navigation" | "overlay" | "resource" | "scene" | "tabs" | "toolbar"

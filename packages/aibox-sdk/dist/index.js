@@ -22,6 +22,7 @@ export { AiboxError, isAiboxError, hasCode, isPermissionDenied, isTransient, nor
 export { isAvailable, allAvailable, ifAvailable, requireAvailable, registeredNamespaces, explainAccess, probe, } from './capabilities';
 export { fetchText, fetchJSON, fetchBytes, fetchWithMeta, base64ToBytes, imageURL, } from './net';
 export * as storage from './storage';
+export { queryAll, removeMany, databaseAvailable } from './db';
 export { registerAction, registerActions, actionResult } from './actions';
 export { tabsAreRendered, searchIsRendered, tabsState, selectTab, setTabBadge, sceneState, setTitle, setCloseConfirmation, haptic, } from './shell';
 export { defineManifest } from './manifest';

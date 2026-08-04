@@ -6,6 +6,8 @@
 //  2. **`upsert` 与 `replace` 语义不同，别合并**（规格 §15.1）：前者命中只加计数，后者原位覆盖全字段。
 //  3. 桥不在场（普通浏览器里预览）时整层退化成内存实现，页面仍能跑。
 
+import { queryAll, removeMany } from '@aibox/applet-sdk'
+
 import type {
   DailySentence, LookupHistoryItem, TranslationRecord, VocabItem, WordEntry, WordLookupPayload,
 } from './types'
@@ -44,12 +46,18 @@ function memoryBucket(collection: string): Map<string, Doc> {
   return bucket
 }
 
-async function all<T>(collection: string): Promise<(T & { _id: string })[]> {
-  const db = bridgeDB()
-  if (!db) return [...memoryBucket(collection).values()] as (T & { _id: string })[]
+/**
+ * 读回一个 collection 的全部文档。
+ *
+ * **曾经这里写的是 `db.query({ collection, limit: 2000 })`，而宿主的单次上限是 500 且超出不报错**
+ * （`min(500, limit)`）——生词本超过 500 个词之后就停止增长，返回值与「真的只有 500 条」
+ * 完全不可区分。改用 SDK 的 `queryAll`（分页到表尾）。同一个 bug 在 `com.aibox.voicememos`
+ * 里也复制了一份，故修在 SDK 而不是各修各的。
+ */
+async function all<T extends object>(collection: string): Promise<(T & { _id: string })[]> {
+  if (!bridgeDB()) return [...memoryBucket(collection).values()] as unknown as (T & { _id: string })[]
   try {
-    const rows = (await db.query({ collection, limit: 2000 })) as unknown
-    return Array.isArray(rows) ? (rows as (T & { _id: string })[]) : []
+    return await queryAll<T>(collection)
   } catch {
     return []
   }
@@ -79,6 +87,26 @@ async function drop(collection: string, id: string): Promise<void> {
     await db.remove({ collection, id })
   } catch {
     /* 同上 */
+  }
+}
+
+/**
+ * 批量删。**不是 `drop` 的循环包装** —— 宿主每条 `remove` 都是一趟「读全表 → 改 → 原子写全表」，
+ * 清理 200 条重复历史 = 200 趟全表 IO，中途失败还会停在删了一半的状态。
+ * `removeMany` 走宿主的 `removeWhere`，一趟写完（老宿主没有该方法时 SDK 自动退回逐条）。
+ */
+async function dropMany(collection: string, ids: readonly string[]): Promise<void> {
+  const list = ids.filter(Boolean)
+  if (list.length === 0) return
+  if (!bridgeDB()) {
+    const bucket = memoryBucket(collection)
+    for (const id of list) bucket.delete(id)
+    return
+  }
+  try {
+    await removeMany(collection, list)
+  } catch {
+    /* 同 drop：清理失败不打断 UI，下次启动再收敛 */
   }
 }
 
@@ -195,8 +223,10 @@ async function dedupeHistory(): Promise<HistoryDoc[]> {
     }
   }
   // 物理上限 500，超限按时间升序删到 500。
+  // 批量删：逐条 drop 时每条都是一趟「读全表 → 改 → 原子写全表」，清理 200 条重复项 = 200 趟全表 IO，
+  // 且中途失败会停在删了一半的状态。`removeMany` 是一趟。
   const overflow = keep.slice(LIMITS.history)
-  for (const row of [...stale, ...overflow]) await drop(COLLECTIONS.history, row._id)
+  await dropMany(COLLECTIONS.history, [...stale, ...overflow].map((row) => row._id))
   return keep.slice(0, LIMITS.history)
 }
 
@@ -221,12 +251,12 @@ export async function recordHistory(term: string, brief: string, source: 'ui' | 
 export async function removeHistory(term: string): Promise<void> {
   const key = normalizeHistoryTerm(term)
   const rows = await all<HistoryDoc>(COLLECTIONS.history)
-  for (const row of rows.filter((item) => item.term === key)) await drop(COLLECTIONS.history, row._id)
+  await dropMany(COLLECTIONS.history, rows.filter((item) => item.term === key).map((row) => row._id))
 }
 
 export async function clearHistory(): Promise<void> {
   const rows = await all<HistoryDoc>(COLLECTIONS.history)
-  for (const row of rows) await drop(COLLECTIONS.history, row._id)
+  await dropMany(COLLECTIONS.history, rows.map((row) => row._id))
 }
 
 // —— 生词本 ——
@@ -316,7 +346,7 @@ export async function listTranslations(limit = 50): Promise<TranslationRecord[]>
   const rows = await all<TranslationDoc>(COLLECTIONS.translations)
   rows.sort((a, b) => b.at - a.at)
   // 物理上限 200，超限按时间升序删到 200。
-  for (const row of rows.slice(LIMITS.translations)) await drop(COLLECTIONS.translations, row._id)
+  await dropMany(COLLECTIONS.translations, rows.slice(LIMITS.translations).map((row) => row._id))
   return rows.slice(0, limit)
 }
 

@@ -227,6 +227,55 @@ async function fetchText(url, options = {}) {
   }
 }
 __name(fetchText, "fetchText");
+const PAGE = 500;
+function requireDB() {
+  const host = bridge();
+  if (!host?.db || typeof host.db.query !== "function") {
+    throw new AiboxError("aibox/unavailable", "aibox/unavailable: aibox.db is not available in this build.");
+  }
+  return host.db;
+}
+__name(requireDB, "requireDB");
+async function queryAll(collection, options = {}) {
+  const db = requireDB();
+  const out = [];
+  const { where, sortBy, descending, max } = options;
+  for (let offset = 0; ; offset += PAGE) {
+    const request = { collection, limit: PAGE, offset };
+    if (where)
+      request.where = where;
+    if (sortBy)
+      request.sortBy = sortBy;
+    if (descending !== void 0)
+      request.descending = descending;
+    const page = await db.query(request);
+    const rows = Array.isArray(page) ? page : [];
+    out.push(...rows);
+    if (max !== void 0 && out.length >= max)
+      return out.slice(0, max);
+    if (rows.length < PAGE)
+      break;
+  }
+  return out;
+}
+__name(queryAll, "queryAll");
+async function removeMany(collection, ids) {
+  const unique = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
+  if (unique.length === 0)
+    return 0;
+  const db = requireDB();
+  if (typeof db.removeWhere !== "function") {
+    let removed2 = 0;
+    for (const id of unique) {
+      if (await db.remove({ collection, id }))
+        removed2 += 1;
+    }
+    return removed2;
+  }
+  const removed = await db.removeWhere({ collection, where: { _id: { $in: unique } } });
+  return typeof removed === "number" ? removed : unique.length;
+}
+__name(removeMany, "removeMany");
 function registerActions(handlers) {
   const host = bridge();
   if (!host?.action || typeof host.action.register !== "function")
@@ -266,11 +315,9 @@ function memoryBucket(collection) {
 }
 __name(memoryBucket, "memoryBucket");
 async function all(collection) {
-  const db = bridgeDB();
-  if (!db) return [...memoryBucket(collection).values()];
+  if (!bridgeDB()) return [...memoryBucket(collection).values()];
   try {
-    const rows = await db.query({ collection, limit: 2e3 });
-    return Array.isArray(rows) ? rows : [];
+    return await queryAll(collection);
   } catch {
     return [];
   }
@@ -301,6 +348,20 @@ async function drop(collection, id) {
   }
 }
 __name(drop, "drop");
+async function dropMany(collection, ids) {
+  const list = ids.filter(Boolean);
+  if (list.length === 0) return;
+  if (!bridgeDB()) {
+    const bucket = memoryBucket(collection);
+    for (const id of list) bucket.delete(id);
+    return;
+  }
+  try {
+    await removeMany(collection, list);
+  } catch {
+  }
+}
+__name(dropMany, "dropMany");
 function cryptoID() {
   const c = typeof globalThis !== "undefined" ? globalThis.crypto : void 0;
   if (c && typeof c.randomUUID === "function") return c.randomUUID();
@@ -392,7 +453,7 @@ async function dedupeHistory() {
     }
   }
   const overflow = keep.slice(LIMITS.history);
-  for (const row of [...stale, ...overflow]) await drop(COLLECTIONS.history, row._id);
+  await dropMany(COLLECTIONS.history, [...stale, ...overflow].map((row) => row._id));
   return keep.slice(0, LIMITS.history);
 }
 __name(dedupeHistory, "dedupeHistory");
@@ -413,12 +474,12 @@ __name(recordHistory, "recordHistory");
 async function removeHistory(term) {
   const key = normalizeHistoryTerm(term);
   const rows = await all(COLLECTIONS.history);
-  for (const row of rows.filter((item) => item.term === key)) await drop(COLLECTIONS.history, row._id);
+  await dropMany(COLLECTIONS.history, rows.filter((item) => item.term === key).map((row) => row._id));
 }
 __name(removeHistory, "removeHistory");
 async function clearHistory() {
   const rows = await all(COLLECTIONS.history);
-  for (const row of rows) await drop(COLLECTIONS.history, row._id);
+  await dropMany(COLLECTIONS.history, rows.map((row) => row._id));
 }
 __name(clearHistory, "clearHistory");
 async function listVocab(limit = 500) {
@@ -479,7 +540,7 @@ __name(saveReview, "saveReview");
 async function listTranslations(limit = 50) {
   const rows = await all(COLLECTIONS.translations);
   rows.sort((a, b) => b.at - a.at);
-  for (const row of rows.slice(LIMITS.translations)) await drop(COLLECTIONS.translations, row._id);
+  await dropMany(COLLECTIONS.translations, rows.slice(LIMITS.translations).map((row) => row._id));
   return rows.slice(0, limit);
 }
 __name(listTranslations, "listTranslations");

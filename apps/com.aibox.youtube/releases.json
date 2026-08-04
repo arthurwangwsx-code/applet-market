@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.youtube",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-04T05:15:25Z",
+      "notes": "对齐哔哩哔哩：改用 aibox.video.stage 页面内嵌播放（保持竖屏、点全屏按钮才横屏、退出后可继续听声），失败提示区分「没有视频桥」与「没编解析能力」",
+      "fileCount": 12,
+      "totalBytes": 52216,
+      "path": "apps/com.aibox.youtube/releases/1.1.0",
+      "bundleSha256": "0a7e70a705c0d5f120faa9a29b62f97081641f27eae4b3f3f7fe31e894f4a1c0"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-03T22:52:51Z",

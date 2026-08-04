@@ -14,8 +14,8 @@ import VideoCard from './VideoCard.jsx'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as innertube from '../lib/innertube.js'
 import {
-  capabilities, copyText, haptic, imageURL, loadPref, onVideoProgress,
-  openInBrowser, play, resolve, savePref, share, toast,
+  capabilities, closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress,
+  openInBrowser, openStage, play, resolve, savePref, share, toast,
 } from '../lib/host.js'
 import { formatDuration, qualityLabel } from '../lib/format.js'
 
@@ -26,7 +26,11 @@ export default function PlayerPage({ video, onOpen }) {
   const [state, setState] = React.useState('resolving')   // resolving | ready | error
   const [media, setMedia] = React.useState(null)
   const [error, setError] = React.useState('')
-  const [caps, setCaps] = React.useState({ available: true, resolve: true, dash: true })
+  // `null` = 还没探测出来。**别用 true 当初值**：那会让页面先显示「能播」再跳成「不能播」。
+  const [caps, setCaps] = React.useState(null)
+  // 舞台开着时视频由**宿主**画在页面顶部，页面自己那块封面就该让位——
+  // 否则会同时看到「上面在放的视频」和「下面一张静止封面」。
+  const [stageOn, setStageOn] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const [progress, setProgress] = React.useState(null)
   const [related, setRelated] = React.useState([])
@@ -92,11 +96,18 @@ export default function PlayerPage({ video, onOpen }) {
   const playable = React.useMemo(
     () => (media?.formats || []).filter((f) => f.playable), [media])
 
+  // 离开这一页就收起视频区（不停播——转画中画或后台听声都可能是用户想要的）。
+  React.useEffect(() => () => { closeStage() }, [])
+
   const start = React.useCallback(async (formatID) => {
     if (busy) return
     setBusy(true)
     haptic('medium')
     try {
+      // **先开舞台再播**：舞台开着时宿主把播放器嵌在页面顶部（保持竖屏、内容照常滚），
+      // 否则会接管整屏并转横屏。开舞台幂等，重复调只更新参数。
+      const stage = await openStage()
+      setStageOn(!!stage?.rendered)
       const saved = await loadPref(PROGRESS_KEY, {})
       await play({
         sourceURL: video.url,
@@ -113,12 +124,17 @@ export default function PlayerPage({ video, onOpen }) {
   if (state === 'resolving') return <Spinner label="解析中" />
 
   if (state === 'error') {
+    // 三种失败的排查方向完全不同，别混成一句话（同 B 站那次 noBridge/noEngine 的教训）。
+    let detail = error
+    if (caps?.reason === 'noBridge') {
+      detail = '这个 App 版本还没有视频桥（aibox.video）。需要重新构建安装 App 本体，换小应用版本没用。'
+    } else if (caps && !caps.resolve) {
+      detail = '这个 App 构建没有编入媒体解析能力（MODULE_VIDEODOWNLOAD），解析不了 YouTube。'
+    }
     return (
       <EmptyState
         title="解析不了这个视频"
-        detail={caps.resolve
-          ? error
-          : '这个版本没有编入媒体解析能力，播放不了 YouTube 视频。'}
+        detail={detail}
         actionLabel="用浏览器打开"
         onAction={() => openInBrowser(video.url)}
       />
@@ -127,6 +143,8 @@ export default function PlayerPage({ video, onOpen }) {
 
   return (
     <div className="yt-scroll" style={{ height: '100%', overflowY: 'auto', background: C.bg }}>
+      {/* 封面 + 播放键。舞台开着时整块隐藏——真正的画面在宿主画的视频区里。 */}
+      {stageOn ? null : (
       <div
         onClick={() => playable.length && start(playable[0].id)}
         style={{
@@ -157,6 +175,7 @@ export default function PlayerPage({ video, onOpen }) {
           }} />
         ) : null}
       </div>
+      )}
 
       <div style={{ padding: SPACE.s4 }}>
         <div style={{ fontSize: 17, fontWeight: 600, color: C.text, lineHeight: 1.4 }}>
@@ -200,7 +219,7 @@ export default function PlayerPage({ video, onOpen }) {
             marginTop: SPACE.s4, padding: SPACE.s3, borderRadius: RADIUS.md,
             background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6,
           }}>
-            {caps.dash
+            {caps?.dash
               ? '这个视频没有可播放的清晰度。'
               : '这个视频只提供分离流（音视频分开），而当前版本没有编入合流能力，所以播不了。'}
           </div>

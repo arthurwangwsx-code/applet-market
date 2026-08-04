@@ -80,17 +80,48 @@ export function imageURL(url, width) {
  */
 export async function capabilities() {
   const api = bridge()
-  if (!api?.video?.availability) return { available: false, resolve: false, dash: false }
+  // `aibox.video` 命名空间整个不在 = 宿主 App 太旧（没有这条桥）。与「桥在但引擎缺席」
+  // 排查方向完全相反，所以用 `reason` 区分，别合成一个布尔。
+  if (!api?.video?.availability) {
+    return { available: false, resolve: false, dash: false, stage: false, reason: 'noBridge' }
+  }
   try {
     const res = await api.video.availability()
     return {
       available: !!res?.available,
       resolve: !!res?.resolve,
       dash: !!res?.dash,
+      // 这次执行能不能开舞台（无头执行恒 false）。
+      stage: !!res?.stage,
+      // 这个**构建**里有没有内嵌播放器实现。
+      embeddedPlayer: !!res?.embeddedPlayer,
+      reason: res?.available ? 'ok' : 'noEngine',
     }
   } catch {
-    return { available: false, resolve: false, dash: false }
+    return { available: false, resolve: false, dash: false, stage: false, reason: 'noBridge' }
   }
+}
+
+/**
+ * 打开页面顶部的原生视频区。
+ *
+ * **必须先开舞台再 play**：舞台开着时播放内嵌在这块区域，页面保持竖屏、内容在下面滚；
+ * 没开舞台就 play 会接管整屏并转横屏 —— 对一个「边看边翻清晰度/相似视频」的页面是错的。
+ */
+export async function openStage() {
+  const api = bridge()
+  if (!api?.video?.stage) return { rendered: false, available: false }
+  try {
+    // 后台音频默认开：「退出去还能继续听」是这类应用最常见的用法。
+    return await api.video.stage({ aspect: '16:9', backgroundAudio: true, pictureInPicture: true })
+  } catch {
+    return { rendered: false, available: false }
+  }
+}
+
+/** 收起视频区。**不停止播放** —— 用户可能正想让它转画中画或后台听声。 */
+export async function closeStage() {
+  fireAndForget(() => bridge()?.video?.dismissStage?.())
 }
 
 /** 解析一个视频页，回可播格式。 */
@@ -107,7 +138,9 @@ export async function resolve(url) {
 export async function play({ sourceURL, formatID, resumeFrom = 0 }) {
   const api = bridge()
   if (!api?.video?.play) throw new Error('宿主没有视频播放能力')
-  return api.video.play({ sourceURL, formatID, resumeFrom, presentation: 'immersive' })
+  // **不传 presentation**：舞台开着时宿主自动内嵌。显式传 'immersive' 会强行接管整屏并转横屏，
+  // 那正是舞台要解决的问题。
+  return api.video.play({ sourceURL, formatID, resumeFrom })
 }
 
 export function onVideoProgress(handler) {

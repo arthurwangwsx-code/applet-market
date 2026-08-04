@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-04T05:09:44Z",
+  "updatedAt": "2026-08-04T05:15:25Z",
   "appCount": 11,
   "apps": [
     {
@@ -385,9 +385,9 @@
       "icon": "play.rectangle.fill",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.0.0",
-      "latestReleasedAt": "2026-08-03T22:52:51Z",
-      "versionCount": 1,
+      "latestVersion": "1.1.0",
+      "latestReleasedAt": "2026-08-04T05:15:25Z",
+      "versionCount": 2,
       "capabilities": [
         "browser",
         "clipboard",
@@ -398,7 +398,7 @@
         "toast",
         "video"
       ],
-      "latestTotalBytes": 49290,
+      "latestTotalBytes": 52216,
       "latestFileCount": 12,
       "runtimeKind": "source",
       "path": "apps/com.aibox.youtube",

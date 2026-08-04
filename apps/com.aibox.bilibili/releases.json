@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.bilibili",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.1.1",
   "releases": [
+    {
+      "version": "1.1.1",
+      "releasedAt": "2026-08-04T05:09:44Z",
+      "notes": "修复扫码登录：登录接口在 passport.bilibili.com 而非 api.bilibili.com，之前拿到的是 HTTP 404 的 HTML 页",
+      "fileCount": 15,
+      "totalBytes": 89702,
+      "path": "apps/com.aibox.bilibili/releases/1.1.1",
+      "bundleSha256": "ecd3ecef9b52498039ffdfb301fcc7116fa24ad786045cad96e818ee45abcaed"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-04T05:02:14Z",

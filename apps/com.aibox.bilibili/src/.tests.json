@@ -55,6 +55,28 @@
         "expr": "/视频/.test(document.body.innerText) && document.querySelectorAll('[data-row-id]').length >= 3",
         "matcher": "truthy",
         "note": "搜索出结果 —— 这条同时验证了 WBI 签名是对的（签错会回 -403，结果为空）"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '我的'); if (!b) throw new Error('我的 tab not found'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 2500 },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '扫码登录'); if (!b) throw new Error('登录按钮未找到'); b.click(); return 'ok' })()"
+      },
+      { "action": "wait", "ms": 5000 },
+      {
+        "action": "assert",
+        "expr": "[...document.querySelectorAll('img')].some(i => i.src.startsWith('applet://localhost/qr/'))",
+        "matcher": "truthy",
+        "note": "二维码画出来了。这条钉的是一个静默失败：登录接口在 passport.bilibili.com 而不是 api.bilibili.com，写错域名会拿到 HTTP 404 的 HTML 页（不是 JSON 错误码），报错信息指向不明"
+      },
+      {
+        "action": "assert",
+        "expr": "!/拿不到二维码/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "同上的反向断言：出错时页面会显示「拿不到二维码」"
       }
     ]
   }

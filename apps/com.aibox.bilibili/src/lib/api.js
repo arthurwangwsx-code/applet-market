@@ -14,6 +14,14 @@ import { md5 } from './md5.js'
 import { fetchJSON } from './host.js'
 
 const API = 'https://api.bilibili.com'
+/**
+ * 登录相关接口在**另一个域**上。
+ *
+ * `passport-login` 这个路径前缀很容易让人以为它和其它接口一样挂在 `api.bilibili.com` 下 ——
+ * 实测那样会拿到一个 **HTTP 404 的 HTML 页面**（不是 JSON 错误码），于是页面侧看到的是
+ * 「responseType 'json' 但 body 不是合法 JSON」这种指向不明的报错。
+ */
+const PASSPORT = 'https://passport.bilibili.com'
 /** B 站接口一律要 Referer 防盗链；UA 用移动端串，拿到的是移动端口径的数据。 */
 const HEADERS = {
   Referer: 'https://www.bilibili.com',
@@ -88,12 +96,12 @@ function apiError(res) {
   return err
 }
 
-async function get(path, params) {
+async function get(path, params, base = API) {
   const query = params
     ? '?' + Object.keys(params).map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&')
     : ''
   return withRetry(async () => {
-    const res = await fetchJSON(`${API}${path}${query}`, HEADERS)
+    const res = await fetchJSON(`${base}${path}${query}`, HEADERS)
     if (res?.code !== 0) throw apiError(res)
     return res.data
   })
@@ -270,9 +278,10 @@ export async function related(bvid) {
 
 // —— 登录 ——————————————————————————————————————————————
 
-/** 申请登录二维码。回 `{ url, key }`。 */
+/** 申请登录二维码。回 `{ url, key }`。**走 PASSPORT 域**（见该常量的注释）。 */
 export async function loginQRCode() {
-  const data = await get('/x/passport-login/web/qrcode/generate')
+  const data = await get('/x/passport-login/web/qrcode/generate', null, PASSPORT)
+  if (!data?.url || !data?.qrcode_key) throw new Error('接口没有返回二维码')
   return { url: data.url, key: data.qrcode_key }
 }
 
@@ -285,7 +294,9 @@ export async function loginQRCode() {
  */
 export async function loginPoll(qrcodeKey) {
   const res = await fetchJSON(
-    `${API}/x/passport-login/web/qrcode/poll?qrcode_key=${encodeURIComponent(qrcodeKey)}`, HEADERS)
+    `${PASSPORT}/x/passport-login/web/qrcode/poll?qrcode_key=${encodeURIComponent(qrcodeKey)}`, HEADERS)
+  // 注意是 `data.code` 而不是外层 `code`：外层恒 0（HTTP 层面成功），
+  // 真正的扫码状态在 data 里（86101 未扫码 / 86090 已扫待确认 / 86038 失效 / 0 成功）。
   const code = res?.data?.code
   if (code === 0) return { status: 'ok', message: '登录成功' }
   if (code === 86038) return { status: 'expired', message: '二维码已失效' }

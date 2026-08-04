@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-04T05:02:14Z",
+  "updatedAt": "2026-08-04T05:09:44Z",
   "appCount": 11,
   "apps": [
     {
@@ -11,9 +11,9 @@
       "icon": "play.tv.fill",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.0",
-      "latestReleasedAt": "2026-08-04T05:02:14Z",
-      "versionCount": 3,
+      "latestVersion": "1.1.1",
+      "latestReleasedAt": "2026-08-04T05:09:44Z",
+      "versionCount": 4,
       "capabilities": [
         "browser",
         "clipboard",
@@ -26,7 +26,7 @@
         "toast",
         "video"
       ],
-      "latestTotalBytes": 87660,
+      "latestTotalBytes": 89702,
       "latestFileCount": 15,
       "runtimeKind": "source",
       "path": "apps/com.aibox.bilibili",

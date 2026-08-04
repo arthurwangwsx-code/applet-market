@@ -77,16 +77,36 @@ export function imageURL(url, width) {
 
 // —— 视频播放 ——————————————————————————————————————————
 
-/** 宿主有没有视频引擎。没有就该把播放按钮藏掉，而不是点了没反应。 */
-export async function videoAvailable() {
+/**
+ * 宿主的视频能力状态。
+ *
+ * **区分三种情况**，因为它们的排查方向完全相反，混成一句「没有视频引擎」会让人查错方向：
+ *  · `noBridge`  —— `aibox.video` 命名空间根本不存在。宿主 App 太旧（没有这条桥），
+ *                   要重新构建安装宿主，与小应用版本无关。
+ *  · `noEngine`  —— 桥在，但 `available:false`：播放器模块没链入这个构建（如 Lean 变体）。
+ *  · `ok`        —— 能播。
+ */
+export async function videoReadiness() {
   const api = bridge()
-  if (!api?.video?.availability) return false
+  if (!api?.video?.availability) {
+    return { ok: false, reason: 'noBridge' }
+  }
   try {
     const res = await api.video.availability()
-    return !!res?.available
-  } catch {
-    return false
+    return {
+      ok: !!res?.available,
+      reason: res?.available ? 'ok' : 'noEngine',
+      resolve: !!res?.resolve,
+      dash: !!res?.dash,
+    }
+  } catch (err) {
+    return { ok: false, reason: 'noBridge', error: String(err?.message || err) }
   }
+}
+
+/** 兼容旧调用点：只关心能不能播。 */
+export async function videoAvailable() {
+  return (await videoReadiness()).ok
 }
 
 /** 起播。`resumeFrom` 是续播秒数。 */

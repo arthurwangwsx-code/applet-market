@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.bilibili",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.0.1",
   "releases": [
+    {
+      "version": "1.0.1",
+      "releasedAt": "2026-08-04T01:32:11Z",
+      "notes": "播放不可用时区分「宿主没有 aibox.video 桥」与「构建没链入播放器模块」两种情况，便于定位",
+      "fileCount": 15,
+      "totalBytes": 85857,
+      "path": "apps/com.aibox.bilibili/releases/1.0.1",
+      "bundleSha256": "b847bc725380e349469eb5a139fa7e2e6f9e7864fc7966aa4c34963ec07fbfd9"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-03T21:40:21Z",

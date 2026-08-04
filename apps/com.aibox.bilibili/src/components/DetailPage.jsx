@@ -16,7 +16,7 @@ import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import {
   copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser,
-  playVideo, savePref, share, toast, videoAvailable,
+  playVideo, savePref, share, toast, videoReadiness,
 } from '../lib/host.js'
 import { formatCount, formatDate, formatDuration } from '../lib/format.js'
 
@@ -28,7 +28,9 @@ export default function DetailPage({ bvid, onOpen }) {
   const [error, setError] = React.useState('')
   const [relatedList, setRelated] = React.useState([])
   const [activeCid, setActiveCid] = React.useState(0)
-  const [playable, setPlayable] = React.useState(true)
+  // `null` = 还没探测出来。**别用 true 当初值**：那会让页面先显示「能播」再跳成「不能播」。
+  const [videoState, setVideoState] = React.useState(null)
+  const playable = videoState?.ok !== false
   const [busy, setBusy] = React.useState(false)
   const [descOpen, setDescOpen] = React.useState(false)
   const [progress, setProgress] = React.useState(null)
@@ -50,7 +52,7 @@ export default function DetailPage({ bvid, onOpen }) {
         setState('error')
       }
     })()
-    videoAvailable().then((ok) => { if (alive) setPlayable(ok) })
+    videoReadiness().then((s) => { if (alive) setVideoState(s) })
     return () => { alive = false }
   }, [bvid])
 
@@ -160,9 +162,14 @@ export default function DetailPage({ bvid, onOpen }) {
         ) : null}
       </div>
 
-      {!playable ? (
-        <div style={{ padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub }}>
-          这个版本没有装视频引擎，只能用浏览器打开。
+      {videoState && !videoState.ok ? (
+        <div style={{ padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
+          {videoState.reason === 'noBridge'
+            ? '这个 App 版本还没有视频播放桥（aibox.video）。需要重新构建安装 App 本体，'
+              + '换小应用版本没用。'
+            : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。'}
+          <br />
+          只能先用浏览器打开。
         </div>
       ) : null}
 

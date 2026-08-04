@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.1.2",
+  "latestVersion": "1.1.3",
   "releases": [
+    {
+      "version": "1.1.3",
+      "releasedAt": "2026-08-04T17:44:23Z",
+      "notes": "资料库/下载中列表行对齐：图标框固定 44×44 且不参与 flex 压缩（此前标题长的行会把它挤窄，每行起点都不一样）",
+      "fileCount": 4,
+      "totalBytes": 56437,
+      "path": "apps/com.aibox.viddl/releases/1.1.3",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "3345c68cafff6bc9f7a1b1cb8e83ccb63a9b76e22cb67c58eb1396be3a99c988"
+    },
     {
       "version": "1.1.2",
       "releasedAt": "2026-08-04T13:06:19Z",

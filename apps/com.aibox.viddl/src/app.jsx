@@ -128,10 +128,12 @@ function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onE
     <div data-row-id={job.jobId} style={{ padding: `${SPACE.s3}px ${SPACE.s4}px` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s3 }}>
         <div style={{
-          width: 44, height: 30, borderRadius: 6, background: C.track,
+          // `flex: '0 0 44px'` 不能省：只写 width 的话，flex 容器在标题长的行里会把它**压窄**，
+          // 于是每行的图标宽度和标题起点都不一样——真机上就是一列参差不齐的行（2026-08-05 实测）。
+          flex: '0 0 44px', width: 44, height: 44, borderRadius: 8, background: C.track,
           display: 'flex', alignItems: 'center', justifyContent: 'center', color,
         }}>
-          <Icon name={done ? 'play.rectangle' : failed ? 'exclamationmark.circle' : 'arrow.down.circle'} size={18} />
+          <Icon name={done ? 'play.rectangle' : failed ? 'exclamationmark.circle' : 'arrow.down.circle'} size={20} />
         </div>
         <div style={{ flex: '1 1 auto', minWidth: 0 }}>
           <div style={{
@@ -144,7 +146,7 @@ function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onE
           }}>{parts.join(' · ') || job.state}</div>
         </div>
         {active && typeof job.fraction === 'number' ? (
-          <span style={{ fontSize: 12.5, color: C.muted, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ flexShrink: 0, fontSize: 12.5, color: C.muted, fontVariantNumeric: 'tabular-nums' }}>
             {Math.round(job.fraction * 100)}%
           </span>
         ) : null}

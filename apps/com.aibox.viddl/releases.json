@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.1.1",
+  "latestVersion": "1.1.2",
   "releases": [
+    {
+      "version": "1.1.2",
+      "releasedAt": "2026-08-04T13:06:19Z",
+      "notes": "授权提示指向真实路径：⋯ ▸ 应用详情 ▸ 能力（上一版写的「设置 ▸ 能力中心」是错的，那是助手的能力页）",
+      "fileCount": 4,
+      "totalBytes": 56140,
+      "path": "apps/com.aibox.viddl/releases/1.1.2",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "5ded2edc7592e963ce753e253c770c2205820d97ad449aabc6fc52fc292e2e4a"
+    },
     {
       "version": "1.1.1",
       "releasedAt": "2026-08-04T12:17:01Z",

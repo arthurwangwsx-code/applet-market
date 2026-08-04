@@ -14,7 +14,7 @@
 | 返回类型覆盖（含手写签名命名空间） | 106/172（61.6%）—— 其余那批补了只改文档 | 同上 |
 | 生成的 `aibox-global.d.ts` | 1199 行 / 266 个签名 / 80 个 `Promise<unknown>` | `packages/aibox-sdk/src/generated/` |
 | 市场应用（总数 / bundle 型 / 用 SDK） | 11 / 5 / 5 | `apps/*/package.json` |
-| `host.js` 分叉 | 8 份、1943 行 | `apps/*/src/lib/host.js` |
+| `host.js` 分叉 | 8 份、1947 行 | `apps/*/src/lib/host.js` |
 | SDK | v1.0.0，15 个模块 / 1630 行 | `packages/aibox-sdk/` |
 
 <!-- FACTS:END -->

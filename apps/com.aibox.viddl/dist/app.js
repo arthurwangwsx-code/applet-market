@@ -626,7 +626,7 @@ async function toolBlockReason(name) {
       return { ok: false, reason: "not-active", hint: "这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。" };
     }
     if (failed.includes("localGrant")) {
-      return { ok: false, reason: "not-granted", hint: "还没有把视频解析工具授权给这个小应用。到「设置 ▸ 能力中心 ▸ 视频下载 ▸ 工具」里勾上 viddl 系列工具就能用了。" };
+      return { ok: false, reason: "not-granted", hint: "还没有把视频解析工具授权给这个小应用。点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开就能用了。" };
     }
     if (failed.includes("declared") || failed.includes("requirement")) {
       return { ok: false, reason: "not-declared", hint: "这个版本的小应用没有声明要用视频解析工具，请更新到新版本。" };

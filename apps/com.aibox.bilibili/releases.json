@@ -1,8 +1,17 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.bilibili",
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-04T05:02:14Z",
+      "notes": "视频改为页面内嵌播放：顶部视频区、保持竖屏、点全屏按钮才横屏、退出后可继续听声",
+      "fileCount": 15,
+      "totalBytes": 87660,
+      "path": "apps/com.aibox.bilibili/releases/1.1.0",
+      "bundleSha256": "399b7f00e5c3c3caa167d13c5f1fb08d787b597612c75931161e89572c424546"
+    },
     {
       "version": "1.0.1",
       "releasedAt": "2026-08-04T01:32:11Z",

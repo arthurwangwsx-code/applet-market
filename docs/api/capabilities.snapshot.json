@@ -2522,10 +2522,28 @@
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
         },
         {
-          "name": "availability",
-          "summary": "What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing.",
+          "name": "stage",
+          "summary": "Open a native video area pinned to the TOP of your page, and play there instead of taking over the whole screen. THIS IS THE ONE YOU WANT for a video app: your page content keeps scrolling underneath (description, episodes, related), the app stays PORTRAIT, and the user gets landscape only by tapping the player's own fullscreen button. Call stage() first, then play(). Playing without a stage takes over the screen in landscape, which is almost never what a page wants.",
+          "parametersJSON": "{\"type\":\"object\",\"properties\":{\"aspect\":{\"type\":\"string\",\"description\":\"Aspect ratio like '16:9' (default) or '4:3'.\"},\"backgroundAudio\":{\"type\":\"boolean\",\"description\":\"Keep AUDIO playing when the app goes to the background — video pauses, sound continues. Default true.\"},\"pictureInPicture\":{\"type\":\"boolean\",\"description\":\"Allow the floating picture-in-picture window after leaving the app. Separate from backgroundAudio: PiP keeps the PICTURE, backgroundAudio keeps only the SOUND. Default true.\"},\"gestureControls\":{\"type\":\"boolean\",\"description\":\"Swipe for volume/brightness and double-tap to play-pause. Default true.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{rendered:boolean, available:boolean, aspect:string, backgroundAudio:boolean, gestureControls:boolean, pictureInPicture:boolean}",
+          "effect": "presentation",
+          "example": "await aibox.video.stage({ aspect: '16:9' })\nawait aibox.video.play({ sourceURL: pageURL, formatID: best.id })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "dismissStage",
+          "summary": "Close the video area. Does NOT stop playback — the user may want it to continue as picture-in-picture or background audio. Call video.stop for that.",
           "parametersJSON": "{}",
-          "resultSummary": "{available:boolean, resolve:boolean, dash:boolean}",
+          "resultSummary": "boolean",
+          "effect": "presentation",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played, `stage` = the in-page video area is supported. Hide the entry points this build cannot honor instead of letting a tap do nothing.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean, resolve:boolean, dash:boolean, stage:boolean}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift"

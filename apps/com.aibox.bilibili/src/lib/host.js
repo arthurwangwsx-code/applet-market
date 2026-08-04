@@ -109,11 +109,33 @@ export async function videoAvailable() {
   return (await videoReadiness()).ok
 }
 
-/** 起播。`resumeFrom` 是续播秒数。 */
+/**
+ * 打开页面顶部的原生视频区。
+ *
+ * **必须先开舞台再 play**：舞台开着时播放会内嵌在这块区域里，页面照常竖屏、内容在下面滚；
+ * 没开舞台就 play 会接管整屏并转横屏——那对一个「边看边翻简介/选集」的页面是错的。
+ */
+export async function openStage() {
+  const api = bridge()
+  if (!api?.video?.stage) return { rendered: false, available: false }
+  try {
+    // 后台音频默认开：「退出去还能继续听」正是这个应用最常见的用法。
+    return await api.video.stage({ aspect: '16:9', backgroundAudio: true })
+  } catch {
+    return { rendered: false, available: false }
+  }
+}
+
+/** 收起视频区。**不停止播放** —— 用户可能正想让它转画中画或后台听声。 */
+export async function closeStage() {
+  fireAndForget(() => bridge()?.video?.dismissStage?.())
+}
+
+/** 起播。`resumeFrom` 是续播秒数。舞台开着时宿主会自动内嵌，不必也不该再传 presentation。 */
 export async function playVideo({ url, title, resumeFrom = 0 }) {
   const api = bridge()
   if (!api?.video?.play) throw new Error('宿主没有视频播放能力')
-  return api.video.play({ url, title, resumeFrom, presentation: 'immersive' })
+  return api.video.play({ url, title, resumeFrom })
 }
 
 /** 播放状态快照。`mine` 表示当前播的是不是本应用起的。 */

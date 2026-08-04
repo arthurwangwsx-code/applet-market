@@ -15,8 +15,8 @@ import VideoCard from './VideoCard.jsx'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import {
-  copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser,
-  playVideo, savePref, share, toast, videoReadiness,
+  closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser,
+  openStage, playVideo, savePref, share, toast, videoReadiness,
 } from '../lib/host.js'
 import { formatCount, formatDate, formatDuration } from '../lib/format.js'
 
@@ -32,6 +32,9 @@ export default function DetailPage({ bvid, onOpen }) {
   const [videoState, setVideoState] = React.useState(null)
   const playable = videoState?.ok !== false
   const [busy, setBusy] = React.useState(false)
+  // 舞台开着时，视频由**宿主**画在页面顶部，页面自己那块封面就该让位——
+  // 否则用户会同时看到「上面在放的视频」和「下面一张静止封面」。
+  const [stageOn, setStageOn] = React.useState(false)
   const [descOpen, setDescOpen] = React.useState(false)
   const [progress, setProgress] = React.useState(null)
 
@@ -95,11 +98,18 @@ export default function DetailPage({ bvid, onOpen }) {
       .catch(() => { /* 存不住续播位置不值得打扰用户，也不该变成未处理拒绝 */ })
   }, [])
 
+  // 离开这一页就收起视频区（不停播——转画中画或后台听声都是用户可能想要的）。
+  React.useEffect(() => () => { closeStage() }, [])
+
   const play = React.useCallback(async (cid) => {
     if (!detail || busy) return
     setBusy(true)
     haptic('medium')
     try {
+      // **先开舞台再播**：舞台开着时宿主把播放器嵌在页面顶部（保持竖屏、内容照常滚），
+      // 否则会接管整屏并转横屏。开舞台是幂等的，重复调只更新参数。
+      const stage = await openStage()
+      setStageOn(!!stage?.rendered)
       const targetCid = cid || activeCid || detail.cid
       const stream = await api.playURL(bvid, targetCid)
       const saved = await loadPref(PROGRESS_KEY, {})
@@ -128,7 +138,8 @@ export default function DetailPage({ bvid, onOpen }) {
 
   return (
     <div className="bl-scroll" style={{ height: '100%', overflowY: 'auto', background: C.bg }}>
-      {/* 封面 + 播放键 */}
+      {/* 封面 + 播放键。舞台开着时整块隐藏——真正的画面在宿主画的视频区里。 */}
+      {stageOn ? null : (
       <div
         onClick={() => playable && play()}
         style={{
@@ -161,6 +172,7 @@ export default function DetailPage({ bvid, onOpen }) {
           }} />
         ) : null}
       </div>
+      )}
 
       {videoState && !videoState.ok ? (
         <div style={{ padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }}>

@@ -2,7 +2,7 @@
 
 > Play video on the host's native full-screen player — the same engine the media library uses, so you get AirPlay, picture-in-picture, the lock-screen card and background audio for free. Your applet never owns the player: it sends commands and receives progress events. Use this for ANY video playback; a <video> tag inside an applet is blocked by CSP and dies the moment the app goes to the background.
 
-**分组** 系统能力投影 ｜ **方法数** 13 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"video"`。**声明 ≠ 授权**，用户仍会被逐项询问。
+**分组** 系统能力投影 ｜ **方法数** 15 ｜ **声明要求** 需要在 `manifest.permissions.capabilities` 里声明 `"video"`。**声明 ≠ 授权**，用户仍会被逐项询问。
 
 <!-- GENERATED:BEGIN —— 本节由 scripts/gen-api-docs.mjs 从宿主 descriptor 生成，请勿手改 -->
 
@@ -204,9 +204,45 @@ const best = r.formats.filter(f => f.playable)[0]
 if (best) await aibox.video.play({ url: best.url, title: r.title })
 ```
 
+### `aibox.video.stage()`
+
+Open a native video area pinned to the TOP of your page, and play there instead of taking over the whole screen. THIS IS THE ONE YOU WANT for a video app: your page content keeps scrolling underneath (description, episodes, related), the app stays PORTRAIT, and the user gets landscape only by tapping the player's own fullscreen button. Call stage() first, then play(). Playing without a stage takes over the screen in landscape, which is almost never what a page wants.
+
+**副作用档位** `presentation`（呈现）— 弹出原生界面或播放；需要可见的 applet 运行时。
+
+**参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|:--:|---|
+| `aspect` | string |  | Aspect ratio like '16:9' (default) or '4:3'. |
+| `backgroundAudio` | boolean |  | Keep AUDIO playing when the app goes to the background — video pauses, sound continues. Default true. |
+| `pictureInPicture` | boolean |  | Allow the floating picture-in-picture window after leaving the app. Separate from backgroundAudio: PiP keeps the PICTURE, backgroundAudio keeps only the SOUND. Default true. |
+| `gestureControls` | boolean |  | Swipe for volume/brightness and double-tap to play-pause. Default true. |
+
+未列出的字段会被拒绝（`additionalProperties: false`）。
+
+**返回** `{rendered:boolean, available:boolean, aspect:string, backgroundAudio:boolean, gestureControls:boolean, pictureInPicture:boolean}`
+
+```js
+await aibox.video.stage({ aspect: '16:9' })
+await aibox.video.play({ sourceURL: pageURL, formatID: best.id })
+```
+
+### `aibox.video.dismissStage()`
+
+Close the video area. Does NOT stop playback — the user may want it to continue as picture-in-picture or background audio. Call video.stop for that.
+
+**副作用档位** `presentation`（呈现）— 弹出原生界面或播放；需要可见的 applet 运行时。
+
+**参数**
+
+无参数。
+
+**返回** `boolean`
+
 ### `aibox.video.availability()`
 
-What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played. Hide the entry points this build cannot honor instead of letting a tap do nothing.
+What this build can actually do: `available` = there is a video engine, `resolve` = the extractor stack is compiled in, `dash` = split video/audio streams can be played, `stage` = the in-page video area is supported. Hide the entry points this build cannot honor instead of letting a tap do nothing.
 
 **副作用档位** `read`（读取）— 只读，不改任何状态；不触发用户确认。
 
@@ -214,7 +250,7 @@ What this build can actually do: `available` = there is a video engine, `resolve
 
 无参数。
 
-**返回** `{available:boolean, resolve:boolean, dash:boolean}`
+**返回** `{available:boolean, resolve:boolean, dash:boolean, stage:boolean}`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VideoCapabilityAdapter.swift`
 

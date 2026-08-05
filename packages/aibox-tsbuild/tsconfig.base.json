@@ -25,6 +25,16 @@
     "removeComments": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+
+    // `aibox/ui` 不是 npm 包 —— 它是 `applet://localhost/runtime/aibox-ui.mjs`，
+    // 构建时恒 external、运行时由 import map 解析。TS 找不到它的声明会报 TS2307/TS7016，
+    // 所以用 paths 指到随本预设一起发的 types/aibox-ui.d.ts。
+    // 相对路径按 TS 5.0+ 的规则**相对本文件**解析，继承方一个字节都不用写。
+    // ⚠️ `index.mjs` 里是手工组装 CompilerOptions（basePath 传的是应用的 src/），
+    //    那条路径上必须先把这里的相对项绝对化，否则会错解到应用目录下 → 找不到声明。
+    "paths": {
+      "aibox/ui": ["./types/aibox-ui.d.ts"]
+    }
   }
 }

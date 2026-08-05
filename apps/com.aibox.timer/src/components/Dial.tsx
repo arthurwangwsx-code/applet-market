@@ -1,4 +1,4 @@
-import { formatDuration } from '../lib/timer';
+import { formatDuration } from '../lib/timer.js';
 
 interface DialProps {
   remaining: number;

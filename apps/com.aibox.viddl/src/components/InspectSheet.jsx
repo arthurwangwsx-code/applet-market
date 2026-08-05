@@ -5,8 +5,8 @@
 // 所以它必须在这里画出来，而不是让宿主替用户决定。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Button, Chip, Sheet } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Button, Chip, Sheet } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 
 /** 从一段文本里抽第一个 http(s) 链接（分享过来的文字常常带一堆前后缀）。 */

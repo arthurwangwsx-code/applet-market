@@ -2,7 +2,7 @@ import { registerActions } from '@aibox/applet-sdk';
 import {
   appendHistory, durationFrom, formatDuration, loadRunning, newSessionID,
   remainingSeconds, saveRunning,
-} from './timer';
+} from './timer.js';
 
 /**
  * manifest 声明的三个 action 的实现。

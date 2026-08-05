@@ -2,8 +2,8 @@
 // 页面只读这份快照，写操作走 db.ts 后 `refresh()` 重拉，避免多处各自缓存导致的不一致。
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { listEntries, listHistory, listTranslations, listVocab } from './db'
-import type { LookupHistoryItem, TranslationRecord, VocabItem, WordEntry } from './types'
+import { listEntries, listHistory, listTranslations, listVocab } from './db.js'
+import type { LookupHistoryItem, TranslationRecord, VocabItem, WordEntry } from './types.js'
 
 export interface WordStore {
   ready: boolean

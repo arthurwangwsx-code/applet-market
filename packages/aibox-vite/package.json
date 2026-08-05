@@ -1,7 +1,7 @@
 {
   "name": "@aibox/applet-vite",
   "version": "1.0.0",
-  "description": "AiBox 小应用的 Vite 预设：external 名单、iOS 17 目标、manifest action 类型生成、产物自检。",
+  "description": "【已退役】AiBox 小应用的 Vite 预设。构建管线统一到 @aibox/applet-tsbuild（保结构多文件 ESM），本包只剩 manifest → action 类型的生成与脚手架模板还在用。",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./index.mjs",
@@ -12,7 +12,6 @@
       "default": "./index.mjs"
     },
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./types/aibox-ui.d.ts": "./types/aibox-ui.d.ts",
     "./lib/runtime-modules.mjs": "./lib/runtime-modules.mjs",
     "./lib/schema-to-ts.mjs": "./lib/schema-to-ts.mjs",
     "./package.json": "./package.json"
@@ -21,7 +20,6 @@
     "index.mjs",
     "index.d.ts",
     "lib",
-    "types",
     "tsconfig.base.json"
   ],
   "dependencies": {

@@ -5,8 +5,8 @@
 // ②③ 之间静默切换、用户无感知；抓取环节的任何失败都不抛给上层，直接进 AI 兜底。
 
 import { fetchText, normalizeError } from '@aibox/applet-sdk'
-import { emptyPayload } from './logic'
-import type { LangCode, WordLookupPayload } from './types'
+import { emptyPayload } from './logic.js'
+import type { LangCode, WordLookupPayload } from './types.js'
 
 /** 有道结果页很容易超过桥的 200KB 默认截断 —— **必须显式传 maxBytes**，否则例句区解析不出来且不报错。 */
 const YOUDAO_MAX_BYTES = 2_000_000

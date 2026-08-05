@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.viddl",
+  "version": "1.2.0",
+  "releasedAt": "2026-08-05T15:54:29Z",
+  "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+  "localizedNotes": {
+    "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "视频下载",
+    "localizedNames": {
+      "en": "Video Downloads"
+    },
+    "icon": "arrow.down.to.line",
+    "iconTintHex": "E64340",
+    "summary": "解析视频页、选画质、离线资料库",
+    "localizedSummaries": {
+      "en": "Parse a video page, pick a quality, keep an offline library"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": false,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [],
+      "capabilities": [
+        "tools",
+        "download",
+        "clipboard",
+        "share",
+        "haptics"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "viddl_app_inspect",
+        "name": "inspect",
+        "displayName": "解析视频",
+        "summary": "Reads a video page or stream URL and reports what can be downloaded: title, uploader, duration, and every available quality with its format id, container, codecs and size. Nothing is downloaded. Pass the chosen format id to the fetch action. Supports Bilibili, YouTube, direct media links, m3u8 streams and generic pages with an embedded video.",
+        "keywords": [
+          "video",
+          "inspect video",
+          "what qualities",
+          "video formats",
+          "resolutions available",
+          "解析视频",
+          "视频画质",
+          "有哪些清晰度",
+          "看看这个视频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The video page or stream URL.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"formats\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true,
+        "execution": {
+          "mode": "concurrent",
+          "timeoutMilliseconds": 45000,
+          "requiresNetworkConnectivity": true
+        }
+      },
+      {
+        "id": "viddl_app_fetch",
+        "name": "fetch",
+        "displayName": "下载视频",
+        "summary": "Downloads a video the user is entitled to save, for offline viewing. Give the page or stream \"url\"; add \"formatId\" (from the inspect action) to choose a quality, otherwise the best one is used. Set \"audioOnly\" to keep only the audio track as .m4a. Returns a jobId immediately — videos are large, so track it with the library action. HLS sources produce an in-app offline package rather than a portable mp4.",
+        "keywords": [
+          "download video",
+          "save video",
+          "offline video",
+          "download in 1080p",
+          "audio only",
+          "下载视频",
+          "保存视频",
+          "离线观看",
+          "只要音频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"formatId\":{\"type\":\"string\",\"description\":\"Format id from the inspect action. Omit for best quality.\"},\"audioOnly\":{\"type\":\"boolean\",\"description\":\"Keep only the audio track as .m4a. Default false.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"jobId\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 30000,
+          "requiresNetworkConnectivity": true
+        }
+      },
+      {
+        "id": "viddl_app_library",
+        "name": "library",
+        "displayName": "视频资料库",
+        "summary": "Lists downloaded videos and in-flight video downloads with their state and progress, or acts on one of them. \"action\": \"list\" (default) / \"status\" / \"pause\" / \"resume\" / \"cancel\" / \"retry\" / \"play\" / \"export\" — everything except list and status needs a \"jobId\". \"export\" turns an HLS offline package into a portable mp4; direct downloads are already mp4.",
+        "keywords": [
+          "downloaded videos",
+          "video library",
+          "video download progress",
+          "pause video download",
+          "play downloaded video",
+          "视频资料库",
+          "已下载的视频",
+          "视频下载进度",
+          "播放下载的视频"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"status\",\"pause\",\"resume\",\"cancel\",\"retry\",\"play\",\"export\"]},\"jobId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential",
+          "timeoutMilliseconds": 30000
+        }
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "library",
+            "title": "资料库",
+            "localizedTitles": {
+              "en": "Library"
+            },
+            "icon": "film",
+            "selectedIcon": "film.fill"
+          },
+          {
+            "id": "downloading",
+            "title": "下载中",
+            "localizedTitles": {
+              "en": "Downloading"
+            },
+            "icon": "arrow.down.circle",
+            "selectedIcon": "arrow.down.circle.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "add",
+            "icon": "plus",
+            "tint": "accent"
+          },
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ]
+      }
+    },
+    "toolRequirements": {
+      "mode": "allowlist",
+      "prefixes": [
+        "viddl"
+      ],
+      "tools": []
+    },
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 93932,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 2741,
+      "sha256": "818e8da4f0da30ff51a25641f467d44bbf1b8b431373f457afed77619ac2c66b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 19700,
+      "sha256": "9fef51787a66b60bc7959f24730034d2e0dfce9d1515de64077962ba41df0764",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.js",
+      "bytes": 3647,
+      "sha256": "0335427682a949f0a390e9d62cacd330a234ebafc12c0861d29b7ec4e0e0cf83",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/InspectSheet.js",
+      "bytes": 7935,
+      "sha256": "50c96efc30fd2de4f953e8e138ce5bdfade6e864297972c5034b4ed9abb4bcbf",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 6733,
+      "sha256": "a05e0e8f1488c5a176a26e4391e1e6121cd999ad49d3c460bc051348b88e5191",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 3382,
+      "sha256": "71fa58700eccd153f000fc8f2ce0e49ebd37ef655ef7c5c0206c2d3f9ad56f93",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2788,
+      "sha256": "99bc25fc831cb0073b893492f4af6b44e5963a6ab37f10a6780391a60bb110fd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 5635,
+      "sha256": "b7729a3f92cae71ce116a0011ceb58de6cb76a36bf2a39c2e47299433abc945b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 25527,
+      "sha256": "00dc3f39f761e4d617d85fc1941e01fd4d3589e1466015128e5d6452257d60b0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 7635,
+      "sha256": "ca7a22441e08566bb5c119d082e338cffab2d05234ae8a149b2554343f9f3d0c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/jobs.js",
+      "bytes": 1878,
+      "sha256": "ee79183d33b35d980225fad3c3064c25efaa234858f5da7aa1e679356b3dc568",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 6331,
+      "sha256": "ba5946d526d56ff55c448d8aa428866443b87f681377505521566f0989530401",
+      "encoding": "utf8"
+    }
+  ]
+}

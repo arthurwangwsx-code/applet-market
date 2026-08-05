@@ -4,11 +4,11 @@
 // 自上而下：标题输入 / 环境行 / 实时滚动波形 / 百分秒计时 / 已暂停标 / 控制排。
 
 import { useEffect, useRef, useState } from 'react'
-import { clockCentis } from '../lib/format'
-import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop, type StoppedClip } from '../lib/memos'
-import type { T } from '../lib/strings'
-import { SPACE, type Palette } from '../lib/theme'
-import { Icon, Sheet } from './primitives'
+import { clockCentis } from '../lib/format.js'
+import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop, type StoppedClip } from '../lib/memos.js'
+import type { T } from '../lib/strings.js'
+import { SPACE, type Palette } from '../lib/theme.js'
+import { Icon, Sheet } from './primitives.js'
 
 /** 20 Hz —— 与底座的采样率一致，即便以更低频率轮询也不会丢样本（环形缓冲有 6 秒余量）。 */
 const POLL_MS = 50

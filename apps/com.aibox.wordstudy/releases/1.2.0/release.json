@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.wordstudy",
+  "version": "1.2.0",
+  "releasedAt": "2026-08-05T15:54:27Z",
+  "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+  "localizedNotes": {
+    "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+  },
+  "manifest": {
+    "name": "单词学习",
+    "localizedNames": {
+      "en": "Word Study"
+    },
+    "icon": "character.book.closed",
+    "iconTintHex": "2D6AE0",
+    "summary": "查词、翻译、生词本与 Leitner 复习",
+    "localizedSummaries": {
+      "en": "Dictionary lookup, translation, vocabulary and Leitner review"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "runtimeKind": "bundle",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "networkAllowed": [
+        "dict.youdao.com"
+      ],
+      "storage": true,
+      "ai": true,
+      "capabilities": [
+        "tts",
+        "speech",
+        "clipboard",
+        "share",
+        "ui",
+        "haptics",
+        "picker",
+        "photos"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "sheet",
+        "fullscreen"
+      ]
+    },
+    "scene": {
+      "tabBar": {
+        "items": [
+          {
+            "id": "translate",
+            "title": "翻译",
+            "localizedTitles": {
+              "en": "Translate"
+            },
+            "icon": "character.bubble",
+            "selectedIcon": "character.bubble.fill"
+          },
+          {
+            "id": "search",
+            "title": "搜索",
+            "localizedTitles": {
+              "en": "Search"
+            },
+            "icon": "magnifyingglass",
+            "selectedIcon": "magnifyingglass"
+          },
+          {
+            "id": "vocab",
+            "title": "生词本",
+            "localizedTitles": {
+              "en": "Vocabulary"
+            },
+            "icon": "star",
+            "selectedIcon": "star.fill"
+          }
+        ]
+      }
+    },
+    "actions": [
+      {
+        "id": "word_lookup",
+        "name": "word_lookup",
+        "displayName": "查词",
+        "summary": "Looks up an English word or short phrase: phonetics (UK/US IPA), part-of-speech senses, inflected forms, example sentences, exam tags (CET-4/6, postgrad, etc.), synonyms/antonyms, and a memory tip. Cached lookups return instantly; a new word is scraped from a dictionary site and falls back to a one-shot AI generation (may take a few seconds). Accepts a spelling-corrected suggestion if the input looks misspelled.",
+        "keywords": [
+          "word",
+          "dictionary",
+          "define",
+          "lookup",
+          "vocabulary",
+          "english",
+          "phonetics",
+          "查词",
+          "单词",
+          "词典",
+          "释义",
+          "音标"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The English word or short phrase to look up.\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"word\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"cached\":{\"type\":\"boolean\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": true
+      },
+      {
+        "id": "word_translate",
+        "name": "word_translate",
+        "displayName": "翻译",
+        "summary": "Translates text between Chinese and English (auto-detects direction by default: CJK input → Chinese-to-English, otherwise English-to-Chinese). Returns translation only, no explanation. Pass 'direction' to force a specific direction instead of auto-detection.",
+        "keywords": [
+          "translate",
+          "translation",
+          "chinese",
+          "english",
+          "翻译",
+          "中译英",
+          "英译中"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"The text to translate (up to 3000 characters).\"},\"direction\":{\"type\":\"string\",\"enum\":[\"auto\",\"zhToEn\",\"enToZh\"],\"description\":\"Translation direction; defaults to 'auto' (detect by script).\"}},\"required\":[\"text\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"srcLang\":{\"type\":\"string\"},\"dstLang\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": true
+      },
+      {
+        "id": "word_list_vocab",
+        "name": "word_list_vocab",
+        "displayName": "列出生词本",
+        "summary": "Lists the user's saved vocabulary (words and saved sentences), most recently added first. Filter by kind or mastered status, and/or search by a text fragment matched against the term and its brief gloss. Read-only, local data — no AI call, no network.",
+        "keywords": [
+          "vocabulary",
+          "saved words",
+          "word list",
+          "生词本",
+          "收藏的词",
+          "单词列表"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"filter\":{\"type\":\"string\",\"enum\":[\"all\",\"word\",\"sentence\",\"mastered\",\"unmastered\"],\"description\":\"Restrict the list to this kind/status; defaults to 'all'.\"},\"query\":{\"type\":\"string\",\"description\":\"Optional fuzzy text to match against term or gloss.\"},\"limit\":{\"type\":\"integer\",\"description\":\"Max items to return (default 50, max 200).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "word_vocab_upsert",
+        "name": "word_vocab_upsert",
+        "displayName": "收进生词本",
+        "summary": "Adds a word or sentence to the user's saved vocabulary, or updates its mastered flag if it's already saved. Non-destructive — never deletes existing data. Use word_lookup first if you need the word's brief gloss cached alongside it.",
+        "keywords": [
+          "save word",
+          "add vocabulary",
+          "mastered",
+          "收藏单词",
+          "加入生词本",
+          "已掌握"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The word or sentence text to save.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"word\",\"sentence\"],\"description\":\"What kind of entry this is; defaults to 'word'.\"},\"mastered\":{\"type\":\"boolean\",\"description\":\"Mark as mastered (archived, out of review pool).\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"created\":{\"type\":\"boolean\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "word_vocab_remove",
+        "name": "word_vocab_remove",
+        "displayName": "移出生词本",
+        "summary": "Permanently removes a word or sentence from the user's saved vocabulary. This cannot be undone — confirm with the user before calling unless they explicitly asked to delete it.",
+        "keywords": [
+          "remove word",
+          "delete vocabulary",
+          "移除生词",
+          "删除单词"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"term\":{\"type\":\"string\",\"description\":\"The exact word or sentence text to remove.\"}},\"required\":[\"term\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"removed\":{\"type\":\"boolean\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "delete",
+        "readOnly": false,
+        "destructive": true,
+        "idempotent": true,
+        "execution": {
+          "mode": "sequential"
+        }
+      }
+    ]
+  },
+  "totalBytes": 211774,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 2034,
+      "sha256": "0124feb15aace1dfa0c92470542b5526b45dafb24370be4ae53f9ecd82c7e023",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 8510,
+      "sha256": "b5a19012c30dda8ab33eb3186d57a6ba8b8abaf9caf0a4b7b9341ffa76eb6b5b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 10626,
+      "sha256": "087c0b19e79200d07301ebb54fabf8bf99ab650b494f6f701248c657ce15322b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ReviewPage.js",
+      "bytes": 11896,
+      "sha256": "08669c9930cf821d2b4ef90e0388c74366636c331e8ecc9bc96d327d472dbd01",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.js",
+      "bytes": 11425,
+      "sha256": "699aa55253e9a116ba9e724f0547827a7a7a69933466124c26ab49ee81b7d24c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Sheets.js",
+      "bytes": 16146,
+      "sha256": "2a6e009a74231f5d93903cd1d4aa50a219234e22544541c5e2f49528418e06ef",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/TranslatePage.js",
+      "bytes": 10984,
+      "sha256": "62115fb8d91cc09996d7489450e236157a7f802c26b758652450efcfada516e4",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/VocabPage.js",
+      "bytes": 8243,
+      "sha256": "2466c5c00092a9aaa7ee3c659a52013ddabea65972d08a8adec53de700dd252a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/WordDetail.js",
+      "bytes": 13704,
+      "sha256": "575cdded8176bb118ff49e246e03e39c7a8b208692363a550150802584fa5f34",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2788,
+      "sha256": "ec816159d9d7788ac51d8baca2dbf75c6c68870e99e92231883aa45d60a6f66d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 6794,
+      "sha256": "959c824601fcb6e0da71bd43358f13e121e67745573ab6642da131e6934d949a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk-react.js",
+      "bytes": 6522,
+      "sha256": "e0d44612ede6bb96dedd4094046448df2fdb47bbb60514ee34cea96081aad0d1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 25527,
+      "sha256": "00dc3f39f761e4d617d85fc1941e01fd4d3589e1466015128e5d6452257d60b0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/db.js",
+      "bytes": 14002,
+      "sha256": "e76bc120af7a81631d3ad8f1e38cce2baa4cdb659e62b06cab448cecd31cb6f0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/dict.js",
+      "bytes": 13160,
+      "sha256": "e7984e1351e7441bbdabc2ed1ca58bbdce74a18f91e13ecda88e70842214ff37",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 11021,
+      "sha256": "d31ac8a40219842964ad9a9a1354cf67b4e475511ecdbbea1a47ff5900c92c76",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/logic.js",
+      "bytes": 12621,
+      "sha256": "cfe198cf8c57ab99547f1e8e57ec73d5964f56ade4c4f80a0833b3bcb93e886f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/seed.js",
+      "bytes": 4125,
+      "sha256": "08633541ec80b757152b0f2a9918169bd49061e8e50a4accd19b4196e78c4fe7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 1775,
+      "sha256": "278380a750459666a13ccba0571b2118d836627b6c693c571cedb471aff59fd9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/strings.js",
+      "bytes": 9818,
+      "sha256": "53750917824135fc4007a16c70b2e49be12d10873bcf1fed3396f66805aa36fd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/theme.js",
+      "bytes": 1569,
+      "sha256": "99afe89f6cbc5e4e32e701730610d5290b4d85a2ef2d54da86b85120ea7dcb93",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/types.js",
+      "bytes": 193,
+      "sha256": "6b73869476d85655eb613f0f93191a1975456d58d1633f03473158551842a096",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 8291,
+      "sha256": "522832e3aa3e522f74e768e03bade40eeaa2617cfbe5ec1db6de90667b8399ba",
+      "encoding": "utf8"
+    }
+  ]
+}

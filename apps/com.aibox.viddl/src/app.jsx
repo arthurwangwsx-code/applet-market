@@ -17,9 +17,9 @@
 
 import React from 'react'
 import { THEME_CSS, C, SPACE, formatBytes, formatSpeed, stateColor } from './components/theme.js'
-import { Button, Card, EmptyState, Notice, ProgressBar, SectionHeader, IconButton } from './components/primitives.jsx'
-import Icon from './components/Icon.jsx'
-import InspectSheet from './components/InspectSheet.jsx'
+import { Button, Card, EmptyState, Notice, ProgressBar, SectionHeader, IconButton } from './components/primitives.js'
+import Icon from './components/Icon.js'
+import InspectSheet from './components/InspectSheet.js'
 import {
   capabilities, onEvent, onNamespaceEvent, queue, readClipboard, tap, toolAllowed, toolBlockReason,
 } from './lib/host.js'

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-05T02:07:04Z",
+  "updatedAt": "2026-08-05T15:54:29Z",
   "appCount": 11,
   "apps": [
     {
@@ -248,16 +248,16 @@
       "icon": "timer",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.1.0",
-      "latestReleasedAt": "2026-08-05T01:27:38Z",
-      "versionCount": 4,
+      "latestVersion": "1.2.0",
+      "latestReleasedAt": "2026-08-05T15:54:07Z",
+      "versionCount": 5,
       "capabilities": [
         "haptics",
         "storage",
         "toast"
       ],
-      "latestTotalBytes": 28664,
-      "latestFileCount": 4,
+      "latestTotalBytes": 55769,
+      "latestFileCount": 10,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.timer",
       "localizedNames": {
@@ -283,9 +283,9 @@
       "icon": "arrow.down.to.line",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.5",
-      "latestReleasedAt": "2026-08-05T02:02:27Z",
-      "versionCount": 9,
+      "latestVersion": "1.2.0",
+      "latestReleasedAt": "2026-08-05T15:54:29Z",
+      "versionCount": 10,
       "capabilities": [
         "clipboard",
         "download",
@@ -296,8 +296,8 @@
         "toolbar",
         "tools"
       ],
-      "latestTotalBytes": 58863,
-      "latestFileCount": 4,
+      "latestTotalBytes": 93932,
+      "latestFileCount": 12,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.viddl",
       "localizedNames": {
@@ -324,9 +324,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "2.4.1",
-      "latestReleasedAt": "2026-08-05T02:02:29Z",
-      "versionCount": 8,
+      "latestVersion": "2.5.0",
+      "latestReleasedAt": "2026-08-05T15:54:15Z",
+      "versionCount": 9,
       "capabilities": [
         "ai",
         "audio",
@@ -337,8 +337,8 @@
         "tabs",
         "ui"
       ],
-      "latestTotalBytes": 207768,
-      "latestFileCount": 4,
+      "latestTotalBytes": 268124,
+      "latestFileCount": 20,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",
       "localizedNames": {
@@ -353,9 +353,9 @@
       "icon": "character.book.closed",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.1.0",
-      "latestReleasedAt": "2026-08-05T01:27:41Z",
-      "versionCount": 2,
+      "latestVersion": "1.2.0",
+      "latestReleasedAt": "2026-08-05T15:54:27Z",
+      "versionCount": 3,
       "capabilities": [
         "ai",
         "clipboard",
@@ -370,8 +370,8 @@
         "tts",
         "ui"
       ],
-      "latestTotalBytes": 170709,
-      "latestFileCount": 4,
+      "latestTotalBytes": 211774,
+      "latestFileCount": 23,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.wordstudy",
       "localizedNames": {

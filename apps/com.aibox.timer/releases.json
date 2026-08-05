@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.timer",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-05T15:54:07Z",
+      "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+      "fileCount": 10,
+      "totalBytes": 55769,
+      "path": "apps/com.aibox.timer/releases/1.2.0",
+      "localizedNotes": {
+        "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "66cdb023795a376dbdb1890fd7bf5ea74727fca8a82cb92dadb509729fb248ee"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-05T01:27:38Z",

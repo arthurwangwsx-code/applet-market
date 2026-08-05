@@ -1,6 +1,6 @@
 import { List } from 'antd-mobile';
-import type { Session } from '../lib/timer';
-import { formatDuration } from '../lib/timer';
+import type { Session } from '../lib/timer.js';
+import { formatDuration } from '../lib/timer.js';
 
 interface HistoryListProps {
   sessions: Session[];

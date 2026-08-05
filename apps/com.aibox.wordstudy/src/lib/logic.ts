@@ -2,11 +2,11 @@
 // 全部照抄规格 §11 §12 §7.6 §13.3 §16 —— 这些是"重进同一会话不能换题""判对规则"这类
 // 会被用户逐条对比的行为，任何"顺手优化"都会被看成缺陷。
 
-import { WORDS_SEED } from './seed'
+import { WORDS_SEED } from './seed.js'
 import type {
   ExerciseKind, LangCode, LookupHistoryItem, PronunciationScore, ReviewExercise, ReviewGrade,
   Suggestion, TranslateDirection, VocabItem, WordEntry, WordLookupPayload,
-} from './types'
+} from './types.js'
 
 // —— §11.2 意图识别（纯函数） ——
 
@@ -94,7 +94,9 @@ export function nextBox(box: number, grade: ReviewGrade): number {
 /** 无论哪种自评都会重排到期时间（"模糊"也会顺延一个同长度的间隔）。 */
 export function scheduleNext(box: number, grade: ReviewGrade, now = Date.now()): { box: number; nextReviewAt: number } {
   const box2 = nextBox(box, grade)
-  const days = INTERVAL_DAYS[Math.min(Math.max(box2, 0), 5)]
+  // `?? 1`：下标已经夹在 0..5，与 INTERVAL_DAYS 的 6 个盒一一对应；兜底值只是把这条不变量
+  // 写给类型系统看（noUncheckedIndexedAccess 下每次下标都是 `T | undefined`）。
+  const days = INTERVAL_DAYS[Math.min(Math.max(box2, 0), 5)] ?? 1
   return { box: box2, nextReviewAt: now + days * 86_400_000 }
 }
 
@@ -127,7 +129,8 @@ const KINDS: ExerciseKind[] = ['listening', 'cloze', 'spelling']
 
 /** **按队列位置轮换**，不是随机 —— 重进同一会话时题目必须一模一样。 */
 export function preferredKind(index: number): ExerciseKind {
-  return KINDS[((index % 3) + 3) % 3]
+  // 下标恒在 0..2（先取模再补正号再取模），`?? 'listening'` 只为满足 noUncheckedIndexedAccess。
+  return KINDS[((index % 3) + 3) % 3] ?? 'listening'
 }
 
 function escapeRegExp(text: string): string {
@@ -219,9 +222,14 @@ export function scorePronunciation(target: string, recognized: string): Pronunci
   const m = R.length
   // dp[i][j] = 从 T[i..] 与 R[j..] 起的 LCS 长度（从后往前填）。
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
+  // 读一个格子。`?? 0` 与 `fill(0)` 的初值一致 —— noUncheckedIndexedAccess 下每次下标都是
+  // `T | undefined`，而这里的行列全在循环边界内，兜底只是把不变量写给类型系统看，不改语义。
+  const at = (row: number, col: number): number => dp[row]?.[col] ?? 0
   for (let i = n - 1; i >= 0; i -= 1) {
+    const row = dp[i]
+    if (!row) continue
     for (let j = m - 1; j >= 0; j -= 1) {
-      dp[i][j] = T[i] === R[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+      row[j] = T[i] === R[j] ? at(i + 1, j + 1) + 1 : Math.max(at(i + 1, j), at(i, j + 1))
     }
   }
   const matched = new Set<number>()
@@ -232,7 +240,7 @@ export function scorePronunciation(target: string, recognized: string): Pronunci
       matched.add(i)
       i += 1
       j += 1
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) i += 1
+    } else if (at(i + 1, j) >= at(i, j + 1)) i += 1
     else j += 1
   }
   return {

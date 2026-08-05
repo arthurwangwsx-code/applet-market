@@ -1,8 +1,26 @@
-# TypeScript + Vite 工程
+# TypeScript 工程
 
 小应用的**推荐**开发方式：标准 TS React 工程，本地构建，上传产物，设备上零转译。
 
 纯 JSX（源码型）路径没有废弃，见 [authoring-guide.md](authoring-guide.md) §0 的取舍。
+
+> **⚠️ 2026-08 更新：构建管线已收敛到 `@aibox/applet-tsbuild`，Vite 那条退役。**
+>
+> 判据是既定标准「用 TS 写，装到机器上仍是可读 JS 且保持原结构」：出问题时设备上的文件
+> 与仓库源码一一对应、行号能对上。Vite 把一切压成一个 `dist/app.js`，排障时只能对着 bundle 猜。
+>
+> 与本文以下描述的差异（**§5 及各处 `vite build` 字样按此读**）：
+> - 构建命令是 `aibox-tsbuild`（`npm run build`），不是 `vite build`；`--check` 是 CI 的可复现闸门。
+> - `tsconfig.json` 继承 `@aibox/applet-tsbuild/tsconfig.base.json`；**没有** `vite.config.ts`。
+> - 入口是 `src/app.tsx` 的 `export default function App`；**没有** `src/main.tsx`，
+>   也**没有**应用根目录的 `index.html` —— 外壳（含原生 import map）由构建生成进 `dist/index.html`。
+> - 相对 import **必须带 `.js` 扩展名**（哪怕文件真身是 `.tsx`）：tsc 原样保留说明符，
+>   而 dist/ 里只有编译后的 `.js`，写错就是 404 白屏。
+> - 产物是 `dist/**` 逐文件 ESM（目录结构与 `src/**` 一一对应），不是单个 `app.js`。
+>
+> §1（两种运行时）、§2（external 名单与 import map）、§3（manifest）**完全不变** ——
+> 产物仍声明 `runtimeKind: "bundle"`，端上仍是零转译的原生 ESM。
+> 本文其余按 Vite 写的段落待重写。
 
 ---
 

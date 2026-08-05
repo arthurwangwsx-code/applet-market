@@ -4,7 +4,7 @@
 
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
 
 export function Icon({ name, size = 16, color }: { name: string; size?: number; color?: string }) {
   // 宿主的 SF Symbol 不在 WebView 里，用等价的 Unicode/emoji 字形近似（形状对齐，不追像素）。

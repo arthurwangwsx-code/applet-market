@@ -32,7 +32,7 @@
 //    （重写只发生在转译路径上）。少一个扩展名，浏览器就去请求一个不存在的路径，表现是白屏。
 //    所以源码里就要写 `./foo.js`（TS 的 bundler 解析允许这么写，实际文件是 `foo.tsx`）。
 // 2. **裸说明符只能是 import map 里那几个。** 宿主 import map 之外的裸 import 在运行时解析不到。
-// 3. **`@aibox/applet-sdk` 要落成本地生成文件。** tsc 不重写 paths（TS 的已知限制），
+// 3. **`@aibox/applet-sdk`（含 `/react` 子路径）要落成本地生成文件。** tsc 不重写 paths（TS 的已知限制），
 //    所以这里在产物上做一次确定性替换 → `./…/lib/aibox-sdk.js`，那个文件由 esbuild 从 SDK 打出来。
 //    它是**生成物不是分叉**：单一真值仍在 packages/aibox-sdk，与 bundle 应用签入 dist/ 同理。
 
@@ -58,6 +58,11 @@ export const HOST_BARE_SPECIFIERS = new Set([
 
 const SDK_SPECIFIER = '@aibox/applet-sdk'
 const SDK_LOCAL = 'lib/aibox-sdk.js'
+
+// SDK 的 React 子路径。它是**另一个入口**（hooks），不在 `dist/index.js` 的导出面里，
+// 所以要单独打一份。只有真用到时才 emit —— 否则已经在架上的 7 个应用会凭空多出一个产物文件。
+const SDK_REACT_SPECIFIER = '@aibox/applet-sdk/react'
+const SDK_REACT_LOCAL = 'lib/aibox-sdk-react.js'
 
 /** 从一段 JS 里抓出所有 import/export 说明符（含动态 import）。 */
 export function specifiersIn(code) {
@@ -92,11 +97,20 @@ export function verify(files) {
               `产物是原样伺服的，宿主不会替你补 '.js'，浏览器会去请求一个不存在的路径（白屏）。` +
               `源码里就写 './x.js'（TS 的 bundler 解析认这种写法）。`,
           )
+        } else if (/\.(tsx?|jsx)$/.test(spec)) {
+          // 比「缺扩展名」更阴：tsc **原样保留** import 说明符，不会把 '.jsx' 改写成 '.js'。
+          // 于是产物里留下一个指向源码扩展名的路径，而 dist/ 里只有 `.js` —— 404 白屏，
+          // 且「有扩展名」这条检查会放过它。源码里一律写 './x.js'，哪怕文件真身是 x.tsx。
+          problems.push(
+            `${rel}: 相对 import 指向源码扩展名 —— '${spec}'。` +
+              `tsc 不重写说明符，而 dist/ 里只有编译后的 '.js'，运行时会 404（白屏）。` +
+              `改成 '${spec.replace(/\.(tsx?|jsx)$/, '.js')}'。`,
+          )
         }
         continue
       }
       if (spec.startsWith('/') || /^[a-z]+:/i.test(spec)) continue
-      if (spec === SDK_SPECIFIER) {
+      if (spec === SDK_SPECIFIER || spec === SDK_REACT_SPECIFIER) {
         problems.push(`${rel}: 残留裸 SDK 说明符 '${spec}' —— 产物重写没覆盖到，请报告这个 case。`)
         continue
       }
@@ -195,19 +209,32 @@ function escapeHTML(value) {
   return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 }
 
-/** `@aibox/applet-sdk` → 相对路径（按该文件在 dist/ 下的深度算）。 */
+/** `@aibox/applet-sdk`（含 `/react` 子路径）→ 相对路径（按该文件在 dist/ 下的深度算）。 */
 function rewriteSDKSpecifier(code, relPath) {
   const depth = relPath.split('/').length - 1
   const prefix = depth === 0 ? './' : '../'.repeat(depth)
-  const target = `${prefix}${SDK_LOCAL}`
-  return code
-    .replaceAll(`'${SDK_SPECIFIER}'`, `'${target}'`)
-    .replaceAll(`"${SDK_SPECIFIER}"`, `"${target}"`)
+  // 长的写在前：带引号时 `'@aibox/applet-sdk'` 并不是 `'@aibox/applet-sdk/react'` 的前缀
+  // （闭合引号挡着），顺序其实无所谓；仍这么写，免得将来加子路径时踩到。
+  let out = code
+  for (const [specifier, local] of [
+    [SDK_REACT_SPECIFIER, SDK_REACT_LOCAL],
+    [SDK_SPECIFIER, SDK_LOCAL],
+  ]) {
+    const target = `${prefix}${local}`
+    out = out.replaceAll(`'${specifier}'`, `'${target}'`).replaceAll(`"${specifier}"`, `"${target}"`)
+  }
+  return out
 }
 
-/** 把 SDK 打成单文件 ESM，写进 dist/lib/aibox-sdk.js。 */
-async function bundleSDK(marketRoot, outFile) {
-  const entry = path.join(marketRoot, 'packages', 'aibox-sdk', 'dist', 'index.js')
+/**
+ * 把 SDK 的一个入口打成单文件 ESM（核心 → dist/lib/aibox-sdk.js，hooks → dist/lib/aibox-sdk-react.js）。
+ *
+ * `react` 恒 external：它由宿主随运行时资产提供、经 import map 解析。打进来就是**两份 React
+ * 实例**（宿主的 antd-mobile / aibox-ui 用宿主那份、hooks 用这份），useState 立刻炸。
+ * 核心入口本身不 import react，所以真正需要这条的是 `/react` 那份；两处写一致更稳。
+ */
+async function bundleSDKEntry(marketRoot, ...relEntry) {
+  const entry = path.join(marketRoot, 'packages', 'aibox-sdk', 'dist', ...relEntry)
   if (!fs.existsSync(entry)) {
     throw new Error(`SDK 产物不在：${entry} —— 先跑 npm run build --workspace @aibox/applet-sdk`)
   }
@@ -217,6 +244,7 @@ async function bundleSDK(marketRoot, outFile) {
     format: 'esm',
     target: 'safari17',
     platform: 'browser',
+    external: ['react'],
     write: false,
     legalComments: 'none',
     banner: {
@@ -226,9 +254,7 @@ async function bundleSDK(marketRoot, outFile) {
         '// 重新生成： npm run build --prefix apps/<id>',
     },
   })
-  const code = result.outputFiles[0].text
-  fs.mkdirSync(path.dirname(outFile), { recursive: true })
-  return code
+  return result.outputFiles[0].text
 }
 
 /**
@@ -248,8 +274,21 @@ export async function buildApplet({ appDir, check = false }) {
   const base = ts.readConfigFile(configPath, ts.sys.readFile)
   if (base.error) throw new Error(ts.flattenDiagnosticMessageText(base.error.messageText, '\n'))
 
+  // `paths` 里的相对项按 TS 5.0+ 的规则是**相对 tsconfig 文件**解析的；这里 basePath 传的是
+  // 应用的 src/，照抄过去会被错解成 `<app>/src/types/aibox-ui.d.ts`（不存在）→ TS2307。
+  // 所以先按本包目录绝对化。应用侧 `tsc -p tsconfig.json` 走的是正常继承路径，不受影响。
+  const baseOptions = { ...base.config.compilerOptions }
+  if (baseOptions.paths) {
+    baseOptions.paths = Object.fromEntries(
+      Object.entries(baseOptions.paths).map(([specifier, targets]) => [
+        specifier,
+        targets.map((target) => (target.startsWith('.') ? path.resolve(HERE, target) : target)),
+      ]),
+    )
+  }
+
   const parsed = ts.parseJsonConfigFileContent(
-    { ...base.config, include: ['**/*'], compilerOptions: { ...base.config.compilerOptions, outDir, rootDir: srcDir, noEmit: false } },
+    { ...base.config, include: ['**/*'], compilerOptions: { ...baseOptions, outDir, rootDir: srcDir, noEmit: false } },
     ts.sys,
     srcDir,
   )
@@ -280,7 +319,14 @@ export async function buildApplet({ appDir, check = false }) {
     throw new Error(`TypeScript 报错，未写盘：\n${text}`)
   }
 
-  emitted.set(SDK_LOCAL, await bundleSDK(marketRoot, path.join(outDir, SDK_LOCAL)))
+  emitted.set(SDK_LOCAL, await bundleSDKEntry(marketRoot, 'index.js'))
+
+  // hooks 那份**按需**才打：产物里出现指向它的路径才 emit。无条件带上会让不用 hooks 的应用
+  // 凭空多一个 dist 文件（`--check` 立刻判漂移，且发版包白白多几 KB）。
+  const usesSDKReact = [...emitted.values()].some(
+    (code) => typeof code === 'string' && code.includes(SDK_REACT_LOCAL),
+  )
+  if (usesSDKReact) emitted.set(SDK_REACT_LOCAL, await bundleSDKEntry(marketRoot, 'react', 'index.js'))
 
   // 自带外壳：宿主默认外壳硬编码 import('./app.jsx')，而本管线的入口是已编译的 app.js。
   const manifestPath = path.join(srcDir, 'manifest.json')

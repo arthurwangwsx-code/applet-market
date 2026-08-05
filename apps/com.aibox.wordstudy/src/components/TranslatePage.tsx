@@ -4,15 +4,15 @@
 // 语言名恒用母语名（`中文` / `English`），**不随界面语言翻译**。
 
 import { useEffect, useMemo, useState } from 'react'
-import { cryptoID, getTranslation, removeTranslation, saveTranslation } from '../lib/db'
-import { LookupError, translateStream } from '../lib/dict'
-import { copyText, speak } from '../lib/host'
-import { previewDirection } from '../lib/logic'
-import type { T } from '../lib/strings'
-import type { WordStore } from '../lib/store'
-import { RADIUS, SPACE, type Palette } from '../lib/theme'
-import type { LangCode, TranslateDirection, TranslationRecord } from '../lib/types'
-import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton } from './primitives'
+import { cryptoID, getTranslation, removeTranslation, saveTranslation } from '../lib/db.js'
+import { LookupError, translateStream } from '../lib/dict.js'
+import { copyText, speak } from '../lib/host.js'
+import { previewDirection } from '../lib/logic.js'
+import type { T } from '../lib/strings.js'
+import type { WordStore } from '../lib/store.js'
+import { RADIUS, SPACE, type Palette } from '../lib/theme.js'
+import type { LangCode, TranslateDirection, TranslationRecord } from '../lib/types.js'
+import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton } from './primitives.js'
 
 /** 语言名恒用母语名。 */
 const NATIVE_NAME: Record<LangCode, string> = { zh: '中文', en: 'English' }

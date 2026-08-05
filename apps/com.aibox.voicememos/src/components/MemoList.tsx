@@ -5,11 +5,11 @@
 // **列表行没有左滑操作**，只有长按菜单（重命名/删除都在里面，不重复暴露）。
 
 import { useMemo } from 'react'
-import { clockString, shortDate } from '../lib/format'
-import type { T } from '../lib/strings'
-import { RADIUS, SPACE, alpha, favouriteTint, type Palette } from '../lib/theme'
-import { DEFAULT_FILTER, filterIsActive, type Memo, type MemoFilter } from '../lib/types'
-import { Icon, SecondaryButton, Sheet } from './primitives'
+import { clockString, shortDate } from '../lib/format.js'
+import type { T } from '../lib/strings.js'
+import { RADIUS, SPACE, alpha, favouriteTint, type Palette } from '../lib/theme.js'
+import { DEFAULT_FILTER, filterIsActive, type Memo, type MemoFilter } from '../lib/types.js'
+import { Icon, SecondaryButton, Sheet } from './primitives.js'
 import { useRowGestures } from 'aibox/ui'
 
 export function MemoList(props: {

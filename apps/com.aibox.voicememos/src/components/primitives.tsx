@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import * as ui from 'aibox/ui'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
 
 /**
  * 图标 —— 画**真** SF Symbol（`applet://symbol/…`，aibox-ui ≥ 1.2.0）。

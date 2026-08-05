@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   cancelRecognizing, lookUpFromPhoto, partialTranscript, probeSpeech, recognize, shareWordContext,
   stopRecognizing, type SpeechUnavailable,
-} from '../lib/host'
-import { scorePronunciation } from '../lib/logic'
-import type { T } from '../lib/strings'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
-import type { PronunciationScore } from '../lib/types'
-import { EmptyState, Icon, PrimaryButton, SecondaryButton, Sheet } from './primitives'
+} from '../lib/host.js'
+import { scorePronunciation } from '../lib/logic.js'
+import type { T } from '../lib/strings.js'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
+import type { PronunciationScore } from '../lib/types.js'
+import { EmptyState, Icon, PrimaryButton, SecondaryButton, Sheet } from './primitives.js'
 
 // —— §8 跟读评分 ——
 

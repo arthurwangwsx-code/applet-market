@@ -1,7 +1,7 @@
 // 内置种子资源 —— 逐字取自原生 `Resources/daily-seed.json`（8 条）与 `words-seed.tsv`（20 行）。
 // 规格 §20.4：两个文件都很小，直接内联进 JS 常量最省事（不必再走 applet:// 读文件）。
 
-import type { DailySentence } from './types'
+import type { DailySentence } from './types.js'
 
 /** 每日一句种子池。AI 失败时按日期稳定取一条兜底。 */
 export const DAILY_SEED: Omit<DailySentence, 'dateKey'>[] = [
@@ -61,5 +61,6 @@ export function stableHash(text: string): number {
 /** 按 dateKey 从种子池稳定取一条。池为空时返回三个空串（与原生边界行为一致）。 */
 export function seedSentence(dateKey: string): Omit<DailySentence, 'dateKey'> {
   if (DAILY_SEED.length === 0) return { en: '', zh: '', author: '' }
-  return DAILY_SEED[stableHash(dateKey) % DAILY_SEED.length]
+  // 取模保证下标在池内；`??` 兜底与池为空时同一条返回值，只为满足 noUncheckedIndexedAccess。
+  return DAILY_SEED[stableHash(dateKey) % DAILY_SEED.length] ?? { en: '', zh: '', author: '' }
 }

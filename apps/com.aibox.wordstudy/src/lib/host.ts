@@ -4,7 +4,7 @@
 //  3. 没有 window.aibox 时（普通浏览器里预览）退化成 no-op，页面仍能跑。
 
 import { isAvailable, normalizeError } from '@aibox/applet-sdk'
-import type { Accent } from './types'
+import type { Accent } from './types.js'
 
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 

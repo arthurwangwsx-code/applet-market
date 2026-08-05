@@ -6,12 +6,12 @@
 
 ## 0. 先选一条路
 
-| | **TypeScript + Vite（推荐）** | 纯 JSX（快速原型） |
+| | **TypeScript 工程（推荐）** | 纯 JSX（快速原型） |
 |---|---|---|
 | 适合 | 要发布、要维护、有业务逻辑的应用 | 试想法、一次性小工具、AI 在设备上直接写 |
 | 类型 | 全量 `aibox.*` 类型 + manifest action 编译期校验 | 无 |
-| 上传的是 | 构建产物，**设备上零转译** | 源码，每次加载浏览器内 Sucrase 转译 |
-| 改一行 | 要重新 `vite build` | 存盘即生效 |
+| 上传的是 | 构建产物（`dist/**` 逐文件 ESM），**设备上零转译** | 源码，每次加载浏览器内 Sucrase 转译 |
+| 改一行 | 要重新 `npm run build`（`aibox-tsbuild`） | 存盘即生效 |
 | manifest 与代码对齐 | tsc 保证 | 全靠自觉 |
 | 文档 | **[typescript-workflow.md](typescript-workflow.md)** | 本文 |
 
@@ -302,6 +302,11 @@ node scripts/migrate-to-ts.mjs <appId> --in-place --force              # 就地�
 ```
 
 ### 工具做什么
+
+> **⚠️ 这个工具的产出形态已过时**：仓库里 11 个应用都迁完了，构建管线也已收敛到
+> `@aibox/applet-tsbuild`（见 [typescript-workflow.md](typescript-workflow.md) 顶部的更新说明）。
+> 现在的正确形态是：入口 `src/app.tsx`、无 `src/main.tsx`、无 `vite.config.ts`、无应用根 `index.html`、
+> 相对 import 一律带 `.js`。要新起一个应用就 `cp -r apps/com.aibox.timer`。
 
 1. `.jsx → .tsx`、`.js → .ts`，相对 import 的扩展名同步去掉
 2. 入口 `app.jsx → src/App.tsx`，新建 `src/main.tsx`（自挂载 + default 导出，两种外壳都能跑）

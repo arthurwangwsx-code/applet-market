@@ -1,0 +1,521 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.voicememos",
+  "version": "2.5.0",
+  "releasedAt": "2026-08-05T15:54:15Z",
+  "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+  "localizedNotes": {
+    "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+  },
+  "manifest": {
+    "name": "语音备忘录",
+    "localizedNames": {
+      "en": "Voice Memos"
+    },
+    "icon": "waveform",
+    "iconTintHex": "FF6B35",
+    "summary": "录音、转写与 AI 分析",
+    "localizedSummaries": {
+      "en": "Record, transcribe and analyze voice memos"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "runtimeKind": "bundle",
+    "securityMode": "secure",
+    "permissions": {
+      "network": false,
+      "networkAllowed": [],
+      "storage": true,
+      "ai": true,
+      "capabilities": [
+        "audio",
+        "share",
+        "clipboard",
+        "ui",
+        "haptics"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "sheet",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "scene": {
+      "overlay": {
+        "items": [
+          {
+            "id": "player",
+            "kind": "bar",
+            "icon": "waveform",
+            "title": "未播放",
+            "localizedTitles": {
+              "en": "Not Playing"
+            },
+            "hidden": true,
+            "controls": [
+              {
+                "id": "back15",
+                "icon": "gobackward.15"
+              },
+              {
+                "id": "toggle",
+                "icon": "play.fill",
+                "activeIcon": "pause.fill"
+              },
+              {
+                "id": "forward15",
+                "icon": "goforward.15"
+              }
+            ]
+          },
+          {
+            "id": "record",
+            "kind": "button",
+            "icon": "record.circle",
+            "activeIcon": "stop.circle.fill",
+            "title": "录音",
+            "localizedTitles": {
+              "en": "Record"
+            },
+            "tint": "danger",
+            "hidden": true
+          }
+        ]
+      },
+      "menu": {
+        "sections": [
+          {
+            "id": "ai",
+            "items": [
+              {
+                "id": "actionItems",
+                "title": "待办事项",
+                "localizedTitles": {
+                  "en": "Action Items"
+                },
+                "icon": "checklist",
+                "hidden": true
+              },
+              {
+                "id": "ask",
+                "title": "询问这段录音",
+                "localizedTitles": {
+                  "en": "Ask this recording"
+                },
+                "icon": "questionmark.bubble",
+                "hidden": true
+              },
+              {
+                "id": "cleanUp",
+                "title": "整理文本",
+                "localizedTitles": {
+                  "en": "Clean Up"
+                },
+                "icon": "wand.and.stars",
+                "role": "destructive",
+                "hidden": true
+              }
+            ]
+          },
+          {
+            "id": "share",
+            "items": [
+              {
+                "id": "shareTranscript",
+                "title": "分享原文",
+                "localizedTitles": {
+                  "en": "Share transcript"
+                },
+                "icon": "square.and.arrow.up",
+                "hidden": true
+              },
+              {
+                "id": "shareSummary",
+                "title": "分享摘要",
+                "localizedTitles": {
+                  "en": "Share summary"
+                },
+                "icon": "square.and.arrow.up",
+                "hidden": true
+              },
+              {
+                "id": "exportMd",
+                "title": "导出为 Markdown",
+                "localizedTitles": {
+                  "en": "Export as Markdown"
+                },
+                "icon": "doc.richtext",
+                "hidden": true
+              },
+              {
+                "id": "exportTxt",
+                "title": "导出为文本",
+                "localizedTitles": {
+                  "en": "Export as text"
+                },
+                "icon": "doc.plaintext",
+                "hidden": true
+              },
+              {
+                "id": "exportSrt",
+                "title": "导出为字幕",
+                "localizedTitles": {
+                  "en": "Export as subtitles"
+                },
+                "icon": "captions.bubble",
+                "hidden": true
+              }
+            ]
+          },
+          {
+            "id": "manage",
+            "items": [
+              {
+                "id": "rename",
+                "title": "重命名",
+                "localizedTitles": {
+                  "en": "Rename"
+                },
+                "icon": "pencil",
+                "hidden": true
+              }
+            ]
+          }
+        ]
+      },
+      "tabBar": {
+        "items": [
+          {
+            "id": "record",
+            "title": "录音",
+            "localizedTitles": {
+              "en": "Record"
+            },
+            "icon": "mic",
+            "selectedIcon": "mic.fill"
+          },
+          {
+            "id": "library",
+            "title": "文件夹",
+            "localizedTitles": {
+              "en": "Folders"
+            },
+            "icon": "folder",
+            "selectedIcon": "folder.fill"
+          },
+          {
+            "id": "settings",
+            "title": "设置",
+            "localizedTitles": {
+              "en": "Settings"
+            },
+            "icon": "gearshape",
+            "selectedIcon": "gearshape.fill"
+          }
+        ]
+      }
+    },
+    "actions": [
+      {
+        "id": "memo_list",
+        "name": "memo_list",
+        "displayName": "列出录音",
+        "summary": "Lists this app's voice recordings, newest first. Filter by a text query or favourites only. Read-only.",
+        "keywords": [
+          "voice memo",
+          "recording",
+          "audio note",
+          "list recordings",
+          "录音",
+          "语音备忘录",
+          "录音列表"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Match against the recording title.\"},\"favOnly\":{\"type\":\"boolean\",\"description\":\"Only favourited recordings.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_transcribe",
+        "name": "memo_transcribe",
+        "displayName": "转写录音",
+        "summary": "Transcribes one recording with Apple speech recognition and returns the text. It waits for completion, so a long recording can take minutes. Already-transcribed recordings return immediately; read them with memo_transcript.",
+        "keywords": [
+          "transcribe",
+          "speech to text",
+          "transcript",
+          "转写",
+          "转录",
+          "语音转文字"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 locale such as en_US or zh_CN. Defaults to the configured transcription language. Pass the language actually spoken — a mismatch produces garbage.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": true
+      },
+      {
+        "id": "memo_transcript",
+        "name": "memo_transcript",
+        "displayName": "读取转写",
+        "summary": "Returns the transcript of one recording: status and the full text. Prefers the speaker-corrected version when one exists. Read-only.",
+        "keywords": [
+          "transcript",
+          "read transcript",
+          "what was said",
+          "转写文本",
+          "转录内容",
+          "文稿"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"status\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_summarize",
+        "name": "memo_summarize",
+        "displayName": "生成摘要",
+        "summary": "Summarizes a recording's transcript and returns the summary text. Takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
+        "keywords": [
+          "summary",
+          "summarize",
+          "meeting notes",
+          "minutes",
+          "摘要",
+          "会议纪要",
+          "总结"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"template\":{\"type\":\"string\",\"enum\":[\"general\",\"meeting\",\"interview\",\"oneOnOne\",\"lecture\",\"podcast\"],\"description\":\"Summary shape; defaults to 'general'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"template\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "memo_action_items",
+        "name": "memo_action_items",
+        "displayName": "提取待办",
+        "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker actually stated one. Nothing is invented. Needs a completed transcript.",
+        "keywords": [
+          "action items",
+          "todo",
+          "tasks",
+          "decisions",
+          "follow up",
+          "待办",
+          "任务",
+          "决定"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"force\":{\"type\":\"boolean\",\"description\":\"Re-extract instead of returning the cached result.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "memo_ask",
+        "name": "memo_ask",
+        "displayName": "询问录音",
+        "summary": "Answers a question about one recording using only its transcript — nothing else. Use it instead of pulling the whole transcript when the user asks something specific about a long recording.",
+        "keywords": [
+          "ask",
+          "question",
+          "what did they say",
+          "询问录音",
+          "问答",
+          "录音里说了什么"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"question\":{\"type\":\"string\",\"description\":\"The question to answer from the transcript.\"}},\"required\":[\"id\",\"question\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_export",
+        "name": "memo_export",
+        "displayName": "导出文稿",
+        "summary": "Renders one recording as structured Markdown, plain text or SRT subtitles — title, created time, duration, summary, transcript, chapters, action items and translation, whichever exist. Returns the rendered text; it does not write a file.",
+        "keywords": [
+          "export",
+          "markdown",
+          "srt",
+          "subtitles",
+          "导出",
+          "字幕",
+          "文稿导出"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"format\":{\"type\":\"string\",\"enum\":[\"markdown\",\"text\",\"srt\"],\"description\":\"Output format; defaults to 'markdown'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"format\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      }
+    ]
+  },
+  "totalBytes": 268124,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 4274,
+      "sha256": "8a4d843de1fab1896b7fe3d36794901a60b108784bb5f285d6f93cc8a24abf21",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 43774,
+      "sha256": "a6cca04148dc70f2a4f5053be87132cd0ed5f329b95586c55c2ad3b790c30e80",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AiSheets.js",
+      "bytes": 11129,
+      "sha256": "de4aa840d9ad2510e89ead5fbdbe926c1f4790d2d0596d6dad1dec734d59157f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MemoDetail.js",
+      "bytes": 43855,
+      "sha256": "22d8e1d1198b1912d84bf47e0a2f877a28bac9cc1ce27ec36553e521e654a6dd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MemoList.js",
+      "bytes": 14206,
+      "sha256": "51ed7e5c2fb88150a5cbb5fb31483e2bc158f24c72d11c915025093912b465fd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 15828,
+      "sha256": "0e4ddde9262ef818927cdfa07da6dcf60775a76f6f4d6c30d2a79b944ed565a6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/RecordSheet.js",
+      "bytes": 8737,
+      "sha256": "8a7f2e8a727798f91a3dbd5505c0d6b59b8cfdcc5498f380f29a4b10531e0aff",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2791,
+      "sha256": "0288240d79678b338b5b7bc74e2a7545811e45e52c3dc1836fd667689463eb5c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 10461,
+      "sha256": "54714d27a7a686b01ac9bb476b9b5c0eb1bc99a63216d1adc985cf6922479669",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/ai.js",
+      "bytes": 15994,
+      "sha256": "d1c0a55e1d2de8c4b08511840f2f6af8e673b4dbbc0f544ab9a50c0b61471ec2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk-react.js",
+      "bytes": 6522,
+      "sha256": "e0d44612ede6bb96dedd4094046448df2fdb47bbb60514ee34cea96081aad0d1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 25527,
+      "sha256": "00dc3f39f761e4d617d85fc1941e01fd4d3589e1466015128e5d6452257d60b0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 7859,
+      "sha256": "e5e357d9ba0afa5320acb94d38dc079b36ebed7e60750ca8f1017253c1dda542",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/memos.js",
+      "bytes": 15940,
+      "sha256": "c47915d5cce8e05dddf8d4955ba33d04e711dc0b7f79fd4bdd2aba1999e03829",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/shell.js",
+      "bytes": 8235,
+      "sha256": "6978f39bf308bbc5fe45eaac27dd941c613d485b8216fec59bcf31ab1900b275",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 1886,
+      "sha256": "c902841b5cc7717747f6ea30fcf0c290a7d81414523f54b2e52021ea3dac04b8",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/strings.js",
+      "bytes": 15704,
+      "sha256": "8fd4fa1590114f118d5c24de392079d01b873273ee64c98596636a8fd95cc1e1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/theme.js",
+      "bytes": 2256,
+      "sha256": "5b3fd10b0760def0edd81b7673116783ece90b4a05ac25e9d71734f75f695bfb",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/types.js",
+      "bytes": 989,
+      "sha256": "d2230d73aeca03ae9bad2a62ee77bdd80f7151f0cb2aaa211df6ee8a9e1c6043",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 12157,
+      "sha256": "daa160281ac9d4c6e3de634a75ba984678841317c35bb03086419390df5a2f46",
+      "encoding": "utf8"
+    }
+  ]
+}

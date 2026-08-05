@@ -5,16 +5,16 @@
 //  · 回车 / 兜底「查询」行才过意图判定；「作为句子翻译」永远无条件走翻译。
 
 import { useEffect, useMemo, useState } from 'react'
-import { clearHistory, clearTranslations, getDaily, removeHistory, saveDaily, upsertVocab } from '../lib/db'
-import { generateDaily } from '../lib/dict'
-import { confirm, copyText, probeAI, speak } from '../lib/host'
-import { dateKeyOf, dueCount, resolveIntent, suggest } from '../lib/logic'
-import { seedSentence } from '../lib/seed'
-import { dueBanner, type Lang, type T } from '../lib/strings'
-import type { WordStore } from '../lib/store'
-import { SPACE, alpha, type Palette } from '../lib/theme'
-import type { DailySentence } from '../lib/types'
-import { ChipsFlow, DueBanner, EmptyState, Icon, InfoChip, Row, SectionHeader } from './primitives'
+import { clearHistory, clearTranslations, getDaily, removeHistory, saveDaily, upsertVocab } from '../lib/db.js'
+import { generateDaily } from '../lib/dict.js'
+import { confirm, copyText, probeAI, speak } from '../lib/host.js'
+import { dateKeyOf, dueCount, resolveIntent, suggest } from '../lib/logic.js'
+import { seedSentence } from '../lib/seed.js'
+import { dueBanner, type Lang, type T } from '../lib/strings.js'
+import type { WordStore } from '../lib/store.js'
+import { SPACE, alpha, type Palette } from '../lib/theme.js'
+import type { DailySentence } from '../lib/types.js'
+import { ChipsFlow, DueBanner, EmptyState, Icon, InfoChip, Row, SectionHeader } from './primitives.js'
 
 export function SearchPage(props: {
   palette: Palette

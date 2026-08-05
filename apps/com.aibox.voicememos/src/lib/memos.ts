@@ -25,10 +25,10 @@
 // ⚠️ 老用户在宿主录音库里的数据**原地不动**，本应用不读也不删它。
 //    2.0.0 是一次干净的切线，不是数据迁移。
 import { normalizeError, queryAll } from '@aibox/applet-sdk'
-import { hashText, snippetOf } from './format'
+import { hashText, snippetOf } from './format.js'
 import type {
   LocalClip, Memo, MemoArtifacts, SummaryTemplate, TranscriptSegment,
-} from './types'
+} from './types.js'
 
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 

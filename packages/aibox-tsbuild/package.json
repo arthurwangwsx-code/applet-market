@@ -7,7 +7,8 @@
   "main": "./index.mjs",
   "exports": {
     ".": "./index.mjs",
-    "./tsconfig.base.json": "./tsconfig.base.json"
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./types/aibox-ui.d.ts": "./types/aibox-ui.d.ts"
   },
   "bin": { "aibox-tsbuild": "./bin/aibox-tsbuild.mjs" },
   "dependencies": { "esbuild": "^0.25.0", "typescript": "^5.9.3" }

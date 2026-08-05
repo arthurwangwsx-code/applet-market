@@ -5,14 +5,14 @@
 //  · 会话锚点存的是**词面数组**（不是对象）+ 当前下标。
 
 import { useEffect, useMemo, useState } from 'react'
-import { loadAnchor, saveAnchor, saveReview } from '../lib/db'
-import { haptic, speak } from '../lib/host'
-import { dueQueue, isCorrect, planExercise, scheduleNext, tomorrowPreview } from '../lib/logic'
-import type { T } from '../lib/strings'
-import type { WordStore } from '../lib/store'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
-import type { ExerciseKind, ReviewGrade, VocabItem } from '../lib/types'
-import { Icon, PrimaryButton, PushPage } from './primitives'
+import { loadAnchor, saveAnchor, saveReview } from '../lib/db.js'
+import { haptic, speak } from '../lib/host.js'
+import { dueQueue, isCorrect, planExercise, scheduleNext, tomorrowPreview } from '../lib/logic.js'
+import type { T } from '../lib/strings.js'
+import type { WordStore } from '../lib/store.js'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
+import type { ExerciseKind, ReviewGrade, VocabItem } from '../lib/types.js'
+import { Icon, PrimaryButton, PushPage } from './primitives.js'
 
 export function ReviewPage(props: {
   palette: Palette

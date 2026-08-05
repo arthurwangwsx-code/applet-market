@@ -1,6 +1,6 @@
 // 时长 / 日期 / 导出格式（规格 §15）。负值 / NaN / 无穷一律按 0 秒处理。
 
-import type { ActionItem, Chapter, CorrectionTurn, Memo } from './types'
+import type { ActionItem, Chapter, CorrectionTurn, Memo } from './types.js'
 
 function safeSeconds(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0

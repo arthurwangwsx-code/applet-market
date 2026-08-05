@@ -3,8 +3,8 @@
 // `aibox.audio.transcribe` 补上之后合并没有了理由，也就没有了「宿主模块不在场时半个应用变空」的风险。
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { clipToMemo, listClips, loadSetting, saveSetting } from './memos'
-import { DEFAULT_SETTINGS, type LocalClip, type Memo, type Settings } from './types'
+import { clipToMemo, listClips, loadSetting, saveSetting } from './memos.js'
+import { DEFAULT_SETTINGS, type LocalClip, type Memo, type Settings } from './types.js'
 
 export interface MemoStore {
   ready: boolean

@@ -17,7 +17,7 @@
 //    所以复刻版的校正段**不带时间戳**，而不是把模型编的秒数当真显示出来。
 
 import { normalizeError } from '@aibox/applet-sdk'
-import type { ActionItem, ActionItemKind, Chapter, CorrectionTurn, SpeakerMode, SummaryTemplate } from './types'
+import type { ActionItem, ActionItemKind, Chapter, CorrectionTurn, SpeakerMode, SummaryTemplate } from './types.js'
 
 /** 长文本截断口径，与原生一致（8000 字符）。 */
 const MAX_CHARS = 8000
@@ -312,7 +312,9 @@ export function speakerDisplayName(label: string, index: number, template: strin
   const trimmed = label.trim()
   if (!trimmed) return template.replace('{n}', String(index + 1))
   const match = /^S(\d+)$/i.exec(trimmed)
-  if (match) return template.replace('{n}', match[1])
+  // 捕获组在 noUncheckedIndexedAccess 下是 `string | undefined`；正则匹配成功即必有 group 1，
+  // 兜底回 `trimmed` 只为满足类型系统。
+  if (match) return template.replace('{n}', match[1] ?? trimmed)
   return trimmed
 }
 

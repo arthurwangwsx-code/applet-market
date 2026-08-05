@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.timer",
+  "version": "1.2.0",
+  "releasedAt": "2026-08-05T15:54:07Z",
+  "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+  "localizedNotes": {
+    "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+  },
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "计时器",
+    "localizedNames": {
+      "en": "Timer"
+    },
+    "icon": "timer",
+    "iconTintHex": "3A86C8",
+    "summary": "番茄钟与秒表，本地记录",
+    "localizedSummaries": {
+      "en": "Pomodoro timer and stopwatch with local history"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "runtimeKind": "bundle",
+    "securityMode": "secure",
+    "permissions": {
+      "storage": true,
+      "capabilities": [
+        "haptics",
+        "toast"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "sheet",
+        "fullscreen"
+      ]
+    },
+    "actions": [
+      {
+        "id": "timer_start",
+        "name": "start",
+        "displayName": "开始计时",
+        "summary": "Starts a countdown. Pass \"minutes\" (1-180) or \"seconds\" for a precise duration; omit both for the default 25-minute focus block. Optional \"label\" names the session so it is recognisable in history.",
+        "keywords": [
+          "timer",
+          "countdown",
+          "pomodoro",
+          "focus",
+          "计时",
+          "番茄钟",
+          "倒计时"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"minutes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":180,\"description\":\"Duration in whole minutes (1-180).\"},\"seconds\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10800,\"description\":\"Duration in seconds; wins over minutes when both are given.\"},\"label\":{\"type\":\"string\",\"description\":\"What this session is for, e.g. \\\"write report\\\".\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"remainingSeconds\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"remainingSeconds\":{\"type\":\"integer\"},\"label\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "timer_status",
+        "name": "status",
+        "displayName": "查看状态",
+        "summary": "Reports whether a timer is running and how much time is left. Read-only.",
+        "keywords": [
+          "timer",
+          "status",
+          "remaining",
+          "剩余",
+          "状态"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"running\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"running\":{\"type\":\"boolean\"},\"remainingSeconds\":{\"type\":\"integer\"},\"label\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "timer_stop",
+        "name": "stop",
+        "displayName": "停止计时",
+        "summary": "Stops the running timer. Set \"record\" to true to still write it into history as an interrupted session.",
+        "keywords": [
+          "timer",
+          "stop",
+          "cancel",
+          "停止",
+          "取消"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"record\":{\"type\":\"boolean\",\"description\":\"Write the partial session into history. Default false.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"stopped\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"stopped\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": true
+      }
+    ]
+  },
+  "totalBytes": 55769,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 1912,
+      "sha256": "2ae9567a4b26ab6ca8455f974a81ef44f4ff1a9064f65d0c58365eab313506b2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 6070,
+      "sha256": "5620873b22efdcb5db81fe71c7c8ceb4cd7880b613055c4bc7afe3850c7cf309",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Dial.js",
+      "bytes": 1701,
+      "sha256": "1e14f932357bcf9a52248a96d4add1311a0ddd10f45d6b62744c4518e61d5d65",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/HistoryList.js",
+      "bytes": 1223,
+      "sha256": "801eec96ad2406a8badd5c57e77769d4e5cd4778ef564c2df52fdf78a41e3e0a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2785,
+      "sha256": "d9f7d783293e014a79bec2d8f4a65d56b1140d58626b972f2de29080079ea501",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 3064,
+      "sha256": "b5cf19c067e25f1582cf647d5ab541abf92828a79f3411673cfaf458be2f948e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk-react.js",
+      "bytes": 6522,
+      "sha256": "e0d44612ede6bb96dedd4094046448df2fdb47bbb60514ee34cea96081aad0d1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 25527,
+      "sha256": "00dc3f39f761e4d617d85fc1941e01fd4d3589e1466015128e5d6452257d60b0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/timer.js",
+      "bytes": 3453,
+      "sha256": "ed31863d9333a04d2d0d60f2fd6e5a522febd2c7c67980146e61a7df41f0c5e9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 3512,
+      "sha256": "316726570a9b30241a2ed3d87cc049bf3c279bd840d0831358abd8c6a2279382",
+      "encoding": "utf8"
+    }
+  ]
+}

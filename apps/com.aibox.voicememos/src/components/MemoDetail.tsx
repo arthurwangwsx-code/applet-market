@@ -12,19 +12,19 @@
 //  · 播放是页面自己的 `<audio>` → 有真 scrubber、有已播时间、进度与波形逐帧同步。
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { correct, summarize, translate, speakerDisplayName, TRANSLATION_LANGS, LANG_NAME, type TranslationLang } from '../lib/ai'
-import { clockFlat, clockString, hashText } from '../lib/format'
-import { chapters as generateChapters } from '../lib/ai'
+import { correct, summarize, translate, speakerDisplayName, TRANSLATION_LANGS, LANG_NAME, type TranslationLang } from '../lib/ai.js'
+import { clockFlat, clockString, hashText } from '../lib/format.js'
+import { chapters as generateChapters } from '../lib/ai.js'
 import {
   listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
-} from '../lib/memos'
-import type { T } from '../lib/strings'
-import { RADIUS, SPACE, alpha, speakerPalette, type Palette } from '../lib/theme'
+} from '../lib/memos.js'
+import type { T } from '../lib/strings.js'
+import { RADIUS, SPACE, alpha, speakerPalette, type Palette } from '../lib/theme.js'
 import type {
   ActionItem, Chapter, Memo, MemoArtifacts, MemoTranscript, Settings, SpeakerMode, SummaryTemplate,
   TranscriptSegment,
-} from '../lib/types'
-import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton, Sheet } from './primitives'
+} from '../lib/types.js'
+import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton, Sheet } from './primitives.js'
 
 type DetailTab = 'summary' | 'original' | 'corrected' | 'translation'
 
@@ -1036,7 +1036,8 @@ async function decodePeaks(url: string, buckets: number): Promise<number[]> {
       let peak = 0
       const start = index * size
       for (let offset = 0; offset < size && start + offset < channel.length; offset += 1) {
-        const value = Math.abs(channel[start + offset])
+        // `?? 0`：内层条件已保证 `start + offset < channel.length`，`?? 0` 只是把它写给类型系统看。
+        const value = Math.abs(channel[start + offset] ?? 0)
         if (value > peak) peak = value
       }
       peaks.push(peak)

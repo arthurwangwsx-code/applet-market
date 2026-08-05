@@ -4,7 +4,7 @@
 // 同族命令式弹层风险相同；自绘的 fixed 覆盖层在 WebView 里行为确定。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, RADIUS, SPACE } from './theme.js'
 
 export function Card({ children, padding = SPACE.s4, style }) {

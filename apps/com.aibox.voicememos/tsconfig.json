@@ -1,4 +1,6 @@
 {
-  "extends": "@aibox/applet-vite/tsconfig.base.json",
-  "include": ["src", "vite.config.ts"]
+  "extends": "@aibox/applet-tsbuild/tsconfig.base.json",
+  "include": [
+    "src"
+  ]
 }

@@ -5,13 +5,13 @@
 // 文本而不是一个 memoID。少一层「宿主按 id 去自己的库里找那段文字」的间接，也就少一条会断的线。
 
 import { useEffect, useState } from 'react'
-import { clockString } from '../lib/format'
-import { actionItems as extractActionItems, ask as askAI, cleanTranscript as cleanUpAI } from '../lib/ai'
-import { listClips, saveArtifacts, saveClip } from '../lib/memos'
-import type { T } from '../lib/strings'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
-import type { ActionItem, ActionItemKind, MemoArtifacts } from '../lib/types'
-import { EmptyState, Icon, PrimaryButton, SecondaryButton, Sheet } from './primitives'
+import { clockString } from '../lib/format.js'
+import { actionItems as extractActionItems, ask as askAI, cleanTranscript as cleanUpAI } from '../lib/ai.js'
+import { listClips, saveArtifacts, saveClip } from '../lib/memos.js'
+import type { T } from '../lib/strings.js'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
+import type { ActionItem, ActionItemKind, MemoArtifacts } from '../lib/types.js'
+import { EmptyState, Icon, PrimaryButton, SecondaryButton, Sheet } from './primitives.js'
 
 export function ActionItemsSheet(props: {
   palette: Palette

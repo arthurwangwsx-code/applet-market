@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "2.4.1",
+  "latestVersion": "2.5.0",
   "releases": [
+    {
+      "version": "2.5.0",
+      "releasedAt": "2026-08-05T15:54:15Z",
+      "notes": "构建管线收敛到 aibox-tsbuild：产物从单个 app.js 换成与源码 1:1 的多文件 ESM，排障时设备上的文件与仓库源码对得上。运行时形态不变（仍是预构建 bundle，端上零转译），功能与界面无改动。",
+      "fileCount": 20,
+      "totalBytes": 268124,
+      "path": "apps/com.aibox.voicememos/releases/2.5.0",
+      "localizedNotes": {
+        "en": "Build pipeline converged onto aibox-tsbuild: the bundle is now structure-preserving multi-file ESM that maps 1:1 to the sources instead of a single app.js. Runtime shape is unchanged (still a prebuilt bundle, zero on-device transpilation); no functional or UI changes."
+      },
+      "bundleSha256": "7f47b4a872a58aa784666e37c6209e8068cf37901062abbf81e44d284169d1fa"
+    },
     {
       "version": "2.4.1",
       "releasedAt": "2026-08-05T02:02:29Z",

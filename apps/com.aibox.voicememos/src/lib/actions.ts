@@ -9,12 +9,12 @@
 // 所以每条 action 的 `keywords` 必须写足中英双语，`tool_search` 全靠它命中。
 
 import { registerActions } from '@aibox/applet-sdk'
-import { actionItems as extractActionItems, ask as askAI, summarize } from './ai'
-import { clockString, exportMarkdown, exportSRT, exportText, hashText, shortDate } from './format'
+import { actionItems as extractActionItems, ask as askAI, summarize } from './ai.js'
+import { clockString, exportMarkdown, exportSRT, exportText, hashText, shortDate } from './format.js'
 import {
   clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
-} from './memos'
-import type { LocalClip, Memo, SummaryTemplate } from './types'
+} from './memos.js'
+import type { LocalClip, Memo, SummaryTemplate } from './types.js'
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''

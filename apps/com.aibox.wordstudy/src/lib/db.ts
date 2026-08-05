@@ -10,7 +10,7 @@ import { queryAll, removeMany } from '@aibox/applet-sdk'
 
 import type {
   DailySentence, LookupHistoryItem, TranslationRecord, VocabItem, WordEntry, WordLookupPayload,
-} from './types'
+} from './types.js'
 
 const COLLECTIONS = {
   entries: 'wordEntries',

@@ -2,25 +2,26 @@
   "name": "@aibox-app/timer",
   "private": true,
   "version": "1.0.0",
-  "description": "计时器 —— TypeScript + Vite 标准工程范例。",
+  "description": "计时器 —— TypeScript 标准工程范例（源码型：TS 开发、保结构 JS 产物）。",
   "type": "module",
   "scripts": {
     "gen:actions": "node -e \"import('@aibox/applet-vite').then(async m=>{const fs=await import('node:fs');fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\"",
-    "typecheck": "tsc --noEmit",
-    "build": "vite build",
-    "build:ci": "vite build --mode production"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "aibox-tsbuild",
+    "build:ci": "aibox-tsbuild",
+    "check:build": "aibox-tsbuild --check"
   },
   "dependencies": {
     "@aibox/applet-sdk": "^1.0.0"
   },
   "devDependencies": {
+    "@aibox/applet-tsbuild": "^1.0.0",
     "@aibox/applet-vite": "^1.0.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "antd-mobile": "^5.38.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "typescript": "^5.9.3",
-    "vite": "^6.3.5",
-    "antd-mobile": "^5.38.1"
+    "typescript": "^5.9.3"
   }
 }

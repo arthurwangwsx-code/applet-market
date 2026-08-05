@@ -12,10 +12,10 @@ import { registerActions } from '@aibox/applet-sdk'
 import {
   cryptoID, getEntry, listVocab, normalizeTerm, recordHistory, removeVocab, saveTranslation,
   upsertEntry, upsertVocab,
-} from './db'
-import { LookupError, lookupWord, translateText } from './dict'
-import { formatEntryText, formatVocabList, previewDirection } from './logic'
-import type { LangCode, TranslateDirection, VocabItem } from './types'
+} from './db.js'
+import { LookupError, lookupWord, translateText } from './dict.js'
+import { formatEntryText, formatVocabList, previewDirection } from './logic.js'
+import type { LangCode, TranslateDirection, VocabItem } from './types.js'
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''

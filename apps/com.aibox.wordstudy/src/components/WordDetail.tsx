@@ -6,16 +6,16 @@
 //  · 骨架屏一次成页，**不做流式拼装**（保排版稳定）。
 
 import { useEffect, useMemo, useState } from 'react'
-import { getEntry, recordHistory, removeVocab, replaceEntry, upsertVocab } from '../lib/db'
-import { LookupError, lookupWord } from '../lib/dict'
-import { copyText, shareText, speak } from '../lib/host'
-import { formatEntryText } from '../lib/logic'
-import { sourceLabel, type T } from '../lib/strings'
-import type { WordStore } from '../lib/store'
-import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme'
-import type { WordLookupPayload } from '../lib/types'
-import { ChipsFlow, EmptyState, Icon, InfoChip, PrimaryButton, PushPage, SectionHeader } from './primitives'
-import { pickAction } from './SearchPage'
+import { getEntry, recordHistory, removeVocab, replaceEntry, upsertVocab } from '../lib/db.js'
+import { LookupError, lookupWord } from '../lib/dict.js'
+import { copyText, shareText, speak } from '../lib/host.js'
+import { formatEntryText } from '../lib/logic.js'
+import { sourceLabel, type T } from '../lib/strings.js'
+import type { WordStore } from '../lib/store.js'
+import { RADIUS, SPACE, alpha, type Palette } from '../lib/theme.js'
+import type { WordLookupPayload } from '../lib/types.js'
+import { ChipsFlow, EmptyState, Icon, InfoChip, PrimaryButton, PushPage, SectionHeader } from './primitives.js'
+import { pickAction } from './SearchPage.js'
 
 interface Meta { isCached: boolean; source: string | null }
 

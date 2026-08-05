@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.ledger",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.3.0",
   "releases": [
+    {
+      "version": "1.3.0",
+      "releasedAt": "2026-08-05T17:06:50Z",
+      "notes": "新增扫小票记账：选图后端上 OCR（图不上传、不进模型），自动填金额/商家/日期，识别外币并在与账户币种不符时提示",
+      "fileCount": 49,
+      "totalBytes": 496236,
+      "path": "apps/com.aibox.ledger/releases/1.3.0",
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "a62e4eb728c373d16c967b84fd66255731a88719d54f6ea0996ed41b5c6ba736"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-05T01:27:53Z",

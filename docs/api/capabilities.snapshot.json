@@ -2785,6 +2785,35 @@
       "group": "system"
     },
     {
+      "namespace": "vision",
+      "summary": "Read the text out of an image your applet already has — a photo the user picked, a screenshot, a scanned receipt. Runs entirely ON DEVICE (Vision framework); the image never leaves the phone and never goes to a model. This is the one to use for images from aibox.picker.photo/file; aibox.photos.ocr is a different thing (it reads images attached to the CHAT, not yours).",
+      "methods": [
+        {
+          "name": "recognizeText",
+          "summary": "OCR an image resource you own. Pass the handle you got back from picker.photo or picker.file. Returns the text in reading order, newline-separated. Empty text means no readable text was found — that is a normal outcome, not an error, so tell the user rather than retrying.",
+          "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\",\"description\":\"Resource handle from aibox.picker.photo() or picker.file().\"},\"languages\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Recognition language priority, e.g. [\\\"zh-Hans\\\",\\\"en\\\"]. Defaults to Chinese then English.\"}},\"additionalProperties\":false}",
+          "resultSummary": "{ok:boolean, text:string, empty:boolean}",
+          "resultSchemaJSON": null,
+          "effect": "read",
+          "example": "const picked = await aibox.picker.photo({ limit: 1 })\nconst { text } = await aibox.vision.recognizeText({ handle: picked.resources[0].handle })",
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift"
+        },
+        {
+          "name": "availability",
+          "summary": "Whether on-device text recognition exists in this build. Hide the scan entry point instead of letting a tap do nothing.",
+          "parametersJSON": "{}",
+          "resultSummary": "{available:boolean}",
+          "resultSchemaJSON": null,
+          "effect": "read",
+          "example": null,
+          "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift"
+        }
+      ],
+      "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift",
+      "kind": "descriptor",
+      "group": "system"
+    },
+    {
       "namespace": "voiceMemos",
       "summary": "Remote-control the host Voice Memos module: browse, transcribe and analyze entries in the USER'S OWN memo library. CHOOSING BETWEEN aibox.voiceMemos AND aibox.audio — ask one question: should the result show up in the user's own Voice Memos library? If yes, use this namespace. If no, use aibox.audio instead: recordStart here opens the host's full-screen recorder ON TOP of your applet and files the result into the user's library (they end up with junk entries they never asked for), and you get back neither the audio bytes nor a live level meter. This whole namespace is a projection of a host module — it reports unavailable on builds where that module is not installed, whereas aibox.audio is always present.",
       "methods": [
@@ -3053,6 +3082,7 @@
     "tts",
     "ui",
     "video",
+    "vision",
     "voiceMemos"
   ],
   "alwaysAvailable": [

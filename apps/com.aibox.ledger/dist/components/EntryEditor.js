@@ -12,6 +12,8 @@ import { currencySymbol } from '../lib/currencies.js';
 import { money, plainMajor } from '../lib/money.js';
 import { isoDay, parseISODay } from '../lib/dates.js';
 import { lastAccountID, sortRootCategoriesByRecency } from '../lib/prefs.js';
+import { scanImageText, capabilities as hostCaps } from '../lib/host.js';
+import { parseReceipt } from '../lib/receipt.js';
 const KEYS = [
     ['7', '8', '9', '÷'],
     ['4', '5', '6', '×'],
@@ -20,6 +22,64 @@ const KEYS = [
     ['=', '(', ')', 'C'],
 ];
 const OPERATOR_KEYS = new Set(['+', '−', '×', '÷', '=']);
+/**
+ * 扫小票填单。
+ *
+ * **只填空栏、不覆盖用户已经填的**——用户可能先手输了金额再想扫一下补商家，
+ * 把他填的东西冲掉是最容易招致不信任的那种"智能"。
+ *
+ * 币种认出来但与所选账户不一致时**只提示、不自动改账户**：改账户会连带改掉
+ * 余额归属，那是比填错金额更重的副作用，必须由用户点头。
+ */
+function useReceiptScan({ t, setInput, setMerchant, setDay, amountFilled, merchantFilled, accountCurrency }) {
+    const [scanning, setScanning] = React.useState(false);
+    const [scanHint, setScanHint] = React.useState('');
+    const scan = React.useCallback(async () => {
+        if (scanning)
+            return;
+        setScanning(true);
+        setScanHint('');
+        try {
+            const res = await scanImageText();
+            if (!res.ok) {
+                setScanHint(res.reason === 'cancelled' ? ''
+                    : res.reason === 'noVision' ? t('entry.scanNoVision')
+                        : t('entry.scanFailed'));
+                return;
+            }
+            if (res.empty) {
+                setScanHint(t('entry.scanEmpty'));
+                return;
+            }
+            const parsed = parseReceipt(res.text);
+            const notes = [];
+            if (parsed.amount != null && !amountFilled) {
+                setInput(String(parsed.amount));
+                if (!parsed.amountConfident)
+                    notes.push(t('entry.scanCheckAmount'));
+            }
+            if (parsed.payee && !merchantFilled)
+                setMerchant(parsed.payee);
+            if (parsed.date)
+                setDay(isoDay(parsed.date));
+            // 币种：只在与所选账户的币种**不同**时说一声，绝不自动换账户 ——
+            // 换账户会连带改掉余额归属，那个副作用比填错金额更重，必须用户点头。
+            if (parsed.currency && accountCurrency && parsed.currency !== accountCurrency) {
+                notes.push(t('entry.scanCurrencyMismatch')
+                    .replace('{found}', parsed.currency)
+                    .replace('{account}', accountCurrency));
+            }
+            setScanHint(notes.length ? notes.join(' ') : t('entry.scanDone'));
+        }
+        catch (error) {
+            setScanHint(t('entry.scanFailed'));
+        }
+        finally {
+            setScanning(false);
+        }
+    }, [scanning, t, setInput, setMerchant, setDay, amountFilled, merchantFilled, accountCurrency]);
+    return { scan, scanning, scanHint, setScanHint };
+}
 export default function EntryEditor({ ctx, editing, onClose }) {
     const { store, t, locale, actions, canMutate } = ctx;
     const isEditing = !!editing;
@@ -66,6 +126,21 @@ export default function EntryEditor({ ctx, editing, onClose }) {
     const [day, setDay] = React.useState(() => isoDay(editing ? editing.occurredOn : Date.now()));
     const [tags, setTags] = React.useState(editing ? (editing.tags ?? []).join(', ') : '');
     const [reimbursable, setReimbursable] = React.useState(editing ? !!editing.reimbursable : false);
+    // 扫小票填单。当前所选账户的币种用于「票面币种与账户不符」的提示。
+    const scanAccountID = type === 'transfer' ? fromAccountID : accountID;
+    const scanCurrency = React.useMemo(() => {
+        const acct = scanAccountID ? store.account(scanAccountID) : null;
+        return acct ? acct.currency : null;
+    }, [store, scanAccountID]);
+    const receipt = useReceiptScan({
+        t,
+        setInput,
+        setMerchant,
+        setDay,
+        amountFilled: String(input || '').trim().length > 0,
+        merchantFilled: String(merchant || '').trim().length > 0,
+        accountCurrency: scanCurrency,
+    });
     const [refundOfID, setRefundOfID] = React.useState(editing ? editing.refundOfID : null);
     const [expanded, setExpanded] = React.useState(false);
     const [menu, setMenu] = React.useState(null);
@@ -215,7 +290,12 @@ export default function EntryEditor({ ctx, editing, onClose }) {
                                             onDone: setSplit,
                                         }), children: _jsx("span", { style: { fontSize: 15, color: C.muted }, children: split && (split.shares ?? []).length > 0
                                                 ? `${t(`ent.${split.mode}`)} · ${t('ent.people', split.shares.length)}`
-                                                : t('ent.notSplit') }) })] })) : null, _jsx(FieldCard, { icon: "storefront", label: t('ent.merchant'), children: _jsx("input", { className: "lg-field lg-clamp-1", style: { textAlign: 'right', fontSize: 15 }, value: merchant, onChange: (event) => setMerchant(event.target.value) }) }), _jsx(FieldCard, { icon: "calendar", label: t('x.date'), children: _jsx("input", { className: "lg-field", type: "date", style: { textAlign: 'right', fontSize: 15 }, value: day, onChange: (event) => setDay(event.target.value) }) }), _jsx(FieldCard, { icon: "text.alignleft", label: t('x.note'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: note, onChange: (event) => setNote(event.target.value) }) }), type !== 'transfer' ? (_jsxs(_Fragment, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => setExpanded((value) => !value), style: { display: 'flex', alignItems: 'center', gap: 6, padding: `${SPACE.s2}px 4px`, color: C.muted, fontSize: 14 }, children: [_jsx(Icon, { name: "slider.horizontal.3", size: 14, color: C.muted }), _jsx("span", { children: t('ent.moreDetails') }), _jsx(Icon, { name: expanded ? 'chevron.up' : 'chevron.down', size: 10, color: C.muted })] }), expanded ? (_jsxs(_Fragment, { children: [_jsx(FieldCard, { icon: "tag", label: t('ent.tags'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: tags, onChange: (event) => setTags(event.target.value) }) }), _jsx(FieldCard, { icon: "briefcase", label: t('ent.reimbursable'), children: _jsx(Toggle, { checked: reimbursable, onChange: setReimbursable }) }), type === 'income' && refundCandidates.length > 0 ? (_jsx(FieldCard, { icon: "arrow.uturn.left.circle.fill", label: t('ent.refundOf'), onClick: () => setMenu('refund'), children: _jsx("span", { className: "lg-clamp-1", style: { fontSize: 15, color: C.ink }, children: refundOfID ? refundLabel(store, refundOfID, t) : t('ent.notLinked') }) })) : null] })) : null] })) : null] })] }), _jsxs("div", { style: {
+                                                : t('ent.notSplit') }) })] })) : null, _jsx(FieldCard, { icon: "storefront", label: t('ent.merchant'), children: _jsx("input", { className: "lg-field lg-clamp-1", style: { textAlign: 'right', fontSize: 15 }, value: merchant, onChange: (event) => setMerchant(event.target.value) }) }), hostCaps.vision ? (_jsx(FieldCard, { icon: "doc.text.viewfinder", label: t('entry.scanLabel'), children: _jsx("button", { type: "button", className: "lg-press", onClick: receipt.scan, disabled: receipt.scanning || !canMutate, style: {
+                                        border: 'none', background: 'transparent', color: C.brand,
+                                        fontSize: 15, padding: 0,
+                                    }, children: receipt.scanning ? t('entry.scanning') : t('entry.scanAction') }) })) : null, receipt.scanHint ? (_jsx("div", { style: {
+                                    padding: '6px 14px 0', fontSize: 12, color: C.muted, lineHeight: 1.5,
+                                }, children: receipt.scanHint })) : null, _jsx(FieldCard, { icon: "calendar", label: t('x.date'), children: _jsx("input", { className: "lg-field", type: "date", style: { textAlign: 'right', fontSize: 15 }, value: day, onChange: (event) => setDay(event.target.value) }) }), _jsx(FieldCard, { icon: "text.alignleft", label: t('x.note'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: note, onChange: (event) => setNote(event.target.value) }) }), type !== 'transfer' ? (_jsxs(_Fragment, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => setExpanded((value) => !value), style: { display: 'flex', alignItems: 'center', gap: 6, padding: `${SPACE.s2}px 4px`, color: C.muted, fontSize: 14 }, children: [_jsx(Icon, { name: "slider.horizontal.3", size: 14, color: C.muted }), _jsx("span", { children: t('ent.moreDetails') }), _jsx(Icon, { name: expanded ? 'chevron.up' : 'chevron.down', size: 10, color: C.muted })] }), expanded ? (_jsxs(_Fragment, { children: [_jsx(FieldCard, { icon: "tag", label: t('ent.tags'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: tags, onChange: (event) => setTags(event.target.value) }) }), _jsx(FieldCard, { icon: "briefcase", label: t('ent.reimbursable'), children: _jsx(Toggle, { checked: reimbursable, onChange: setReimbursable }) }), type === 'income' && refundCandidates.length > 0 ? (_jsx(FieldCard, { icon: "arrow.uturn.left.circle.fill", label: t('ent.refundOf'), onClick: () => setMenu('refund'), children: _jsx("span", { className: "lg-clamp-1", style: { fontSize: 15, color: C.ink }, children: refundOfID ? refundLabel(store, refundOfID, t) : t('ent.notLinked') }) })) : null] })) : null] })) : null] })] }), _jsxs("div", { style: {
                     background: C.surface, borderTop: `1px solid ${C.line}`, flex: '0 0 auto',
                     padding: `${SPACE.s2}px ${SPACE.s2}px calc(${SPACE.s2}px + env(safe-area-inset-bottom))`,
                 }, children: [KEYS.map((row) => (_jsx("div", { style: { display: 'flex', gap: 6, marginBottom: 6 }, children: row.map((key) => (_jsx("button", { type: "button", className: "lg-btn", onClick: () => press(key), style: {

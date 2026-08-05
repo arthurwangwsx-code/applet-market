@@ -151,6 +151,56 @@ async function probe(namespace, method) {
   };
 }
 
+// ../../packages/aibox-sdk/dist/video.js
+async function resolveVideo(pageURL) {
+  const host = bridge();
+  if (!host?.video?.resolve)
+    throw new Error("\u5BBF\u4E3B\u6CA1\u6709\u89C6\u9891\u89E3\u6790\u80FD\u529B");
+  try {
+    const r = await host.video.resolve({ url: pageURL });
+    if (!r?.ok)
+      throw new Error(r?.error || "\u89E3\u6790\u4E0D\u51FA\u53EF\u64AD\u653E\u7684\u5730\u5740");
+    return { ...r, formats: Array.isArray(r.formats) ? r.formats : [] };
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+function pickBestFormat(formats) {
+  const usable = (formats || []).filter((f) => f && f.playable !== false);
+  if (!usable.length)
+    return null;
+  const area = (f) => (Number(f.width) || 0) * (Number(f.height) || 0);
+  return usable.reduce((best, f) => area(f) > area(best) ? f : best);
+}
+function stageAspect(width, height) {
+  const w = Number(width), h = Number(height);
+  if (!(w > 0) || !(h > 0))
+    return "16:9";
+  const ratio = Math.min(4, Math.max(0.5, w / h));
+  return `${Math.round(ratio * 100)}:100`;
+}
+async function playVideo(args) {
+  const host = bridge();
+  if (!host?.video?.play)
+    throw new Error("\u5BBF\u4E3B\u6CA1\u6709\u89C6\u9891\u64AD\u653E\u80FD\u529B");
+  const payload = {
+    title: args.title,
+    resumeFrom: args.resumeFrom ?? 0
+  };
+  if (args.sourceURL) {
+    payload.sourceURL = args.sourceURL;
+    if (args.formatID)
+      payload.formatID = args.formatID;
+  } else {
+    payload.url = args.url;
+  }
+  try {
+    return await host.video.play(payload);
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}
+
 // ../../packages/aibox-sdk/dist/net.js
 function requireNet() {
   const host = bridge();
@@ -915,6 +965,8 @@ export {
   isTransient,
   namespaceOf,
   normalizeError,
+  pickBestFormat,
+  playVideo,
   probe,
   queryAll,
   registerAction,
@@ -922,12 +974,14 @@ export {
   registeredNamespaces,
   removeMany,
   requireAvailable,
+  resolveVideo,
   sceneState,
   searchIsRendered,
   selectTab,
   setCloseConfirmation,
   setTabBadge,
   setTitle,
+  stageAspect,
   storage_exports as storage,
   system_exports as system,
   tabsAreRendered,

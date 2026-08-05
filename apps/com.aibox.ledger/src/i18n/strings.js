@@ -100,6 +100,14 @@ export const STRINGS = {
     // 记一笔 / 分摊
     'ent.new': 'New entry', 'ent.edit': 'Edit entry', 'ent.saveAndNew': 'Save & new',
     'ent.merchant': 'Merchant', 'ent.moreDetails': 'More details',
+    // 扫小票。识别全程在设备上（Vision 框架），图片不上传、也不进模型。
+    'entry.scanLabel': 'Scan a receipt', 'entry.scanAction': 'Pick a photo',
+    'entry.scanning': 'Reading…', 'entry.scanDone': 'Filled in what I could read.',
+    'entry.scanEmpty': "Couldn't find any text — try a clearer photo.",
+    'entry.scanFailed': "Couldn't read that image.",
+    'entry.scanNoVision': 'This build has no on-device text recognition.',
+    'entry.scanCheckAmount': 'Double-check the amount — no total line was found.',
+    'entry.scanCurrencyMismatch': 'Receipt looks like {found} but this account is {account}.',
     'ent.tags': 'Tags (comma separated)', 'ent.reimbursable': 'Reimbursable',
     'ent.refundOf': 'Refund of', 'ent.notLinked': 'Not linked', 'ent.from': 'From', 'ent.to': 'To',
     'ent.paidBy': 'Paid by',
@@ -249,6 +257,14 @@ export const STRINGS = {
 
     'ent.new': '记一笔', 'ent.edit': '编辑', 'ent.saveAndNew': '保存并再记',
     'ent.merchant': '商家', 'ent.moreDetails': '更多信息',
+    // 扫小票。识别全程在设备上（Vision 框架），图片不上传、也不进模型。
+    'entry.scanLabel': '扫小票', 'entry.scanAction': '选一张图',
+    'entry.scanning': '识别中…', 'entry.scanDone': '能认的都填上了。',
+    'entry.scanEmpty': '没读到文字，换张清楚点的。',
+    'entry.scanFailed': '这张图读不了。',
+    'entry.scanNoVision': '这个版本没有端上文字识别。',
+    'entry.scanCheckAmount': '没找到「合计」那一行，金额请核对一下。',
+    'entry.scanCurrencyMismatch': '票面像是 {found}，而这个账户是 {account}。',
     'ent.tags': '标签（用逗号分隔）', 'ent.reimbursable': '可报销',
     'ent.refundOf': '对应退款', 'ent.notLinked': '未关联', 'ent.from': '从', 'ent.to': '到',
     'ent.paidBy': '付款人',

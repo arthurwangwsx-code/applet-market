@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-05T16:27:42Z",
+  "updatedAt": "2026-08-05T17:06:50Z",
   "appCount": 11,
   "apps": [
     {
@@ -122,9 +122,9 @@
       "icon": "book.closed",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "1.2.0",
-      "latestReleasedAt": "2026-08-05T01:27:53Z",
-      "versionCount": 6,
+      "latestVersion": "1.3.0",
+      "latestReleasedAt": "2026-08-05T17:06:50Z",
+      "versionCount": 7,
       "capabilities": [
         "ai",
         "haptics",
@@ -134,10 +134,11 @@
         "storage",
         "tabs",
         "toolbar",
-        "ui"
+        "ui",
+        "vision"
       ],
-      "latestTotalBytes": 479089,
-      "latestFileCount": 48,
+      "latestTotalBytes": 496236,
+      "latestFileCount": 49,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.ledger",
       "localizedNames": {

@@ -1,0 +1,734 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.ledger",
+  "version": "1.3.0",
+  "releasedAt": "2026-08-05T17:06:50Z",
+  "notes": "新增扫小票记账：选图后端上 OCR（图不上传、不进模型），自动填金额/商家/日期，识别外币并在与账户币种不符时提示",
+  "minHostVersion": "1.0.0",
+  "manifest": {
+    "name": "记账",
+    "localizedNames": {
+      "en": "Ledger"
+    },
+    "icon": "book.closed",
+    "iconTintHex": "2A9D63",
+    "summary": "多账户复式记账与预算",
+    "localizedSummaries": {
+      "en": "Multi-account ledger with budgets, projects and shared-expense settlement"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": true,
+      "networkAllowed": [
+        "open.er-api.com"
+      ],
+      "capabilities": [
+        "haptics",
+        "picker",
+        "share",
+        "ui",
+        "vision"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "transactions",
+            "title": "明细",
+            "localizedTitles": {
+              "en": "Entries"
+            },
+            "icon": "list.bullet.rectangle"
+          },
+          {
+            "id": "reports",
+            "title": "报表",
+            "localizedTitles": {
+              "en": "Reports"
+            },
+            "icon": "chart.pie"
+          },
+          {
+            "id": "accounts",
+            "title": "资产",
+            "localizedTitles": {
+              "en": "Assets"
+            },
+            "icon": "wallet.pass",
+            "selectedIcon": "wallet.pass.fill"
+          },
+          {
+            "id": "budget",
+            "title": "预算",
+            "localizedTitles": {
+              "en": "Budget"
+            },
+            "icon": "target"
+          },
+          {
+            "id": "projects",
+            "title": "项目",
+            "localizedTitles": {
+              "en": "Projects"
+            },
+            "icon": "folder",
+            "selectedIcon": "folder.fill"
+          }
+        ]
+      },
+      "toolbar": {
+        "trailing": [
+          {
+            "id": "more",
+            "icon": "ellipsis",
+            "role": "hostMenu"
+          }
+        ],
+        "search": {
+          "enabled": true,
+          "placeholder": "搜索记录",
+          "localizedPlaceholders": {
+            "en": "Search entries"
+          }
+        }
+      },
+      "menu": {
+        "mergePolicy": "appletFirst",
+        "sections": [
+          {
+            "id": "analysis",
+            "items": [
+              {
+                "id": "openAI",
+                "title": "AI 分析",
+                "localizedTitles": {
+                  "en": "AI analysis"
+                },
+                "icon": "sparkles",
+                "actionID": "ledger_open_ai"
+              }
+            ]
+          },
+          {
+            "id": "data",
+            "items": [
+              {
+                "id": "exportCSV",
+                "title": "导出 CSV",
+                "localizedTitles": {
+                  "en": "Export CSV"
+                },
+                "icon": "square.and.arrow.up",
+                "actionID": "ledger_export_csv"
+              },
+              {
+                "id": "importCSV",
+                "title": "导入 CSV",
+                "localizedTitles": {
+                  "en": "Import CSV"
+                },
+                "icon": "square.and.arrow.down",
+                "actionID": "ledger_import_csv"
+              },
+              {
+                "id": "openRecentlyDeleted",
+                "title": "最近删除",
+                "localizedTitles": {
+                  "en": "Recently deleted"
+                },
+                "icon": "trash",
+                "actionID": "ledger_open_recently_deleted"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "actions": [
+      {
+        "id": "ledger_record",
+        "name": "record",
+        "displayName": "记一笔",
+        "summary": "Record, edit or delete one ledger entry: an expense, an income, or a transfer between two accounts. Only `amount` is required for a new expense — category, account and date all have sensible defaults, so do NOT stop and ask the user for them. Pass a stable `request_id` (a UUID) on every add so a retry can never double-post. Use the ledger account tool to create accounts; this tool never creates one from scratch.",
+        "keywords": [
+          "ledger",
+          "expense",
+          "income",
+          "transfer",
+          "spend",
+          "记账",
+          "支出",
+          "收入",
+          "转账",
+          "花了"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"add\",\"update\",\"delete\"],\"description\":\"Defaults to add. Never guess delete.\"},\"type\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"transfer\"],\"description\":\"Defaults to expense.\"},\"amount\":{\"type\":\"number\",\"description\":\"Required for add and always positive, in major units (12.50). Direction comes from `type`, never from a sign.\"},\"currency\":{\"type\":\"string\",\"description\":\"ISO code or a colloquial name (ringgit, 马币). If given without an account, routes to a same-currency account. A currency with no configured rate is refused outright.\"},\"category\":{\"type\":\"string\",\"description\":\"Category name, or a two-level path 'Parent/Child'. Ignored for transfers.\"},\"account\":{\"type\":\"string\",\"description\":\"Which account the money came from. Defaults to the default account. Kind words (cash, 信用卡, 电子钱包) and brand names (支付宝, WeChat) resolve automatically.\"},\"to_account\":{\"type\":\"string\",\"description\":\"Destination account; required for transfers.\"},\"to_amount\":{\"type\":\"number\",\"description\":\"Cross-currency transfers: the amount that lands, in the destination account's currency. Omit to convert at the current rate.\"},\"date\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, or natural language such as yesterday / 3天前. Defaults to today.\"},\"merchant\":{\"type\":\"string\"},\"note\":{\"type\":\"string\"},\"tags\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"project\":{\"type\":\"string\",\"description\":\"Group into a project; created if missing. 'none' means no project. Omitting it means NO project even when one is currently active.\"},\"payer\":{\"type\":\"string\",\"description\":\"Shared expenses: who paid ('me' for the user). Only meaningful when the project has members.\"},\"split_mode\":{\"type\":\"string\",\"enum\":[\"equal\",\"exact\",\"shares\",\"percent\"],\"description\":\"Omit for no split (the payer bears the whole cost).\"},\"split_with\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Member names taking part; omit for everyone.\"},\"split_values\":{\"type\":\"array\",\"items\":{\"type\":\"number\"},\"description\":\"Aligned with split_with: exact amounts, weights, or percentages. Not needed for equal.\"},\"reimbursable\":{\"type\":\"boolean\"},\"refund_of\":{\"type\":\"string\",\"description\":\"transaction_id of the expense this income refunds; 'none' unlinks on update.\"},\"request_id\":{\"type\":\"string\",\"description\":\"Idempotency key (use a UUID). The same key never posts twice — reuse it when retrying.\"},\"batch_id\":{\"type\":\"string\"},\"source_fingerprint\":{\"type\":\"string\"},\"transaction_id\":{\"type\":\"string\",\"description\":\"Required for update and delete.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"amountMinor\":{\"type\":\"integer\"},\"currency\":{\"type\":\"string\"},\"duplicate\":{\"type\":\"boolean\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation",
+          "shortcut"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "destructive": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_query",
+        "name": "query",
+        "displayName": "查流水",
+        "summary": "List individual ledger entries matching filters. Returns the count, the expense total in the base currency, and one line per entry ending in [id: …] so it can be updated or deleted afterwards. An unresolvable category/account/project name comes back as a candidate list rather than being silently ignored.",
+        "keywords": [
+          "ledger",
+          "entries",
+          "transactions",
+          "history",
+          "流水",
+          "明细",
+          "查账"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"transfer\"]},\"category\":{\"type\":\"string\"},\"account\":{\"type\":\"string\"},\"project\":{\"type\":\"string\"},\"tag\":{\"type\":\"string\"},\"keyword\":{\"type\":\"string\",\"description\":\"Matches merchant, note and tags.\"},\"reimbursable\":{\"type\":\"boolean\"},\"period\":{\"type\":\"string\",\"enum\":[\"today\",\"this_week\",\"last_7_days\",\"last_30_days\",\"this_month\",\"last_month\",\"this_year\",\"all\"],\"description\":\"Defaults to this_month. Ignored when date_from/date_to are given.\"},\"date_from\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, inclusive.\"},\"date_to\":{\"type\":\"string\",\"description\":\"YYYY-MM-DD, inclusive.\"},\"min_amount\":{\"type\":\"number\"},\"max_amount\":{\"type\":\"number\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100,\"description\":\"Defaults to 20.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"totalExpenseMinor\":{\"type\":\"integer\"},\"baseCurrency\":{\"type\":\"string\"},\"entries\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "ledger_stats",
+        "name": "stats",
+        "displayName": "消费统计",
+        "summary": "Aggregate spending or income into buckets by category, subcategory, day, month, account, tag or project. Shares one implementation with the in-app Reports screen, so quoted numbers always match what the user sees. Amounts are in the base currency at the exchange rate frozen when each entry was posted. Transfers and balance adjustments are excluded.",
+        "keywords": [
+          "ledger",
+          "stats",
+          "breakdown",
+          "trend",
+          "统计",
+          "报表",
+          "占比",
+          "花在哪"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"dimension\":{\"type\":\"string\",\"enum\":[\"by_category\",\"by_subcategory\",\"by_day\",\"by_month\",\"by_account\",\"by_tag\",\"by_project\"],\"description\":\"Defaults to by_category.\"},\"metric\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\",\"net\"],\"description\":\"Defaults to expense.\"},\"project\":{\"type\":\"string\"},\"period\":{\"type\":\"string\",\"enum\":[\"today\",\"this_week\",\"last_7_days\",\"last_30_days\",\"this_month\",\"last_month\",\"this_year\",\"all\"]},\"date_from\":{\"type\":\"string\"},\"date_to\":{\"type\":\"string\"},\"top_n\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"Time dimensions are never truncated.\"},\"compare_previous\":{\"type\":\"boolean\",\"description\":\"Also compute the immediately preceding window of equal length.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"totalMinor\":{\"type\":\"integer\"},\"previousTotalMinor\":{\"type\":[\"integer\",\"null\"]},\"baseCurrency\":{\"type\":\"string\"},\"buckets\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "ledger_budget",
+        "name": "budget",
+        "displayName": "预算",
+        "summary": "Read budget status or set a monthly limit. Status shares one implementation with the in-app Budget screen and reports the total limit, spent, remaining, days left and the daily allowance, plus each category line (flagged when over, annotated when it carries a rollover). Setting a limit of 0 deletes that budget.",
+        "keywords": [
+          "ledger",
+          "budget",
+          "limit",
+          "预算",
+          "限额",
+          "还能花"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"status\",\"set\"],\"description\":\"Defaults to status.\"},\"category\":{\"type\":\"string\",\"description\":\"Omit for the overall monthly budget.\"},\"limit\":{\"type\":\"number\",\"description\":\"Major units. 0 removes the budget.\"},\"month\":{\"type\":\"string\",\"description\":\"YYYY-MM (also accepts YYYYMM or YYYY/MM). Defaults to the current month.\"},\"carryover\":{\"type\":\"boolean\",\"description\":\"Roll this month's unspent amount into next month. Overspending never carries a negative.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"payload\":{\"type\":\"object\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": true,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_account",
+        "name": "account",
+        "displayName": "账户",
+        "summary": "List accounts with balances and net worth, create an account, set an account's balance (a Beancount-style balance assertion that posts a visible calibration entry), archive one, or rename one. This is the ONLY way to create an account — the record tool never creates one. For credit accounts a positive initial_balance is stored as the amount owed.",
+        "keywords": [
+          "ledger",
+          "account",
+          "balance",
+          "net worth",
+          "账户",
+          "余额",
+          "净资产",
+          "银行卡"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"set_balance\",\"archive\",\"update\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"kind\":{\"type\":\"string\",\"enum\":[\"cash\",\"debit\",\"credit\",\"ewallet\",\"prepaid\",\"investment\"]},\"currency\":{\"type\":\"string\"},\"initial_balance\":{\"type\":\"number\"},\"credit_limit\":{\"type\":\"number\"},\"include_in_net_worth\":{\"type\":\"boolean\"},\"account\":{\"type\":\"string\",\"description\":\"Which existing account to act on.\"},\"balance\":{\"type\":\"number\",\"description\":\"Target balance for set_balance. Pass a negative number for what is owed on a credit account.\"},\"archived\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"netWorthMinor\":{\"type\":\"integer\"},\"assetsMinor\":{\"type\":\"integer\"},\"liabilitiesMinor\":{\"type\":\"integer\"},\"baseCurrency\":{\"type\":\"string\"},\"deltaMinor\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_category",
+        "name": "category",
+        "displayName": "分类",
+        "summary": "List, create, rename or archive spending and income categories. Categories are two levels deep at most. When the user wants a category that does not exist yet, create it rather than forcing the entry into an existing one. Archiving only removes it from pickers; existing entries keep it.",
+        "keywords": [
+          "ledger",
+          "category",
+          "分类",
+          "类别"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"rename\",\"archive\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"kind\":{\"type\":\"string\",\"enum\":[\"expense\",\"income\"],\"description\":\"Defaults to expense.\"},\"parent\":{\"type\":\"string\",\"description\":\"Attach under a top-level category to make it a subcategory.\"},\"archived\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"categories\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_currency",
+        "name": "currency",
+        "displayName": "币种与汇率",
+        "summary": "Manage currencies and exchange rates: list them, add one, set a rate manually, change the base currency all statistics are priced in, or refresh rates online. A currency with no configured rate is EXCLUDED from converted totals rather than being faked at 1:1, so add the rate before recording in it. Setting a rate marks it manual and online refreshes will not overwrite it.",
+        "keywords": [
+          "ledger",
+          "currency",
+          "exchange rate",
+          "fx",
+          "币种",
+          "汇率",
+          "外币"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"set_rate\",\"set_preferred\",\"refresh\"],\"description\":\"Defaults to list.\"},\"code\":{\"type\":\"string\",\"description\":\"ISO code or a colloquial name; normalised to a 3-letter code.\"},\"rate\":{\"type\":\"number\",\"description\":\"How many units of the BASE currency one unit of `code` is worth.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"baseCurrency\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_project",
+        "name": "project",
+        "displayName": "项目与分摊",
+        "summary": "Projects group a trip or event's spending, and carry shared-expense settlement. Actions: list, create, activate (pass 'none' to clear), update, archive, summary, members, add_member, remove_member, settle (member balances plus the fewest transfers that zero them out), record_settlement. Adding the first member auto-creates a 'Me' member. A settlement involving the user also posts a matching ledger entry.",
+        "keywords": [
+          "ledger",
+          "project",
+          "trip",
+          "split",
+          "settle",
+          "AA",
+          "项目",
+          "旅行",
+          "分摊",
+          "结算"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"create\",\"activate\",\"update\",\"archive\",\"summary\",\"members\",\"add_member\",\"remove_member\",\"settle\",\"record_settlement\"],\"description\":\"Defaults to list.\"},\"name\":{\"type\":\"string\"},\"new_name\":{\"type\":\"string\"},\"budget\":{\"type\":\"number\",\"description\":\"Optional total budget in the base currency.\"},\"start\":{\"type\":\"string\"},\"end\":{\"type\":\"string\"},\"activate\":{\"type\":\"boolean\"},\"archived\":{\"type\":\"boolean\"},\"member\":{\"type\":\"string\"},\"is_me\":{\"type\":\"boolean\"},\"from\":{\"type\":\"string\",\"description\":\"record_settlement: who pays.\"},\"to\":{\"type\":\"string\",\"description\":\"record_settlement: who gets paid.\"},\"amount\":{\"type\":\"number\",\"description\":\"record_settlement: amount in the base currency, major units.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"id\":{\"type\":\"string\"},\"spentMinor\":{\"type\":\"integer\"},\"incomeMinor\":{\"type\":\"integer\"},\"budgetMinor\":{\"type\":\"integer\"},\"buckets\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}},\"balances\":{\"type\":\"object\"},\"plan\":{\"type\":\"array\",\"items\":{\"type\":\"object\"}}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": false,
+        "execution": {
+          "mode": "sequential"
+        }
+      },
+      {
+        "id": "ledger_open_ai",
+        "name": "openAI",
+        "displayName": "AI 分析",
+        "summary": "Open the in-app AI analysis panel.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      },
+      {
+        "id": "ledger_export_csv",
+        "name": "exportCSV",
+        "displayName": "导出 CSV",
+        "summary": "Export every ledger entry as a CSV file and hand it to the share sheet.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      },
+      {
+        "id": "ledger_import_csv",
+        "name": "importCSV",
+        "displayName": "导入 CSV",
+        "summary": "Pick a ledger CSV file and open the import preview. Selecting a file never writes anything on its own.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      },
+      {
+        "id": "ledger_open_recently_deleted",
+        "name": "openRecentlyDeleted",
+        "displayName": "最近删除",
+        "summary": "Open the recently deleted entries screen, where entries can be restored or permanently removed.",
+        "headless": false,
+        "visibility": [
+          "userInterface"
+        ],
+        "effect": "nativePresentation",
+        "readOnly": true
+      }
+    ],
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 496236,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 4218,
+      "sha256": "987b5e90a8c72985e07b6035f38c3d361c38c44a828cc8094bf56d2aaeedbe93",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 24112,
+      "sha256": "7aafa42c279d9d96665e8f9e1dcd65aad3f8edb8e8fe50676ba881971a1e8623",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AccountsPage.js",
+      "bytes": 10840,
+      "sha256": "cc405c93721a495f590d4f378be9cd6bd05c0b854aa60ee0de18365c37f32aef",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/AIPanel.js",
+      "bytes": 10306,
+      "sha256": "ce9cef9db2dde691b5213949c9c5926ed0db03a8c981a0f31942bb1bf3587a18",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/BudgetPage.js",
+      "bytes": 5291,
+      "sha256": "8d4163148dc2ae3a23181dbd4b712ece69cbd2af1e87daec4ed865c775e313fc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Charts.js",
+      "bytes": 6231,
+      "sha256": "7be841367a940817553e4d985bb2a10b780b2eda623ee74e070e59f33edf3160",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/CSVImportPreview.js",
+      "bytes": 4481,
+      "sha256": "ead3fd238570675580af8a50f8aff33c1a34b72a4730bd1b69d8a7c431c7d2f7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/CurrencyManager.js",
+      "bytes": 5818,
+      "sha256": "7204d60a20d64758c1007305f180950a8c52256bba83d3f0175eb2903123c89e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Editors.js",
+      "bytes": 15907,
+      "sha256": "fd04b24ab2342e9bc872661435ddc7c668b8c25c01f5d11fdae6f640a2bc2245",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/EntryEditor.js",
+      "bytes": 25971,
+      "sha256": "1f7c458e074fbdb21b687af1f8a48978743b3a04eb632df8711e6e6e4e853c57",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Icon.js",
+      "bytes": 17505,
+      "sha256": "790cdc742e46e62db15666452f3ecba957ce18b01412115424a8ca4b6c4a03ab",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 15871,
+      "sha256": "802d3c38cda9c7543a4d04920da75c3ee6d63ca3eac5d34b557e833f7102efe4",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ProjectDetail.js",
+      "bytes": 13486,
+      "sha256": "a124e1c569be5ae73e5f9799930dcadca4ab74d13fc69095a530b55c93d1a8be",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ProjectsPage.js",
+      "bytes": 5255,
+      "sha256": "2ae9c49090a5e42659f9f05a29a5ba7687e9b84112071619c8f213a54944d02b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/RecentlyDeleted.js",
+      "bytes": 3644,
+      "sha256": "3d9fe161d296d333b5a4ed5d03d111e1b6f7f0e2d643c839436edca1d680ab16",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/ReportsPage.js",
+      "bytes": 9010,
+      "sha256": "e7871da2161142e48590bf9b9e2e48fca33daa31a1e9110368a1db7abf690290",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Sheets.js",
+      "bytes": 10218,
+      "sha256": "8a918d9f5f4633cd2f6f6908ab22985b9eb7bbed54ecbd58cb356d7199be4f14",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/Shell.js",
+      "bytes": 5748,
+      "sha256": "f61a713a057ed88c37b5bf60531a592cf787b654a4cacd1115c08c0e2acdc82b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SplitEditor.js",
+      "bytes": 6530,
+      "sha256": "e8fe27e6bc5e78b68ee4c2fb649ff4bb873250558188d7c8166276315fe8f896",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 4801,
+      "sha256": "997e1316db250ae03255f1ef5e85e40427d7db4aace82079a7df38cf3aa11e41",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/TransactionsPage.js",
+      "bytes": 13574,
+      "sha256": "9f1973a540741bf09c5951c159a400ca465fec7440281824b7da7dc0531542d2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/index.js",
+      "bytes": 1992,
+      "sha256": "98b6170fceafb0ed7692113f1bb567fedf40ebff88551f22a191fd9d4427f0b8",
+      "encoding": "utf8"
+    },
+    {
+      "path": "i18n/strings.js",
+      "bytes": 23994,
+      "sha256": "a52abb43a14a9e701a9b314a94bee9866e0118a9e0874808a43d0a178d9b87c0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2782,
+      "sha256": "385b31846c806db01af3f83d754eabbf0654fae13d436943b870ac7a09c40131",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions-entities.js",
+      "bytes": 16234,
+      "sha256": "55d57d906e73d6302858a6308fc81970dfb1825adb3f95f9db1b6061308db77f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 22576,
+      "sha256": "886cbac4f6339b6283ae4a0a94aa46360c2348d1898784fa6c6a0000c7bbc2db",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 27178,
+      "sha256": "889810ba18341b34dbece22f3cc14e2063f4e2ef50f47ad9c9329a2a640463c2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/balances.js",
+      "bytes": 4417,
+      "sha256": "eb7de434d7685b68e55a4baa8804e36c171c4aa699a82a530973509c17c0baa1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/csv.js",
+      "bytes": 14840,
+      "sha256": "b1204016e70f8a63960c08812feab95f9b7d62a3225cf4e19269637ae9249022",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/currencies.js",
+      "bytes": 3439,
+      "sha256": "12a5742c80d6dd42dcfb21a989d4d270a5f1886787aed70beca521b6435d767f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/dates.js",
+      "bytes": 4467,
+      "sha256": "2eddcba7065e5a0b7fb666ba50f4a17cbad7d7a8ce5159ea867b43427cc76503",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/db.js",
+      "bytes": 5123,
+      "sha256": "f43a04dbf9ba4e3fd1e8332842077c221e996521f6e8c765a7d1712c2e8b9047",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/display.js",
+      "bytes": 5872,
+      "sha256": "38df6ac038c2d88183061520ed61f775f7fee7c0a0bd1a3710802f0f08007cb8",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/entities.js",
+      "bytes": 17732,
+      "sha256": "24fc52d7a9e802207787cc5ff850e28def3253ca6429e749101b00a6b1c43183",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/entries.js",
+      "bytes": 9543,
+      "sha256": "23234bc85d6828e89c1d78bf1f52816113babd93ab7f1a7e98884ac79b5b340a",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/expression.js",
+      "bytes": 10080,
+      "sha256": "91305bf4cb7749ed604363a8e94466f3580d2061422671048421c0ff5bde4a22",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/fx.js",
+      "bytes": 5094,
+      "sha256": "b74187f9d3e5e1d07ef6078f5535e3f2608c045c48f5b6cf6d12e14a8bf514be",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 7646,
+      "sha256": "b95be14c52c584ea6d6b7dd0b03292f7f94d7fc03ef7b63b7b6b3bec08b47b61",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/money.js",
+      "bytes": 4001,
+      "sha256": "d3cbc2a7b3da4303ff8f8e7b1462ec77ce8cdd8506e4305c4804b16e8d2a7f2b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/prefs.js",
+      "bytes": 3524,
+      "sha256": "4c8dc472478d72d798d92e98806f819724cbfb71104b4fb721e87b2a0085e0e6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/queries.js",
+      "bytes": 8698,
+      "sha256": "aabbe680573b9097f4e7aa8c74752b26709931184d0c0da21a227a65f8b551f4",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/receipt.js",
+      "bytes": 7392,
+      "sha256": "1ec1e582f4f7a69fed96ba1d69439c0ebb3ebaa3acb0b1cbe7caf39de2fbb9c9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/register-actions.js",
+      "bytes": 2224,
+      "sha256": "e304c2ce9b1678cb9b8fbeabf823622cd63ac70663aca1ce2bb961fbd221d1ca",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/reporting.js",
+      "bytes": 5126,
+      "sha256": "ea54d1ceee6e334b1e04d944a18633b94d22c64eee37438611f3ddf4798597d5",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/resolve.js",
+      "bytes": 6419,
+      "sha256": "689ada9a5ecb494ec0e1b7f8342f0d29bfdb97e02cf1e1351fb70e8453b9f4ce",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/seeds.js",
+      "bytes": 6976,
+      "sha256": "22155c09ac2625b6c4e9981ddc77c4b174d1205f7b0be6b39ad72e62a8fb9daa",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/split.js",
+      "bytes": 8396,
+      "sha256": "16b7542a6ea279c979402fbaa1b92e1e057639772c7bc733b746aabdf32b7836",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/store.js",
+      "bytes": 19281,
+      "sha256": "63f3b05d1f17fe4511f2149b9721057e19e57e0bfd2751e019ac3a8f68e091bd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 22373,
+      "sha256": "4376a6a188433c83e290f75a74733b8f1cd737b559f1dec6576dd8faf73aed61",
+      "encoding": "utf8"
+    }
+  ]
+}

@@ -14,6 +14,8 @@ import { currencySymbol } from '../lib/currencies.js'
 import { money, plainMajor } from '../lib/money.js'
 import { isoDay, parseISODay } from '../lib/dates.js'
 import { lastAccountID, sortRootCategoriesByRecency } from '../lib/prefs.js'
+import { scanImageText, capabilities as hostCaps } from '../lib/host.js'
+import { parseReceipt } from '../lib/receipt.js'
 
 const KEYS = [
   ['7', '8', '9', '÷'],
@@ -23,6 +25,58 @@ const KEYS = [
   ['=', '(', ')', 'C'],
 ]
 const OPERATOR_KEYS = new Set(['+', '−', '×', '÷', '='])
+
+/**
+ * 扫小票填单。
+ *
+ * **只填空栏、不覆盖用户已经填的**——用户可能先手输了金额再想扫一下补商家，
+ * 把他填的东西冲掉是最容易招致不信任的那种"智能"。
+ *
+ * 币种认出来但与所选账户不一致时**只提示、不自动改账户**：改账户会连带改掉
+ * 余额归属，那是比填错金额更重的副作用，必须由用户点头。
+ */
+function useReceiptScan({ t, setInput, setMerchant, setDay, amountFilled, merchantFilled, accountCurrency }) {
+  const [scanning, setScanning] = React.useState(false)
+  const [scanHint, setScanHint] = React.useState('')
+
+  const scan = React.useCallback(async () => {
+    if (scanning) return
+    setScanning(true)
+    setScanHint('')
+    try {
+      const res = await scanImageText()
+      if (!res.ok) {
+        setScanHint(res.reason === 'cancelled' ? ''
+          : res.reason === 'noVision' ? t('entry.scanNoVision')
+            : t('entry.scanFailed'))
+        return
+      }
+      if (res.empty) { setScanHint(t('entry.scanEmpty')); return }
+      const parsed = parseReceipt(res.text)
+      const notes = []
+      if (parsed.amount != null && !amountFilled) {
+        setInput(String(parsed.amount))
+        if (!parsed.amountConfident) notes.push(t('entry.scanCheckAmount'))
+      }
+      if (parsed.payee && !merchantFilled) setMerchant(parsed.payee)
+      if (parsed.date) setDay(isoDay(parsed.date))
+      // 币种：只在与所选账户的币种**不同**时说一声，绝不自动换账户 ——
+      // 换账户会连带改掉余额归属，那个副作用比填错金额更重，必须用户点头。
+      if (parsed.currency && accountCurrency && parsed.currency !== accountCurrency) {
+        notes.push(t('entry.scanCurrencyMismatch')
+          .replace('{found}', parsed.currency)
+          .replace('{account}', accountCurrency))
+      }
+      setScanHint(notes.length ? notes.join(' ') : t('entry.scanDone'))
+    } catch (error) {
+      setScanHint(t('entry.scanFailed'))
+    } finally {
+      setScanning(false)
+    }
+  }, [scanning, t, setInput, setMerchant, setDay, amountFilled, merchantFilled, accountCurrency])
+
+  return { scan, scanning, scanHint, setScanHint }
+}
 
 export default function EntryEditor({ ctx, editing, onClose }) {
   const { store, t, locale, actions, canMutate } = ctx
@@ -70,6 +124,22 @@ export default function EntryEditor({ ctx, editing, onClose }) {
   const [day, setDay] = React.useState(() => isoDay(editing ? editing.occurredOn : Date.now()))
   const [tags, setTags] = React.useState(editing ? (editing.tags ?? []).join(', ') : '')
   const [reimbursable, setReimbursable] = React.useState(editing ? !!editing.reimbursable : false)
+
+  // 扫小票填单。当前所选账户的币种用于「票面币种与账户不符」的提示。
+  const scanAccountID = type === 'transfer' ? fromAccountID : accountID
+  const scanCurrency = React.useMemo(() => {
+    const acct = scanAccountID ? store.account(scanAccountID) : null
+    return acct ? acct.currency : null
+  }, [store, scanAccountID])
+  const receipt = useReceiptScan({
+    t,
+    setInput,
+    setMerchant,
+    setDay,
+    amountFilled: String(input || '').trim().length > 0,
+    merchantFilled: String(merchant || '').trim().length > 0,
+    accountCurrency: scanCurrency,
+  })
   const [refundOfID, setRefundOfID] = React.useState(editing ? editing.refundOfID : null)
   const [expanded, setExpanded] = React.useState(false)
   const [menu, setMenu] = React.useState(null)
@@ -338,6 +408,32 @@ export default function EntryEditor({ ctx, editing, onClose }) {
               onChange={(event) => setMerchant(event.target.value)}
             />
           </FieldCard>
+
+          {/* 扫小票。**能力缺席就整条不渲染**——留一个点了没反应的按钮比没有更糟。
+              识别全程在设备上（Vision），图片不上传、不进模型。 */}
+          {hostCaps.vision ? (
+            <FieldCard icon="doc.text.viewfinder" label={t('entry.scanLabel')}>
+              <button
+                type="button"
+                className="lg-press"
+                onClick={receipt.scan}
+                disabled={receipt.scanning || !canMutate}
+                style={{
+                  border: 'none', background: 'transparent', color: C.brand,
+                  fontSize: 15, padding: 0,
+                }}
+              >
+                {receipt.scanning ? t('entry.scanning') : t('entry.scanAction')}
+              </button>
+            </FieldCard>
+          ) : null}
+          {receipt.scanHint ? (
+            <div style={{
+              padding: '6px 14px 0', fontSize: 12, color: C.muted, lineHeight: 1.5,
+            }}>
+              {receipt.scanHint}
+            </div>
+          ) : null}
 
           <FieldCard icon="calendar" label={t('x.date')}>
             <input

@@ -4,7 +4,7 @@
 //   · Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/AppletDeveloperSDK.swift（aiTypeScript）
 //   · applet-market/docs/api/capabilities.snapshot.json（descriptor 快照，由 gen-api-docs.mjs 抽取）
 // 重新生成： npm run sdk:types      漂移检查： npm run sdk:types:check
-// 命名空间：47 个（宿主恒有 16 个、可声明 28 个）
+// 命名空间：48 个（宿主恒有 16 个、可声明 29 个）
 
 /* eslint-disable */
 declare namespace aibox {
@@ -926,6 +926,13 @@ declare namespace aibox {
     function availability(input?: Record<string, never>): Promise<{ available: boolean; dash: boolean; resolve: boolean; stage: boolean }>
   }
 
+  namespace vision {
+    /** OCR an image resource you own. Pass the handle you got back from picker.photo or picker.file. Returns the text in reading order, newline-separated. Empty text means no readable text was found — that is a normal outcome, not an error, so tell the user rather than retrying. Result: {ok:boolean, text:string, empty:boolean} */
+    function recognizeText(input: { handle: string; languages?: Array<string> }): Promise<unknown>
+    /** Whether on-device text recognition exists in this build. Hide the scan entry point instead of letting a tap do nothing. Result: {available:boolean} */
+    function availability(input?: Record<string, never>): Promise<unknown>
+  }
+
   // voiceMemos 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。
   interface VoiceMemosNamespace {
     /**  Result: {ok, text, permission, details?, progress, artifacts} */
@@ -1189,7 +1196,7 @@ interface Window {
 }
 
 /** 宿主可声明的扩展能力命名空间（manifest.permissions.capabilities 的取值域）。 */
-declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "download" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "secrets" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "video" | "voiceMemos"
+declare type AiboxDeclarableCapability = "audio" | "browser" | "calendar" | "clipboard" | "contacts" | "device" | "download" | "files" | "haptics" | "health" | "location" | "media" | "music" | "notifications" | "open" | "photos" | "picker" | "reminders" | "secrets" | "share" | "shortcuts" | "speech" | "toast" | "tools" | "tts" | "ui" | "video" | "vision" | "voiceMemos"
 
 /** 容器恒可用命名空间：无需也不该写进 manifest.permissions.capabilities。 */
 declare type AiboxAlwaysAvailableNamespace = "access" | "action" | "apps" | "chat" | "data" | "db" | "jobs" | "lifecycle" | "list" | "menu" | "navigation" | "overlay" | "resource" | "scene" | "tabs" | "toolbar"

@@ -8,13 +8,13 @@
 
 | 事实 | 当前值 | 真值源 |
 |---|---|---|
-| 桥命名空间 | 47 | `docs/api/capabilities.snapshot.json` |
-| 桥方法（合计 / 可声明 / 工具投影） | 252 / 172 / 80 | 同上 |
-| **返回类型覆盖（生成签名）** | 106/106（100%）—— 真正吃 `Promise<unknown>` 的那批 | `resultSchemaJSON` 字段 |
-| 返回类型覆盖（含手写签名命名空间） | 106/172（61.6%）—— 其余那批补了只改文档 | 同上 |
-| 生成的 `aibox-global.d.ts` | 1199 行 / 266 个签名 / 80 个 `Promise<unknown>` | `packages/aibox-sdk/src/generated/` |
+| 桥命名空间 | 48 | `docs/api/capabilities.snapshot.json` |
+| 桥方法（合计 / 可声明 / 工具投影） | 254 / 174 / 80 | 同上 |
+| **返回类型覆盖（生成签名）** | 108/108（100%）—— 真正吃 `Promise<unknown>` 的那批 | `resultSchemaJSON` 字段 |
+| 返回类型覆盖（含手写签名命名空间） | 108/174（62.1%）—— 其余那批补了只改文档 | 同上 |
+| 生成的 `aibox-global.d.ts` | 1241 行 / 271 个签名 / 80 个 `Promise<unknown>` | `packages/aibox-sdk/src/generated/` |
 | 市场应用（总数 / bundle 型 / 用 SDK） | 11 / 11 / 11 | `apps/*/package.json` |
-| `host.js` 分叉 | 8 份、1630 行 | `apps/*/src/lib/host.js` |
+| `host.js` 分叉 | 8 份、1668 行 | `apps/*/src/lib/host.js` |
 | SDK | v1.0.0，16 个模块 / 1750 行 | `packages/aibox-sdk/` |
 
 <!-- FACTS:END -->

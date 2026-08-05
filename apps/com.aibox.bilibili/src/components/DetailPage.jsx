@@ -15,13 +15,30 @@ import VideoCard from './VideoCard.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import {
-  closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser,
-  openStage, playVideo, savePref, share, toast, videoReadiness,
+  aspectFor, closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser,
+  openStage, playVideo, resolveVideo, savePref, share, toast, videoReadiness,
 } from '../lib/host.js'
 import { formatCount, formatDate, formatDuration } from '../lib/format.js'
 import { loadSettings } from '../lib/settings.js'
 
 const PROGRESS_KEY = 'watch-progress'
+
+/**
+ * 从宿主解析结果里挑一路流。
+ *
+ * 只在 `playable !== false` 的里面挑，再按「像素数」取最大——不按 `quality` 字符串排，
+ * 那是 "480P"/"1080P60" 这类人读的标签，字典序排出来 "1080P" 会排在 "480P" 前面纯属巧合，
+ * 遇到 "4K" 就翻车。宿主已经把 `width`/`height` 给了，用数字。
+ */
+function pickFormat(formats) {
+  const usable = (formats || []).filter((f) => f && f.playable !== false)
+  if (!usable.length) return null
+  return usable.reduce((best, f) => {
+    const area = (Number(f.width) || 0) * (Number(f.height) || 0)
+    const bestArea = (Number(best.width) || 0) * (Number(best.height) || 0)
+    return area > bestArea ? f : best
+  })
+}
 
 export default function DetailPage({ bvid, onOpen }) {
   const [detail, setDetail] = React.useState(null)
@@ -107,23 +124,39 @@ export default function DetailPage({ bvid, onOpen }) {
     setBusy(true)
     haptic('medium')
     try {
-      // **先开舞台再播**：舞台开着时宿主把播放器嵌在页面顶部（保持竖屏、内容照常滚），
-      // 否则会接管整屏并转横屏。开舞台是幂等的，重复调只更新参数。
-      // 每次起播都重读偏好：用户可能刚在「我的」里改过，不该等重进页面才生效。
-      const stage = await openStage(await loadSettings())
-      setStageOn(!!stage?.rendered)
       const targetCid = cid || activeCid || detail.cid
-      const stream = await api.playURL(bvid, targetCid)
+      const part = detail.pages.find((p) => p.cid === targetCid)
+      // 分P 视频要把 `?p=N` 带上，否则宿主解析的永远是第一P。
+      const index = detail.pages.findIndex((p) => p.cid === targetCid)
+      const pageURL = index > 0
+        ? `https://www.bilibili.com/video/${bvid}?p=${index + 1}`
+        : `https://www.bilibili.com/video/${bvid}`
+
+      // ① 先让**宿主**解析。它带 Referer，我们带不了（见 host.js `resolveVideo`）。
+      //    这一步也顺便给出真实分辨率，②③ 都要用。
+      const resolved = await resolveVideo(pageURL)
+      const best = pickFormat(resolved.formats)
+
+      // ② 舞台按视频真实比例开，不写死 16:9 —— 竖屏视频写死的话上下全是黑边。
+      //    **解析成功之后才开**：开在前面的话，解析或起播失败时页面顶部就是一块纯黑舞台，
+      //    封面被隐藏、又没有画面，用户只看到黑屏且不知道为什么。
+      const stage = await openStage(await loadSettings(), aspectFor(best?.width, best?.height))
+      setStageOn(!!stage?.rendered)
+
       const saved = await loadPref(PROGRESS_KEY, {})
       const resumeFrom = Number(saved?.[`${bvid}:${targetCid}`]) || 0
-      const part = detail.pages.find((p) => p.cid === targetCid)
+      // ③ 用同一个 pageURL 作 sourceURL —— 宿主据此取回刚才那份解析结果（含 headers）。
       await playVideo({
-        url: stream.url,
+        sourceURL: pageURL,
+        formatID: best?.id,
         title: part && detail.pages.length > 1 ? `${detail.title} · ${part.title}` : detail.title,
         resumeFrom,
       })
       setActiveCid(targetCid)
     } catch (err) {
+      // 失败就把舞台收掉，让封面回来——留着一块黑舞台比什么都不显示更糟。
+      closeStage()
+      setStageOn(false)
       toast(`播放失败：${err?.message || err}`)
     } finally {
       setBusy(false)

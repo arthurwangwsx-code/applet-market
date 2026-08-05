@@ -108,7 +108,25 @@ export async function videoAvailable() {
  * **必须先开舞台再 play**：舞台开着时播放会内嵌在这块区域里，页面照常竖屏、内容在下面滚；
  * 没开舞台就 play 会接管整屏并转横屏——那对一个「边看边翻简介/选集」的页面是错的。
  */
-export async function openStage(settings) {
+/**
+ * 由视频真实分辨率算舞台宽高比。
+ *
+ * 写死 `16:9` 的后果是竖屏视频被塞进一条扁窗口里，上下两条巨大黑边——
+ * 而竖屏内容在 B 站占比很高。宿主的解析器把 `width`/`height` 一起回来了，直接用。
+ *
+ * 宿主侧 `AppletVideoStageAspect.parse` 只接受比例落在 **[0.5, 4]** 的值
+ * （太高的舞台会把整页挤没），越界会被判非法并**静默退回 16:9**，
+ * 所以这里先夹紧再传——让降级发生在看得见的地方。
+ */
+export function aspectFor(width, height) {
+    const w = Number(width), h = Number(height);
+    if (!(w > 0) || !(h > 0))
+        return '16:9';
+    const ratio = Math.min(4, Math.max(0.5, w / h));
+    // 用 100 作分母保留两位有效比例，避免 "852:480" 这种长串（宿主只做除法，形式不敏感）。
+    return `${Math.round(ratio * 100)}:100`;
+}
+export async function openStage(settings, aspect) {
     const api = bridge();
     if (!api?.video?.stage)
         return { rendered: false, available: false };
@@ -116,7 +134,7 @@ export async function openStage(settings) {
         // 参数来自**用户偏好**（「我的 → 播放设置」），不写死——
         // 「只想听」和「边做别的边看」是两种诉求，写死必然让一半人被迫接受另一半的行为。
         return await api.video.stage({
-            aspect: '16:9',
+            aspect: aspect || '16:9',
             backgroundAudio: settings?.backgroundAudio !== false,
             pictureInPicture: settings?.pictureInPicture !== false,
             gestureControls: settings?.gestureControls !== false,
@@ -131,11 +149,47 @@ export async function closeStage() {
     fireAndForget(() => bridge()?.video?.dismissStage?.());
 }
 /** 起播。`resumeFrom` 是续播秒数。舞台开着时宿主会自动内嵌，不必也不该再传 presentation。 */
-export async function playVideo({ url, title, resumeFrom = 0 }) {
+/**
+ * 让**宿主**解析这个视频页，拿到可播的流与分辨率。
+ *
+ * 为什么必须走宿主而不是自己调 `/x/player/playurl`：B 站的 CDN(`*.bilivideo.com`)
+ * 对**没有 Referer** 的请求回 403。页面这侧给不了——`video.play` 的参数里根本没有 headers 位
+ * （查过 descriptor：只收 `sourceURL` / `url` / `artifactRef`），
+ * 而 `aibox.net.fetch` 拿到的流地址交给宿主 AVPlayer 时，那次播放请求是 AVPlayer 自己发的，
+ * 带不上我们这边的头。于是表现是**舞台开着、画面全黑、还不报错**。
+ *
+ * 宿主的抽取器认识 B 站，解析时自己带 Referer 与 UA，`play({sourceURL})` 复用同一份结果，
+ * headers 和 DASH 分轨都保得住（`VideoCapabilityAdapter` 的 play 分支注释写明了这条是首选路）。
+ */
+export async function resolveVideo(pageURL) {
+    const api = bridge();
+    if (!api?.video?.resolve)
+        throw new Error('宿主没有视频解析能力');
+    const r = await api.video.resolve({ url: pageURL });
+    if (!r?.ok)
+        throw new Error(r?.error || '解析不出可播放的地址');
+    return r;
+}
+/**
+ * 起播。**优先 `sourceURL`**（配合 `resolveVideo` 用），裸 `url` 只作退路。
+ *
+ * 两个参数不是二选一的等价物：`sourceURL` 要求宿主缓存里有对应的解析结果，
+ * 走的是「带 headers 的那条」；`url` 是直给 AVPlayer，遇上要 Referer 的站点必 403。
+ */
+export async function playVideo({ sourceURL, formatID, url, title, resumeFrom = 0 }) {
     const api = bridge();
     if (!api?.video?.play)
         throw new Error('宿主没有视频播放能力');
-    return api.video.play({ url, title, resumeFrom });
+    const args = { title, resumeFrom };
+    if (sourceURL) {
+        args.sourceURL = sourceURL;
+        if (formatID)
+            args.formatID = formatID;
+    }
+    else {
+        args.url = url;
+    }
+    return api.video.play(args);
 }
 /** 播放状态快照。`mine` 表示当前播的是不是本应用起的。 */
 export async function videoStatus() {

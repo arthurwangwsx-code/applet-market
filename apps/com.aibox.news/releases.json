@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.3.0",
   "releases": [
+    {
+      "version": "1.3.0",
+      "releasedAt": "2026-08-05T01:46:34Z",
+      "notes": "补上正文图片的 CDN 域：36krcdn.com / awtmt.com / 360buyimg.com。此前白名单只列了 RSS 源站（36kr.com、wallstreetcn 等），图片却来自各自独立的图床域，被宿主的图片代理按策略拒掉，表现为缩略图整片加载不出来。注意这是扩权更新，需要手动确认一次。",
+      "fileCount": 41,
+      "totalBytes": 302855,
+      "path": "apps/com.aibox.news/releases/1.3.0",
+      "localizedNotes": {
+        "en": "Adds the article image CDN hosts (36krcdn.com / awtmt.com / 360buyimg.com). The allowlist previously only covered RSS source domains, so thumbnails served from separate image CDNs were blocked. This update expands permissions and requires manual confirmation."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "8cd564f18e167d96054ccb31c0b7dc2579adb3c73fea8c5dd688434d33cf2e86"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-05T01:27:58Z",

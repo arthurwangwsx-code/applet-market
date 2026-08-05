@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-05T01:28:14Z",
+  "updatedAt": "2026-08-05T01:46:34Z",
   "appCount": 11,
   "apps": [
     {
@@ -207,9 +207,9 @@
       "icon": "newspaper.fill",
       "category": "information",
       "author": "AiBox",
-      "latestVersion": "1.2.0",
-      "latestReleasedAt": "2026-08-05T01:27:58Z",
-      "versionCount": 6,
+      "latestVersion": "1.3.0",
+      "latestReleasedAt": "2026-08-05T01:46:34Z",
+      "versionCount": 7,
       "capabilities": [
         "ai",
         "browser",
@@ -221,7 +221,7 @@
         "tools",
         "tts"
       ],
-      "latestTotalBytes": 302792,
+      "latestTotalBytes": 302855,
       "latestFileCount": 41,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.news",

@@ -26,20 +26,10 @@ export const capabilities = {
 export const toolAllowed = intelligence.toolAllowed
 
 /**
- * 工具为什么用不了——**分清「宿主没装模块」和「用户没授权」**。
+ * 工具为什么用不了 → `{ ok, reason, hint }`。读 `access.explain` 的 7 道门，翻成一句人话。
  *
- * 这两件事此前被塌成同一句「这个宿主没有装视频下载模块」，把用户指向了完全错误的地方：
- * 真实情况几乎总是后者（市场安装会把本机工具授权归零，`AppletMarketInstaller.resetLocalAuthorization`
- * 是刻意的——「市场包永远带不来授权」），用户要做的是去能力中心勾一下，而不是换构建。
- *
- * 宿主早就把答案备好了：`aibox.access.explain({tool})` 逐门返回 7 条 gate + 可操作的 remedies。
- * 这里只是把它读出来、翻译成用户能照着做的一句话。
- *
- * 返回 `{ ok, reason, hint }`：
- *  · ok=true            → 能用
- *  · reason='not-active' → 宿主确实没装模块（原来那句话此时才是对的）
- *  · reason='not-granted'→ 装了但没授权（绝大多数情况）
- *  · reason='not-declared'/'blocked'/'unknown' → 其余各归其位
+ * 口径与坑记在 docs/capabilities/applet/diagnostics.md §1.5（`active` 门同时覆盖
+ * 「模块没装」和「开关关着」，别替宿主断言；也别转发宿主英文 remedies）。
  */
 export async function toolBlockReason(name) {
   const api = bridge()

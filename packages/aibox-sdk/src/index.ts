@@ -36,6 +36,9 @@ export {
 } from './capabilities';
 export type { AccessDecision, CapabilityProbe } from './capabilities';
 
+export { resolveVideo, pickBestFormat, stageAspect, playVideo } from './video';
+export type { ResolvedVideo, ResolvedFormat } from './video';
+
 export {
   fetchText, fetchJSON, fetchBytes, fetchWithMeta, base64ToBytes, imageURL,
 } from './net';

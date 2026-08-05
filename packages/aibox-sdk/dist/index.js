@@ -20,6 +20,7 @@
 export { bridge, isApplet, available, namespaceOf, capabilityMap } from './bridge';
 export { AiboxError, isAiboxError, hasCode, isPermissionDenied, isTransient, normalizeError, attempt, withFallback, } from './errors';
 export { isAvailable, allAvailable, ifAvailable, requireAvailable, registeredNamespaces, explainAccess, probe, } from './capabilities';
+export { resolveVideo, pickBestFormat, stageAspect, playVideo } from './video';
 export { fetchText, fetchJSON, fetchBytes, fetchWithMeta, base64ToBytes, imageURL, } from './net';
 export * as storage from './storage';
 export { queryAll, removeMany, databaseAvailable } from './db';

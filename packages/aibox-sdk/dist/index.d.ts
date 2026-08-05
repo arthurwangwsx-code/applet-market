@@ -24,6 +24,8 @@ export { AiboxError, isAiboxError, hasCode, isPermissionDenied, isTransient, nor
 export type { AiboxErrorCode, KnownAiboxErrorCode, AiboxResult } from './errors';
 export { isAvailable, allAvailable, ifAvailable, requireAvailable, registeredNamespaces, explainAccess, probe, } from './capabilities';
 export type { AccessDecision, CapabilityProbe } from './capabilities';
+export { resolveVideo, pickBestFormat, stageAspect, playVideo } from './video';
+export type { ResolvedVideo, ResolvedFormat } from './video';
 export { fetchText, fetchJSON, fetchBytes, fetchWithMeta, base64ToBytes, imageURL, } from './net';
 export type { NetMethod, NetMeta, NetRequestOptions, TextRequestOptions } from './net';
 export * as storage from './storage';

@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.2.1",
   "releases": [
+    {
+      "version": "1.2.1",
+      "releasedAt": "2026-08-05T16:03:24Z",
+      "notes": "工具不可用的提示改用文档口径，桥胶水转发 SDK。",
+      "fileCount": 12,
+      "totalBytes": 94901,
+      "path": "apps/com.aibox.viddl/releases/1.2.1",
+      "localizedNotes": {
+        "en": "Tool-unavailable messaging aligned with the documented contract; bridge glue forwards to the SDK."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "33cd7c271e152fe928126d379609fe36b41d2d0b95242f4d922d3a4d3fd3116a"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-05T15:54:29Z",

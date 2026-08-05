@@ -14,27 +14,13 @@ import { EmptyState, PrimaryButton, Spinner, StatItem } from './primitives.js';
 import VideoCard from './VideoCard.js';
 import { C, RADIUS, SPACE } from './theme.js';
 import * as api from '../lib/api.js';
+// 挑流按像素数、不按 quality 字符串 —— 判据住在 SDK（`pickBestFormat`），
+// 这是宿主解析结果的通用读法，不是 B 站特有的。
+import { pickBestFormat as pickFormat } from '../lib/aibox-sdk.js';
 import { aspectFor, closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser, openStage, playVideo, resolveVideo, savePref, share, toast, videoReadiness, } from '../lib/host.js';
 import { formatCount, formatDate, formatDuration } from '../lib/format.js';
 import { loadSettings } from '../lib/settings.js';
 const PROGRESS_KEY = 'watch-progress';
-/**
- * 从宿主解析结果里挑一路流。
- *
- * 只在 `playable !== false` 的里面挑，再按「像素数」取最大——不按 `quality` 字符串排，
- * 那是 "480P"/"1080P60" 这类人读的标签，字典序排出来 "1080P" 会排在 "480P" 前面纯属巧合，
- * 遇到 "4K" 就翻车。宿主已经把 `width`/`height` 给了，用数字。
- */
-function pickFormat(formats) {
-    const usable = (formats || []).filter((f) => f && f.playable !== false);
-    if (!usable.length)
-        return null;
-    return usable.reduce((best, f) => {
-        const area = (Number(f.width) || 0) * (Number(f.height) || 0);
-        const bestArea = (Number(best.width) || 0) * (Number(best.height) || 0);
-        return area > bestArea ? f : best;
-    });
-}
 export default function DetailPage({ bvid, onOpen }) {
     const [detail, setDetail] = React.useState(null);
     const [state, setState] = React.useState('loading');

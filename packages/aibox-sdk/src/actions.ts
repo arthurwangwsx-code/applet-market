@@ -12,7 +12,7 @@ import { AiboxError, normalizeError } from './errors';
  * 这是 applet 交付里最常见的一类静默失败。
  *
  * ## 做法
- * 构建期（`@aibox/applet-vite` 的 `aiboxManifest` 插件）从 `src/manifest.json` 的
+ * 构建期（`@aibox/applet-tsbuild` 的 `renderActionTypes`）从 `src/manifest.json` 的
  * `actions[].inputSchemaJSON` / `outputSchemaJSON` 生成 `src/aibox-actions.d.ts`，
  * 用 **模块增补** 往 `AppletActionMap` 里填字面量键与参数/返回类型：
  *

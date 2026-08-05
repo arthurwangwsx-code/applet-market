@@ -5,7 +5,7 @@
   "description": "计时器 —— TypeScript 标准工程范例（源码型：TS 开发、保结构 JS 产物）。",
   "type": "module",
   "scripts": {
-    "gen:actions": "node -e \"import('@aibox/applet-vite').then(async m=>{const fs=await import('node:fs');fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\"",
+    "gen:actions": "node -e \"import('@aibox/applet-tsbuild').then(async m=>{const fs=await import('node:fs');fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "aibox-tsbuild",
     "build:ci": "aibox-tsbuild",
@@ -16,7 +16,6 @@
   },
   "devDependencies": {
     "@aibox/applet-tsbuild": "^1.0.0",
-    "@aibox/applet-vite": "^1.0.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "antd-mobile": "^5.38.1",

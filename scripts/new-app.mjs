@@ -166,7 +166,7 @@ const INDEX_HTML = `<!doctype html>
 </html>
 `
 
-const VITE_CONFIG = `import { defineAppletConfig } from '@aibox/applet-vite';
+const VITE_CONFIG = `// (unused)
 
 // 全部约束（external / iOS 17 target / 相对基址 / 产物自检 / action 类型生成）都在预设里。
 // 应用侧通常一行就够；要覆写就传参数，别绕过预设直接写裸 Vite 配置。
@@ -174,7 +174,7 @@ export default defineAppletConfig();
 `
 
 const GEN_ACTIONS =
-  "node -e \"import('@aibox/applet-vite').then(async m=>{const fs=await import('node:fs');" +
+  "node -e \"import('@aibox/applet-tsbuild').then(async m=>{const fs=await import('node:fs');" +
   "fs.writeFileSync('src/aibox-actions.d.ts',m.renderActionTypes(JSON.parse(fs.readFileSync('src/manifest.json','utf8'))))})\""
 
 function main() {
@@ -247,8 +247,8 @@ function main() {
     dependencies: { '@aibox/applet-sdk': '^1.0.0' },
     devDependencies: {
       '@aibox/applet-tsbuild': '^1.0.0',
-      // gen:actions 的 renderActionTypes 仍住在 applet-vite（只是 codegen，不进产物）。
-      '@aibox/applet-vite': '^1.0.0',
+
+      '@aibox/applet-tsbuild': '^1.0.0',
       '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
       react: '^18.3.1',

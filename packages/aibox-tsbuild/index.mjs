@@ -1,3 +1,4 @@
+export { renderActionTypes, checkManifest } from './lib/action-types.mjs'
 // 源码型小应用的 TS → JS 构建。
 //
 // ## 为什么要这条管线（而不是都改成 bundle）

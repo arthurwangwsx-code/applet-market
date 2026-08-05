@@ -1,4 +1,4 @@
-// 本文件由 @aibox/applet-vite 从 src/manifest.json 的 actions 声明生成，请勿手改。
+// 本文件由 @aibox/applet-tsbuild 从 src/manifest.json 的 actions 声明生成，请勿手改。
 // 重新生成：npm run build（或 npm run gen:actions）。
 //
 // 它把 manifest 的 action 契约接进 @aibox/applet-sdk 的 AppletActionMap，于是

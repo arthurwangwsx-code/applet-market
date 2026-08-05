@@ -623,7 +623,12 @@ async function toolBlockReason(name) {
     if (verdict && verdict.allowed) return { ok: true, reason: null, hint: "" };
     const failed = (verdict && verdict.gates ? verdict.gates : []).filter((g) => !g.passed).map((g) => g.name);
     if (failed.includes("active")) {
-      return { ok: false, reason: "not-active", hint: "这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。" };
+      const grantPath = failed.includes("localGrant") ? "另外也还没授权给这个小应用：点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开。" : "";
+      return {
+        ok: false,
+        reason: "not-active",
+        hint: `视频解析工具当前没有启用——可能是宿主的工具开关里关着，也可能是这个构建没装视频下载模块。${grantPath}`
+      };
     }
     if (failed.includes("localGrant")) {
       return { ok: false, reason: "not-granted", hint: "还没有把视频解析工具授权给这个小应用。点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开就能用了。" };
@@ -743,10 +748,23 @@ function isLibraryDenied() {
   return libraryDenied;
 }
 __name(isLibraryDenied, "isLibraryDenied");
+let preflight = null;
+async function libraryAllowed() {
+  preflight ??= toolBlockReason("viddl_jobs").then((verdict) => {
+    if (!verdict.ok) libraryDenied = true;
+    return verdict;
+  }).catch(() => ({ ok: true }));
+  return preflight;
+}
+__name(libraryAllowed, "libraryAllowed");
 async function libraryAction({ action, jobId } = {}) {
   const verb = action || "list";
   if (libraryDenied) {
     return { ok: false, action: verb, denied: true, jobs: [], text: "视频下载工具未授权。" };
+  }
+  const verdict = await libraryAllowed();
+  if (!verdict.ok) {
+    return { ok: false, action: verb, denied: true, jobs: [], text: verdict.hint || "视频下载工具未授权。" };
   }
   const args = { action: verb };
   if (jobId) args.jobId = jobId;

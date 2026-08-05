@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-04T17:44:23Z",
+  "updatedAt": "2026-08-05T01:24:57Z",
   "appCount": 11,
   "apps": [
     {
@@ -28,7 +28,7 @@
       ],
       "latestTotalBytes": 95395,
       "latestFileCount": 16,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.bilibili",
       "localizedNames": {
         "en": "Bilibili"
@@ -97,7 +97,7 @@
       ],
       "latestTotalBytes": 425068,
       "latestFileCount": 45,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.finance",
       "localizedNames": {
         "en": "Finance"
@@ -138,7 +138,7 @@
       ],
       "latestTotalBytes": 435876,
       "latestFileCount": 46,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.ledger",
       "localizedNames": {
         "en": "Ledger"
@@ -182,7 +182,7 @@
       ],
       "latestTotalBytes": 277123,
       "latestFileCount": 33,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.music",
       "localizedNames": {
         "en": "Music"
@@ -223,7 +223,7 @@
       ],
       "latestTotalBytes": 262577,
       "latestFileCount": 39,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.news",
       "localizedNames": {
         "en": "News"
@@ -283,9 +283,9 @@
       "icon": "arrow.down.to.line",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.3",
-      "latestReleasedAt": "2026-08-04T17:44:23Z",
-      "versionCount": 7,
+      "latestVersion": "1.1.4",
+      "latestReleasedAt": "2026-08-05T01:24:57Z",
+      "versionCount": 8,
       "capabilities": [
         "clipboard",
         "download",
@@ -296,7 +296,7 @@
         "toolbar",
         "tools"
       ],
-      "latestTotalBytes": 56437,
+      "latestTotalBytes": 57894,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.viddl",
@@ -402,7 +402,7 @@
       ],
       "latestTotalBytes": 62395,
       "latestFileCount": 14,
-      "runtimeKind": "source",
+      "runtimeKind": "bundle",
       "path": "apps/com.aibox.youtube",
       "localizedNames": {
         "en": "YouTube"

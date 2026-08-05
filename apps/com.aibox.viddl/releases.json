@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.1.3",
+  "latestVersion": "1.1.4",
   "releases": [
+    {
+      "version": "1.1.4",
+      "releasedAt": "2026-08-05T01:24:57Z",
+      "notes": "工具不可用时的提示改成实话：宿主的 active 门同时覆盖「模块没装」和「工具开关关着」，此前写死成前者，把用户支去换构建；现在两种可能都说清，并给出已核实的授权路径（⋯ → 应用详情 → 能力）。另外资料库改成先问网关再调用，未授权时不再每次冷启动吐 aibox/denied。",
+      "fileCount": 4,
+      "totalBytes": 57894,
+      "path": "apps/com.aibox.viddl/releases/1.1.4",
+      "localizedNotes": {
+        "en": "Honest tool-unavailable message (the host's active gate covers both a missing module and a disabled tool switch) and preflight the gateway before calling, so denied errors no longer appear on cold start."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "cca0c402fe40b76efbf0cd31ee1b0825f994f8f747e552f85df17f65214b479c"
+    },
     {
       "version": "1.1.3",
       "releasedAt": "2026-08-04T17:44:23Z",

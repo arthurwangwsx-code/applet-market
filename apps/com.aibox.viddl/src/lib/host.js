@@ -51,7 +51,22 @@ export async function toolBlockReason(name) {
     if (verdict && verdict.allowed) return { ok: true, reason: null, hint: '' }
     const failed = (verdict && verdict.gates ? verdict.gates : []).filter((g) => !g.passed).map((g) => g.name)
     if (failed.includes('active')) {
-      return { ok: false, reason: 'not-active', hint: '这个宿主没有装视频下载模块，只能查看已经下好的内容，不能再解析新的链接。' }
+      // ⚠️ 别把 active 读成「模块没装」——宿主这一门的 detail 原文是
+      // “The tool is not active **or** not installed”：模块缺席和工具开关被关掉走的是同一门，
+      // 宿主自己都没分开，这里更不能替它断言。此前写死成「没装模块」，把用户支去换构建，
+      // 而实际上绝大多数情况只是开关没开（真机实测：active 与 localGrant 同时为 false）。
+      // 所以只描述现象 + 透出宿主自己给的 remedies（它知道该开哪个模块/哪个开关）。
+      // 不转发 verdict.remedies：宿主那两条是英文，且第一条写着「in the capability center」——
+      // 设置页的能力中心**没有** per-applet 工具授权，照抄只会把用户再支错一次（上一版就栽在这句）。
+      // 这里给中文 + 已核实过的路径，两种可能都说清，让用户先去开关看一眼。
+      const grantPath = failed.includes('localGrant')
+        ? '另外也还没授权给这个小应用：点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开。'
+        : ''
+      return {
+        ok: false,
+        reason: 'not-active',
+        hint: `视频解析工具当前没有启用——可能是宿主的工具开关里关着，也可能是这个构建没装视频下载模块。${grantPath}`,
+      }
     }
     if (failed.includes('localGrant')) {
       // 路径是核实过的：AppletRunnerView 的 ⋯ 菜单 → 「App details」→ 「Capabilities」→

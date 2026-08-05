@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.viddl",
-  "latestVersion": "1.2.1",
+  "latestVersion": "1.2.2",
   "releases": [
+    {
+      "version": "1.2.2",
+      "releasedAt": "2026-08-05T16:27:42Z",
+      "notes": "修复资料库点播放必崩：playJob 定义在 useJobs 里却没被返回，App 里那个调用点是 undefined；它的兜底分支又去调 App 作用域的 act，同样够不着。两处都是 ReferenceError，点一下就是红框。播放失败现在给一条能读的提示。",
+      "fileCount": 12,
+      "totalBytes": 95413,
+      "path": "apps/com.aibox.viddl/releases/1.2.2",
+      "localizedNotes": {
+        "en": "Fixes a crash when tapping play in the library: playJob was never returned from its hook and its fallback referenced an out-of-scope helper — both were runtime ReferenceErrors."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "180db54c18e2f99c1ade9f717924b4e830c2382e521cced4a5888ee134ba0e91"
+    },
     {
       "version": "1.2.1",
       "releasedAt": "2026-08-05T16:03:24Z",

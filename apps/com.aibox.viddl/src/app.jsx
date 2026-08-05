@@ -83,7 +83,10 @@ function useJobs() {
         // 落到兜底，不把异常抛给 UI——播放失败要给用户一条能读的提示，不是一个红框。
       }
     }
-    await act('play', job.jobId)
+    // 兜底：句柄播不了就走 job 的 play 动作。**不要调 App 里的 `act`** —— 那在这个 hook 的
+    // 作用域里根本不存在（2026-08-06 由未定义标识符闸门抓出，运行时是 ReferenceError）。
+    // 结果交回调用方去提示，hook 不碰 UI 状态。
+    return libraryAction({ action: 'play', jobId: job.jobId })
   }, [bytes])
 
   const refreshBytes = React.useCallback(async () => {
@@ -133,7 +136,7 @@ function useJobs() {
     }
   }, [refresh, refreshBytes])
 
-  return { jobs, bytes, loaded, refresh, denied }
+  return { jobs, bytes, loaded, refresh, denied, playJob }
 }
 
 function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onExport }) {
@@ -206,7 +209,7 @@ export default function App() {
   const [extractorReady, setExtractorReady] = React.useState(true)
   // 不可用时的**真实原因**（宿主没装模块 vs 没授权 —— 两者的下一步动作完全不同）。
   const [blockHint, setBlockHint] = React.useState('')
-  const { jobs, bytes, loaded, refresh, denied } = useJobs()
+  const { jobs, bytes, loaded, refresh, denied, playJob } = useJobs()
 
   // 解析面不可用时（Lean 变体解链了 MODULE_VIDEODOWNLOAD）**整块入口不渲染**，
   // 而不是留一个点了报错的按钮——「合法留 ≠ 必须留」。
@@ -355,7 +358,7 @@ export default function App() {
                     onResume={(j) => act('resume', j.jobId)}
                     onCancel={(j) => act('cancel', j.jobId)}
                     onRetry={(j) => act('retry', j.jobId)}
-                    onPlay={(j) => playJob(j)}
+                    onPlay={(j) => { playJob(j).then((r) => { if (r && r.ok === false) setNotice({ tone: 'error', text: r.text || '播放失败' }) }) }}
                     onExport={(j) => act('export', j.jobId)}
                   />
                 </div>

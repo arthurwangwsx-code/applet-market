@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-05T16:03:24Z",
+  "updatedAt": "2026-08-05T16:27:42Z",
   "appCount": 11,
   "apps": [
     {
@@ -283,9 +283,9 @@
       "icon": "arrow.down.to.line",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.2.1",
-      "latestReleasedAt": "2026-08-05T16:03:24Z",
-      "versionCount": 11,
+      "latestVersion": "1.2.2",
+      "latestReleasedAt": "2026-08-05T16:27:42Z",
+      "versionCount": 12,
       "capabilities": [
         "clipboard",
         "download",
@@ -296,7 +296,7 @@
         "toolbar",
         "tools"
       ],
-      "latestTotalBytes": 94901,
+      "latestTotalBytes": 95413,
       "latestFileCount": 12,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.viddl",

@@ -2,8 +2,8 @@
 // 「项目」= 正交于分类/账户/标签的分组维度：一笔可以同时属于项目 + 分类 + 账户 + 标签。
 
 import React from 'react'
-import { IconBadge } from './Icon.jsx'
-import { Card, Divider, EmptyState, SectionHeader, useLongPress } from './primitives.jsx'
+import { IconBadge } from './Icon.js'
+import { Card, Divider, EmptyState, SectionHeader, useLongPress } from './primitives.js'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { projectSpentMinor } from '../lib/split.js'
 import { money, moneyCompact } from '../lib/money.js'

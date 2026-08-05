@@ -6,8 +6,8 @@
 // 这样「结论必须钉在真实数据上」这条契约反而更硬——模型没有编数字的机会。
 
 import React from 'react'
-import Icon, { IconBadge, Spinner } from './Icon.jsx'
-import { Card } from './primitives.jsx'
+import Icon, { IconBadge, Spinner } from './Icon.js'
+import { Card } from './primitives.js'
 import { C, RADIUS, SPACE, fade } from './theme.js'
 import { buckets } from '../lib/queries.js'
 import { budgetPayload, monthFlowTransactions, monthlyFlow } from '../lib/reporting.js'

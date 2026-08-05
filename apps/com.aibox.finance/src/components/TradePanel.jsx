@@ -4,7 +4,7 @@
 // 拿不到汇率就**不允许下单**（绝不用 1 兜底），按钮禁用并说明缺汇率。
 
 import React from 'react'
-import { Field, Segmented, Sheet, SheetHeader, Stat } from './primitives.jsx'
+import { Field, Segmented, Sheet, SheetHeader, Stat } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatMinor, formatPrice } from '../lib/format.js'
 import { grossMinorOf, parseNumberInput, roundHalfAway, toMinor } from '../lib/money.js'

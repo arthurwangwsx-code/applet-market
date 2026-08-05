@@ -10,9 +10,9 @@
 
 import React from 'react'
 import { useSubpageStack } from 'aibox/ui'
-import SearchPage from './components/SearchPage.jsx'
-import PlayerPage from './components/PlayerPage.jsx'
-import MinePage from './components/MinePage.jsx'
+import SearchPage from './components/SearchPage.js'
+import PlayerPage from './components/PlayerPage.js'
+import MinePage from './components/MinePage.js'
 import { THEME_CSS, C } from './components/theme.js'
 import { registerActions } from './lib/actions.js'
 

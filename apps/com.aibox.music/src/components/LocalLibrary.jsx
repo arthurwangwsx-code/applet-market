@@ -9,9 +9,9 @@
 // 只回计数、不回曲目，派生一次反而更省桥调用，也顺带把流派补齐（工具没有 genres 动作）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { EmptyState, Segmented, Spinner, VirtualList } from './primitives.jsx'
-import { LocalTrackRow } from './rows.jsx'
+import Icon from './Icon.js'
+import { EmptyState, Segmented, Spinner, VirtualList } from './primitives.js'
+import { LocalTrackRow } from './rows.js'
 import { C, SPACE } from './theme.js'
 import { music as callMusic } from '../lib/host.js'
 

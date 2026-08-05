@@ -304,5 +304,6 @@
         }
       ]
     }
-  }
+  },
+  "runtimeKind": "bundle"
 }

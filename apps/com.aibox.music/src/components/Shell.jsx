@@ -5,7 +5,7 @@
 // `getState().rendered === false` 时页面必须自己降级，否则用户会被困在没有出口的页面里。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 /** 宿主没渲染顶栏，或处在下钻页时的自绘导航栏。 */

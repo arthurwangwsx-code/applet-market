@@ -14,8 +14,8 @@
 
 import React from 'react'
 import * as ui from 'aibox/ui'
-import { EmptyState, PrimaryButton, SectionTitle, SettingSwitch, Spinner } from './primitives.jsx'
-import VideoCard from './VideoCard.jsx'
+import { EmptyState, PrimaryButton, SectionTitle, SettingSwitch, Spinner } from './primitives.js'
+import VideoCard from './VideoCard.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import {

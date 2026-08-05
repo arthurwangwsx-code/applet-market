@@ -2,9 +2,9 @@
 // 布局：月份条 → 收支切换 → 总额卡 →（占比卡）→（趋势卡）→（排行卡）。
 
 import React from 'react'
-import Icon, { IconBadge } from './Icon.jsx'
-import { Card, Divider, EmptyState, MonthBar, Segmented } from './primitives.jsx'
-import { ChartLegend, DonutChart, TimeBarChart, bucketColor } from './Charts.jsx'
+import Icon, { IconBadge } from './Icon.js'
+import { Card, Divider, EmptyState, MonthBar, Segmented } from './primitives.js'
+import { ChartLegend, DonutChart, TimeBarChart, bucketColor } from './Charts.js'
 import { C, SPACE, alpha } from './theme.js'
 import { KIND } from '../lib/store.js'
 import { buckets } from '../lib/queries.js'

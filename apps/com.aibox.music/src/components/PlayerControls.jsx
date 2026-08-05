@@ -2,8 +2,8 @@
 // 两者在 Now Playing 的专辑态与歌词态**共享**，间距 20。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Spinner } from './primitives.js'
 import { WHITE } from './theme.js'
 import { elapsed, remaining } from '../lib/format.js'
 

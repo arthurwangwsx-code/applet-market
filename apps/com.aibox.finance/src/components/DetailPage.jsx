@@ -4,10 +4,10 @@
 // （腾讯 A 股是 `20260803150001` 这种），刻意不格式化——它是「这份数据到底多新」的唯一证据。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import FundamentalsView from './FundamentalsView.jsx'
-import { AreaLineChart, SubChart } from './Chart.jsx'
-import { Card, Menu, PullRefresh, Spinner, Stat } from './primitives.jsx'
+import Icon from './Icon.js'
+import FundamentalsView from './FundamentalsView.js'
+import { AreaLineChart, SubChart } from './Chart.js'
+import { Card, Menu, PullRefresh, Spinner, Stat } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import {
   formatChange, formatCompact, formatCompactCurrency, formatPercent, formatPrice, toLots, trendColor,

@@ -1,15 +1,17 @@
-// 宿主桥的薄封装。三条纪律（与资讯包一致）：
-//  1. 每个能力**先探测再使用**——宿主没装/没授权时 `window.aibox.<ns>` 根本不存在，
-//     入口要整块不渲染，而不是留一个点了没反应的按钮；
-//  2. 所有调用都不抛到 UI 层，失败回落成可判定的返回值；
-//  3. 没有 aibox 时（普通浏览器预览、node 自测）退化成内存实现，页面仍能跑。
+// 宿主桥接口：**共享部分全部转发给 `@aibox/applet-sdk`**。
+//
+// 2026-08-05 迁移：这里原本是一份私有胶水，是全市场 8 份分叉之一。分叉的代价不是重复代码，
+// 是**同一件事有好几个答案**——几份实现对「不可用时回什么」各有各的说法，AI 写新应用时
+// 检索到哪份就继承哪份。现在语义由 SDK 统一裁定（见 sdk/src/ui.ts、system.ts 的文件头）。
+//
+// 保留这层薄转发而不是让各调用点直接 import SDK：调用点一个都不用改，迁移 diff 只有本文件，
+// 出问题回滚面也只有本文件。真机验过一轮后再把调用点逐步指向 SDK 并删掉本文件。
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+import { available, bridge, events, system, intelligence, storage as sdkStorage } from '@aibox/applet-sdk'
+
 
 export function hasNamespace(name, method) {
-  const api = bridge()
-  if (!api || !api[name]) return false
-  return method ? typeof api[name][method] === 'function' : true
+  return available(name, method)
 }
 
 export const capabilities = {
@@ -63,30 +65,14 @@ export const storage = {
 
 // —— 事件总线 ——
 
-export function onEvent(name, handler) {
-  const api = bridge()
-  if (!api || !api.events || typeof api.events.on !== 'function') return () => {}
-  return api.events.on(name, handler)
-}
+export const onEvent = events.on
 
-export function onNamespaceEvent(namespace, event, handler) {
-  const api = bridge()
-  if (!api || !api[namespace] || typeof api[namespace].on !== 'function') return () => {}
-  return api[namespace].on(event, handler)
-}
+/** 外壳命名空间自带回调（tabs/toolbar），与 aibox.events 是两套机制，别混。 */
+export const onNamespaceEvent = events.shellOn
 
 // —— AI ——
 
-export async function aiAvailability() {
-  const api = bridge()
-  if (!api || !api.ai || typeof api.ai.availability !== 'function') return { available: false }
-  try {
-    const info = await api.ai.availability()
-    return info && typeof info === 'object' ? info : { available: false }
-  } catch (error) {
-    return { available: false }
-  }
-}
+export const aiAvailability = intelligence.aiAvailability
 
 /** 降级路径：没有停靠会话时跳聊天页开一个带种子的会话（原生自己就有这条降级）。 */
 export async function openChat({ prompt, categoryKey, autoSend = true, identity }) {
@@ -100,11 +86,7 @@ export async function openChat({ prompt, categoryKey, autoSend = true, identity 
   return false
 }
 
-export async function aiGenerate(input) {
-  const api = bridge()
-  if (!api || !api.ai || typeof api.ai.generate !== 'function') throw new Error('aibox/ai-unavailable')
-  return api.ai.generate(input)
-}
+export const aiGenerate = intelligence.aiGenerate
 
 // —— 本地通知（到价提醒）——
 //
@@ -124,16 +106,7 @@ export async function scheduleNotification({ title, body, afterMinutes = 0 }) {
 
 // —— 文件导出（账户归档）——
 
-export async function shareFile({ filename, content, mimeType }) {
-  const api = bridge()
-  if (!api || !api.share || typeof api.share.file !== 'function') return false
-  try {
-    await api.share.file({ filename, content, mimeType })
-    return true
-  } catch (error) {
-    return false
-  }
-}
+export const shareFile = system.shareFile
 
 export function impact(style = 'light') {
   const api = bridge()

@@ -6,8 +6,8 @@
 // 宿主补上 `lines:[{time,text}]` 后，`synced` 变 true，同一份代码自动变成逐行同步。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Spinner } from './primitives.js'
 import { WHITE } from './theme.js'
 import { currentLineIndex, sweepRatio } from '../lib/lyrics.js'
 

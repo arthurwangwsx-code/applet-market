@@ -3,8 +3,8 @@
 // 免责声明常驻：历史模拟不代表未来收益。
 
 import React from 'react'
-import { LineChart } from './Chart.jsx'
-import { Card, Field, Segmented, Sheet, SheetHeader, Spinner, Stat } from './primitives.jsx'
+import { LineChart } from './Chart.js'
+import { Card, Field, Segmented, Sheet, SheetHeader, Spinner, Stat } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatPercent, formatPrice } from '../lib/format.js'
 import { parseNumberInput } from '../lib/money.js'

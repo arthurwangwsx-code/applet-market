@@ -6,8 +6,8 @@
 
 import React from 'react'
 import { VirtualList, useKeyboardInset, useListGestures } from 'aibox/ui'
-import VideoCard, { CARD_HEIGHT } from './VideoCard.jsx'
-import { EmptyState, Spinner } from './primitives.jsx'
+import VideoCard, { CARD_HEIGHT } from './VideoCard.js'
+import { EmptyState, Spinner } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as innertube from '../lib/innertube.js'
 import { copyText, haptic, loadPref, openInBrowser, savePref, share, toast } from '../lib/host.js'

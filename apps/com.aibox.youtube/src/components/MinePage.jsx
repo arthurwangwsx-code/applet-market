@@ -4,8 +4,8 @@
 // 只放行 `applet://`），所以这一页不是账号页，而是「我看过什么」+「播放怎么表现」。
 
 import React from 'react'
-import VideoCard from './VideoCard.jsx'
-import { EmptyState, SectionTitle, SettingSwitch } from './primitives.jsx'
+import VideoCard from './VideoCard.js'
+import { EmptyState, SectionTitle, SettingSwitch } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { loadPref, savePref } from '../lib/host.js'
 import { DEFAULTS, loadSettings, updateSetting } from '../lib/settings.js'

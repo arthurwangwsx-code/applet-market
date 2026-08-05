@@ -5,8 +5,8 @@
 // 懒加载：同一 canonical 只拉一次；四张卡各自「无数据就整卡不渲染」。
 
 import React from 'react'
-import { BarChart } from './Chart.jsx'
-import { Card, Spinner, Stat } from './primitives.jsx'
+import { BarChart } from './Chart.js'
+import { Card, Spinner, Stat } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatCompactCurrency, formatPercent, formatPrice, trendColor } from '../lib/format.js'
 import { fetchAnnouncements, fetchDividends, fetchFinancials } from '../lib/providers/eastmoney.js'

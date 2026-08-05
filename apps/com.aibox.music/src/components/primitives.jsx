@@ -4,7 +4,7 @@
 // 同族命令式弹层风险相同。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 import { artworkDataURL, sizedArtworkURL } from '../lib/artwork.js'
 

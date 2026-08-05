@@ -9,7 +9,7 @@
 //  · **歌词翻译**两项需要 AI 文本能力，本应用 `ai: false` → 整段不渲染。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 const SLEEP_PRESETS = [5, 10, 15, 30, 45, 60]

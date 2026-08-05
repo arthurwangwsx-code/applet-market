@@ -9,8 +9,8 @@
 // 明确告诉用户原因，而不是显示一个空列表。
 
 import React from 'react'
-import { EmptyState, PrimaryButton, Spinner } from './primitives.jsx'
-import VideoCard from './VideoCard.jsx'
+import { EmptyState, PrimaryButton, Spinner } from './primitives.js'
+import VideoCard from './VideoCard.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as innertube from '../lib/innertube.js'
 import {

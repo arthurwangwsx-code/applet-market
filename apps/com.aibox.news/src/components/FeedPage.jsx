@@ -2,10 +2,10 @@
 // 传 sourceFeed 时复用为单订阅源下钻页（无 chips、无状态条、不回填播报队列）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import ArticleList, { buildArticleMenu } from './ArticleList.jsx'
-import { EmptyState, PullRefresh, Spinner } from './primitives.jsx'
-import Pager from './Pager.jsx'
+import Icon from './Icon.js'
+import ArticleList, { buildArticleMenu } from './ArticleList.js'
+import { EmptyState, PullRefresh, Spinner } from './primitives.js'
+import Pager from './Pager.js'
 import { C, SPACE } from './theme.js'
 import { TOPIC_ORDER, topicKey } from '../lib/catalog.js'
 import { buckets as computeBuckets, project } from '../lib/projection.js'

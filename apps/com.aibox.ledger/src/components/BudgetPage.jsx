@@ -1,8 +1,8 @@
 // 预算页（LedgerBudgetView）。月份状态提到根视图，所以 FAB 建的预算落在当前查看月。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Card, EmptyState, MonthBar, ProgressBar } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Card, EmptyState, MonthBar, ProgressBar } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { budgetPayload } from '../lib/reporting.js'
 import { addMonths, monthKeyNow, monthTitle } from '../lib/dates.js'

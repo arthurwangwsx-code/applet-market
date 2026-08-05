@@ -6,7 +6,7 @@
 // 也更好对齐本包的设计令牌。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, RADIUS, SPACE, fade } from './theme.js'
 
 /** ledgerCard：surface 底 + 16 圆角 + line 描边 + padding 16。 */

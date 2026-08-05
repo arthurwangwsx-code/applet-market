@@ -14,10 +14,10 @@
 
 import React from 'react'
 import { useSubpageStack } from 'aibox/ui'
-import FeedPage from './components/FeedPage.jsx'
-import SearchPage from './components/SearchPage.jsx'
-import MinePage from './components/MinePage.jsx'
-import DetailPage from './components/DetailPage.jsx'
+import FeedPage from './components/FeedPage.js'
+import SearchPage from './components/SearchPage.js'
+import MinePage from './components/MinePage.js'
+import DetailPage from './components/DetailPage.js'
 import { THEME_CSS, C } from './components/theme.js'
 import { registerActions } from './lib/actions.js'
 

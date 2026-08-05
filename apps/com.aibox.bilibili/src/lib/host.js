@@ -1,11 +1,12 @@
-// 宿主能力的薄封装。**所有** `window.aibox` 访问收敛在这里，页面不直接碰桥。
-//
-// 纪律：每条能力都要有降级路径。宿主变体（Full/Lean）、surface 差异、用户未授权都会让能力缺席，
-// 页面据此隐藏入口，而不是留一个点了没反应的按钮。
+// 宿主桥接口：**共享部分转发给 `@aibox/applet-sdk`**（2026-08-05 迁移）。
+// 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
+// （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
+// 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
+
+import { available, bridge, events, system, intelligence, ui } from '@aibox/applet-sdk'
 
 import { imageURL as uiImageURL } from 'aibox/ui'
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 
 // —— 网络 ——————————————————————————————————————————————
 
@@ -263,29 +264,7 @@ export async function share(text, url) {
   }
 }
 
-export async function copyText(text) {
-  const api = bridge()
-  try {
-    await api?.clipboard?.write?.({ text })
-    return true
-  } catch {
-    return false
-  }
-}
+export const copyText = system.copyText
 
 /** 用宿主内置浏览器打开（番剧、直播这类本应用没做的页面，交给浏览器而不是留死路）。 */
-export async function openInBrowser(url) {
-  const api = bridge()
-  if (api?.browser?.open) {
-    try {
-      await api.browser.open({ url, mode: 'inApp' })
-      return true
-    } catch { /* 落到下面 */ }
-  }
-  try {
-    await api?.open?.url?.({ url })
-    return true
-  } catch {
-    return false
-  }
-}
+export const openInBrowser = system.openInBrowser

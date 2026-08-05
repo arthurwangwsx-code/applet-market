@@ -1,8 +1,8 @@
 // 选项行（对应 SwiftUI 的 Picker）：点开底部面板选一个。设置页与添加订阅源表单共用。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Row, Sheet } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Row, Sheet } from './primitives.js'
 import { C, SPACE } from './theme.js'
 
 export default function PickerRow({ icon, title, value, options, onChange, disabled, last, cancelLabel }) {

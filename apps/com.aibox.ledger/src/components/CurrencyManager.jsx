@@ -2,8 +2,8 @@
 // 行排序：**基准币置顶**，其余按币种码升序。
 
 import React from 'react'
-import Icon, { Spinner } from './Icon.jsx'
-import { Card, Divider, useLongPress } from './primitives.jsx'
+import Icon, { Spinner } from './Icon.js'
+import { Card, Divider, useLongPress } from './primitives.js'
 import { C, RADIUS, SPACE, fade } from './theme.js'
 import { CURRENCY_CATALOG, currencySymbol } from '../lib/currencies.js'
 import { formatRate } from '../lib/fx.js'

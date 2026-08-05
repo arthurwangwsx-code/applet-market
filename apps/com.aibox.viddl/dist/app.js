@@ -796,12 +796,29 @@ function useJobs() {
     setLoaded(true);
     if (result.denied) setDenied(true);
   }, []);
+  React.useCallback(async (job) => {
+    const api = typeof window !== "undefined" ? window.aibox : void 0;
+    const ref = (bytes[job.jobId] || {}).artifactRef;
+    if (api && api.video && ref) {
+      try {
+        try {
+          await api.video.stage({ aspect: "16:9", backgroundAudio: true, pictureInPicture: true });
+        } catch (_) {
+        }
+        const result = await api.video.play({ artifactRef: ref, title: job.title });
+        if (result && result.playing) return;
+      } catch (error) {
+      }
+    }
+    await act("play", job.jobId);
+  }, [bytes]);
   const refreshBytes = React.useCallback(async () => {
     const items = await queue.list();
     const map = {};
     for (const item of items) {
       const key = item.groupId || item.taskId;
-      const row = map[key] || { received: 0, total: 0, speed: 0, known: true };
+      const row = map[key] || { received: 0, total: 0, speed: 0, known: true, artifactRef: null };
+      if (!row.artifactRef && item.state === "completed" && item.artifactRef) row.artifactRef = item.artifactRef;
       row.received += item.bytesReceived || 0;
       if (item.totalBytes) row.total += item.totalBytes;
       else row.known = false;
@@ -930,7 +947,7 @@ function App() {
   const done = jobs.filter((j) => DONE_STATES.includes(j.state));
   const running = jobs.filter((j) => !DONE_STATES.includes(j.state));
   const visible = tab === "library" ? done : running;
-  const act = React.useCallback(async (action, jobId) => {
+  const act2 = React.useCallback(async (action, jobId) => {
     tap("light");
     const result = await libraryAction({ action, jobId });
     if (!result.ok) setNotice({ tone: "error", text: result.text || "操作失败" });
@@ -1046,12 +1063,12 @@ function App() {
         {
           job,
           detail: bytes[job.jobId],
-          onPause: /* @__PURE__ */ __name((j) => act("pause", j.jobId), "onPause"),
-          onResume: /* @__PURE__ */ __name((j) => act("resume", j.jobId), "onResume"),
-          onCancel: /* @__PURE__ */ __name((j) => act("cancel", j.jobId), "onCancel"),
-          onRetry: /* @__PURE__ */ __name((j) => act("retry", j.jobId), "onRetry"),
-          onPlay: /* @__PURE__ */ __name((j) => act("play", j.jobId), "onPlay"),
-          onExport: /* @__PURE__ */ __name((j) => act("export", j.jobId), "onExport")
+          onPause: /* @__PURE__ */ __name((j) => act2("pause", j.jobId), "onPause"),
+          onResume: /* @__PURE__ */ __name((j) => act2("resume", j.jobId), "onResume"),
+          onCancel: /* @__PURE__ */ __name((j) => act2("cancel", j.jobId), "onCancel"),
+          onRetry: /* @__PURE__ */ __name((j) => act2("retry", j.jobId), "onRetry"),
+          onPlay: /* @__PURE__ */ __name((j) => playJob(j), "onPlay"),
+          onExport: /* @__PURE__ */ __name((j) => act2("export", j.jobId), "onExport")
         }
       ) }, job.jobId)) })
     ] }) }),

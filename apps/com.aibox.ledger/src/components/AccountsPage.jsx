@@ -2,8 +2,8 @@
 // 整页共用**一份**余额快照，净资产卡与每行都从它派生。
 
 import React from 'react'
-import Icon, { IconBadge } from './Icon.jsx'
-import { Card, Divider, EmptyState, SectionHeader, useLongPress } from './primitives.jsx'
+import Icon, { IconBadge } from './Icon.js'
+import { Card, Divider, EmptyState, SectionHeader, useLongPress } from './primitives.js'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { ACCOUNT_KIND_ORDER } from '../lib/seeds.js'
 import { balancesByAccount, netWorth, balanceMinor } from '../lib/balances.js'

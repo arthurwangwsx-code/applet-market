@@ -3,8 +3,8 @@
 // 结构：类型分段 → 可滚动区（金额显示 → 分类宫格 / 转账账户 → 元信息）→ 底部计算器键盘。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { FieldCard, Menu, Segmented, Toggle } from './primitives.jsx'
+import Icon from './Icon.js'
+import { FieldCard, Menu, Segmented, Toggle } from './primitives.js'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { KIND } from '../lib/store.js'
 import {

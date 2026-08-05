@@ -2,8 +2,8 @@
 // 第二段列出簇内全部文章（发布时间倒序）；长按菜单只有「AI 分析」+「收藏 / 取消收藏」。
 
 import React from 'react'
-import ArticleList from './ArticleList.jsx'
-import { SectionHeader } from './primitives.jsx'
+import ArticleList from './ArticleList.js'
+import { SectionHeader } from './primitives.js'
 import { C, SPACE } from './theme.js'
 
 export default function ClusterDetail({ ctx, cluster }) {

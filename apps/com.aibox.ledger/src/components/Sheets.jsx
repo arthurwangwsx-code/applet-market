@@ -6,17 +6,17 @@
 // 写失败时弹层**不关闭**，也不假装成功。
 
 import React from 'react'
-import { Sheet, SheetButton } from './primitives.jsx'
+import { Sheet, SheetButton } from './primitives.js'
 import { C, SPACE } from './theme.js'
-import EntryEditor from './EntryEditor.jsx'
-import SplitEditor from './SplitEditor.jsx'
-import CurrencyManager from './CurrencyManager.jsx'
-import RecentlyDeleted from './RecentlyDeleted.jsx'
-import CSVImportPreview from './CSVImportPreview.jsx'
-import AIPanel from './AIPanel.jsx'
+import EntryEditor from './EntryEditor.js'
+import SplitEditor from './SplitEditor.js'
+import CurrencyManager from './CurrencyManager.js'
+import RecentlyDeleted from './RecentlyDeleted.js'
+import CSVImportPreview from './CSVImportPreview.js'
+import AIPanel from './AIPanel.js'
 import {
   AccountEditor, BudgetEditor, MemberEditor, ProjectEditor, RateEditor, ReconcileSheet,
-} from './Editors.jsx'
+} from './Editors.js'
 import {
   addMember, createAccount, createProject, setRate, updateAccount, updateMember, updateProject, upsertBudget,
 } from '../lib/entities.js'

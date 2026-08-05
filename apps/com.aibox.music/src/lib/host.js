@@ -1,18 +1,13 @@
-// 宿主桥的薄封装。三条纪律与资讯应用一致：
-//  1. 先探测再使用——能力缺席时入口整块不渲染，不留「点了没反应」的按钮；
-//  2. 调用不抛到 UI 层，一律回落成可判定的返回值；
-//  3. 没有 window.aibox 时（普通浏览器里预览）退化成内存实现，页面仍能跑。
-//
-// ⚠️ 架构裁决：播放一律遥控宿主引擎 `aibox.music.*`，**禁止** `aibox.media` 自持引擎——
-// 那条路不写锁屏 NowPlaying、不注册 remote command，WebView 一挂起队列就停摆。
-// 见 docs/capabilities/applet/framework-capabilities.md §3.6。
+// 宿主桥接口：**共享部分转发给 `@aibox/applet-sdk`**（2026-08-05 迁移）。
+// 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
+// （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
+// 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+import { available, bridge, events, system, intelligence, ui } from '@aibox/applet-sdk'
+
 
 export function hasNamespace(name, method) {
-  const api = bridge()
-  if (!api || !api[name]) return false
-  return method ? typeof api[name][method] === 'function' : true
+  return available(name, method)
 }
 
 export const capabilities = {
@@ -97,80 +92,19 @@ function fireAndForget(namespace, method, args) {
 // MARK: - 原生弹层（antd-mobile 的 Toast.show 在本宿主渲染为空，命令式弹层一律走原生或自绘）
 
 /** 二次确认。返回 true 表示用户点了确认键。宿主没有 ui 能力时保守返回 false（不误删）。 */
-export async function confirm({ title, message, confirmTitle, cancelTitle, destructive = false }) {
-  const api = bridge()
-  if (!api || !api.ui || typeof api.ui.confirm !== 'function') return false
-  try {
-    const result = await api.ui.confirm({
-      title,
-      message,
-      actions: [
-        { id: 'cancel', title: cancelTitle, role: 'cancel' },
-        { id: 'confirm', title: confirmTitle, role: destructive ? 'destructive' : 'default' },
-      ],
-    })
-    return !!result && result.actionId === 'confirm' && !result.cancelled
-  } catch (error) {
-    return false
-  }
-}
+/** 语义已统一：问不出来 = 没确认。 */
+export const confirm = ui.confirm
 
 /** 原生 action sheet（长按菜单）。actions = [{id,title,role}]，返回被点中的 id 或 null。 */
-export async function actionSheet({ title, message, actions }) {
-  const api = bridge()
-  if (!api || !api.ui || typeof api.ui.actionSheet !== 'function') return null
-  try {
-    const result = await api.ui.actionSheet({ title, message, actions })
-    if (!result || result.cancelled) return null
-    return result.actionId || null
-  } catch (error) {
-    return null
-  }
-}
+export const actionSheet = ui.actionSheet
 
-export async function prompt({ title, message, placeholder, defaultValue }) {
-  const api = bridge()
-  if (!api || !api.ui || typeof api.ui.prompt !== 'function') return null
-  try {
-    const result = await api.ui.prompt({ title, message, placeholder, defaultValue })
-    if (!result || result.cancelled) return null
-    return typeof result.value === 'string' ? result.value : null
-  } catch (error) {
-    return null
-  }
-}
+export const prompt = ui.prompt
 
 // MARK: - 分享 / 打开链接
 
-export async function shareText(text, url) {
-  const api = bridge()
-  if (!api || !api.share || typeof api.share.text !== 'function') return false
-  try {
-    await api.share.text({ text, url })
-    return true
-  } catch (error) {
-    return false
-  }
-}
+export const shareText = system.shareText
 
-export async function openURL(url) {
-  const api = bridge()
-  if (api && api.browser && typeof api.browser.open === 'function') {
-    try {
-      await api.browser.open({ url, mode: 'system' })
-      return true
-    } catch (error) { /* 落到 open.url */ }
-  }
-  if (api && api.open && typeof api.open.url === 'function') {
-    try {
-      await api.open.url({ url })
-      return true
-    } catch (error) {
-      return false
-    }
-  }
-  return false
-}
+export const openURL = system.openURL
 
 // MARK: - storage
 
@@ -225,17 +159,10 @@ export async function fetchImageDataURL(url, { maxBytes = 400000 } = {}) {
 
 // MARK: - 事件与动作
 
-export function onEvent(name, handler) {
-  const api = bridge()
-  if (!api || !api.events || typeof api.events.on !== 'function') return () => {}
-  return api.events.on(name, handler)
-}
+export const onEvent = events.on
 
-export function onNamespaceEvent(namespace, event, handler) {
-  const api = bridge()
-  if (!api || !api[namespace] || typeof api[namespace].on !== 'function') return () => {}
-  return api[namespace].on(event, handler)
-}
+/** 外壳命名空间自带回调，与 aibox.events 是两套机制。 */
+export const onNamespaceEvent = events.shellOn
 
 /** 注册一个对外动作（AI / 自动化 / 快捷指令可调用）。处理器必须返回 JSON 可序列化值。 */
 export function registerAction(name, handler) {

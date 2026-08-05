@@ -2,8 +2,8 @@
 // 布局：当前项目提示条 → 本月摘要卡 → 筛选条 → 按日分组列表 → 加载更早。
 
 import React from 'react'
-import Icon, { IconBadge } from './Icon.jsx'
-import { Card, Chip, Divider, EmptyState, Menu, SwipeRow } from './primitives.jsx'
+import Icon, { IconBadge } from './Icon.js'
+import { Card, Chip, Divider, EmptyState, Menu, SwipeRow } from './primitives.js'
 // 框架级虚拟列表（随运行时资产内置，不是 npm 包）。本地那份 133 行的同接口兜底已删除——
 // 它的文件头写着「等 aibox/ui 上架后换成这一行」，闸门早就放开了，只是没人回头采纳。
 import { VirtualList } from 'aibox/ui'

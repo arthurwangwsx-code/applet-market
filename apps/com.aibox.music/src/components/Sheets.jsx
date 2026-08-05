@@ -6,9 +6,9 @@
 //  · 播放历史是**本应用自己记的**（宿主 19 个工具没有任何一个能读原生播放历史）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { EmptyState, Segmented, Sheet, SwipeRow, Artwork, Spinner } from './primitives.jsx'
-import { SongRow } from './rows.jsx'
+import Icon from './Icon.js'
+import { EmptyState, Segmented, Sheet, SwipeRow, Artwork, Spinner } from './primitives.js'
+import { SongRow } from './rows.js'
 import { C, SPACE } from './theme.js'
 
 export function FavoritesSheet({ open, onClose, ctx }) {

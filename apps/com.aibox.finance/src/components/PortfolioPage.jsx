@@ -5,9 +5,9 @@
 // 不完整时不出健康分、不写快照，而不是拿半份数据凑一个看起来很像的数字。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { ALLOCATION_COLORS, DonutChart, LineChart } from './Chart.jsx'
-import { Card, Chip, ChipRow, EmptyState, PullRefresh, Spinner, Stat } from './primitives.jsx'
+import Icon from './Icon.js'
+import { ALLOCATION_COLORS, DonutChart, LineChart } from './Chart.js'
+import { Card, Chip, ChipRow, EmptyState, PullRefresh, Spinner, Stat } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import {
   formatMinor, formatPercent, formatPrice, formatQuantity, trendColor,

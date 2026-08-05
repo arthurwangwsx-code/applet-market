@@ -647,5 +647,6 @@
       "readOnly": true,
       "idempotent": true
     }
-  ]
+  ],
+  "runtimeKind": "bundle"
 }

@@ -2,8 +2,8 @@
 // 手势：整条支持**上滑展开** —— 拖拽超过 25px 即切到 Now Playing（不只是点击）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Artwork, Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Artwork, Spinner } from './primitives.js'
 import { C } from './theme.js'
 
 export default function MiniBar({ track, isPlaying, busy, progress, onOpen, onToggle, onNext, t }) {

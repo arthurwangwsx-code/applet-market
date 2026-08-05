@@ -6,7 +6,7 @@
 // 内部分段控件与自绘搜索框，而不是把导航锁死。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 /** 自绘顶栏（宿主 toolbar 不可用时）。 */

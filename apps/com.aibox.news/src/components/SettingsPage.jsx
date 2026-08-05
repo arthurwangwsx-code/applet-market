@@ -1,8 +1,8 @@
 // 新闻设置（对应 NewsSettingsView）：4 段 + 高级设置。
 
 import React from 'react'
-import PickerRow from './OptionPicker.jsx'
-import { Card, Row, SectionFooter, SectionHeader, Toggle } from './primitives.jsx'
+import PickerRow from './OptionPicker.js'
+import { Card, Row, SectionFooter, SectionHeader, Toggle } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { bytes } from '../lib/format.js'
 

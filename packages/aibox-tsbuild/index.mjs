@@ -62,10 +62,15 @@ const SDK_LOCAL = 'lib/aibox-sdk.js'
 /** 从一段 JS 里抓出所有 import/export 说明符（含动态 import）。 */
 export function specifiersIn(code) {
   const out = []
+  // **必须锚在行首**：裸 `\bfrom\s*['"]` 会把字符串内容当成 import ——
+  // `menu === 'from'` 里那个 `from` 紧跟闭合引号，正则就从那儿开始捕获，
+  // 于是报出 `裸说明符 '), onClick: () => setMenu('` 这种荒唐结果（2026-08-05 实测被自己的闸门咬到）。
+  // tsc 产物的 import/export 一律在行首独占一行，锚定行首既准确又不需要真解析器。
   const patterns = [
-    /\bfrom\s*['"]([^'"]+)['"]/g,
-    /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-    /\bimport\s*['"]([^'"]+)['"]/g,
+    /^\s*import\s[^'"]*from\s*['"]([^'"]+)['"]/gm,
+    /^\s*export\s[^'"]*from\s*['"]([^'"]+)['"]/gm,
+    /^\s*import\s*['"]([^'"]+)['"]/gm,
+    /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g,
   ]
   for (const re of patterns) {
     let m

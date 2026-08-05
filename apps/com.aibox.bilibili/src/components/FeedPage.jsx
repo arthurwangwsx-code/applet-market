@@ -6,8 +6,8 @@
 
 import React from 'react'
 import { VirtualList, useListGestures } from 'aibox/ui'
-import VideoCard, { CARD_HEIGHT } from './VideoCard.jsx'
-import { Segmented, Spinner, EmptyState } from './primitives.jsx'
+import VideoCard, { CARD_HEIGHT } from './VideoCard.js'
+import { Segmented, Spinner, EmptyState } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import { copyText, haptic, openInBrowser, share, toast } from '../lib/host.js'

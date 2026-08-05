@@ -1,9 +1,9 @@
 // 项目详情（LedgerProjectDetailView）+ 成员与 AA 结算区块（LedgerMemberSettleSection）。
 
 import React from 'react'
-import Icon, { IconBadge } from './Icon.jsx'
-import { Card, Divider, EmptyState, ProgressBar, useLongPress } from './primitives.jsx'
-import { ChartLegend, DonutChart } from './Charts.jsx'
+import Icon, { IconBadge } from './Icon.js'
+import { Card, Divider, EmptyState, ProgressBar, useLongPress } from './primitives.js'
+import { ChartLegend, DonutChart } from './Charts.js'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { KIND } from '../lib/store.js'
 import { buckets, filterTransactions } from '../lib/queries.js'

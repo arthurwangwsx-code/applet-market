@@ -5,8 +5,8 @@
 // 这里只能从工具失败文案**反推**——文案变了就会退化成「加载失败」，不会误报成「库为空」。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Artwork, EmptyState, IconTile, ListHeader, Row, Spinner, Chevron } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Artwork, EmptyState, IconTile, ListHeader, Row, Spinner, Chevron } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { music as callMusic, classifyMusicError, openURL } from '../lib/host.js'
 

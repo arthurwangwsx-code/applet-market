@@ -8,8 +8,8 @@
 // 北向资金面板**不做**（§8.7：官方 2024-08 已停更，字段全 null，原生也放弃了）。
 
 import React from 'react'
-import { Chip, EmptyState, PullRefresh, Segmented, Sheet, SheetHeader, Spinner, Stat } from './primitives.jsx'
-import Icon from './Icon.jsx'
+import { Chip, EmptyState, PullRefresh, Segmented, Sheet, SheetHeader, Spinner, Stat } from './primitives.js'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 import { formatCompactCurrency, formatPercent, formatShortStamp, trendColor } from '../lib/format.js'
 import { fetchBreadth, fetchConstituents, fetchMoneyRank, fetchSectors } from '../lib/providers/push2.js'

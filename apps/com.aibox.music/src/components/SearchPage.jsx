@@ -5,10 +5,10 @@
 //  · 「资料库」范围走 `music_library` 的分类浏览 + 本地过滤，不是服务端的资料库搜索。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { EmptyState, ListHeader, Segmented, Spinner, SwipeRow } from './primitives.jsx'
+import Icon from './Icon.js'
+import { EmptyState, ListHeader, Segmented, Spinner, SwipeRow } from './primitives.js'
 import { useRowGestures } from 'aibox/ui'
-import { CollectionRow, SongRow } from './rows.jsx'
+import { CollectionRow, SongRow } from './rows.js'
 import { C, SPACE } from './theme.js'
 import { music as callMusic, classifyMusicError, openURL } from '../lib/host.js'
 

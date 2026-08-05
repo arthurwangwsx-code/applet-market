@@ -2,7 +2,7 @@
 // 宿主渲染时这些一概不出现——底栏顶栏用原生控件才跟系统的滚动收起、安全区、深浅色一致。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, RADIUS, SPACE, fade } from './theme.js'
 
 export function NavBar({ title, onBack, backLabel, trailing }) {

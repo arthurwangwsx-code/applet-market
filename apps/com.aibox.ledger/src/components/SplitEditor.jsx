@@ -3,8 +3,8 @@
 // 付款人被排到份额数组首位 → 零头永远落在付款人身上，Σ 各人应担 ≡ 总额。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Segmented } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Segmented } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { resolveSplit } from '../lib/split.js'
 import { money } from '../lib/money.js'

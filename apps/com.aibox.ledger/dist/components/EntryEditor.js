@@ -1,0 +1,273 @@
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+// 记一笔 / 编辑（LedgerEntryView）。同一个面板既是新建也是编辑（传 editing 即编辑）。
+// 目标：**3 步内落账**（金额 → 分类 → 保存）。
+// 结构：类型分段 → 可滚动区（金额显示 → 分类宫格 / 转账账户 → 元信息）→ 底部计算器键盘。
+import React from 'react';
+import Icon from './Icon.js';
+import { FieldCard, Menu, Segmented, Toggle } from './primitives.js';
+import { C, RADIUS, SPACE, alpha, fade } from './theme.js';
+import { KIND } from '../lib/store.js';
+import { appendDigit, appendDot, appendOperator, displayValue, tryEvaluateMinor, } from '../lib/expression.js';
+import { currencySymbol } from '../lib/currencies.js';
+import { money, plainMajor } from '../lib/money.js';
+import { isoDay, parseISODay } from '../lib/dates.js';
+import { lastAccountID, sortRootCategoriesByRecency } from '../lib/prefs.js';
+const KEYS = [
+    ['7', '8', '9', '÷'],
+    ['4', '5', '6', '×'],
+    ['1', '2', '3', '−'],
+    ['0', '.', '⌫', '+'],
+    ['=', '(', ')', 'C'],
+];
+const OPERATOR_KEYS = new Set(['+', '−', '×', '÷', '=']);
+export default function EntryEditor({ ctx, editing, onClose }) {
+    const { store, t, locale, actions, canMutate } = ctx;
+    const isEditing = !!editing;
+    const initialType = editing
+        ? (editing.kind === KIND.income ? 'income'
+            : (editing.kind === KIND.transferOut || editing.kind === KIND.transferIn ? 'transfer' : 'expense'))
+        : 'expense';
+    const [type, setType] = React.useState(initialType);
+    const [input, setInput] = React.useState(() => {
+        if (!editing)
+            return '';
+        // 编辑载入：金额框优先填原始表达式，没有才填纯金额。
+        return editing.calculationExpression || plainMajor(editing.amountMinor);
+    });
+    const [categoryID, setCategoryID] = React.useState(editing ? editing.categoryID : null);
+    const [expandedRoot, setExpandedRoot] = React.useState(() => {
+        if (!editing || !editing.categoryID)
+            return null;
+        const category = store.category(editing.categoryID);
+        return category && category.parentID ? category.parentID : null;
+    });
+    const [accountID, setAccountID] = React.useState(() => (editing ? editing.accountID : lastAccountID(store, 'expense')));
+    const [toAccountID, setToAccountID] = React.useState(() => {
+        if (!editing || !editing.transferPeerID)
+            return null;
+        const peer = store.transaction(editing.transferPeerID);
+        if (!peer)
+            return null;
+        return editing.kind === KIND.transferOut ? peer.accountID : editing.accountID;
+    });
+    const [fromAccountID, setFromAccountID] = React.useState(() => {
+        if (!editing || !editing.transferPeerID)
+            return lastAccountID(store, 'transfer');
+        const peer = store.transaction(editing.transferPeerID);
+        if (!peer)
+            return editing.accountID;
+        return editing.kind === KIND.transferOut ? editing.accountID : peer.accountID;
+    });
+    const [projectID, setProjectID] = React.useState(() => (editing ? editing.projectID : (store.currentProject()?.id ?? null)));
+    const [payerMemberID, setPayerMemberID] = React.useState(editing ? editing.payerMemberID : null);
+    const [split, setSplit] = React.useState(editing ? editing.split : null);
+    const [merchant, setMerchant] = React.useState(editing ? (editing.merchant ?? '') : '');
+    const [note, setNote] = React.useState(editing ? editing.note : '');
+    const [day, setDay] = React.useState(() => isoDay(editing ? editing.occurredOn : Date.now()));
+    const [tags, setTags] = React.useState(editing ? (editing.tags ?? []).join(', ') : '');
+    const [reimbursable, setReimbursable] = React.useState(editing ? !!editing.reimbursable : false);
+    const [refundOfID, setRefundOfID] = React.useState(editing ? editing.refundOfID : null);
+    const [expanded, setExpanded] = React.useState(false);
+    const [menu, setMenu] = React.useState(null);
+    const [bounce, setBounce] = React.useState(false);
+    const accounts = store.activeAccounts();
+    const projects = store.activeProjects();
+    const kind = type === 'income' ? 'income' : 'expense';
+    const roots = React.useMemo(() => sortRootCategoriesByRecency(store, store.rootCategories(kind), kind), [store, store.revision, kind]);
+    const children = expandedRoot ? store.childCategories(expandedRoot) : [];
+    const minor = tryEvaluateMinor(input);
+    const account = store.account(accountID);
+    const fromAccount = store.account(fromAccountID);
+    const toAccount = store.account(toAccountID);
+    const currency = type === 'transfer'
+        ? (fromAccount ? fromAccount.currency : store.baseCode)
+        : (account ? account.currency : store.baseCode);
+    const accent = type === 'income' ? C.income : (type === 'expense' ? C.expense : C.brand);
+    const hasOperator = /[+\-−*×/÷()]/.test(input);
+    const transferRateMissing = type === 'transfer' && fromAccount && toAccount
+        && fromAccount.currency !== toAccount.currency
+        && (!store.hasUsableRate(fromAccount.currency) || !store.hasUsableRate(toAccount.currency));
+    const canSave = canMutate && minor !== null && minor > 0 && (type === 'transfer'
+        ? !!(fromAccount && toAccount && fromAccount.id !== toAccount.id && !transferRateMissing)
+        : !!(account && store.hasUsableRate(account.currency)));
+    const projectMembers = projectID ? store.projectMembers(projectID) : [];
+    const hasOtherMembers = projectMembers.some((row) => !row.isMe);
+    // 切类型：清空已选分类与展开态、按类型取上次账户、非收入清空退款关联、重算 AA 默认值。
+    const changeType = (next) => {
+        if (isEditing)
+            return;
+        setType(next);
+        setCategoryID(null);
+        setExpandedRoot(null);
+        if (next === 'transfer')
+            setFromAccountID(lastAccountID(store, 'transfer'));
+        else
+            setAccountID(lastAccountID(store, next === 'income' ? 'income' : 'expense'));
+        if (next !== 'income')
+            setRefundOfID(null);
+        setPayerMemberID(null);
+        setSplit(null);
+    };
+    const press = (key) => {
+        if (key === 'C') {
+            setInput('');
+            return;
+        }
+        if (key === '⌫') {
+            setInput((text) => text.slice(0, -1));
+            return;
+        }
+        if (key === '=') {
+            try {
+                setInput(displayValue(input));
+            }
+            catch (error) { /* 求值失败时原样保留 */ }
+            return;
+        }
+        if (key === '(' || key === ')') {
+            setInput((text) => text + key);
+            return;
+        }
+        if (OPERATOR_KEYS.has(key)) {
+            setInput((text) => appendOperator(text, key));
+            return;
+        }
+        if (key === '.') {
+            setInput((text) => appendDot(text));
+            return;
+        }
+        setInput((text) => appendDigit(text, key));
+    };
+    const payload = () => ({
+        type,
+        amountMinor: minor,
+        calculationExpression: hasOperator ? input : null,
+        categoryID: type === 'transfer' ? null : categoryID,
+        accountID: type === 'transfer' ? fromAccountID : accountID,
+        toAccountID,
+        projectID,
+        payerMemberID,
+        split,
+        merchant: merchant.trim().length > 0 ? merchant.trim() : null,
+        note,
+        occurredOn: parseISODay(day) ?? Date.now(),
+        tags: tags.split(',').map((piece) => piece.trim()).filter((piece) => piece.length > 0),
+        reimbursable,
+        refundOfID,
+    });
+    const submit = async (again) => {
+        const ok = await actions.saveEntry(payload(), editing);
+        if (!ok)
+            return;
+        if (!again) {
+            onClose();
+            return;
+        }
+        // 「保存并再记」：清空 金额/商家/备注/标签/可报销/退款关联，**保留** 类型/分类/账户/日期/项目。
+        setInput('');
+        setMerchant('');
+        setNote('');
+        setTags('');
+        setReimbursable(false);
+        setRefundOfID(null);
+        setBounce(true);
+        window.setTimeout(() => setBounce(false), 250);
+    };
+    const refundCandidates = React.useMemo(() => {
+        if (type !== 'income')
+            return [];
+        return store.allTransactions()
+            .filter((txn) => txn.kind === KIND.expense && (!editing || txn.id !== editing.id))
+            .slice(0, 30);
+    }, [store, store.revision, type, editing]); // eslint-disable-line react-hooks/exhaustive-deps
+    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }, children: [_jsx("div", { style: { padding: `${SPACE.s3}px ${SPACE.s4}px 0` }, children: _jsx(Segmented, { value: type, onChange: changeType, disabled: isEditing, items: [
+                        { id: 'expense', label: t('x.expense') },
+                        { id: 'income', label: t('x.income') },
+                        { id: 'transfer', label: t('x.transfer') },
+                    ] }) }), _jsxs("div", { className: "lg-scroll", style: { flex: '1 1 auto', padding: SPACE.s4 }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, marginBottom: SPACE.s4 }, children: [hasOperator && input.length > 0 ? (_jsx("span", { className: "lg-mono lg-clamp-1", style: { fontSize: 15, color: C.muted }, children: input })) : null, _jsxs("div", { style: {
+                                    display: 'flex', alignItems: 'baseline', gap: 4,
+                                    transform: bounce ? 'scale(1.06)' : 'none', transition: 'transform 0.2s ease',
+                                }, children: [_jsx("span", { style: { fontSize: 24, fontWeight: 500, color: accent, opacity: 0.7 }, children: currencySymbol(currency) }), _jsx("span", { className: "lg-mono lg-clamp-1", style: { fontSize: 40, fontWeight: 500, color: accent }, children: minor === null ? (input.length > 0 ? input : '0') : (input.length === 0 ? '0' : displaySafe(input)) })] })] }), type === 'transfer' ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s2, marginBottom: SPACE.s4 }, children: [_jsx(FieldCard, { icon: "arrow.up.right", label: t('ent.from'), onClick: () => setMenu('from'), children: _jsx("span", { style: { fontSize: 15, color: C.ink }, children: fromAccount ? fromAccount.name : '—' }) }), _jsx(FieldCard, { icon: "arrow.down.left", label: t('ent.to'), onClick: () => setMenu('to'), children: _jsx("span", { style: { fontSize: 15, color: C.ink }, children: toAccount ? toAccount.name : '—' }) }), transferRateMissing ? (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.expense }, children: [_jsx(Icon, { name: "exclamationmark.triangle.fill", size: 12, color: C.expense }), _jsx("span", { children: t('ent.transferRateNeeded') })] })) : null] })) : (_jsxs("div", { style: { marginBottom: SPACE.s4 }, children: [_jsx("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: `${SPACE.s3}px ${SPACE.s2}px` }, children: roots.map((root) => {
+                                    const selected = categoryID === root.id
+                                        || (categoryID && store.rootCategoryID(categoryID) === root.id);
+                                    return (_jsxs("button", { type: "button", className: "lg-btn", onClick: () => {
+                                            const kids = store.childCategories(root.id);
+                                            setCategoryID(root.id);
+                                            setExpandedRoot(kids.length > 0 ? root.id : null);
+                                        }, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }, children: [_jsx("div", { style: {
+                                                    width: 44, height: 44, borderRadius: 22,
+                                                    background: selected ? root.colorHex : alpha(root.colorHex, 0.14),
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                }, children: _jsx(Icon, { name: root.systemImage, size: 20, color: selected ? C.onAccent : root.colorHex }) }), _jsx("span", { className: "lg-clamp-1", style: { fontSize: 12, color: C.ink, maxWidth: '100%', textAlign: 'center' }, children: root.name })] }, root.id));
+                                }) }), children.length > 0 ? (_jsx("div", { className: "lg-chips", style: { marginTop: SPACE.s3 }, children: children.map((child) => {
+                                    const selected = categoryID === child.id;
+                                    return (_jsx("button", { type: "button", className: "lg-btn", onClick: () => setCategoryID(child.id), style: {
+                                            flex: '0 0 auto', padding: '8px 12px', borderRadius: RADIUS.pill, fontSize: 15,
+                                            background: selected ? C.brand : C.surface,
+                                            color: selected ? C.onAccent : C.ink,
+                                            border: selected ? 'none' : `1px solid ${C.line}`,
+                                        }, children: child.name }, child.id));
+                                }) })) : null] })), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s2 }, children: [type !== 'transfer' ? (_jsx(FieldCard, { icon: "wallet.pass", label: t('x.account'), onClick: () => setMenu('account'), children: _jsx("span", { style: { fontSize: 15, color: C.ink }, children: account ? account.name : '—' }) })) : null, projects.length > 0 ? (_jsx(FieldCard, { icon: "folder", label: t('x.project'), onClick: () => setMenu('project'), children: _jsx("span", { style: { fontSize: 15, color: C.ink }, children: projectID ? (store.project(projectID)?.name ?? t('x.noProject')) : t('x.noProject') }) })) : null, type === 'expense' && hasOtherMembers ? (_jsxs(_Fragment, { children: [_jsx(FieldCard, { icon: "person.badge.plus", label: t('ent.paidBy'), onClick: () => setMenu('payer'), children: _jsx("span", { style: { fontSize: 15, color: C.ink }, children: payerMemberID ? (store.member(payerMemberID)?.name ?? t('prj.meName')) : t('prj.meName') }) }), _jsx(FieldCard, { icon: "person.2.badge.plus", label: t('ent.split'), onClick: () => actions.openSplitEditor({
+                                            projectID,
+                                            payerMemberID,
+                                            totalBaseMinor: store.toBaseMinor(minor ?? 0, currency),
+                                            split,
+                                            onDone: setSplit,
+                                        }), children: _jsx("span", { style: { fontSize: 15, color: C.muted }, children: split && (split.shares ?? []).length > 0
+                                                ? `${t(`ent.${split.mode}`)} · ${t('ent.people', split.shares.length)}`
+                                                : t('ent.notSplit') }) })] })) : null, _jsx(FieldCard, { icon: "storefront", label: t('ent.merchant'), children: _jsx("input", { className: "lg-field lg-clamp-1", style: { textAlign: 'right', fontSize: 15 }, value: merchant, onChange: (event) => setMerchant(event.target.value) }) }), _jsx(FieldCard, { icon: "calendar", label: t('x.date'), children: _jsx("input", { className: "lg-field", type: "date", style: { textAlign: 'right', fontSize: 15 }, value: day, onChange: (event) => setDay(event.target.value) }) }), _jsx(FieldCard, { icon: "text.alignleft", label: t('x.note'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: note, onChange: (event) => setNote(event.target.value) }) }), type !== 'transfer' ? (_jsxs(_Fragment, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => setExpanded((value) => !value), style: { display: 'flex', alignItems: 'center', gap: 6, padding: `${SPACE.s2}px 4px`, color: C.muted, fontSize: 14 }, children: [_jsx(Icon, { name: "slider.horizontal.3", size: 14, color: C.muted }), _jsx("span", { children: t('ent.moreDetails') }), _jsx(Icon, { name: expanded ? 'chevron.up' : 'chevron.down', size: 10, color: C.muted })] }), expanded ? (_jsxs(_Fragment, { children: [_jsx(FieldCard, { icon: "tag", label: t('ent.tags'), children: _jsx("input", { className: "lg-field", style: { textAlign: 'right', fontSize: 15 }, value: tags, onChange: (event) => setTags(event.target.value) }) }), _jsx(FieldCard, { icon: "briefcase", label: t('ent.reimbursable'), children: _jsx(Toggle, { checked: reimbursable, onChange: setReimbursable }) }), type === 'income' && refundCandidates.length > 0 ? (_jsx(FieldCard, { icon: "arrow.uturn.left.circle.fill", label: t('ent.refundOf'), onClick: () => setMenu('refund'), children: _jsx("span", { className: "lg-clamp-1", style: { fontSize: 15, color: C.ink }, children: refundOfID ? refundLabel(store, refundOfID, t) : t('ent.notLinked') }) })) : null] })) : null] })) : null] })] }), _jsxs("div", { style: {
+                    background: C.surface, borderTop: `1px solid ${C.line}`, flex: '0 0 auto',
+                    padding: `${SPACE.s2}px ${SPACE.s2}px calc(${SPACE.s2}px + env(safe-area-inset-bottom))`,
+                }, children: [KEYS.map((row) => (_jsx("div", { style: { display: 'flex', gap: 6, marginBottom: 6 }, children: row.map((key) => (_jsx("button", { type: "button", className: "lg-btn", onClick: () => press(key), style: {
+                                flex: '1 1 0', height: 44, borderRadius: RADIUS.field,
+                                background: OPERATOR_KEYS.has(key) ? fade(C.brand, 12) : C.bg,
+                                color: C.ink, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: key === 'C' ? 20 : 24, fontWeight: 500,
+                            }, children: key === '⌫' ? _jsx(Icon, { name: "delete.left", size: 20, color: C.ink }) : key }, key))) }, row.join('')))), _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: SPACE.s2 }, children: [!isEditing ? (_jsx("button", { type: "button", className: "lg-btn", disabled: !canSave, onClick: () => submit(true), style: {
+                                    flex: '1 1 0', height: 48, borderRadius: RADIUS.field, background: fade(C.brand, 14),
+                                    color: C.brand, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 16, fontWeight: 500, opacity: canSave ? 1 : 0.5,
+                                }, children: t('ent.saveAndNew') })) : null, _jsx("button", { type: "button", className: "lg-btn", disabled: !canSave, onClick: () => submit(false), style: {
+                                    flex: '1 1 0', height: 48, borderRadius: RADIUS.field,
+                                    background: canSave ? C.brand : fade(C.muted, 25),
+                                    color: C.onAccent, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 16, fontWeight: 500,
+                                }, children: isEditing ? t('x.update') : t('x.save') })] })] }), _jsx(Menu, { open: menu === 'account', onClose: () => setMenu(null), items: accounts.map((row) => ({
+                    id: row.id, label: row.name, selected: accountID === row.id, onSelect: () => setAccountID(row.id),
+                })) }), _jsx(Menu, { open: menu === 'from', onClose: () => setMenu(null), items: accounts.map((row) => ({
+                    id: row.id, label: row.name, selected: fromAccountID === row.id, onSelect: () => setFromAccountID(row.id),
+                })) }), _jsx(Menu, { open: menu === 'to', onClose: () => setMenu(null), items: accounts.map((row) => ({
+                    id: row.id, label: row.name, selected: toAccountID === row.id, onSelect: () => setToAccountID(row.id),
+                })) }), _jsx(Menu, { open: menu === 'project', onClose: () => setMenu(null), items: [
+                    { id: 'none', label: t('x.noProject'), selected: !projectID, onSelect: () => setProjectID(null) },
+                    ...projects.map((row) => ({
+                        id: row.id, label: row.name, selected: projectID === row.id, onSelect: () => setProjectID(row.id),
+                    })),
+                ] }), _jsx(Menu, { open: menu === 'payer', onClose: () => setMenu(null), items: projectMembers.map((row) => ({
+                    id: row.id, label: row.name, selected: payerMemberID === row.id, onSelect: () => setPayerMemberID(row.id),
+                })) }), _jsx(Menu, { open: menu === 'refund', onClose: () => setMenu(null), items: [
+                    { id: 'none', label: t('ent.notLinked'), selected: !refundOfID, onSelect: () => setRefundOfID(null) },
+                    ...refundCandidates.map((row) => ({
+                        id: row.id, label: refundLabel(store, row.id, t), selected: refundOfID === row.id,
+                        onSelect: () => setRefundOfID(row.id),
+                    })),
+                ] })] }));
+}
+function displaySafe(input) {
+    try {
+        return displayValue(input);
+    }
+    catch (error) {
+        return input;
+    }
+}
+function refundLabel(store, id, t) {
+    const txn = store.transaction(id);
+    if (!txn)
+        return t('ent.notLinked');
+    const name = txn.merchant
+        || (txn.categoryID ? store.category(txn.categoryID)?.name : null)
+        || txn.note
+        || t('x.expense');
+    return `${name} · ${money(txn.amountMinor, txn.currency)}`;
+}

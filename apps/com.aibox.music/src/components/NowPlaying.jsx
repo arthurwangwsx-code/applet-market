@@ -2,10 +2,10 @@
 // 两个就地切换的形态（专辑 / 歌词）**共享底部控件组**。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Artwork, ToastCapsule } from './primitives.jsx'
-import { Scrubber, TransportBar } from './PlayerControls.jsx'
-import Lyrics from './Lyrics.jsx'
+import Icon from './Icon.js'
+import { Artwork, ToastCapsule } from './primitives.js'
+import { Scrubber, TransportBar } from './PlayerControls.js'
+import Lyrics from './Lyrics.js'
 import { WHITE } from './theme.js'
 import { rgba, sizedArtworkURL, artworkDataURL } from '../lib/artwork.js'
 

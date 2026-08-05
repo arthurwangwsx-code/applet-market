@@ -1,8 +1,8 @@
 // 资讯诊断（对应 NewsDiagnosticsView）：概览 → 最近一次刷新 → 逐源状态 → 立即刷新 / 清除缓存。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Card, Row, SectionFooter, SectionHeader } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Card, Row, SectionFooter, SectionHeader } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { bytes, duration, relative } from '../lib/format.js'
 

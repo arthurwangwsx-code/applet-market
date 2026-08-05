@@ -106,5 +106,6 @@
         }
       ]
     }
-  }
+  },
+  "runtimeKind": "bundle"
 }

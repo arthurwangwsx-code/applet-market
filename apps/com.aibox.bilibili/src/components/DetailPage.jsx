@@ -10,8 +10,8 @@
 //    所以由本应用按 bvid+cid 记进度，起播时传 `resumeFrom`。
 
 import React from 'react'
-import { EmptyState, PrimaryButton, Spinner, StatItem } from './primitives.jsx'
-import VideoCard from './VideoCard.jsx'
+import { EmptyState, PrimaryButton, Spinner, StatItem } from './primitives.js'
+import VideoCard from './VideoCard.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import {

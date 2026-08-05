@@ -2,7 +2,7 @@
 // 状态槽互斥：正在朗读 → speaker.wave.2.fill；否则未读 → 6×6 品牌色圆点；已读 → 无标记。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 import { relative } from '../lib/format.js'
 import { imageURL } from '../lib/host.js'

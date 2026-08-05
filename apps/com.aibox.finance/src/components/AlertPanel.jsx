@@ -4,8 +4,8 @@
 // 假装能后台盯盘比不做更糟。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Field, Row, Segmented, Sheet, SheetHeader, Toggle } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Field, Row, Segmented, Sheet, SheetHeader, Toggle } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatPercent, formatPrice } from '../lib/format.js'
 import { parseNumberInput } from '../lib/money.js'

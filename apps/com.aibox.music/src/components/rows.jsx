@@ -2,8 +2,8 @@
 // 行尺寸、字号与图标严格按规格 §2.4 / §2.6 / §2.8 / §2.11。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Artwork, useLongPress } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Artwork, useLongPress } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { duration as fmtDuration, losslessBadge, trackSubtitle } from '../lib/format.js'
 

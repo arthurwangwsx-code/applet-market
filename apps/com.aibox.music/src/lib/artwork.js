@@ -8,7 +8,7 @@
 //     `music_local` 的条目也没有封面字段。所以封面要靠「搜索/推荐/资料库结果里见过就记下来」
 //     这条旁路补齐（见 store.rememberArtwork），本地曲目则永远是音符占位。
 
-import { fetchImageDataURL } from './host.js'
+import { imageURL } from '@aibox/applet-sdk'
 import { stableKey } from './format.js'
 
 const dataURLCache = new Map()
@@ -22,7 +22,12 @@ export async function artworkDataURL(url) {
   if (!key) return null
   if (dataURLCache.has(key)) return dataURLCache.get(key)
   if (inflight.has(key)) return inflight.get(key)
-  const task = fetchImageDataURL(key).then((value) => {
+  // 2026-08-05：从 `fetchImageDataURL`（整张图 base64 进 JS 内存再进 DOM，比原图大 33%、
+  // 60 张常驻必爆）换成 `imageURL()` —— 走宿主图片通道，字节不经过 JS，宿主两级缓存跨会话。
+  // ⚠️ 取色那条路（canvas getImageData）此前依赖 data: URL 的同源性，换成 applet:// 之后
+  // **是否仍不被判跨域污染尚未真机验证**；`dominantColor` 已加 try/catch 兜底，
+  // 万一被污染就退回无主色，不会崩，但主色会消失——这条要在真机上确认。
+  const task = Promise.resolve(imageURL(key, { width: 300 })).then((value) => {
     inflight.delete(key)
     if (dataURLCache.size >= MAX_CACHE) dataURLCache.delete(dataURLCache.keys().next().value)
     dataURLCache.set(key, value)

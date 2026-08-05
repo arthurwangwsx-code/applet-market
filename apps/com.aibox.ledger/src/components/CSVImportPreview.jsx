@@ -2,8 +2,8 @@
 // **绝不「选文件即写库」**：这一页只读、只展示，确认后才落库。
 
 import React from 'react'
-import { IconBadge } from './Icon.jsx'
-import { Card, Divider } from './primitives.jsx'
+import { IconBadge } from './Icon.js'
+import { Card, Divider } from './primitives.js'
 import { C, SPACE, alpha } from './theme.js'
 import { KIND } from '../lib/store.js'
 import { money } from '../lib/money.js'

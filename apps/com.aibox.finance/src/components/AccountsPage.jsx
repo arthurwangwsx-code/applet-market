@@ -3,8 +3,8 @@
 // 导出走 `aibox.share.file`（宿主没有该能力就整块不渲染入口，不留死按钮）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Card, Field, Row, Segmented, Sheet, SheetHeader, Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Card, Field, Row, Segmented, Sheet, SheetHeader, Spinner } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatMinor, formatPrice, formatQuantity, isoDate } from '../lib/format.js'
 import { parseNumberInput, toMinor } from '../lib/money.js'

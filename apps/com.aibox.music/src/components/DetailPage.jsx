@@ -2,9 +2,9 @@
 // 用滚动容器 + 惰性纵列，不用 List——多按钮行的点击容易被吞。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Artwork, EmptyState, ListHeader, Spinner } from './primitives.jsx'
-import { CollectionRow, Divider, NumberedTrackRow, SongRow } from './rows.jsx'
+import Icon from './Icon.js'
+import { Artwork, EmptyState, ListHeader, Spinner } from './primitives.js'
+import { CollectionRow, Divider, NumberedTrackRow, SongRow } from './rows.js'
 import { C, SPACE } from './theme.js'
 import { music as callMusic, openURL, haptics } from '../lib/host.js'
 

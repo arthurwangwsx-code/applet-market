@@ -5,9 +5,9 @@
 // 所以这里在拖动过程中只做本地乐观重排，**松手时只发一次 move(from,to)**，再用真值对账。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { EmptyState, ListHeader, SwipeRow } from './primitives.jsx'
-import { QueueRow } from './rows.jsx'
+import Icon from './Icon.js'
+import { EmptyState, ListHeader, SwipeRow } from './primitives.js'
+import { QueueRow } from './rows.js'
 import { C, SPACE } from './theme.js'
 import { useRowGestures } from 'aibox/ui'
 

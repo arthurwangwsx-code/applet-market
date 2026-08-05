@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>记账</title>
+  <!-- 本文件由 @aibox/applet-tsbuild 生成，请勿手改。 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "applet://localhost/runtime/react.mjs",
+      "react-dom": "applet://localhost/runtime/react.mjs",
+      "react-dom/client": "applet://localhost/runtime/react.mjs",
+      "react/jsx-runtime": "applet://localhost/runtime/react.mjs",
+      "chart.js": "applet://localhost/runtime/chart.mjs",
+      "antd-mobile": "applet://localhost/runtime/antd-mobile.mjs",
+      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs"
+    }
+  }
+  </script>
+  <link rel="stylesheet" href="applet://localhost/runtime/aibox-ui.css" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; }
+    #__err {
+      position: fixed; left: 0; right: 0; bottom: 0; max-height: 55%; overflow: auto;
+      margin: 0; padding: 12px 14px; background: #b00020; color: #fff;
+      font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; z-index: 2147483647;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <pre id="__err" style="display:none"></pre>
+  <script>
+    // 可见错误浮层：WKWebView 里没有控制台，没有这一层「白屏」就是全部信息。
+    function __showErr(m) {
+      var e = document.getElementById('__err');
+      if (e) { e.style.display = 'block'; e.textContent = String(m); }
+      try { console.error(String(m)); } catch (_) {}
+    }
+    window.addEventListener('error', function (ev) {
+      if (ev && ev.target && (ev.target.src || ev.target.href)) { __showErr('Failed to load: ' + (ev.target.src || ev.target.href)); return; }
+      __showErr((ev && ev.error && ev.error.stack) || (ev && ev.message) || 'Error');
+    }, true);
+    window.addEventListener('unhandledrejection', function (ev) {
+      var r = ev && ev.reason;
+      __showErr('Unhandled rejection: ' + ((r && r.stack) || (r && r.message) || r));
+    });
+  </script>
+  <script type="module">
+    import { createElement, StrictMode } from 'react';
+    import { createRoot } from 'react-dom/client';
+    try {
+      const mod = await import('./app.js');
+      const root = document.getElementById('root');
+      if (mod && mod.default && root && root.children.length === 0) {
+        createRoot(root).render(createElement(StrictMode, null, createElement(mod.default)));
+      } else if (root && root.children.length === 0) {
+        __showErr('app.js must `export default function App(){…}` (a React component). Nothing mounted.');
+      }
+    } catch (e) { __showErr('Failed to run app.js: ' + ((e && e.stack) || e)); }
+  </script>
+</body>
+</html>

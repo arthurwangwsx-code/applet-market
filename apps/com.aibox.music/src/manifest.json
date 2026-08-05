@@ -41,11 +41,22 @@
       "name": "nowPlayingSummary",
       "displayName": "当前播放摘要",
       "summary": "Return the current track, queue summary, sleep timer and lyrics availability in one call, instead of chaining music_status + music_queue + music_lyrics.",
-      "keywords": ["music", "now playing", "queue", "音乐", "正在播放", "队列"],
+      "keywords": [
+        "music",
+        "now playing",
+        "queue",
+        "音乐",
+        "正在播放",
+        "队列"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"isPlaying\":{\"type\":\"boolean\"},\"playbackState\":{\"type\":\"string\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"durationSeconds\":{\"type\":\"integer\"},\"queueCount\":{\"type\":\"integer\"},\"currentIndex\":{\"type\":\"integer\"},\"upNext\":{\"type\":\"array\"},\"repeatMode\":{\"type\":\"string\"},\"isShuffled\":{\"type\":\"boolean\"},\"sleepTimer\":{\"type\":[\"string\",\"null\"]},\"lyrics\":{\"type\":\"object\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation", "applet"],
+      "visibility": [
+        "agent",
+        "automation",
+        "applet"
+      ],
       "effect": "read",
       "readOnly": true,
       "idempotent": true
@@ -55,11 +66,22 @@
       "name": "playMostPlayed",
       "displayName": "播放最常听的歌",
       "summary": "Play the user's most-played tracks, ranked by this app's own play history (the host music tools do not expose play history).",
-      "keywords": ["music", "most played", "history", "音乐", "最常播放", "播放历史"],
+      "keywords": [
+        "music",
+        "most played",
+        "history",
+        "音乐",
+        "最常播放",
+        "播放历史"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"How many tracks to queue (default 20).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"queued\":{\"type\":\"integer\"},\"startedWith\":{\"type\":[\"string\",\"null\"]},\"message\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation", "shortcut"],
+      "visibility": [
+        "agent",
+        "automation",
+        "shortcut"
+      ],
       "effect": "mediaPlayback",
       "readOnly": false,
       "idempotent": false
@@ -69,11 +91,22 @@
       "name": "resumeLast",
       "displayName": "接着上次继续听",
       "summary": "Resume the last track this app played, seeking back to the stored position (this app's own restore point; no host tool persists it).",
-      "keywords": ["music", "resume", "continue", "音乐", "继续播放", "接着听"],
+      "keywords": [
+        "music",
+        "resume",
+        "continue",
+        "音乐",
+        "继续播放",
+        "接着听"
+      ],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"message\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": ["agent", "automation", "shortcut"],
+      "visibility": [
+        "agent",
+        "automation",
+        "shortcut"
+      ],
       "effect": "mediaPlayback",
       "readOnly": false,
       "idempotent": false
@@ -84,7 +117,9 @@
       "displayName": "随机播放",
       "summary": "Toggle shuffle on the host playback engine. Drives the ⋯ menu row, so it is a UI action rather than an agent tool (music_shuffle already covers agents).",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -94,7 +129,9 @@
       "displayName": "循环模式",
       "summary": "Set the repeat mode to off / one / all. Input is the bare mode string supplied by the ⋯ menu row.",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -104,7 +141,9 @@
       "displayName": "睡眠定时器",
       "summary": "Set or cancel the sleep timer. Input is {minutes} for a preset, {mode:'endOfTrack'} to stop after the current song, or {mode:'off'} to cancel.",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -114,7 +153,9 @@
       "displayName": "音效",
       "summary": "Open the audio effects subpage.",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "nativePresentation",
       "readOnly": true
     },
@@ -124,7 +165,9 @@
       "displayName": "分享当前歌曲",
       "summary": "Share the current track through the system share sheet.",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "nativePresentation",
       "readOnly": true
     },
@@ -134,7 +177,9 @@
       "displayName": "音乐设置",
       "summary": "Open the music settings subpage.",
       "headless": false,
-      "visibility": ["userInterface"],
+      "visibility": [
+        "userInterface"
+      ],
       "effect": "nativePresentation",
       "readOnly": true
     }
@@ -146,32 +191,42 @@
         {
           "id": "forYou",
           "title": "为你推荐",
-          "localizedTitles": { "en": "For You" },
+          "localizedTitles": {
+            "en": "For You"
+          },
           "icon": "sparkles"
         },
         {
           "id": "search",
           "title": "搜索",
-          "localizedTitles": { "en": "Search" },
+          "localizedTitles": {
+            "en": "Search"
+          },
           "icon": "magnifyingglass"
         },
         {
           "id": "player",
           "title": "正在播放",
-          "localizedTitles": { "en": "Playing" },
+          "localizedTitles": {
+            "en": "Playing"
+          },
           "icon": "play.circle",
           "selectedIcon": "play.circle.fill"
         },
         {
           "id": "queue",
           "title": "队列",
-          "localizedTitles": { "en": "Queue" },
+          "localizedTitles": {
+            "en": "Queue"
+          },
           "icon": "list.bullet"
         },
         {
           "id": "albums",
           "title": "资料库",
-          "localizedTitles": { "en": "Library" },
+          "localizedTitles": {
+            "en": "Library"
+          },
           "icon": "square.stack",
           "selectedIcon": "square.stack.fill"
         }
@@ -184,18 +239,31 @@
           "kind": "bar",
           "icon": "music.note",
           "title": "未在播放",
-          "localizedTitles": { "en": "Not Playing" },
+          "localizedTitles": {
+            "en": "Not Playing"
+          },
           "hidden": true,
           "controls": [
-            { "id": "toggle", "icon": "play.fill", "activeIcon": "pause.fill" },
-            { "id": "next", "icon": "forward.fill" }
+            {
+              "id": "toggle",
+              "icon": "play.fill",
+              "activeIcon": "pause.fill"
+            },
+            {
+              "id": "next",
+              "icon": "forward.fill"
+            }
           ]
         }
       ]
     },
     "toolbar": {
       "trailing": [
-        { "id": "more", "icon": "ellipsis", "role": "hostMenu" }
+        {
+          "id": "more",
+          "icon": "ellipsis",
+          "role": "hostMenu"
+        }
       ]
     },
     "menu": {
@@ -207,34 +275,44 @@
             {
               "id": "shuffle",
               "title": "随机播放",
-              "localizedTitles": { "en": "Shuffle" },
+              "localizedTitles": {
+                "en": "Shuffle"
+              },
               "icon": "shuffle",
               "actionID": "music_toggle_shuffle"
             },
             {
               "id": "repeat",
               "title": "循环",
-              "localizedTitles": { "en": "Repeat" },
+              "localizedTitles": {
+                "en": "Repeat"
+              },
               "icon": "repeat",
               "children": [
                 {
                   "id": "repeatOff",
                   "title": "关闭",
-                  "localizedTitles": { "en": "Off" },
+                  "localizedTitles": {
+                    "en": "Off"
+                  },
                   "actionID": "music_set_repeat",
                   "inputJSON": "\"off\""
                 },
                 {
                   "id": "repeatOne",
                   "title": "单曲循环",
-                  "localizedTitles": { "en": "Repeat One" },
+                  "localizedTitles": {
+                    "en": "Repeat One"
+                  },
                   "actionID": "music_set_repeat",
                   "inputJSON": "\"one\""
                 },
                 {
                   "id": "repeatAll",
                   "title": "全部循环",
-                  "localizedTitles": { "en": "Repeat All" },
+                  "localizedTitles": {
+                    "en": "Repeat All"
+                  },
                   "actionID": "music_set_repeat",
                   "inputJSON": "\"all\""
                 }
@@ -243,13 +321,17 @@
             {
               "id": "sleepTimer",
               "title": "睡眠定时器",
-              "localizedTitles": { "en": "Sleep Timer" },
+              "localizedTitles": {
+                "en": "Sleep Timer"
+              },
               "icon": "moon.zzz.fill",
               "children": [
                 {
                   "id": "sleepOff",
                   "title": "关闭定时器",
-                  "localizedTitles": { "en": "Turn Off Timer" },
+                  "localizedTitles": {
+                    "en": "Turn Off Timer"
+                  },
                   "icon": "moon.zzz.fill",
                   "role": "destructive",
                   "actionID": "music_set_sleep_timer",
@@ -259,49 +341,63 @@
                 {
                   "id": "sleep5",
                   "title": "5 分钟",
-                  "localizedTitles": { "en": "5 Minutes" },
+                  "localizedTitles": {
+                    "en": "5 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":5}"
                 },
                 {
                   "id": "sleep10",
                   "title": "10 分钟",
-                  "localizedTitles": { "en": "10 Minutes" },
+                  "localizedTitles": {
+                    "en": "10 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":10}"
                 },
                 {
                   "id": "sleep15",
                   "title": "15 分钟",
-                  "localizedTitles": { "en": "15 Minutes" },
+                  "localizedTitles": {
+                    "en": "15 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":15}"
                 },
                 {
                   "id": "sleep30",
                   "title": "30 分钟",
-                  "localizedTitles": { "en": "30 Minutes" },
+                  "localizedTitles": {
+                    "en": "30 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":30}"
                 },
                 {
                   "id": "sleep45",
                   "title": "45 分钟",
-                  "localizedTitles": { "en": "45 Minutes" },
+                  "localizedTitles": {
+                    "en": "45 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":45}"
                 },
                 {
                   "id": "sleep60",
                   "title": "60 分钟",
-                  "localizedTitles": { "en": "60 Minutes" },
+                  "localizedTitles": {
+                    "en": "60 Minutes"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"minutes\":60}"
                 },
                 {
                   "id": "sleepEndOfTrack",
                   "title": "播完这首后停止",
-                  "localizedTitles": { "en": "Stop After This Song" },
+                  "localizedTitles": {
+                    "en": "Stop After This Song"
+                  },
                   "actionID": "music_set_sleep_timer",
                   "inputJSON": "{\"mode\":\"endOfTrack\"}"
                 }
@@ -315,14 +411,18 @@
             {
               "id": "audioEffects",
               "title": "音效",
-              "localizedTitles": { "en": "Audio Effects" },
+              "localizedTitles": {
+                "en": "Audio Effects"
+              },
               "icon": "slider.horizontal.3",
               "actionID": "music_open_effects"
             },
             {
               "id": "shareTrack",
               "title": "分享",
-              "localizedTitles": { "en": "Share" },
+              "localizedTitles": {
+                "en": "Share"
+              },
               "icon": "square.and.arrow.up",
               "actionID": "music_share_current",
               "hidden": true
@@ -335,7 +435,9 @@
             {
               "id": "musicSettings",
               "title": "音乐设置",
-              "localizedTitles": { "en": "Music Settings" },
+              "localizedTitles": {
+                "en": "Music Settings"
+              },
               "icon": "gearshape",
               "actionID": "music_open_settings"
             }
@@ -343,5 +445,6 @@
         }
       ]
     }
-  }
+  },
+  "runtimeKind": "bundle"
 }

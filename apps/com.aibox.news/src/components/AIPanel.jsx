@@ -6,8 +6,8 @@
 // 但**工具调用换成把当前时间线摘要塞进上下文**，且会话只存在于本次运行（不持久）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Sheet, Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Sheet, Spinner } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { aiGenerate } from '../lib/host.js'
 

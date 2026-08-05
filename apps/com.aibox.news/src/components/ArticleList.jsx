@@ -2,8 +2,8 @@
 // 长按菜单的**项与顺序**按 spec §2.5 / §4：条件不满足则整项不出现。
 
 import React from 'react'
-import ArticleRow from './ArticleRow.jsx'
-import { ActionSheet, SwipeRow, useLongPress, useIncremental } from './primitives.jsx'
+import ArticleRow from './ArticleRow.js'
+import { ActionSheet, SwipeRow, useLongPress, useIncremental } from './primitives.js'
 import { C, SPACE } from './theme.js'
 
 function Item({ article, item, ctx, menuFor, swipe, sequence }) {

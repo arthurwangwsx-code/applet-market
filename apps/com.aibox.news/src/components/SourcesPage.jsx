@@ -3,8 +3,8 @@
 // 点行下钻该源文章列表；长按 = 上移 / 下移 / 删除；左滑 = 删除。内置源也能删。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle, useLongPress } from './primitives.jsx'
+import Icon from './Icon.js'
+import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle, useLongPress } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { TOPIC_ICON, TOPIC_ORDER, topicKey } from '../lib/catalog.js'
 import { relative } from '../lib/format.js'

@@ -1,15 +1,12 @@
-// 宿主能力封装。**所有** `window.aibox` 访问收敛在这里。
-//
-// 这个应用与「自己解析取流」的写法有一处本质区别：**播放地址不由它拿**。
-// 页面把视频页 URL 交给 `aibox.video.resolve`，宿主的 extractor 栈（含客户端选型、
-// visitorData 握手这些每周都在变的东西）负责解析，再由 `aibox.video.play` 带着必需的请求头去播。
-//
-// 这样做的收益不只是省代码：YouTube 的取流是**持续对抗**，把它放在宿主里，
-// 一次升级所有小应用同时受益；放在小应用里，每个应用各自烂掉。
+// 宿主桥接口：**共享部分转发给 `@aibox/applet-sdk`**（2026-08-05 迁移）。
+// 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
+// （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
+// 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
+
+import { available, bridge, events, system, intelligence, ui } from '@aibox/applet-sdk'
 
 import { imageURL as uiImageURL } from 'aibox/ui'
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 
 const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，'
   + '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）'
@@ -190,14 +187,7 @@ export function toast(message) {
   fireAndForget(() => bridge()?.toast?.show?.({ message }))
 }
 
-export async function copyText(text) {
-  try {
-    await bridge()?.clipboard?.write?.({ text })
-    return true
-  } catch {
-    return false
-  }
-}
+export const copyText = system.copyText
 
 export async function share(text, url) {
   const api = bridge()
@@ -210,18 +200,4 @@ export async function share(text, url) {
 }
 
 /** 本应用没做的页面（频道、评论）交给宿主浏览器，而不是留死路。 */
-export async function openInBrowser(url) {
-  const api = bridge()
-  if (api?.browser?.open) {
-    try {
-      await api.browser.open({ url, mode: 'inApp' })
-      return true
-    } catch { /* 落到下面 */ }
-  }
-  try {
-    await api?.open?.url?.({ url })
-    return true
-  } catch {
-    return false
-  }
-}
+export const openInBrowser = system.openInBrowser

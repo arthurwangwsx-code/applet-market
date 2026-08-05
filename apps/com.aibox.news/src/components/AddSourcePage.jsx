@@ -3,9 +3,9 @@
 // 添加逻辑：endpoint 以 `/` 开头强制视为 rsshub；sortOrder = max+1；enabled = true。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import PickerRow from './OptionPicker.jsx'
-import { Card, SectionFooter, Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import PickerRow from './OptionPicker.js'
+import { Card, SectionFooter, Spinner } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { FEED_KINDS, TOPIC_ORDER, topicKey } from '../lib/catalog.js'
 

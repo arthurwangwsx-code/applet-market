@@ -60,13 +60,42 @@ function useJobs() {
     if (result.denied) setDenied(true)
   }, [])
 
+  /**
+   * 播放一个已完成的任务。
+   *
+   * 走的是**和哔哩哔哩同一条路**：`video.stage()` 开页面内舞台 → `video.play({artifactRef})`。
+   * 这样拿到的是舞台播放器——画中画、后台音频、手势、以及播放器自己的全屏按钮全都在，
+   * 页面还能继续滚动。
+   *
+   * 老路（`viddl_jobs play`）会把整屏交给宿主全屏播放器并转横屏，且没有画中画。
+   * 它仍作**兜底**：没有句柄（比如 HLS 离线包还没导出成 mp4）时退回去，总比不能播好。
+   */
+  const playJob = React.useCallback(async (job) => {
+    const api = typeof window !== 'undefined' ? window.aibox : undefined
+    const ref = (bytes[job.jobId] || {}).artifactRef
+    if (api && api.video && ref) {
+      try {
+        // 舞台是可选增强：开不出来（无头 / 这个构建没编播放器）也不该挡住播放。
+        try { await api.video.stage({ aspect: '16:9', backgroundAudio: true, pictureInPicture: true }) } catch (_) {}
+        const result = await api.video.play({ artifactRef: ref, title: job.title })
+        if (result && result.playing) return
+      } catch (error) {
+        // 落到兜底，不把异常抛给 UI——播放失败要给用户一条能读的提示，不是一个红框。
+      }
+    }
+    await act('play', job.jobId)
+  }, [bytes])
+
   const refreshBytes = React.useCallback(async () => {
     const items = await queue.list()
     // 一个 job 可能有多条轨道（DASH 双轨），按 groupId 聚合；HLS 只有一条（补充源投影的那条）。
     const map = {}
     for (const item of items) {
       const key = item.groupId || item.taskId
-      const row = map[key] || { received: 0, total: 0, speed: 0, known: true }
+      const row = map[key] || { received: 0, total: 0, speed: 0, known: true, artifactRef: null }
+      // 句柄留给播放用：完成的那条轨道就是可播的那个文件（DASH 双轨里取先完成的那条即可，
+      // 宿主合轨后 outputPath 指向同一个成品）。
+      if (!row.artifactRef && item.state === 'completed' && item.artifactRef) row.artifactRef = item.artifactRef
       row.received += item.bytesReceived || 0
       if (item.totalBytes) row.total += item.totalBytes
       else row.known = false
@@ -326,7 +355,7 @@ export default function App() {
                     onResume={(j) => act('resume', j.jobId)}
                     onCancel={(j) => act('cancel', j.jobId)}
                     onRetry={(j) => act('retry', j.jobId)}
-                    onPlay={(j) => act('play', j.jobId)}
+                    onPlay={(j) => playJob(j)}
                     onExport={(j) => act('export', j.jobId)}
                   />
                 </div>

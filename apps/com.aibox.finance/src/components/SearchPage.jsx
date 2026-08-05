@@ -5,10 +5,10 @@
 //  · **搜索历史在「点开详情」时记入**，不是敲键时，也不是点加自选时（§15 第 10 条）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { VirtualList } from './VirtualList.jsx'
-import { EmptyState, Sheet, SheetHeader, Spinner } from './primitives.jsx'
-import { SearchField } from './Shell.jsx'
+import Icon from './Icon.js'
+import { VirtualList } from './VirtualList.js'
+import { EmptyState, Sheet, SheetHeader, Spinner } from './primitives.js'
+import { SearchField } from './Shell.js'
 import { C, SPACE } from './theme.js'
 import { formatPercent, formatPriceFor, trendColor } from '../lib/format.js'
 import { HOT_SEEDS } from '../lib/store.js'

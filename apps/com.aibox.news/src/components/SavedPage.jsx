@@ -3,10 +3,10 @@
 // 长按菜单没有「相关报道」。
 
 import React from 'react'
-import ArticleList from './ArticleList.jsx'
-import { EmptyState } from './primitives.jsx'
-import Pager from './Pager.jsx'
-import { SearchField } from './Shell.jsx'
+import ArticleList from './ArticleList.js'
+import { EmptyState } from './primitives.js'
+import Pager from './Pager.js'
+import { SearchField } from './Shell.js'
 import { C, SPACE } from './theme.js'
 import { HISTORY_UI_LIMIT } from '../lib/store.js'
 

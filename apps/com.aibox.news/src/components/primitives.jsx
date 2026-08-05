@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 export function Spinner({ size = 16, color = 'currentColor' }) {

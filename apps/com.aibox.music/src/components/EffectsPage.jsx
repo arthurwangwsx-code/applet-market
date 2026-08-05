@@ -2,8 +2,8 @@
 // 全部经 `music_effects`（宿主工具覆盖完整，这一页没有降级）。
 
 import React from 'react'
-import { Card, ListHeader, Row, Spinner } from './primitives.jsx'
-import { Switch } from './SettingsPage.jsx'
+import { Card, ListHeader, Row, Spinner } from './primitives.js'
+import { Switch } from './SettingsPage.js'
 import { C, SPACE } from './theme.js'
 import { bandLabel, gainLabel, presetRateLabel, rateLabel } from '../lib/format.js'
 

@@ -2,7 +2,7 @@
 // 顶栏左侧「退出」按钮是原生规格里的 `chevron.backward` 圆形毛玻璃 + accent。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 export function NavBar({ title, onBack, backLabel, trailing }) {

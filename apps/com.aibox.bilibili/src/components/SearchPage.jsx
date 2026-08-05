@@ -5,8 +5,8 @@
 
 import React from 'react'
 import { VirtualList, useKeyboardInset } from 'aibox/ui'
-import VideoCard, { CARD_HEIGHT } from './VideoCard.jsx'
-import { EmptyState, Spinner } from './primitives.jsx'
+import VideoCard, { CARD_HEIGHT } from './VideoCard.js'
+import { EmptyState, Spinner } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import * as api from '../lib/api.js'
 import { imageURL, openInBrowser } from '../lib/host.js'

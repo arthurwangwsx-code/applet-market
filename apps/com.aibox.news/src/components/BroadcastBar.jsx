@@ -1,7 +1,7 @@
 // 播报提示条 + 播报控制条（对应 NewsBroadcastBar.swift）。跨 Tab 常驻，贴在底栏之上。
 
 import React from 'react'
-import Icon from './Icon.jsx'
+import Icon from './Icon.js'
 import { C, SPACE } from './theme.js'
 
 export function BroadcastNotice({ messageKey, t, onDismiss }) {

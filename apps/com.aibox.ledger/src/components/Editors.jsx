@@ -2,8 +2,8 @@
 // 都是 sheet 里的表单，共用 FieldCard + Menu + Toggle 三件套。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { FieldCard, Menu, Toggle } from './primitives.jsx'
+import Icon from './Icon.js'
+import { FieldCard, Menu, Toggle } from './primitives.js'
 import { C, RADIUS, SPACE, alpha, fade } from './theme.js'
 import { ACCOUNT_KIND_ORDER, MEMBER_COLORS, PROJECT_COLORS, PROJECT_ICONS } from '../lib/seeds.js'
 import { CURRENCY_CATALOG, currencySymbol } from '../lib/currencies.js'

@@ -5,7 +5,7 @@
 // iCloud 自选同步在容器里没有对应能力 → 整块不渲染（不留一个点了没反应的开关）。
 
 import React from 'react'
-import { Card, Row, Segmented, Sheet, SheetHeader, Toggle } from './primitives.jsx'
+import { Card, Row, Segmented, Sheet, SheetHeader, Toggle } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { capabilities } from '../lib/host.js'
 

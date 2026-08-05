@@ -895,7 +895,7 @@ declare namespace aibox {
 
   namespace video {
     /** Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass the SAME page url as sourceURL plus the chosen formatID — this is the one you want, because it keeps the request headers and split-stream info that resolve found; passing resolve's raw url instead loses them and sites like Bilibili will answer 403. (2) For a plain direct media URL you already have (mp4/m3u8, not a web page): pass url. resumeFrom continues from a saved position in seconds; presentation 'immersive' (default) takes over the screen, 'embedded' does not. Result: {playing:boolean} */
-    function play(input?: { formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<{ playing: boolean }>
+    function play(input?: { artifactRef?: string; formatID?: string; presentation?: "immersive" | "embedded"; resumeFrom?: number; sourceURL?: string; subtitleURL?: string; title?: string; url?: string }): Promise<{ playing: boolean }>
     /** Play a list of videos starting at startAt, so next/previous walk the list. Use this for episode lists and multi-part videos instead of calling play() again on every part. Result: {playing:boolean, count:integer} */
     function playQueue(input: { items: Array<{ subtitleURL?: string; title?: string; url: string }>; presentation?: "immersive" | "embedded"; resumeFrom?: number; startAt?: number }): Promise<{ count: number; playing: boolean }>
     /** Pause playback. Does nothing if what is playing was not started by your applet. Result: boolean */

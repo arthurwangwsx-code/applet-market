@@ -6,11 +6,11 @@
 //  · 页脚时间戳带**日期 + 时区缩写**，避免把昨天的快照当今天。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { VirtualList } from './VirtualList.jsx'
+import Icon from './Icon.js'
+import { VirtualList } from './VirtualList.js'
 import {
   Chip, ChipRow, EmptyState, Menu, PullRefresh, Spinner, SwipeRow,
-} from './primitives.jsx'
+} from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatPercent, formatPrice, formatPriceFor, formatStamp, trendColor, trendTint } from '../lib/format.js'
 import { INDEX_ROWS, decimalsFor, resolveSymbol } from '../lib/symbol.js'

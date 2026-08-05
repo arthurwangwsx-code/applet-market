@@ -1,17 +1,14 @@
-// 宿主桥的薄封装。三条纪律：
-//  1. 每个能力都**先探测再使用**——宿主没装/没授权时 window.aibox.<ns> 根本不存在，
-//     入口要整块不渲染，而不是点了没反应；
-//  2. 所有调用都不抛到 UI 层，失败回落成一个可判定的返回值；
-//  3. 没有 aibox 时（例如在普通浏览器里预览）退化成内存实现，页面仍能跑。
+// 宿主桥接口：**共享部分转发给 `@aibox/applet-sdk`**（2026-08-05 迁移）。
+// 保留本应用自己的东西：httpGet 的单飞闸 / 软超时 / maxBytes 是**领域策略**（RSS 源千奇百怪），
+// 不是桥胶水，不进 SDK。
 
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+import { available, bridge, events, system, intelligence } from '@aibox/applet-sdk'
+
 
 // MARK: - 能力探测
 
 export function hasNamespace(name, method) {
-  const api = bridge()
-  if (!api || !api[name]) return false
-  return method ? typeof api[name][method] === 'function' : true
+  return available(name, method)
 }
 
 export const capabilities = {
@@ -245,22 +242,7 @@ export function imageURL(url, widthPoints) {
 
 // MARK: - browser（打开文章）
 
-export async function browserAvailability() {
-  const api = bridge()
-  if (!api || !api.browser) return { modes: [], reader: false }
-  try {
-    if (typeof api.browser.availability !== 'function') {
-      return { modes: ['inApp'], reader: typeof api.browser.openArticle === 'function' }
-    }
-    const info = await api.browser.availability()
-    return {
-      modes: Array.isArray(info && info.modes) ? info.modes : [],
-      reader: !!(info && info.reader),
-    }
-  } catch (error) {
-    return { modes: [], reader: false }
-  }
-}
+export const browserAvailability = system.browserAvailability
 
 /**
  * 打开类调用的封顶时长。
@@ -283,83 +265,21 @@ function withTimeout(promise, ms) {
   )
 }
 
-export async function openArticle(payload) {
-  const api = bridge()
-  if (api && api.browser && typeof api.browser.openArticle === 'function') {
-    try {
-      // 超时**不再往下级联**：降级链上的每一跳都是动作型能力，会再弹一次授权，
-      // 用户等来的就是一串弹窗。迟迟不回话时如实回 false，由调用方提示。
-      if (await withTimeout(api.browser.openArticle(payload), OPEN_TIMEOUT_MS) === TIMED_OUT) return false
-      return true
-    } catch (error) {
-      /* 落到下面的降级链 */
-    }
-  }
-  return openURL(payload.url, 'inApp')
-}
+export const openArticle = system.openArticle
 
-export async function openURL(url, mode = 'inApp') {
-  const api = bridge()
-  if (api && api.browser && typeof api.browser.open === 'function') {
-    try {
-      if (await withTimeout(api.browser.open({ url, mode }), OPEN_TIMEOUT_MS) === TIMED_OUT) return false
-      return true
-    } catch (error) {
-      /* 落到 open.url */
-    }
-  }
-  if (api && api.open && typeof api.open.url === 'function') {
-    try {
-      return await withTimeout(api.open.url({ url }), OPEN_TIMEOUT_MS) !== TIMED_OUT
-    } catch (error) {
-      return false
-    }
-  }
-  return false
-}
+export const openURL = system.openURL
 
 // MARK: - tts
 
-export async function speak(text, lang) {
-  const api = bridge()
-  if (!api || !api.tts || typeof api.tts.speak !== 'function') return false
-  try {
-    const ok = await api.tts.speak({ text, lang })
-    return ok !== false
-  } catch (error) {
-    return false
-  }
-}
+export const speak = system.speak
 
-export async function stopSpeaking() {
-  const api = bridge()
-  if (!api || !api.tts || typeof api.tts.stop !== 'function') return false
-  try {
-    await api.tts.stop({})
-    return true
-  } catch (error) {
-    return false
-  }
-}
+export const stopSpeaking = system.stopSpeaking
 
 // MARK: - ai
 
-export async function aiAvailability() {
-  const api = bridge()
-  if (!api || !api.ai || typeof api.ai.availability !== 'function') return { available: false }
-  try {
-    const info = await api.ai.availability()
-    return info && typeof info === 'object' ? info : { available: false }
-  } catch (error) {
-    return { available: false }
-  }
-}
+export const aiAvailability = intelligence.aiAvailability
 
-export async function aiGenerate(input) {
-  const api = bridge()
-  if (!api || !api.ai || typeof api.ai.generate !== 'function') throw new Error('aibox/ai-unavailable')
-  return api.ai.generate(input)
-}
+export const aiGenerate = intelligence.aiGenerate
 
 // MARK: - tools（长尾工具网关；知识库入库用）
 
@@ -374,46 +294,12 @@ export async function aiGenerate(input) {
  * `aibox.access.explain` 是容器为这件事准备的**只读**入口：它永远 resolve，回
  * `{ allowed, code, failedGate, remedies }`，不产生错误日志。老宿主没有 access 面时回落到旧探法。
  */
-export async function findTool(name) {
-  const api = bridge()
-  if (api && api.access && typeof api.access.explain === 'function') {
-    try {
-      const verdict = await api.access.explain({ tool: name })
-      return !!(verdict && verdict.allowed)
-    } catch (error) {
-      return false
-    }
-  }
-  if (!api || !api.tools || typeof api.tools.describe !== 'function') return false
-  try {
-    await api.tools.describe({ name })
-    return true
-  } catch (error) {
-    return false
-  }
-}
+export const findTool = intelligence.findTool
 
-export async function callTool(name, args) {
-  const api = bridge()
-  if (!api || !api.tools || typeof api.tools.call !== 'function') return { ok: false }
-  try {
-    const result = await api.tools.call({ name, arguments: args })
-    return result && typeof result === 'object' ? result : { ok: false }
-  } catch (error) {
-    return { ok: false, error: String((error && error.message) || error) }
-  }
-}
+export const callTool = intelligence.callTool
 
 // MARK: - 事件总线
 
-export function onEvent(name, handler) {
-  const api = bridge()
-  if (!api || !api.events || typeof api.events.on !== 'function') return () => {}
-  return api.events.on(name, handler)
-}
+export const onEvent = events.on
 
-export function onNamespaceEvent(namespace, event, handler) {
-  const api = bridge()
-  if (!api || !api[namespace] || typeof api[namespace].on !== 'function') return () => {}
-  return api[namespace].on(event, handler)
-}
+export const onNamespaceEvent = events.shellOn

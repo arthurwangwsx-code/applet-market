@@ -8,7 +8,7 @@
 //    没有能力就**不渲染入口**（留个点了没反应的开关比没有更糟）。
 
 import React from 'react'
-import { Card, Chevron, IconTile, ListHeader, Row } from './primitives.jsx'
+import { Card, Chevron, IconTile, ListHeader, Row } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { percent } from '../lib/format.js'
 

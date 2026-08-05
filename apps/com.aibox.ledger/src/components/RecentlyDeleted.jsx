@@ -3,8 +3,8 @@
 // **转账两腿只展示一条**（以两个 id 里字典序较小的那个作为配对键去重）。
 
 import React from 'react'
-import { IconBadge } from './Icon.jsx'
-import { Card, Divider, EmptyState, SwipeRow } from './primitives.jsx'
+import { IconBadge } from './Icon.js'
+import { Card, Divider, EmptyState, SwipeRow } from './primitives.js'
 import { C, SPACE, alpha, fade } from './theme.js'
 import { KIND } from '../lib/store.js'
 import { recentlyDeleted } from '../lib/entries.js'

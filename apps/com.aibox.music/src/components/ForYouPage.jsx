@@ -8,7 +8,7 @@
 // **只有非空才覆盖**（无订阅/断网返回空时保留已显示内容，不闪成空态）。
 
 import React from 'react'
-import { EmptyState, PullToRefresh, SectionHeader, Artwork, Spinner } from './primitives.jsx'
+import { EmptyState, PullToRefresh, SectionHeader, Artwork, Spinner } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { music as callMusic, storage, classifyMusicError } from '../lib/host.js'
 

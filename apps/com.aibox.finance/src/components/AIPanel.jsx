@@ -5,8 +5,8 @@
 // ✨ 入口与本面板**整块不渲染**（在 app.jsx 里由 `hasAI` 门控）。
 
 import React from 'react'
-import Icon from './Icon.jsx'
-import { Sheet, SheetHeader, Spinner } from './primitives.jsx'
+import Icon from './Icon.js'
+import { Sheet, SheetHeader, Spinner } from './primitives.js'
 import { C, RADIUS, SPACE } from './theme.js'
 import { formatPercent, formatPrice, formatStamp } from '../lib/format.js'
 import { INDEX_ROWS, decimalsFor, resolveSymbol } from '../lib/symbol.js'

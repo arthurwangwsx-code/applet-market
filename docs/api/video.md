@@ -21,6 +21,7 @@ Play one video full-screen. Two ways to call it. (1) AFTER video.resolve: pass t
 | `sourceURL` | string |  | The page url you passed to video.resolve. Preferred. |
 | `formatID` | string |  | id of the chosen format from resolve; omit to let the host pick the best playable one. |
 | `url` | string |  | A direct media URL. Only for streams you did not get from resolve. |
+| `artifactRef` | string |  | Play a file YOUR OWN applet already downloaded — pass the artifactRef from download.enqueue/list (download://<taskId>). The host resolves it and checks ownership; you never handle a local path. Works with stage(), so this is how you give a downloaded video picture-in-picture and background audio. |
 | `title` | string |  |  |
 | `subtitleURL` | string |  | Optional .srt sidecar subtitle URL. |
 | `resumeFrom` | number |  | Seconds to resume from. （最小 0） |

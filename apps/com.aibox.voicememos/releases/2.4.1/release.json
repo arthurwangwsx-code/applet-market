@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.voicememos",
+  "version": "2.4.1",
+  "releasedAt": "2026-08-05T02:02:29Z",
+  "notes": "回归套件分层：默认 smoke 只验应用自身，依赖环境的断言原样搬进点名套件（device/live/negative），真机上照跑不打折。原来两类断言混在一条套件里，在模拟器上永远不可能绿，红灯也就失去了信号价值。",
+  "localizedNotes": {
+    "en": "Split the regression suites: the default smoke suite now covers only app-side behaviour, while environment-dependent assertions move verbatim into named suites (device/live/negative) that still run on real hardware."
+  },
+  "manifest": {
+    "name": "语音备忘录",
+    "localizedNames": {
+      "en": "Voice Memos"
+    },
+    "icon": "waveform",
+    "iconTintHex": "FF6B35",
+    "summary": "录音、转写与 AI 分析",
+    "localizedSummaries": {
+      "en": "Record, transcribe and analyze voice memos"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "runtimeKind": "bundle",
+    "securityMode": "secure",
+    "permissions": {
+      "network": false,
+      "networkAllowed": [],
+      "storage": true,
+      "ai": true,
+      "capabilities": [
+        "audio",
+        "share",
+        "clipboard",
+        "ui",
+        "haptics"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "sheet",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "scene": {
+      "overlay": {
+        "items": [
+          {
+            "id": "player",
+            "kind": "bar",
+            "icon": "waveform",
+            "title": "未播放",
+            "localizedTitles": {
+              "en": "Not Playing"
+            },
+            "hidden": true,
+            "controls": [
+              {
+                "id": "back15",
+                "icon": "gobackward.15"
+              },
+              {
+                "id": "toggle",
+                "icon": "play.fill",
+                "activeIcon": "pause.fill"
+              },
+              {
+                "id": "forward15",
+                "icon": "goforward.15"
+              }
+            ]
+          },
+          {
+            "id": "record",
+            "kind": "button",
+            "icon": "record.circle",
+            "activeIcon": "stop.circle.fill",
+            "title": "录音",
+            "localizedTitles": {
+              "en": "Record"
+            },
+            "tint": "danger",
+            "hidden": true
+          }
+        ]
+      },
+      "menu": {
+        "sections": [
+          {
+            "id": "ai",
+            "items": [
+              {
+                "id": "actionItems",
+                "title": "待办事项",
+                "localizedTitles": {
+                  "en": "Action Items"
+                },
+                "icon": "checklist",
+                "hidden": true
+              },
+              {
+                "id": "ask",
+                "title": "询问这段录音",
+                "localizedTitles": {
+                  "en": "Ask this recording"
+                },
+                "icon": "questionmark.bubble",
+                "hidden": true
+              },
+              {
+                "id": "cleanUp",
+                "title": "整理文本",
+                "localizedTitles": {
+                  "en": "Clean Up"
+                },
+                "icon": "wand.and.stars",
+                "role": "destructive",
+                "hidden": true
+              }
+            ]
+          },
+          {
+            "id": "share",
+            "items": [
+              {
+                "id": "shareTranscript",
+                "title": "分享原文",
+                "localizedTitles": {
+                  "en": "Share transcript"
+                },
+                "icon": "square.and.arrow.up",
+                "hidden": true
+              },
+              {
+                "id": "shareSummary",
+                "title": "分享摘要",
+                "localizedTitles": {
+                  "en": "Share summary"
+                },
+                "icon": "square.and.arrow.up",
+                "hidden": true
+              },
+              {
+                "id": "exportMd",
+                "title": "导出为 Markdown",
+                "localizedTitles": {
+                  "en": "Export as Markdown"
+                },
+                "icon": "doc.richtext",
+                "hidden": true
+              },
+              {
+                "id": "exportTxt",
+                "title": "导出为文本",
+                "localizedTitles": {
+                  "en": "Export as text"
+                },
+                "icon": "doc.plaintext",
+                "hidden": true
+              },
+              {
+                "id": "exportSrt",
+                "title": "导出为字幕",
+                "localizedTitles": {
+                  "en": "Export as subtitles"
+                },
+                "icon": "captions.bubble",
+                "hidden": true
+              }
+            ]
+          },
+          {
+            "id": "manage",
+            "items": [
+              {
+                "id": "rename",
+                "title": "重命名",
+                "localizedTitles": {
+                  "en": "Rename"
+                },
+                "icon": "pencil",
+                "hidden": true
+              }
+            ]
+          }
+        ]
+      },
+      "tabBar": {
+        "items": [
+          {
+            "id": "record",
+            "title": "录音",
+            "localizedTitles": {
+              "en": "Record"
+            },
+            "icon": "mic",
+            "selectedIcon": "mic.fill"
+          },
+          {
+            "id": "library",
+            "title": "文件夹",
+            "localizedTitles": {
+              "en": "Folders"
+            },
+            "icon": "folder",
+            "selectedIcon": "folder.fill"
+          },
+          {
+            "id": "settings",
+            "title": "设置",
+            "localizedTitles": {
+              "en": "Settings"
+            },
+            "icon": "gearshape",
+            "selectedIcon": "gearshape.fill"
+          }
+        ]
+      }
+    },
+    "actions": [
+      {
+        "id": "memo_list",
+        "name": "memo_list",
+        "displayName": "列出录音",
+        "summary": "Lists this app's voice recordings, newest first. Filter by a text query or favourites only. Read-only.",
+        "keywords": [
+          "voice memo",
+          "recording",
+          "audio note",
+          "list recordings",
+          "录音",
+          "语音备忘录",
+          "录音列表"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Match against the recording title.\"},\"favOnly\":{\"type\":\"boolean\",\"description\":\"Only favourited recordings.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_transcribe",
+        "name": "memo_transcribe",
+        "displayName": "转写录音",
+        "summary": "Transcribes one recording with Apple speech recognition and returns the text. It waits for completion, so a long recording can take minutes. Already-transcribed recordings return immediately; read them with memo_transcript.",
+        "keywords": [
+          "transcribe",
+          "speech to text",
+          "transcript",
+          "转写",
+          "转录",
+          "语音转文字"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"locale\":{\"type\":\"string\",\"description\":\"BCP-47 locale such as en_US or zh_CN. Defaults to the configured transcription language. Pass the language actually spoken — a mismatch produces garbage.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "write",
+        "readOnly": false,
+        "idempotent": true
+      },
+      {
+        "id": "memo_transcript",
+        "name": "memo_transcript",
+        "displayName": "读取转写",
+        "summary": "Returns the transcript of one recording: status and the full text. Prefers the speaker-corrected version when one exists. Read-only.",
+        "keywords": [
+          "transcript",
+          "read transcript",
+          "what was said",
+          "转写文本",
+          "转录内容",
+          "文稿"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"status\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_summarize",
+        "name": "memo_summarize",
+        "displayName": "生成摘要",
+        "summary": "Summarizes a recording's transcript and returns the summary text. Takes a template: general, meeting, interview, oneOnOne, lecture or podcast — each produces a different section structure (decisions and action items for meetings, strengths and concerns for interviews, and so on). Needs a completed transcript; run memo_transcribe first.",
+        "keywords": [
+          "summary",
+          "summarize",
+          "meeting notes",
+          "minutes",
+          "摘要",
+          "会议纪要",
+          "总结"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"template\":{\"type\":\"string\",\"enum\":[\"general\",\"meeting\",\"interview\",\"oneOnOne\",\"lecture\",\"podcast\"],\"description\":\"Summary shape; defaults to 'general'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"template\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "memo_action_items",
+        "name": "memo_action_items",
+        "displayName": "提取待办",
+        "summary": "Extracts tasks, decisions and personal commitments from a recording's transcript, each with an owner and a due hint when the speaker actually stated one. Nothing is invented. Needs a completed transcript.",
+        "keywords": [
+          "action items",
+          "todo",
+          "tasks",
+          "decisions",
+          "follow up",
+          "待办",
+          "任务",
+          "决定"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"force\":{\"type\":\"boolean\",\"description\":\"Re-extract instead of returning the cached result.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": false,
+        "idempotent": false
+      },
+      {
+        "id": "memo_ask",
+        "name": "memo_ask",
+        "displayName": "询问录音",
+        "summary": "Answers a question about one recording using only its transcript — nothing else. Use it instead of pulling the whole transcript when the user asks something specific about a long recording.",
+        "keywords": [
+          "ask",
+          "question",
+          "what did they say",
+          "询问录音",
+          "问答",
+          "录音里说了什么"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"question\":{\"type\":\"string\",\"description\":\"The question to answer from the transcript.\"}},\"required\":[\"id\",\"question\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true,
+        "idempotent": true
+      },
+      {
+        "id": "memo_export",
+        "name": "memo_export",
+        "displayName": "导出文稿",
+        "summary": "Renders one recording as structured Markdown, plain text or SRT subtitles — title, created time, duration, summary, transcript, chapters, action items and translation, whichever exist. Returns the rendered text; it does not write a file.",
+        "keywords": [
+          "export",
+          "markdown",
+          "srt",
+          "subtitles",
+          "导出",
+          "字幕",
+          "文稿导出"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"The recording id from memo_list.\"},\"format\":{\"type\":\"string\",\"enum\":[\"markdown\",\"text\",\"srt\"],\"description\":\"Output format; defaults to 'markdown'.\"}},\"required\":[\"id\"],\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\"},\"format\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "read",
+        "readOnly": true,
+        "idempotent": true
+      }
+    ]
+  },
+  "totalBytes": 207768,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 4274,
+      "sha256": "8a4d843de1fab1896b7fe3d36794901a60b108784bb5f285d6f93cc8a24abf21",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 188357,
+      "sha256": "47f797d7d65fdb8571936b645b80a1c2ccb622e130508181076ffe23d80cf862",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2980,
+      "sha256": "0fce7a0b08c2a3ed0c5fe09af0c03f6ef8ff87320052ae3a86e6ac72d4039885",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 12157,
+      "sha256": "daa160281ac9d4c6e3de634a75ba984678841317c35bb03086419390df5a2f46",
+      "encoding": "utf8"
+    }
+  ]
+}

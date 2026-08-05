@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.3.0",
+  "latestVersion": "1.3.1",
   "releases": [
+    {
+      "version": "1.3.1",
+      "releasedAt": "2026-08-05T02:07:04Z",
+      "notes": "回归套件分层：默认 smoke 只验订阅源管理与结构完整性，断言实时内容（资讯已更新 / 条数 / 来源数）的部分原样搬进 live 套件——上游 RSS 打个嗝就红一次，红灯会失去信号价值。",
+      "fileCount": 41,
+      "totalBytes": 304310,
+      "path": "apps/com.aibox.news/releases/1.3.1",
+      "localizedNotes": {
+        "en": "Split the regression suite: the default smoke suite covers subscription management and structural integrity, while assertions on freshly fetched content move verbatim into a live suite."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "e6104ba4b69c2a1ff34c47d099a71c58f0683d4de31253ff304630a90003e0b8"
+    },
     {
       "version": "1.3.0",
       "releasedAt": "2026-08-05T01:46:34Z",

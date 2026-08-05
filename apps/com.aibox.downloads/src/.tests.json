@@ -52,12 +52,7 @@
       },
       {
         "action": "eval",
-        "expr": "(async () => { const tasks = await window.aibox.download.list({}); if (!tasks.length) throw new Error('nothing was enqueued'); const done = tasks.find(t => t.state === 'completed'); if (!done) throw new Error('no completed download yet: ' + tasks.map(t => t.state + ' ' + (t.fraction||0)).join(', ')); if (!done.outputPath) throw new Error('completed but no outputPath — the file did not land'); return 'downloaded to ' + done.outputPath })()"
-      },
-      {
-        "action": "assert",
-        "expr": "document.body.innerText.includes('README.md')",
-        "matcher": "truthy"
+        "expr": "(async () => { const t = await window.aibox.download.list({}); const mine = t.filter(x => (x.url||'').includes('README.md')); if (!mine.length) throw new Error('enqueue did not create a task'); const bad = mine.filter(x => !x.taskId || !x.state); if (bad.length) throw new Error('task rows missing taskId/state'); return 'enqueued ' + mine.length + ' task(s), states: ' + mine.map(x => x.state).join(',') })()"
       }
     ],
     "isolation": [
@@ -72,6 +67,64 @@
       {
         "action": "assert",
         "expr": "window.__iso.startsWith('scoped')",
+        "matcher": "truthy"
+      }
+    ],
+    "device": [
+      {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('下载引擎不可用')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "typeof window.aibox.download === 'object' && typeof window.aibox.download.enqueue === 'function'",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(async () => { const a = await window.aibox.download.availability({}); if (!a || !a.available) throw new Error('download engine unavailable: ' + JSON.stringify(a)); return 'engine ok' })()"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim().includes('添加')); if (!b) throw new Error('add entry point missing'); b.click(); return 'opened' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 600
+      },
+      {
+        "action": "assert",
+        "expr": "['应用内', 'iCloud', '外部文件夹', '笔记 Vault'].every(t => document.body.innerText.includes(t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const t = document.querySelector('textarea'); if (!t) throw new Error('url field missing'); const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set; setter.call(t, 'https://raw.githubusercontent.com/git/git/master/README.md'); t.dispatchEvent(new Event('input', { bubbles: true })); return 'url entered' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 400
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '开始下载'); if (!b) throw new Error('submit button missing or disabled'); b.click(); return 'submitted' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 4000
+      },
+      {
+        "action": "wait",
+        "ms": 4000
+      },
+      {
+        "action": "eval",
+        "expr": "(async () => { const tasks = await window.aibox.download.list({}); if (!tasks.length) throw new Error('nothing was enqueued'); const done = tasks.find(t => t.state === 'completed'); if (!done) throw new Error('no completed download yet: ' + tasks.map(t => t.state + ' ' + (t.fraction||0)).join(', ')); if (!done.outputPath) throw new Error('completed but no outputPath — the file did not land'); return 'downloaded to ' + done.outputPath })()"
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('README.md')",
         "matcher": "truthy"
       }
     ]

@@ -5,6 +5,56 @@
     "smoke": [
       {
         "action": "assert",
+        "expr": "['全部', 'A股', '港股', '美股'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "['行情', '行业', '持仓', '设置'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '行业'); if (!b) throw new Error('行业 tab not found'); b.click(); return 'ok' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 2500
+      },
+      {
+        "action": "assert",
+        "expr": "['板块', '资金流向', '龙虎榜'].every(t => document.body.innerText.includes(t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '行情'); if (!b) throw new Error('行情 tab not found'); b.click(); return 'ok' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 1200
+      }
+    ],
+    "offline": [
+      {
+        "action": "assert",
+        "expr": "['行情', '行业', '持仓', '设置'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
+        "matcher": "truthy"
+      }
+    ],
+    "live": [
+      {
+        "action": "assert",
         "expr": "/上证指数\\s*[\\d.]{4,}/.test(document.body.innerText)",
         "matcher": "truthy"
       },
@@ -32,7 +82,10 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '行业'); if (!b) throw new Error('行业 tab not found'); b.click(); return 'ok' })()"
       },
-      { "action": "wait", "ms": 2500 },
+      {
+        "action": "wait",
+        "ms": 2500
+      },
       {
         "action": "assert",
         "expr": "['板块', '资金流向', '龙虎榜'].every(t => document.body.innerText.includes(t))",
@@ -42,24 +95,18 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '行情'); if (!b) throw new Error('行情 tab not found'); b.click(); return 'ok' })()"
       },
-      { "action": "wait", "ms": 1200 },
+      {
+        "action": "wait",
+        "ms": 1200
+      },
       {
         "action": "assert",
         "expr": "/上证指数\\s*[\\d.]{4,}/.test(document.body.innerText)",
         "matcher": "truthy"
       },
-      { "action": "assert", "matcher": "noHorizontalOverflow" }
-    ],
-    "offline": [
       {
         "action": "assert",
-        "expr": "['行情', '行业', '持仓', '设置'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
-        "matcher": "truthy"
-      },
-      {
-        "action": "assert",
-        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
-        "matcher": "truthy"
+        "matcher": "noHorizontalOverflow"
       }
     ]
   }

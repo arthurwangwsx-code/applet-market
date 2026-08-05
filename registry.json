@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "AiBox 官方小应用市场",
-  "updatedAt": "2026-08-05T01:46:34Z",
+  "updatedAt": "2026-08-05T02:07:04Z",
   "appCount": 11,
   "apps": [
     {
@@ -42,9 +42,9 @@
       "icon": "arrow.down.circle.fill",
       "category": "tools",
       "author": "AiBox",
-      "latestVersion": "1.2.0",
-      "latestReleasedAt": "2026-08-05T01:28:12Z",
-      "versionCount": 6,
+      "latestVersion": "1.2.1",
+      "latestReleasedAt": "2026-08-05T02:02:26Z",
+      "versionCount": 7,
       "capabilities": [
         "clipboard",
         "download",
@@ -56,7 +56,7 @@
         "toolbar",
         "ui"
       ],
-      "latestTotalBytes": 94580,
+      "latestTotalBytes": 97056,
       "latestFileCount": 12,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.downloads",
@@ -83,9 +83,9 @@
       "icon": "chart.line.uptrend.xyaxis",
       "category": "information",
       "author": "AiBox",
-      "latestVersion": "1.2.0",
-      "latestReleasedAt": "2026-08-05T01:27:56Z",
-      "versionCount": 5,
+      "latestVersion": "1.2.1",
+      "latestReleasedAt": "2026-08-05T02:02:31Z",
+      "versionCount": 6,
       "capabilities": [
         "ai",
         "net",
@@ -95,7 +95,7 @@
         "tabs",
         "toolbar"
       ],
-      "latestTotalBytes": 471054,
+      "latestTotalBytes": 472537,
       "latestFileCount": 47,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.finance",
@@ -207,9 +207,9 @@
       "icon": "newspaper.fill",
       "category": "information",
       "author": "AiBox",
-      "latestVersion": "1.3.0",
-      "latestReleasedAt": "2026-08-05T01:46:34Z",
-      "versionCount": 7,
+      "latestVersion": "1.3.1",
+      "latestReleasedAt": "2026-08-05T02:07:04Z",
+      "versionCount": 8,
       "capabilities": [
         "ai",
         "browser",
@@ -221,7 +221,7 @@
         "tools",
         "tts"
       ],
-      "latestTotalBytes": 302855,
+      "latestTotalBytes": 304310,
       "latestFileCount": 41,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.news",
@@ -283,9 +283,9 @@
       "icon": "arrow.down.to.line",
       "category": "media",
       "author": "AiBox",
-      "latestVersion": "1.1.4",
-      "latestReleasedAt": "2026-08-05T01:24:57Z",
-      "versionCount": 8,
+      "latestVersion": "1.1.5",
+      "latestReleasedAt": "2026-08-05T02:02:27Z",
+      "versionCount": 9,
       "capabilities": [
         "clipboard",
         "download",
@@ -296,7 +296,7 @@
         "toolbar",
         "tools"
       ],
-      "latestTotalBytes": 57894,
+      "latestTotalBytes": 58863,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.viddl",
@@ -324,9 +324,9 @@
       "icon": "waveform",
       "category": "productivity",
       "author": "AiBox",
-      "latestVersion": "2.4.0",
-      "latestReleasedAt": "2026-08-05T01:28:00Z",
-      "versionCount": 7,
+      "latestVersion": "2.4.1",
+      "latestReleasedAt": "2026-08-05T02:02:29Z",
+      "versionCount": 8,
       "capabilities": [
         "ai",
         "audio",
@@ -337,7 +337,7 @@
         "tabs",
         "ui"
       ],
-      "latestTotalBytes": 207414,
+      "latestTotalBytes": 207768,
       "latestFileCount": 4,
       "runtimeKind": "bundle",
       "path": "apps/com.aibox.voicememos",

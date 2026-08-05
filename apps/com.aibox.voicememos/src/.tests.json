@@ -60,7 +60,7 @@
       },
       {
         "action": "eval",
-        "expr": "(() => { window.__p = {}; aibox.audio.transcribeAvailability({ locale: 'zh-CN' }).then(a => { window.__p.avail = a }, e => { window.__p.availErr = String(e && e.message || e) }); aibox.audio.transcribe({ handle: 'resource://00000000-0000-4000-8000-000000000000' }).then(() => { window.__p.bogus = 'RESOLVED' }, e => { window.__p.bogus = String(e && e.message || e) }); aibox.audio.transcribe({}).then(() => { window.__p.missing = 'RESOLVED' }, e => { window.__p.missing = String(e && e.message || e) }); aibox.audio.transcribe({ handle: '/var/mobile/Containers/Data/Application/somebody-elses.m4a' }).then(() => { window.__p.path = 'RESOLVED' }, e => { window.__p.path = String(e && e.message || e) }); return 'probes-started' })()"
+        "expr": "(() => { window.__p = {}; aibox.audio.transcribeAvailability({ locale: 'zh-CN' }).then(a => { window.__p.avail = a }, e => { window.__p.availErr = String(e && e.message || e) }); return 'probe-started' })()"
       },
       {
         "action": "wait",
@@ -70,6 +70,21 @@
         "action": "assert",
         "expr": "!!window.__p.avail && window.__p.avail.engine === true && typeof window.__p.avail.state === 'string' && window.__p.avail.locale === 'zh-CN'",
         "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "typeof aibox.voiceMemos === 'undefined' || typeof aibox.voiceMemos.list !== 'function' || !JSON.parse(document.querySelector('script#__aibox_manifest__')?.textContent || '{}')?.permissions?.capabilities?.includes?.('voiceMemos')",
+        "matcher": "truthy"
+      }
+    ],
+    "negative": [
+      {
+        "action": "eval",
+        "expr": "(() => { window.__p = {}; aibox.audio.transcribeAvailability({ locale: 'zh-CN' }).then(a => { window.__p.avail = a }, e => { window.__p.availErr = String(e && e.message || e) }); aibox.audio.transcribe({ handle: 'resource://00000000-0000-4000-8000-000000000000' }).then(() => { window.__p.bogus = 'RESOLVED' }, e => { window.__p.bogus = String(e && e.message || e) }); aibox.audio.transcribe({}).then(() => { window.__p.missing = 'RESOLVED' }, e => { window.__p.missing = String(e && e.message || e) }); aibox.audio.transcribe({ handle: '/var/mobile/Containers/Data/Application/somebody-elses.m4a' }).then(() => { window.__p.path = 'RESOLVED' }, e => { window.__p.path = String(e && e.message || e) }); return 'probes-started' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 2000
       },
       {
         "action": "assert",
@@ -84,11 +99,6 @@
       {
         "action": "assert",
         "expr": "String(window.__p.path).includes('aibox/not-found')",
-        "matcher": "truthy"
-      },
-      {
-        "action": "assert",
-        "expr": "typeof aibox.voiceMemos === 'undefined' || typeof aibox.voiceMemos.list !== 'function' || !JSON.parse(document.querySelector('script#__aibox_manifest__')?.textContent || '{}')?.permissions?.capabilities?.includes?.('voiceMemos')",
         "matcher": "truthy"
       }
     ]

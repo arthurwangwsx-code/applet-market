@@ -4,6 +4,63 @@
   "suites": {
     "smoke": [
       {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '订阅'); if (!b) throw new Error('订阅 tab not found'); b.click(); return 'ok' })()"
+      },
+      {
+        "action": "wait",
+        "ms": 2200
+      },
+      {
+        "action": "assert",
+        "expr": "document.body.innerText.includes('添加订阅源')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "(document.body.innerText.match(/rss\\s*·/g) || []).length >= 5",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "['Google 头条', 'BBC 中文网', 'IT之家'].every(n => document.body.innerText.includes(n))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!!document.querySelector('#root') && document.querySelector('#root').children.length > 0",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "['资讯', '订阅', '收藏'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
+        "matcher": "truthy"
+      }
+    ],
+    "offline": [
+      {
+        "action": "assert",
+        "expr": "!!document.querySelector('#root') && document.querySelector('#root').children.length > 0",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "['资讯', '订阅', '收藏'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
+        "matcher": "truthy"
+      },
+      {
+        "action": "assert",
+        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
+        "matcher": "truthy"
+      }
+    ],
+    "live": [
+      {
         "action": "assert",
         "expr": "document.body.innerText.includes('资讯已更新')",
         "matcher": "truthy"
@@ -27,7 +84,10 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.replace(/\\s+/g, ' ').trim().startsWith('科技')); if (!b) throw new Error('topic chip 科技 not found'); b.click(); return b.textContent.replace(/\\s+/g, ' ').trim() })()"
       },
-      { "action": "wait", "ms": 1200 },
+      {
+        "action": "wait",
+        "ms": 1200
+      },
       {
         "action": "assert",
         "expr": "document.querySelectorAll('.news-press').length > 3",
@@ -37,7 +97,10 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '订阅'); if (!b) throw new Error('订阅 tab not found'); b.click(); return 'ok' })()"
       },
-      { "action": "wait", "ms": 2200 },
+      {
+        "action": "wait",
+        "ms": 2200
+      },
       {
         "action": "assert",
         "expr": "document.body.innerText.includes('添加订阅源')",
@@ -57,29 +120,18 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '资讯'); if (!b) throw new Error('资讯 tab not found'); b.click(); return 'ok' })()"
       },
-      { "action": "wait", "ms": 900 },
+      {
+        "action": "wait",
+        "ms": 900
+      },
       {
         "action": "assert",
         "expr": "document.querySelectorAll('.news-press').length > 3",
         "matcher": "truthy"
       },
-      { "action": "assert", "matcher": "noHorizontalOverflow" }
-    ],
-    "offline": [
       {
         "action": "assert",
-        "expr": "!!document.querySelector('#root') && document.querySelector('#root').children.length > 0",
-        "matcher": "truthy"
-      },
-      {
-        "action": "assert",
-        "expr": "['资讯', '订阅', '收藏'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))",
-        "matcher": "truthy"
-      },
-      {
-        "action": "assert",
-        "expr": "!/undefined|NaN|\\[object Object\\]/.test(document.body.innerText)",
-        "matcher": "truthy"
+        "matcher": "noHorizontalOverflow"
       }
     ]
   }

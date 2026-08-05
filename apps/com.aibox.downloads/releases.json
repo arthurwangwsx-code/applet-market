@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.downloads",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.2.1",
   "releases": [
+    {
+      "version": "1.2.1",
+      "releasedAt": "2026-08-05T02:02:26Z",
+      "notes": "回归套件分层：默认 smoke 只验应用自身，依赖环境的断言原样搬进点名套件（device/live/negative），真机上照跑不打折。原来两类断言混在一条套件里，在模拟器上永远不可能绿，红灯也就失去了信号价值。",
+      "fileCount": 12,
+      "totalBytes": 97056,
+      "path": "apps/com.aibox.downloads/releases/1.2.1",
+      "localizedNotes": {
+        "en": "Split the regression suites: the default smoke suite now covers only app-side behaviour, while environment-dependent assertions move verbatim into named suites (device/live/negative) that still run on real hardware."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "45eaf762631d7d89c2dcf96bbd31dbff15c5605a420d27d08288fc6b191aa765"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-05T01:28:12Z",

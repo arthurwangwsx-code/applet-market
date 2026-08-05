@@ -9,6 +9,28 @@
         "matcher": "truthy"
       },
       {
+        "action": "assert",
+        "expr": "!document.body.innerText.includes('私密')",
+        "matcher": "truthy"
+      },
+      {
+        "action": "eval",
+        "expr": "(async () => { const v = await window.aibox.access.explain({ tool: 'viddl_inspect' }); if (v && v.allowed) return 'tool granted — the device suite covers the live path'; const t = document.body.innerText; if (!t.includes('解析能力不可用')) throw new Error('tool blocked but the applet never explained why'); if (/没有装视频下载模块/.test(t)) throw new Error('regression: the old message asserts the module is missing, but the host cannot tell that apart from a disabled tool switch'); return 'blocked and explained honestly' })()"
+      }
+    ],
+    "queue": [
+      {
+        "action": "eval",
+        "expr": "(async () => { const items = await window.aibox.download.list({}); return 'queue readable: ' + items.length + ' rows' })()"
+      }
+    ],
+    "device": [
+      {
+        "action": "assert",
+        "expr": "typeof window.aibox.tools === 'object' && typeof window.aibox.tools.call === 'function'",
+        "matcher": "truthy"
+      },
+      {
         "action": "eval",
         "expr": "(async () => { const v = await window.aibox.access.explain({ tool: 'viddl_inspect' }); if (!v || !v.allowed) throw new Error('viddl_inspect not granted: ' + JSON.stringify(v)); return 'extractor reachable' })()"
       },
@@ -26,7 +48,10 @@
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim().includes('添加')); if (!b) throw new Error('add entry point missing'); b.click(); return 'opened' })()"
       },
-      { "action": "wait", "ms": 600 },
+      {
+        "action": "wait",
+        "ms": 600
+      },
       {
         "action": "assert",
         "expr": "!!document.querySelector('input[placeholder*=\"视频页面\"]')",
@@ -35,12 +60,6 @@
       {
         "action": "eval",
         "expr": "(async () => { const r = await window.aibox.tools.call({ name: 'viddl_jobs', arguments: { action: 'list' } }); if (!r || r.isError) throw new Error('viddl_jobs list failed: ' + JSON.stringify(r)); return 'library reachable' })()"
-      }
-    ],
-    "queue": [
-      {
-        "action": "eval",
-        "expr": "(async () => { const items = await window.aibox.download.list({}); return 'queue readable: ' + items.length + ' rows' })()"
       }
     ]
   }

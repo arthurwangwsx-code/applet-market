@@ -963,9 +963,9 @@ declare namespace aibox {
 
   namespace vision {
     /** OCR an image resource you own. Pass the handle you got back from picker.photo or picker.file. Returns the text in reading order, newline-separated. Empty text means no readable text was found — that is a normal outcome, not an error, so tell the user rather than retrying. Result: {ok:boolean, text:string, empty:boolean} */
-    function recognizeText(input: { handle: string; languages?: Array<string> }): Promise<unknown>
+    function recognizeText(input: { handle: string; languages?: Array<string> }): Promise<{ empty: boolean; ok: boolean; text: string }>
     /** Whether on-device text recognition exists in this build. Hide the scan entry point instead of letting a tap do nothing. Result: {available:boolean} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean }>
   }
 
   // voiceMemos 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。

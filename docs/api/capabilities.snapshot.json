@@ -2793,7 +2793,7 @@
           "summary": "OCR an image resource you own. Pass the handle you got back from picker.photo or picker.file. Returns the text in reading order, newline-separated. Empty text means no readable text was found — that is a normal outcome, not an error, so tell the user rather than retrying.",
           "parametersJSON": "{\"type\":\"object\",\"required\":[\"handle\"],\"properties\":{\"handle\":{\"type\":\"string\",\"description\":\"Resource handle from aibox.picker.photo() or picker.file().\"},\"languages\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Recognition language priority, e.g. [\\\"zh-Hans\\\",\\\"en\\\"]. Defaults to Chinese then English.\"}},\"additionalProperties\":false}",
           "resultSummary": "{ok:boolean, text:string, empty:boolean}",
-          "resultSchemaJSON": null,
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"ok\",\"text\",\"empty\"],\"properties\":{\"ok\":{\"type\":\"boolean\"},\"text\":{\"type\":\"string\",\"description\":\"Recognized text in reading order, newline-separated.\"},\"empty\":{\"type\":\"boolean\",\"description\":\"True when nothing readable was found — a normal outcome, not an error.\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": "const picked = await aibox.picker.photo({ limit: 1 })\nconst { text } = await aibox.vision.recognizeText({ handle: picked.resources[0].handle })",
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift"
@@ -2803,7 +2803,7 @@
           "summary": "Whether on-device text recognition exists in this build. Hide the scan entry point instead of letting a tap do nothing.",
           "parametersJSON": "{}",
           "resultSummary": "{available:boolean}",
-          "resultSchemaJSON": null,
+          "resultSchemaJSON": "{\"type\":\"object\",\"required\":[\"available\"],\"properties\":{\"available\":{\"type\":\"boolean\"}},\"additionalProperties\":false}",
           "effect": "read",
           "example": null,
           "source": "Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift"

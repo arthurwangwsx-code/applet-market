@@ -25,6 +25,8 @@ OCR an image resource you own. Pass the handle you got back from picker.photo or
 
 **返回** `{ok:boolean, text:string, empty:boolean}`
 
+**返回类型** `{ empty: boolean; ok: boolean; text: string }`
+
 ```js
 const picked = await aibox.picker.photo({ limit: 1 })
 const { text } = await aibox.vision.recognizeText({ handle: picked.resources[0].handle })
@@ -41,6 +43,8 @@ Whether on-device text recognition exists in this build. Hide the scan entry poi
 无参数。
 
 **返回** `{available:boolean}`
+
+**返回类型** `{ available: boolean }`
 
 **真值来源** `Packages/AppletPluginKit/Sources/AppletPluginKit/Runtime/Capabilities/VisionCapabilityAdapter.swift`
 

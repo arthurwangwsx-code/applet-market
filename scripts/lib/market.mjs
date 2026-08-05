@@ -63,7 +63,7 @@ export const CATEGORIES = new Set([
 export const KNOWN_CAPABILITIES = new Set([
   'audio', 'browser', 'calendar', 'clipboard', 'contacts', 'device', 'download', 'files', 'haptics',
   'health', 'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
-  'secrets', 'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'video', 'voiceMemos',
+  'secrets', 'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'video', 'vision', 'voiceMemos',
 ])
 
 // 容器协议自身的命名空间：恒可用，**不需要**也不应该写进 permissions.capabilities。

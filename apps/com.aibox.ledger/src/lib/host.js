@@ -23,6 +23,7 @@ export const capabilities = {
   get shareFile() { return hasNamespace('share', 'file') },
   get shareText() { return hasNamespace('share', 'text') },
   get haptics() { return hasNamespace('haptics', 'impact') },
+  get vision() { return hasNamespace('vision', 'recognizeText') },
 }
 
 // MARK: - storage（轻量偏好；不承载账本主数据）
@@ -85,6 +86,43 @@ export const nativeAlert = ui.alert
 export const nativeActionSheet = ui.actionSheet
 
 // MARK: - picker / resource（CSV 导入）
+
+/**
+ * 选一张图并**端上**识别其中的文字。返回 `{ ok, text, empty }`。
+ *
+ * 两段都在设备里完成：`picker.photo` 把用户选的图收进本应用的私有资源区，
+ * `vision.recognizeText` 用系统 Vision 框架读它。**图片不上传、也不进模型** ——
+ * 这正是原生记账那个「本地识别（图不上传）」开关的语义，只是这条路上没有另一个会上传的选项。
+ *
+ * 失败一律回可判定的 reason，不抛到 UI 层。
+ */
+export async function scanImageText() {
+  const api = bridge()
+  if (!api || !api.picker || typeof api.picker.photo !== 'function') {
+    return { ok: false, reason: 'unavailable' }
+  }
+  if (!api.vision || typeof api.vision.recognizeText !== 'function') {
+    return { ok: false, reason: 'noVision' }
+  }
+  let handle
+  try {
+    const picked = await api.picker.photo({ limit: 1 })
+    if (!picked || picked.cancelled) return { ok: false, reason: 'cancelled' }
+    const item = (picked.items ?? picked.resources ?? [])[0]
+    if (!item || !item.handle) return { ok: false, reason: 'cancelled' }
+    handle = item.handle
+  } catch (error) {
+    return { ok: false, reason: String((error && error.message) || error) }
+  }
+  try {
+    const res = await api.vision.recognizeText({ handle, languages: ['zh-Hans', 'en'] })
+    const text = String((res && res.text) || '')
+    // 「没认出文字」是正常结果（拍糊、纯图），不是错误 —— 让调用方能说人话而不是报错。
+    return { ok: true, text, empty: text.trim().length === 0 }
+  } catch (error) {
+    return { ok: false, reason: String((error && error.message) || error) }
+  }
+}
 
 /** 弹系统文档选择器读一个文本文件。返回 `{ ok, text, name }`。 */
 export async function pickTextFile(types) {

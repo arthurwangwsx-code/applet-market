@@ -73,7 +73,7 @@ const NAMESPACE_GROUP = {
   health: 'system', notifications: 'system', location: 'system', calendar: 'system',
   reminders: 'system', contacts: 'system', photos: 'system', files: 'system',
   music: 'system', voiceMemos: 'system', shortcuts: 'system', download: 'system',
-  video: 'system', secrets: 'system',
+  video: 'system', secrets: 'system', vision: 'system',
   // 长尾工具网关
   tools: 'gateway',
 };

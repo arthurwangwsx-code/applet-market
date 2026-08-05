@@ -240,29 +240,28 @@ function main() {
     scripts: {
       'gen:actions': GEN_ACTIONS,
       typecheck: 'tsc --noEmit',
-      build: 'vite build',
-      'build:ci': 'vite build --mode production',
+      build: 'aibox-tsbuild',
+      'build:ci': 'aibox-tsbuild',
+      'check:build': 'aibox-tsbuild --check',
     },
     dependencies: { '@aibox/applet-sdk': '^1.0.0' },
     devDependencies: {
+      '@aibox/applet-tsbuild': '^1.0.0',
+      // gen:actions 的 renderActionTypes 仍住在 applet-vite（只是 codegen，不进产物）。
       '@aibox/applet-vite': '^1.0.0',
       '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
       react: '^18.3.1',
       'react-dom': '^18.3.1',
       typescript: '^5.9.3',
-      vite: '^6.3.5',
       'antd-mobile': '^5.38.1',
     },
   })
   writeJSON(path.join(paths.dir, 'tsconfig.json'), {
-    extends: '@aibox/applet-vite/tsconfig.base.json',
-    include: ['src', 'vite.config.ts'],
+    extends: '@aibox/applet-tsbuild/tsconfig.base.json',
+    include: ['src'],
   })
-  fs.writeFileSync(path.join(paths.dir, 'vite.config.ts'), VITE_CONFIG, 'utf8')
-  fs.writeFileSync(path.join(paths.dir, 'index.html'), INDEX_HTML.replaceAll('<NAME>', name), 'utf8')
-  fs.writeFileSync(path.join(paths.srcDir, 'main.tsx'), MAIN_TSX, 'utf8')
-  fs.writeFileSync(path.join(paths.srcDir, 'App.tsx'), APP_TSX.replaceAll('<NAME>', name), 'utf8')
+  fs.writeFileSync(path.join(paths.srcDir, 'app.tsx'), APP_TSX.replaceAll('<NAME>', name), 'utf8')
 
   ok(`已创建 ${paths.relative}（bundle + TypeScript + SDK）`)
   info('下一步：')

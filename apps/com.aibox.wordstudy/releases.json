@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.wordstudy",
-  "latestVersion": "1.0.0",
+  "latestVersion": "1.1.0",
   "releases": [
+    {
+      "version": "1.1.0",
+      "releasedAt": "2026-08-05T01:27:41Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk：桥胶水统一（confirm 不可用一律回 false、openURL 超时封顶、图片走 applet:// 代理），运行形态改为构建型（端上不再转译）。",
+      "fileCount": 4,
+      "totalBytes": 170709,
+      "path": "apps/com.aibox.wordstudy/releases/1.1.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk; bridge glue unified and the runtime is now prebuilt (no on-device transpile)."
+      },
+      "bundleSha256": "ddab46ded93351bda19a6dd60c9b6841fcbb47bf3b87d8ab63dae152e74617a0"
+    },
     {
       "version": "1.0.0",
       "releasedAt": "2026-08-03T04:02:02Z",

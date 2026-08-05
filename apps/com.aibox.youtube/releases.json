@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.youtube",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.3.0",
   "releases": [
+    {
+      "version": "1.3.0",
+      "releasedAt": "2026-08-05T01:27:43Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk：桥胶水统一（confirm 不可用一律回 false、openURL 超时封顶、图片走 applet:// 代理），运行形态改为构建型（端上不再转译）。",
+      "fileCount": 16,
+      "totalBytes": 93254,
+      "path": "apps/com.aibox.youtube/releases/1.3.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk; bridge glue unified and the runtime is now prebuilt (no on-device transpile)."
+      },
+      "bundleSha256": "2cbbc34d3a0d2dc260644e7063132bf858aa7e1c2cbe0f44ddf28e2200abf73e"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-04T05:40:14Z",

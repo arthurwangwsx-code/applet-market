@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.music",
-  "latestVersion": "1.2.0",
+  "latestVersion": "1.3.0",
   "releases": [
+    {
+      "version": "1.3.0",
+      "releasedAt": "2026-08-05T01:28:14Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk，运行形态改为构建型（端上不再转译）。封面改走 applet:// 图片代理（原来是把整张图 base64 塞进 JS 内存，比原图还大三分之一，列表一长必然吃满内存）。",
+      "fileCount": 35,
+      "totalBytes": 315838,
+      "path": "apps/com.aibox.music/releases/1.3.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk. Artwork now streams through the applet:// image proxy instead of being inlined as base64 data URLs."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "280426c620f09b6e2505d3c38be8e7bcc1f980b083dd654f6fe303ead8823531"
+    },
     {
       "version": "1.2.0",
       "releasedAt": "2026-08-03T13:51:57Z",

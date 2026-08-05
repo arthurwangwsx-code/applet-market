@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.bilibili",
+  "version": "1.3.0",
+  "releasedAt": "2026-08-05T01:27:37Z",
+  "notes": "迁到 TS 构建管线 + @aibox/applet-sdk：桥胶水统一（confirm 不可用一律回 false、openURL 超时封顶、图片走 applet:// 代理），运行形态改为构建型（端上不再转译）。",
+  "localizedNotes": {
+    "en": "Migrated to the TS build pipeline and @aibox/applet-sdk; bridge glue unified and the runtime is now prebuilt (no on-device transpile)."
+  },
+  "manifest": {
+    "name": "哔哩哔哩",
+    "localizedNames": {
+      "en": "Bilibili"
+    },
+    "icon": "play.tv.fill",
+    "iconTintHex": "FB7299",
+    "summary": "看视频、搜索、追更",
+    "localizedSummaries": {
+      "en": "Browse, search and watch Bilibili"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [
+        "api.bilibili.com",
+        "passport.bilibili.com",
+        "www.bilibili.com",
+        "hdslb.com"
+      ],
+      "capabilities": [
+        "video",
+        "secrets",
+        "browser",
+        "share",
+        "clipboard",
+        "haptics",
+        "toast"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "actions": [
+      {
+        "id": "bili_search",
+        "name": "search",
+        "displayName": "搜索哔哩哔哩",
+        "summary": "Search Bilibili for videos by keyword. Returns each match with its BV id, title, uploader, duration and play count. Pass a BV id to the play action to watch one.",
+        "keywords": [
+          "bilibili",
+          "b站",
+          "哔哩哔哩",
+          "搜视频",
+          "找视频",
+          "search bilibili"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"keyword\"],\"properties\":{\"keyword\":{\"type\":\"string\",\"description\":\"What to search for.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20,\"description\":\"How many results to return (default 10).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true
+      },
+      {
+        "id": "bili_trending",
+        "name": "trending",
+        "displayName": "哔哩哔哩热门",
+        "summary": "What is popular on Bilibili right now. kind 'popular' is the trending feed, 'ranking' is the all-site leaderboard.",
+        "keywords": [
+          "bilibili热门",
+          "b站排行",
+          "哔哩哔哩排行榜",
+          "bilibili trending"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"popular\",\"ranking\"]},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true
+      },
+      {
+        "id": "bili_play",
+        "name": "play",
+        "displayName": "播放哔哩哔哩视频",
+        "summary": "Play a Bilibili video by its BV id on the native full-screen player, with lock-screen controls and picture-in-picture. Get a BV id from the search or trending action first.",
+        "keywords": [
+          "播放b站",
+          "看视频",
+          "播放哔哩哔哩",
+          "play bilibili"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"bvid\"],\"properties\":{\"bvid\":{\"type\":\"string\",\"description\":\"The BV id, e.g. BV1bz3Q6oEMP.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "mediaPlayback"
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "feed",
+            "title": "首页",
+            "localizedTitles": {
+              "en": "Home"
+            },
+            "icon": "house",
+            "selectedIcon": "house.fill"
+          },
+          {
+            "id": "search",
+            "title": "搜索",
+            "localizedTitles": {
+              "en": "Search"
+            },
+            "icon": "magnifyingglass"
+          },
+          {
+            "id": "mine",
+            "title": "我的",
+            "localizedTitles": {
+              "en": "Mine"
+            },
+            "icon": "person",
+            "selectedIcon": "person.fill"
+          }
+        ]
+      }
+    },
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 128783,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 4193,
+      "sha256": "287bd5ef563abb541e8d7177a140c66557b4124ffdfee7f12eab24e2c3a7f7ba",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 6677,
+      "sha256": "f8fba22445dbed4507287daf4cd1a9e10d2a5f61eff4148969272614cc82f5e6",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/DetailPage.js",
+      "bytes": 13730,
+      "sha256": "2f75496eba6fae47e6b9ed55d99e88ce0ce1c5533208b7e8af5ecc2cdcd03c9d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/FeedPage.js",
+      "bytes": 5160,
+      "sha256": "d9e6b328669e53af1410de6e21e2322dd82c66cbf7fc5e8f5c0dfab76ad063fd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MinePage.js",
+      "bytes": 11304,
+      "sha256": "30ab214dc9b838248058e2fd7dc57658f468cf2b87c2986a5027473cd23930e4",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 5085,
+      "sha256": "d8585dc9f53bf03a8dc5e44e1d040ee50d7dba0653c7e7c733bcd15d8058aeb7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.js",
+      "bytes": 7598,
+      "sha256": "a7517de0576c420fbec7f6d415bc0dece2d29c8ce4d18d9fd9524a07142dba48",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 1596,
+      "sha256": "398773d65a4029eefe1d5cc214adc09cb144f6d1d12397457e989bf899611043",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/VideoCard.js",
+      "bytes": 3067,
+      "sha256": "1cd470a6da2dbe69512b90ce3eb123e41e9738c1425f5e1c41cf745c82476205",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 2788,
+      "sha256": "4699bf6adb69dc2adc82ad5382bda800622c4e67d23abba1e793a5b34201d5e9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 3900,
+      "sha256": "245d1e495d92d57e1d8ccbb9957121f368c105b44225adb0857b720fc72f0fa1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/aibox-sdk.js",
+      "bytes": 25527,
+      "sha256": "00dc3f39f761e4d617d85fc1941e01fd4d3589e1466015128e5d6452257d60b0",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/api.js",
+      "bytes": 14718,
+      "sha256": "0a1cd93bfb51479b33b7c65d67c49fbcc7422535550ee83ebea86c9605a6569d",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 1496,
+      "sha256": "0de9de3c68aadf6e3ee421456810328c114a45b3d48f97c3cf85f7596718ed6c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 11342,
+      "sha256": "620ec472d403c5a5a356fac40540b86c50bb3366252cb19dea0a6657be3f81a2",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/md5.js",
+      "bytes": 4408,
+      "sha256": "76d4c1243be49876cc2a09702ea310c303930a6c3dcaaa9547399cd1b3a93625",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/settings.js",
+      "bytes": 1631,
+      "sha256": "d82490f93a793ae227f9bc8bde0fe0cfa37f66747800736b5904fda53811c256",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 4563,
+      "sha256": "376e034567557d559ad527034fa34517947b0a381b21a47c013e050694daf2df",
+      "encoding": "utf8"
+    }
+  ]
+}

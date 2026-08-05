@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.news",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-05T01:27:58Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk：桥胶水统一（confirm 不可用一律回 false、openURL 超时封顶、图片走 applet:// 代理），运行形态改为构建型（端上不再转译）。",
+      "fileCount": 41,
+      "totalBytes": 302792,
+      "path": "apps/com.aibox.news/releases/1.2.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk; bridge glue unified and the runtime is now prebuilt (no on-device transpile)."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "f20302c27c7a3eb128edcc2ae5cd3724403976cd29c5f059cfb9bb086920ce14"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-03T13:51:42Z",

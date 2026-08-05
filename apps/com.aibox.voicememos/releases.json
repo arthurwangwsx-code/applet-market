@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.voicememos",
-  "latestVersion": "2.3.0",
+  "latestVersion": "2.4.0",
   "releases": [
+    {
+      "version": "2.4.0",
+      "releasedAt": "2026-08-05T01:28:00Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk：桥胶水统一（confirm 不可用一律回 false、openURL 超时封顶、图片走 applet:// 代理），运行形态改为构建型（端上不再转译）。",
+      "fileCount": 4,
+      "totalBytes": 207414,
+      "path": "apps/com.aibox.voicememos/releases/2.4.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk; bridge glue unified and the runtime is now prebuilt (no on-device transpile)."
+      },
+      "bundleSha256": "59044723e72b4c93a81334960f2852dd96a3aa760125a29e5ec3b4b7756aaa48"
+    },
     {
       "version": "2.3.0",
       "releasedAt": "2026-08-03T20:10:07Z",

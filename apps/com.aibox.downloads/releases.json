@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.downloads",
-  "latestVersion": "1.1.0",
+  "latestVersion": "1.2.0",
   "releases": [
+    {
+      "version": "1.2.0",
+      "releasedAt": "2026-08-05T01:28:12Z",
+      "notes": "迁到 TS 构建管线 + @aibox/applet-sdk，运行形态改为构建型（端上不再转译）。修复：删除等破坏性操作的二次确认此前在未声明 ui 能力时直接返回 true（等于静默放行，确认框从未出现过），现在能力不可用即拒；manifest 补上 ui 声明。",
+      "fileCount": 12,
+      "totalBytes": 94580,
+      "path": "apps/com.aibox.downloads/releases/1.2.0",
+      "localizedNotes": {
+        "en": "Migrated to the TS build pipeline and @aibox/applet-sdk. Fix: destructive-action confirmation silently auto-approved when the ui capability was unavailable; it now denies instead, and the manifest declares ui."
+      },
+      "minHostVersion": "1.0.0",
+      "bundleSha256": "476f5d5a486f08f1290f61fe7d23d110190b076cbae0e92c66fca147c2fd39e3"
+    },
     {
       "version": "1.1.0",
       "releasedAt": "2026-08-04T11:35:03Z",

@@ -3,13 +3,14 @@
 
 import React from 'react'
 import ArticleRow from './ArticleRow.js'
-import { ActionSheet, SwipeRow, useLongPress, useIncremental } from './primitives.js'
+import { useLongPress } from '@aibox/applet-sdk/react'
+import { ActionSheet, SwipeRow, useIncremental } from './primitives.js'
 import { C, SPACE } from './theme.js'
 
 function Item({ article, item, ctx, menuFor, swipe, sequence }) {
   const [menu, setMenu] = React.useState(false)
   const actions = menu ? menuFor(article, item, sequence) : []
-  const press = useLongPress(() => setMenu(true), () => ctx.actions.openArticle(article))
+  const press = useLongPress({ onLongPress: () => setMenu(true), onTap: () => ctx.actions.openArticle(article) })
 
   const body = (
     <div

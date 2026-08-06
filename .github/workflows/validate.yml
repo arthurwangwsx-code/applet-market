@@ -60,6 +60,11 @@ jobs:
         # 同一件事有多个答案，是 AI 继承劣化实现的结构性原因。实测一天内从 4 份涨到 8 份。
         run: node scripts/audit-host-forks.mjs
 
+      - name: 手写源不得再手搓触摸手势
+        # 补了 SDK 原语只是一半：没有闸门的共享基建，下一个人照样手搓一份
+        #（本仓已数出八个「基建在、没人用」，其中一个正是「手搓基建检测器自己没挂闸门」）。
+        run: node scripts/audit-hand-rolled-touch.mjs
+
       - name: 文档事实基线不得过期
         # 手写文档里的统计数字一天就会错（39→47 命名空间、4→8 份分叉）。数字改成生成的，并在这里守住。
         run: node scripts/gen-facts.mjs --check
@@ -78,6 +83,12 @@ jobs:
 
       - name: SDK 必须能编译并产出类型
         run: npm run build --workspace @aibox/applet-sdk
+
+      - name: 手势原语自测（touchcancel = 放弃）
+        # `touchcancel` 只有原生手势抢走触摸时才发，浏览器里测不出来——两个应用各自手搓、
+        # 各自写错（一个当 end 提交、一个根本不接）就是这么来的。这里往真 EventTarget 上
+        # 派发合成 touchcancel，断言 abort 分支跑到且没有翻页；另有一条反例证明断言吃劲。
+        run: npm test --workspace @aibox/applet-sdk
 
       - name: 构建型应用必须能 typecheck + 构建
         # 逐个跑，而不是 `npm run build --workspaces`：后者会静默跳过没有该脚本的包，

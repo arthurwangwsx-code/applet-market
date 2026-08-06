@@ -1,4 +1,17 @@
 import type { SceneState, TabsState, ToolbarSearchState } from '../shell';
+/**
+ * React hooks。
+ *
+ * 每个 hook 都遵守同一条纪律：**宿主没有这条能力时返回一个诚实的「不可用」状态，而不是抛**。
+ * 组件据此决定「渲染原生入口」还是「渲染页内替代」，这正是 `rendered` 字段存在的意义。
+ *
+ * 所有 hook 都在 unmount 时退订（桥的 `on()` 返回 unsubscribe 函数），避免 applet 在
+ * sheet/drawer 里反复开合时越积越多的订阅。
+ *
+ * 触摸手势原语（`useSwipePager` / `useDragGesture`）在 `./gestures`，从这里一并导出。
+ */
+export { createDragGesture, createLongPress, createSwipePager, defaultSwipeThreshold, useDragGesture, useLongPress, useSwipePager, } from './gestures';
+export type { DragAxis, DragGestureCore, DragGestureHandlers, DragGestureOptions, DragLockMode, DragSample, LongPressCore, LongPressHandlers, LongPressOptions, SwipePagerBinding, SwipePagerCore, SwipePagerCoreOptions, SwipePagerView, SwipeThreshold, TouchEventLike, TouchPointLike, UseDragGestureResult, UseSwipePagerOptions, } from './gestures';
 /** 原生 TabBar 的状态。`rendered === false` 时**必须**自己画页内切换器。 */
 export declare function useTabs(): {
     state: TabsState | null;

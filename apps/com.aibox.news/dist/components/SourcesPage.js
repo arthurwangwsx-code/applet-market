@@ -4,7 +4,8 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 // 点行下钻该源文章列表；长按 = 上移 / 下移 / 删除；左滑 = 删除。内置源也能删。
 import React from 'react';
 import Icon from './Icon.js';
-import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle, useLongPress } from './primitives.js';
+import { useLongPress } from '../lib/aibox-sdk-react.js';
+import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle } from './primitives.js';
 import { C, SPACE } from './theme.js';
 import { TOPIC_ICON, TOPIC_ORDER, topicKey } from '../lib/catalog.js';
 import { relative } from '../lib/format.js';
@@ -27,7 +28,7 @@ function statusFor(feed, state, ctx) {
 function SourceRow({ feed, ctx, state, last }) {
     const [menu, setMenu] = React.useState(false);
     const status = statusFor(feed, state, ctx);
-    const press = useLongPress(() => setMenu(true), () => ctx.actions.navigate({ name: 'source', feed }));
+    const press = useLongPress({ onLongPress: () => setMenu(true), onTap: () => ctx.actions.navigate({ name: 'source', feed }) });
     return (_jsxs(_Fragment, { children: [_jsx(SwipeRow, { actionLabel: ctx.t('news.action.delete'), onAction: () => ctx.actions.removeFeed(feed.id), children: _jsxs("div", { className: "news-press", style: {
                         display: 'flex', alignItems: 'center', gap: SPACE.s3,
                         padding: `10px ${SPACE.s4}px`, background: C.surface,

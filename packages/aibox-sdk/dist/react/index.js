@@ -8,7 +8,14 @@ import { bridge, available } from '../bridge';
  *
  * 所有 hook 都在 unmount 时退订（桥的 `on()` 返回 unsubscribe 函数），避免 applet 在
  * sheet/drawer 里反复开合时越积越多的订阅。
+ *
+ * 触摸手势原语（`useSwipePager` / `useDragGesture`）在 `./gestures`，从这里一并导出。
  */
+// --- 触摸手势原语 -----------------------------------------------------------
+// **做横扫分页 / 左滑露操作 / 下拉刷新一律用这些，不要自己接 `onTouch*`。**
+// 理由不是风格：`touchcancel` 只有原生手势抢走触摸时才发，纯 Web 环境测不出来，
+// 手搓必漏（2026-08-06 实测两个应用两种错法）。详见 `./gestures` 文件头。
+export { createDragGesture, createLongPress, createSwipePager, defaultSwipeThreshold, useDragGesture, useLongPress, useSwipePager, } from './gestures';
 /** 订阅一个 `aibox.<ns>.on(event, …)`，组件卸载自动退订。 */
 function useBridgeEvent(namespace, event, handler, enabled = true) {
     const latest = useRef(handler);

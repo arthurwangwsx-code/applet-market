@@ -2,8 +2,14 @@
 //
 // 弹层刻意自绘（不用 antd-mobile 的 Popup / ActionSheet / Toast）——运行时已知
 // `Toast.show` 渲染为空，同族命令式弹层风险相同；自绘的 fixed 覆盖层在 WebView 里行为确定。
+//
+// **触摸手势一律走 SDK**（`useDragGesture`），本文件不再出现任何 `onTouch*`。
+// 理由见 SDK `react/gestures.ts` 文件头：`touchcancel` 只有原生手势抢走触摸时才发，
+// 浏览器里测不出来，手搓必漏——2026-08-06 实测本应用与资讯各自手搓、各自写错，错法还相反
+//（这边是根本没接、状态永不复位，那边是当成 end 直接误提交一次翻页）。
 
 import React from 'react'
+import { useDragGesture } from '@aibox/applet-sdk/react'
 import Icon from './Icon.js'
 import { C, RADIUS, SPACE } from './theme.js'
 
@@ -332,16 +338,33 @@ export function Row({ icon, title, subtitle, detail, detailColor, accessory, onC
 export function SwipeRow({ children, actionLabel, onAction, disabled }) {
   const [offset, setOffset] = React.useState(0)
   const [animating, setAnimating] = React.useState(false)
-  const state = React.useRef({ active: false, startX: 0, startY: 0, base: 0, lock: null })
+  // 手势起点的基准偏移与实时偏移都放 ref：处理器身份稳定，读到的永远是最新值而不是闭包快照。
+  const base = React.useRef(0)
+  const live = React.useRef(0)
   const WIDTH = 82
 
-  if (disabled) return children
-
-  const settle = (value) => {
+  const settle = React.useCallback((value) => {
+    live.current = value
     setAnimating(true)
     setOffset(value)
     window.setTimeout(() => setAnimating(false), 200)
-  }
+  }, [])
+
+  // 横向轴锁 + 6px slop + 锁定后才 preventDefault，与迁移前逐条一致；
+  // `touchcancel` 由 SDK 定死成「弹回原位、不提交」，这里不需要（也不该）再写一遍。
+  const { handlers } = useDragGesture({
+    axis: 'x',
+    onStart: () => { base.current = live.current },
+    onDrag: ({ dx }) => {
+      const next = Math.max(-WIDTH, Math.min(0, base.current + dx))
+      live.current = next
+      setOffset(next)
+    },
+    onEnd: () => settle(live.current < -WIDTH / 2 ? -WIDTH : 0),
+    onCancel: () => settle(0),
+  })
+
+  if (disabled) return children
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -358,44 +381,12 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
         {actionLabel}
       </button>
       <div
+        {...handlers}
         style={{
           transform: `translate3d(${offset}px, 0, 0)`,
           transition: animating ? 'transform 200ms ease' : 'none',
           background: C.bg,
           position: 'relative',
-        }}
-        onTouchStart={(event) => {
-          const touch = event.touches[0]
-          state.current = { active: true, startX: touch.clientX, startY: touch.clientY, base: offset, lock: null }
-        }}
-        onTouchMove={(event) => {
-          if (!state.current.active) return
-          const touch = event.touches[0]
-          const dx = touch.clientX - state.current.startX
-          const dy = touch.clientY - state.current.startY
-          if (state.current.lock === null) {
-            if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
-            state.current.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-          }
-          if (state.current.lock !== 'h') return
-          if (event.cancelable) event.preventDefault()
-          setOffset(Math.max(-WIDTH, Math.min(0, state.current.base + dx)))
-        }}
-        onTouchEnd={() => {
-          if (!state.current.active) return
-          state.current.active = false
-          if (state.current.lock !== 'h') return
-          settle(offset < -WIDTH / 2 ? -WIDTH : 0)
-        }}
-        // 触摸被原生手势抢走（宿主退出手势、页栈返回、系统接管…）。**不接这条的代价不是少个动画，
-        // 而是手势状态永不复位**：`active` 一直是 true、`startX` 停在上一次的值，行卡在半开位，
-        // 下一次无关的触摸（哪怕只是滚列表）会接着上一次的基准继续拖。
-        // 正确语义是**放弃**：复位状态并弹回原位，绝不提交这一次滑动操作。
-        onTouchCancel={() => {
-          if (!state.current.active) return
-          state.current.active = false
-          state.current.lock = null
-          settle(0)
         }}
       >
         {children}
@@ -408,43 +399,36 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
 
 export function PullRefresh({ onRefresh, refreshing, children, scrollRef, style }) {
   const [pull, setPull] = React.useState(0)
-  const state = React.useRef({ active: false, startY: 0 })
+  const live = React.useRef(0)
   const THRESHOLD = 64
 
+  // `lock: 'none'`：下拉刷新本来就只读 dy、不与横向竞争，也不抢事件（`preventDefault` 关掉）。
+  // 迁移前这里没有方向锁，保持一致——加锁会改掉既有观感，而这不是本次要改的东西。
+  const { handlers, dragging } = useDragGesture({
+    axis: 'y',
+    lock: 'none',
+    preventDefaultWhenLocked: false,
+    canStart: () => Boolean(scrollRef.current) && scrollRef.current.scrollTop <= 0 && !refreshing,
+    onDrag: ({ dy }) => {
+      const next = dy <= 0 ? 0 : Math.min(96, dy * 0.5)
+      live.current = next
+      setPull(next)
+    },
+    onEnd: () => {
+      if (live.current >= THRESHOLD) onRefresh()
+      live.current = 0
+      setPull(0)
+    },
+    // 放弃：收起下拉区，**绝不触发刷新**（用户并没有完成这次下拉，那一下属于别的手势）。
+    onCancel: () => { live.current = 0; setPull(0) },
+  })
+
   return (
-    <div
-      ref={scrollRef}
-      className="fin-scroll"
-      style={style}
-      onTouchStart={(event) => {
-        const node = scrollRef.current
-        if (!node || node.scrollTop > 0 || refreshing) return
-        state.current = { active: true, startY: event.touches[0].clientY }
-      }}
-      onTouchMove={(event) => {
-        if (!state.current.active) return
-        const dy = event.touches[0].clientY - state.current.startY
-        if (dy <= 0) { setPull(0); return }
-        setPull(Math.min(96, dy * 0.5))
-      }}
-      onTouchEnd={() => {
-        if (!state.current.active) return
-        state.current.active = false
-        if (pull >= THRESHOLD) onRefresh()
-        setPull(0)
-      }}
-      // 同上：被抢走时**放弃**——复位状态、收起下拉区，且**绝不触发刷新**
-      //（用户并没有完成这次下拉，那一下属于别的手势）。
-      onTouchCancel={() => {
-        if (!state.current.active) return
-        state.current.active = false
-        setPull(0)
-      }}
-    >
+    <div ref={scrollRef} className="fin-scroll" style={style} {...handlers}>
       <div style={{
         height: refreshing ? 40 : pull,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: state.current.active ? 'none' : 'height 200ms ease',
+        transition: dragging ? 'none' : 'height 200ms ease',
         overflow: 'hidden', color: C.muted,
       }}
       >

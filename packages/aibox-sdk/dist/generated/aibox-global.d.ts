@@ -457,6 +457,41 @@ declare namespace aibox {
     function confirm(input: { title?: string; message?: string; actions?: Action[] }): Promise<DialogResult>
     function prompt(input: { title?: string; message?: string; placeholder?: string; defaultValue?: string }): Promise<DialogResult>
     function actionSheet(input: { title?: string; message?: string; actions: Action[] }): Promise<DialogResult>
+
+    /**
+     * How much of YOUR viewport is unusable, in CSS px.
+     *
+     * NOT the same thing as `aibox.scene.getState().safeArea` — that one reports how much
+     * space the host chrome OCCUPIES, measured outside your viewport, and the chrome height
+     * has ALREADY been subtracted from your viewport. Padding by it double-compensates.
+     *
+     * Also note `env(safe-area-inset-*)` is always 0 inside an applet (SwiftUI zeroes the
+     * web view's safe area and expresses it by placement instead) — use these values instead.
+     *
+     * Prefer the CSS custom properties when plain CSS is enough — they need no JS at all:
+     *   `--aibox-inset-top|-right|-bottom|-left`, `--aibox-keyboard-inset`,
+     *   `--aibox-keyboard-duration`, `--aibox-usable-height`.
+     * The host never applies padding for you; you decide where the inset goes.
+     */
+    interface Insets {
+      top: number
+      right: number
+      /** Device area covered by your viewport (home indicator). 0 when host chrome already shrank you. */
+      bottom: number
+      left: number
+      /** Keyboard overlap of the viewport. Compose as max(bottom, keyboard) — do not add them. */
+      keyboard: number
+      /** Keyboard animation duration in ms; match it to move in step with the system curve. */
+      keyboardAnimationMs: number
+      /** Viewport height in CSS px — the same number as 100dvh. */
+      viewportHeight: number
+    }
+    /** Synchronous snapshot. Safe to read during layout; never throws. */
+    const insets: Insets
+    function getInsets(): Promise<Insets>
+    /** Fires on tab bar / toolbar / overlay changes, keyboard, rotation and safe-area changes. */
+    function on(event: "insetsChanged", handler: (insets: Insets) => void): () => void
+    function on(event: "keyboardChanged", handler: (input: { height: number; animationMs: number }) => void): () => void
   }
 
   interface ResourceRef {
@@ -928,9 +963,9 @@ declare namespace aibox {
 
   namespace vision {
     /** OCR an image resource you own. Pass the handle you got back from picker.photo or picker.file. Returns the text in reading order, newline-separated. Empty text means no readable text was found — that is a normal outcome, not an error, so tell the user rather than retrying. Result: {ok:boolean, text:string, empty:boolean} */
-    function recognizeText(input: { handle: string; languages?: Array<string> }): Promise<unknown>
+    function recognizeText(input: { handle: string; languages?: Array<string> }): Promise<{ empty: boolean; ok: boolean; text: string }>
     /** Whether on-device text recognition exists in this build. Hide the scan entry point instead of letting a tap do nothing. Result: {available:boolean} */
-    function availability(input?: Record<string, never>): Promise<unknown>
+    function availability(input?: Record<string, never>): Promise<{ available: boolean }>
   }
 
   // voiceMemos 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。

@@ -30,6 +30,7 @@
     "build": "tsc -p tsconfig.build.json && node scripts-postbuild.mjs",
     "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node tests/gestures.test.mjs",
     "clean": "rm -rf dist"
   },
   "peerDependencies": {

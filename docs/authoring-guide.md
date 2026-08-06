@@ -196,6 +196,44 @@ addEventListener('popstate', () => {
 news / ledger / finance / music 四个应用用的都是它。完整机制见宿主文档
 `docs/capabilities/applet/native-navigation.md`。
 
+### 触摸手势：用 SDK 原语，**不要自己写 `onTouch*`**
+
+做横扫分页（左右滑切主题 / 切子 Tab）、左滑露出操作、下拉刷新、长按菜单，
+一律用 `@aibox/applet-sdk/react` 里的原语：
+
+```jsx
+import { useSwipePager, useDragGesture, useLongPress } from '@aibox/applet-sdk/react'
+
+// 横扫分页。受控（页码在外面，chip / 分段控件也要读它）：
+const pager = useSwipePager({ count: topics.length, index, onIndexChange: setIndex })
+// 非受控（页码自管）：useSwipePager({ count: 3, defaultIndex: 0 })
+
+<div {...pager.containerProps} style={{ overflow: 'hidden', display: 'flex' }}>
+  <div className="track" style={pager.trackStyle}>{/* 上一页 / 当前页 / 下一页 三屏 */}</div>
+</div>
+```
+
+`pager.slideTo(i)` 给 chip / 分段控件用——点击和横扫必须共用同一条动画，否则两种入口的观感会分家。
+
+**为什么这条是硬性的：`touchcancel` 在纯 Web 环境几乎不会触发**，只有原生手势识别器
+（宿主的退出手势、页栈返回、系统接管）抢走这串触摸时才发。也就是说**在浏览器里写、
+在浏览器里测，永远测不出来**——谁手搓谁漏。2026-08-06 实测：市场里两个应用各自手搓，
+两个都把它写错，**错法还相反**：
+
+| 错法 | 后果 |
+|---|---|
+| `onTouchCancel={onTouchEnd}` | cancel 走完阈值判定并提交 —— **凭空翻一页用户没打算翻的页** |
+| 干脆不接 cancel | 手势状态**永不复位**，行卡在半开位，下一次无关触摸接着上一次的基准继续拖 |
+
+正确语义只有一条：**`touchcancel` = 放弃**（复位状态、回弹、绝不提交），且**永远不与
+`touchend` 共用处理器**。原语把这条写死在里面，并有直接派发合成 `touchcancel` 的单测守着
+（`packages/aibox-sdk/tests/gestures.test.mjs`，CI 每次跑）。
+
+原语同时管掉方向锁（横向 slop 达到才锁，**锁定前绝不 `preventDefault`**，否则页面滚不动）、
+翻页阈值（默认 `max(48, 容器宽 × 0.22)`，可配）、首末页橡皮筋阻尼。
+低层的 `useDragGesture` 给「拖到哪儿松手看结果」的手势用（左滑露操作 = `axis: 'x'`；
+下拉刷新 = `axis: 'y'` + `lock: 'none'`）。
+
 ### 可选能力（用前先探测）
 
 ```javascript

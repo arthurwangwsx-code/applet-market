@@ -4,7 +4,8 @@
 
 import React from 'react'
 import Icon from './Icon.js'
-import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle, useLongPress } from './primitives.js'
+import { useLongPress } from '@aibox/applet-sdk/react'
+import { ActionSheet, Card, Row, SectionHeader, SwipeRow, Toggle } from './primitives.js'
 import { C, SPACE } from './theme.js'
 import { TOPIC_ICON, TOPIC_ORDER, topicKey } from '../lib/catalog.js'
 import { relative } from '../lib/format.js'
@@ -27,7 +28,7 @@ function statusFor(feed, state, ctx) {
 function SourceRow({ feed, ctx, state, last }) {
   const [menu, setMenu] = React.useState(false)
   const status = statusFor(feed, state, ctx)
-  const press = useLongPress(() => setMenu(true), () => ctx.actions.navigate({ name: 'source', feed }))
+  const press = useLongPress({ onLongPress: () => setMenu(true), onTap: () => ctx.actions.navigate({ name: 'source', feed }) })
 
   return (
     <>

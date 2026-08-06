@@ -21,7 +21,8 @@
     "sdk:build": "npm run build --workspace @aibox/applet-sdk",
     "audit:result-schema": "node scripts/audit-result-schema.mjs",
     "audit:host-forks": "node scripts/audit-host-forks.mjs",
-    "audit": "npm run audit:result-schema && npm run audit:host-forks && npm run audit:undefined-names",
+    "audit:hand-rolled-touch": "node scripts/audit-hand-rolled-touch.mjs",
+    "audit": "npm run audit:result-schema && npm run audit:host-forks && npm run audit:hand-rolled-touch && npm run audit:undefined-names",
     "audit:undefined-names": "node scripts/audit-undefined-names.mjs"
   },
   "devDependencies": {

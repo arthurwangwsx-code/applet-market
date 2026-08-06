@@ -5,7 +5,14 @@ AiBox 小应用的前端 SDK。零运行时依赖，构建时被打进应用产�
 ```ts
 import { isAvailable, fetchText, storage, registerActions, normalizeError } from '@aibox/applet-sdk';
 import { useTabs, useToolbarSearch, useKeyboardInset, useLocale } from '@aibox/applet-sdk/react';
+import { useSwipePager, useDragGesture, useLongPress } from '@aibox/applet-sdk/react';
 ```
+
+> **触摸手势一律用上面第三行那组原语，不要自己接 `onTouch*`。**
+> `touchcancel` 只有原生手势抢走触摸时才发，浏览器里测不出来——手搓必漏，
+> 实测两个应用两种错法（当成 `touchend` 直接误提交 / 干脆不接、状态永不复位）。
+> 原语把「cancel = 放弃」写死在里面，并由 `tests/gestures.test.mjs` 派发真的合成
+> `touchcancel` 守着。见 [../../docs/authoring-guide.md](../../docs/authoring-guide.md) §2。
 
 完整文档：[../../docs/typescript-workflow.md](../../docs/typescript-workflow.md) §4。
 
@@ -20,6 +27,7 @@ import { useTabs, useToolbarSearch, useKeyboardInset, useLocale } from '@aibox/a
 | `truncated` | 布尔位，大多数应用漏判 | 默认截断即抛 |
 | action 契约 | manifest 与 handler 无机械联系 | 名字/入参/返回**编译期**对齐 |
 | 事件订阅 | 手动记 unsubscribe | hooks 自动退订 |
+| 触摸手势 | 每个应用手搓分页 / 左滑 / 下拉，`touchcancel` 谁写谁漏 | `useSwipePager` / `useDragGesture` / `useLongPress`，cancel = 放弃写死在里面 |
 
 ## 类型是怎么来的
 

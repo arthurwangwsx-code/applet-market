@@ -82,6 +82,22 @@ const Pager = React.forwardRef(function Pager({ count, index, onIndex, renderPag
     settle(next, next > index ? 1 : (next < index ? -1 : 0))
   }
 
+  // 触摸被原生手势抢走（宿主的退出手势、页栈返回、系统接管…）。
+  // **必须回弹放弃，不能复用 `onTouchEnd`**：`touchcancel` 的语义是「这串触摸已经不属于页面了」，
+  // 用户的意图是那个原生手势，不是翻页；当成 end 处理会在阈值够时**直接提交一次用户没打算做的翻页**。
+  // 纯 Web 环境几乎触发不到 touchcancel（只有原生识别器抢触摸才发），所以这条极易漏——
+  // 2026-08-06 排查时本文件与理财的 `primitives.jsx` 两处手搓分页**都**错了，错法还相反
+  //（这边是 cancel 当提交，那边是根本没接、状态永不复位）。
+  const onTouchCancel = () => {
+    const state = gesture.current
+    if (!state.active) return
+    const wasHorizontal = state.lock === 'h'
+    state.active = false
+    state.lock = null
+    // `settle(index, 0)` 走的是「目标页 === 当前页」那条分支：动画回弹到本页，不提交。
+    if (wasHorizontal) settle(index, 0)
+  }
+
   // translate 的百分比按**自身**尺寸算 —— 轨道是宿主的 300%，故一屏 = 100%/3，
   // 与 `.news-pager-slot` 的 `calc(100% / 3)` 精确同宽（写死 33.3333% 会差出亚像素并累积）。
   const offset = `calc(-100% / 3 + ${drag}px)`
@@ -92,7 +108,7 @@ const Pager = React.forwardRef(function Pager({ count, index, onIndex, renderPag
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchEnd}
+      onTouchCancel={onTouchCancel}
     >
       <div
         className="news-pager-track"

@@ -318,6 +318,14 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
           if (state.current.lock !== 'h') return
           settle(offset < -WIDTH / 2 ? -WIDTH : 0)
         }}
+        // 触摸被原生手势抢走时**放弃**：不接这条的话 `active` 永远停在 true、`startX` 停在旧值，
+        // 行卡在半开位，下一次无关触摸会接着上一次的基准继续拖（与理财 `primitives.jsx` 同因同修）。
+        onTouchCancel={() => {
+          if (!state.current.active) return
+          state.current.active = false
+          state.current.lock = null
+          settle(0)
+        }}
       >
         {children}
       </div>
@@ -351,6 +359,13 @@ export function PullRefresh({ onRefresh, refreshing, children, scrollRef }) {
         if (!state.current.active) return
         state.current.active = false
         if (pull >= THRESHOLD) onRefresh()
+        setPull(0)
+      }}
+      // 同上：被抢走时**放弃**——复位状态、收起下拉区，且**绝不触发刷新**
+      //（用户并没有完成这次下拉，那一下属于别的手势）。
+      onTouchCancel={() => {
+        if (!state.current.active) return
+        state.current.active = false
         setPull(0)
       }}
     >

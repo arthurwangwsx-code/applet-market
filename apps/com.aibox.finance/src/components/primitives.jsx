@@ -387,6 +387,16 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
           if (state.current.lock !== 'h') return
           settle(offset < -WIDTH / 2 ? -WIDTH : 0)
         }}
+        // 触摸被原生手势抢走（宿主退出手势、页栈返回、系统接管…）。**不接这条的代价不是少个动画，
+        // 而是手势状态永不复位**：`active` 一直是 true、`startX` 停在上一次的值，行卡在半开位，
+        // 下一次无关的触摸（哪怕只是滚列表）会接着上一次的基准继续拖。
+        // 正确语义是**放弃**：复位状态并弹回原位，绝不提交这一次滑动操作。
+        onTouchCancel={() => {
+          if (!state.current.active) return
+          state.current.active = false
+          state.current.lock = null
+          settle(0)
+        }}
       >
         {children}
       </div>
@@ -421,6 +431,13 @@ export function PullRefresh({ onRefresh, refreshing, children, scrollRef, style 
         if (!state.current.active) return
         state.current.active = false
         if (pull >= THRESHOLD) onRefresh()
+        setPull(0)
+      }}
+      // 同上：被抢走时**放弃**——复位状态、收起下拉区，且**绝不触发刷新**
+      //（用户并没有完成这次下拉，那一下属于别的手势）。
+      onTouchCancel={() => {
+        if (!state.current.active) return
+        state.current.active = false
         setPull(0)
       }}
     >

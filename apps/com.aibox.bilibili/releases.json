@@ -1,8 +1,34 @@
 {
   "schemaVersion": 1,
   "appId": "com.aibox.bilibili",
-  "latestVersion": "1.4.0",
+  "latestVersion": "1.5.1",
   "releases": [
+    {
+      "version": "1.5.1",
+      "releasedAt": "2026-08-07T08:26:14Z",
+      "notes": "修复生成外壳在 WebKit 中因 aibox/sdk 路径正则转义错误导致的启动白屏；包含 1.5.0 的详情切 Tab 退栈、完整播放能力预检、常驻失败提示和共享 SDK 包体复用改进。",
+      "fileCount": 18,
+      "totalBytes": 114547,
+      "path": "apps/com.aibox.bilibili/releases/1.5.1",
+      "localizedNotes": {
+        "en": "Fixed a generated-shell regex that caused a WebKit startup blank screen; includes the root-tab, playback preflight, persistent error guidance, and shared-SDK improvements from 1.5.0."
+      },
+      "bundleSha256": "e9cbf4eaaf9c727604c9dd7e683bdc6aaa7b863b7b4c5dbdb095aa2a93a80ced"
+    },
+    {
+      "version": "1.5.0",
+      "releasedAt": "2026-08-07T08:20:14Z",
+      "notes": "修复从视频详情切换首页/搜索/我的后详情页仍覆盖的问题；播放前同时检查宿主播放器与媒体解析能力，失败原因常驻展示并提供浏览器回退；切换到宿主共享 SDK 运行时以减少重复包体。",
+      "fileCount": 18,
+      "totalBytes": 114296,
+      "path": "apps/com.aibox.bilibili/releases/1.5.0",
+      "localizedNotes": {
+        "en": "Fixed root-tab navigation from video details, added complete playback capability checks with persistent recovery guidance, and moved to the host-shared SDK runtime."
+      },
+      "yanked": true,
+      "yankedReason": "生成外壳包含无效正则，WebKit 解析期白屏",
+      "bundleSha256": "6ce6622c08ccde6830d68fd9a11c52ac1f18fbfa656d43459591893da0ed7b96"
+    },
     {
       "version": "1.4.0",
       "releasedAt": "2026-08-05T16:03:16Z",

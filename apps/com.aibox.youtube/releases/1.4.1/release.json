@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.youtube",
+  "version": "1.4.1",
+  "releasedAt": "2026-08-07T08:26:16Z",
+  "notes": "修复生成外壳在 WebKit 中因 aibox/sdk 路径正则转义错误导致的启动白屏；包含 1.4.0 的播放详情切根 Tab 修复与共享 SDK 包体复用改进。",
+  "localizedNotes": {
+    "en": "Fixed a generated-shell regex that caused a WebKit startup blank screen; includes the player-to-root-tab and shared-SDK improvements from 1.4.0."
+  },
+  "manifest": {
+    "name": "YouTube",
+    "localizedNames": {
+      "en": "YouTube"
+    },
+    "icon": "play.rectangle.fill",
+    "iconTintHex": "FF0033",
+    "summary": "搜索并播放 YouTube 视频",
+    "localizedSummaries": {
+      "en": "Search and watch YouTube"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [
+        "www.youtube.com",
+        "youtube.com",
+        "suggestqueries-clients6.youtube.com",
+        "i.ytimg.com",
+        "ytimg.com"
+      ],
+      "capabilities": [
+        "video",
+        "browser",
+        "share",
+        "clipboard",
+        "haptics",
+        "toast"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "actions": [
+      {
+        "id": "yt_search",
+        "name": "search",
+        "displayName": "搜索 YouTube",
+        "summary": "Search YouTube for videos by keyword. Returns each match with its video id, title, channel, duration and view count. Pass a video id or url to the play action to watch one.",
+        "keywords": [
+          "youtube",
+          "油管",
+          "搜索youtube",
+          "找视频",
+          "search youtube"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"query\"],\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"What to search for.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20,\"description\":\"How many results to return (default 10).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true
+      },
+      {
+        "id": "yt_play",
+        "name": "play",
+        "displayName": "播放 YouTube 视频",
+        "summary": "Play a YouTube video on the native full-screen player, with lock-screen controls and picture-in-picture. Accepts a full watch url or a bare video id. The host resolves the stream and picks the best quality this build can actually play.",
+        "keywords": [
+          "播放youtube",
+          "看油管",
+          "play youtube"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"A youtube.com/watch?v=... url.\"},\"videoId\":{\"type\":\"string\",\"description\":\"Bare video id, if you do not have the full url.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "mediaPlayback"
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "search",
+            "title": "搜索",
+            "localizedTitles": {
+              "en": "Search"
+            },
+            "icon": "magnifyingglass"
+          },
+          {
+            "id": "mine",
+            "title": "我的",
+            "localizedTitles": {
+              "en": "Mine"
+            },
+            "icon": "person",
+            "selectedIcon": "person.fill"
+          }
+        ]
+      }
+    },
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 74971,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 3249,
+      "sha256": "e4cfa778528ba456429b71dcbd2b3c7df7c1a1828cac0be0cff0f69768af7ea7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 6030,
+      "sha256": "a1e02b82403fa9bd4ae82c54d2c5cc10e1cb302ad7f59b2907e9a16114534df1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MinePage.js",
+      "bytes": 4097,
+      "sha256": "2b7167f1999faec159e9e85bcb6e836c5510be87c5da07519461d852509b3455",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/PlayerPage.js",
+      "bytes": 13661,
+      "sha256": "be6619d1928924f202ebd41970510e617f7f774487c45bdc1ac78e2f3bc20480",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 4735,
+      "sha256": "9c35c36f9b444baa573d312a29c524abf64400f718fbb8e95d20d671e634c450",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.js",
+      "bytes": 7487,
+      "sha256": "60569f5d95da094a59ef6a24b263db0a6035006f34ad89cdbcaeaeab67fd558e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 1596,
+      "sha256": "3c6b92a4422b8b27f929e782c4580d2387a40e6a81b300d83b48f9acfda1806b",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/VideoCard.js",
+      "bytes": 2518,
+      "sha256": "12bdc16026e34d4362905b9619d113631c8ad775ecbe69c1c9d7633e29b5c44f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 4819,
+      "sha256": "5198f93ab6d6f17353b92679147ce419ca132149da91acd3f2a2ac846c7127cb",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 3660,
+      "sha256": "09eaba8a51691f0fe79caf69fd2dcb857949087b70e6c147974646b4cfe6b7e7",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 2666,
+      "sha256": "2afbadedbff064b38756a785f2b9308591188abef46fb6261175e6beae40662e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 8646,
+      "sha256": "067e9be76da4dd19681e74f9c46aad8a6dc7e79235cec127957171493883c3c1",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/innertube.js",
+      "bytes": 6173,
+      "sha256": "6822a00101b404250acbf1bfac35e78423503249a5b6909f31bab82ad416e476",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/settings.js",
+      "bytes": 1997,
+      "sha256": "3ebfebc757257ed3badff50af4c84346dab1c71f93f078475c4484084e44f071",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/types.js",
+      "bytes": 329,
+      "sha256": "673991dd4137715d9ee56971d854668d5c804014ef4cecfd0d68de7321bb7989",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 3308,
+      "sha256": "9c75460eb104beae55b4ba087beda34773396ee1036f7bee6e47f28ec857d704",
+      "encoding": "utf8"
+    }
+  ]
+}

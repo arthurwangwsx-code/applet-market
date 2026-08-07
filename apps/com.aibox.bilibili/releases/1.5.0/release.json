@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.aibox.bilibili",
+  "version": "1.5.0",
+  "releasedAt": "2026-08-07T08:20:14Z",
+  "notes": "修复从视频详情切换首页/搜索/我的后详情页仍覆盖的问题；播放前同时检查宿主播放器与媒体解析能力，失败原因常驻展示并提供浏览器回退；切换到宿主共享 SDK 运行时以减少重复包体。",
+  "localizedNotes": {
+    "en": "Fixed root-tab navigation from video details, added complete playback capability checks with persistent recovery guidance, and moved to the host-shared SDK runtime."
+  },
+  "manifest": {
+    "name": "哔哩哔哩",
+    "localizedNames": {
+      "en": "Bilibili"
+    },
+    "icon": "play.tv.fill",
+    "iconTintHex": "FB7299",
+    "summary": "看视频、搜索、追更",
+    "localizedSummaries": {
+      "en": "Browse, search and watch Bilibili"
+    },
+    "template": "react",
+    "entry": "index.html",
+    "securityMode": "secure",
+    "permissions": {
+      "network": true,
+      "storage": true,
+      "ai": false,
+      "networkAllowed": [
+        "api.bilibili.com",
+        "passport.bilibili.com",
+        "www.bilibili.com",
+        "hdslb.com"
+      ],
+      "capabilities": [
+        "video",
+        "secrets",
+        "browser",
+        "share",
+        "clipboard",
+        "haptics",
+        "toast"
+      ]
+    },
+    "presentation": {
+      "default": "page",
+      "surfaces": [
+        "page",
+        "fullscreen"
+      ],
+      "subpages": true
+    },
+    "actions": [
+      {
+        "id": "bili_search",
+        "name": "search",
+        "displayName": "搜索哔哩哔哩",
+        "summary": "Search Bilibili for videos by keyword. Returns each match with its BV id, title, uploader, duration and play count. Pass a BV id to the play action to watch one.",
+        "keywords": [
+          "bilibili",
+          "b站",
+          "哔哩哔哩",
+          "搜视频",
+          "找视频",
+          "search bilibili"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"keyword\"],\"properties\":{\"keyword\":{\"type\":\"string\",\"description\":\"What to search for.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20,\"description\":\"How many results to return (default 10).\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true
+      },
+      {
+        "id": "bili_trending",
+        "name": "trending",
+        "displayName": "哔哩哔哩热门",
+        "summary": "What is popular on Bilibili right now. kind 'popular' is the trending feed, 'ranking' is the all-site leaderboard.",
+        "keywords": [
+          "bilibili热门",
+          "b站排行",
+          "哔哩哔哩排行榜",
+          "bilibili trending"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"popular\",\"ranking\"]},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "externalNetwork",
+        "readOnly": true
+      },
+      {
+        "id": "bili_play",
+        "name": "play",
+        "displayName": "播放哔哩哔哩视频",
+        "summary": "Play a Bilibili video by its BV id on the native full-screen player, with lock-screen controls and picture-in-picture. Get a BV id from the search or trending action first.",
+        "keywords": [
+          "播放b站",
+          "看视频",
+          "播放哔哩哔哩",
+          "play bilibili"
+        ],
+        "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"bvid\"],\"properties\":{\"bvid\":{\"type\":\"string\",\"description\":\"The BV id, e.g. BV1bz3Q6oEMP.\"}},\"additionalProperties\":false}",
+        "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
+        "headless": true,
+        "visibility": [
+          "agent",
+          "automation"
+        ],
+        "effect": "mediaPlayback"
+      }
+    ],
+    "scene": {
+      "tabBar": {
+        "style": "glass",
+        "items": [
+          {
+            "id": "feed",
+            "title": "首页",
+            "localizedTitles": {
+              "en": "Home"
+            },
+            "icon": "house",
+            "selectedIcon": "house.fill"
+          },
+          {
+            "id": "search",
+            "title": "搜索",
+            "localizedTitles": {
+              "en": "Search"
+            },
+            "icon": "magnifyingglass"
+          },
+          {
+            "id": "mine",
+            "title": "我的",
+            "localizedTitles": {
+              "en": "Mine"
+            },
+            "icon": "person",
+            "selectedIcon": "person.fill"
+          }
+        ]
+      }
+    },
+    "runtimeKind": "bundle"
+  },
+  "totalBytes": 114296,
+  "files": [
+    {
+      "path": ".tests.json",
+      "bytes": 4851,
+      "sha256": "e435a4f57b247ba847aa99ee62ba30fc13c4066075b7dcc3ed30b4c03c1e54fd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "app.js",
+      "bytes": 7718,
+      "sha256": "70be2acabc162695fd0ede3932f4e57e54fb83e63019ba3cf276231bd1c972bc",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/DetailPage.js",
+      "bytes": 17561,
+      "sha256": "b6d72ef58f553969511f95fff8508f2609bcf6f9bedac42c268bb040cbc51ffd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/FeedPage.js",
+      "bytes": 5397,
+      "sha256": "2d905627e0e26180ebf3fd515239b756ce4396358baac3d6a5a26111d93e0577",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/MinePage.js",
+      "bytes": 11704,
+      "sha256": "191d60c44dd1b315933f5c7ba3200dfaa40498582c7da44be1d604c15f3ed0d9",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/primitives.js",
+      "bytes": 4735,
+      "sha256": "0d9ed440739230928003f90bc1467679c3ffb9ff1bb0454023955dfcfb448336",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/SearchPage.js",
+      "bytes": 8120,
+      "sha256": "506e39fde1abbfed23b76b32098d16ff6448930c3eb3e6117d7df8031c895f21",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/theme.js",
+      "bytes": 1596,
+      "sha256": "398773d65a4029eefe1d5cc214adc09cb144f6d1d12397457e989bf899611043",
+      "encoding": "utf8"
+    },
+    {
+      "path": "components/VideoCard.js",
+      "bytes": 2685,
+      "sha256": "63f41c4b3b627f2fa30a860679c9bf4b3c7c4ffd3da62af5e12657d917d5402e",
+      "encoding": "utf8"
+    },
+    {
+      "path": "index.html",
+      "bytes": 4573,
+      "sha256": "75e9c974c08500adc88c0d52e7a2c510cd74fdeaf3e9b39d4c2170001f174736",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/actions.js",
+      "bytes": 4335,
+      "sha256": "28943466b5e148ab28f21cee46356740210b2ee4b0ebf6bcf42871d7f9c83400",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/api.js",
+      "bytes": 15533,
+      "sha256": "e8b8f6b46a3200707484bf050ed55a64c1bc9771269f44bca585c18d4cac1b7f",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/format.js",
+      "bytes": 1502,
+      "sha256": "9970321f0d055d1a95bbbc7eea211208b733b333185afecf6bc29dde17ff5153",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/host.js",
+      "bytes": 11424,
+      "sha256": "2aeb556496eebbb6f6e12ae19bd50e8a640e61989691bc7929080d5aeebfc995",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/md5.js",
+      "bytes": 4472,
+      "sha256": "161e777ac53ad385071fa5dfca0b24f30e77267bf132061b754a0fe5fc6669bd",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/settings.js",
+      "bytes": 1997,
+      "sha256": "3ebfebc757257ed3badff50af4c84346dab1c71f93f078475c4484084e44f071",
+      "encoding": "utf8"
+    },
+    {
+      "path": "lib/types.js",
+      "bytes": 1834,
+      "sha256": "0695e89673650524ed31bb2855242e0664dcb0aa8c1d6c43eb57fb74ae698a4c",
+      "encoding": "utf8"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 4259,
+      "sha256": "c66d7d2feda316959db1feb86a6de48018df83526b69f2a2f0440e7c33fffe99",
+      "encoding": "utf8"
+    }
+  ],
+  "yanked": true,
+  "yankedReason": "生成外壳包含无效正则，WebKit 解析期白屏"
+}

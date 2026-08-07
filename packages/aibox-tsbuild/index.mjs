@@ -222,7 +222,9 @@ export function shellHTML(title) {
       var message = String((e && e.message) || e || '');
       // 通用动态 import 失败文案本身不含 URL；只有 SDK 预检阶段失败时才能据此归因宿主过旧。
       // app.js 自己 404 或其业务依赖失败必须保留真实的运行错误，不能误导成「请升级容器」。
-      var sharedSDKMissing = !sharedSDKReady || /aibox-sdk\.mjs|aibox\/sdk|incompatible-host/i.test(message);
+      // 不用正则字面量：这段代码住在模板字符串里，转义斜杠会先被模板消费，
+      // 生成含 aibox/sdk 的正则字面量后 WebKit 会把 sdk 当 flags，整个 module script 在解析期白屏。
+      var sharedSDKMissing = !sharedSDKReady || new RegExp('aibox-sdk[.]mjs|aibox/sdk|incompatible-host', 'i').test(message);
       var locale = String((navigator && navigator.language) || document.documentElement.lang || '').toLowerCase();
       var upgradeHint = locale.indexOf('zh') === 0
         ? '这个小应用需要更新版本的 AiBox（宿主共享 aibox/sdk 运行时）。请升级 AiBox 后重新打开。'

@@ -162,6 +162,11 @@ export function compareSemver(a, b) {
   return 0
 }
 
+/** 市场“最新版本”的统一裁决：跳过已撤回版本；全部撤回时仍保留最高版本用于可诊断展示。 */
+export function latestAvailableRelease(releases) {
+  return releases.find((release) => release?.yanked !== true) ?? releases[0] ?? null
+}
+
 // —— 路径安全 ——
 
 const APP_ID_RE = /^[a-z0-9]+(\.[a-z0-9][a-z0-9-]*)+$/

@@ -56,9 +56,18 @@ function isTabID(value) {
  * 宿主没渲染出来时（surface 不支持 / 老宿主）回落到自绘条——**永远不能只有原生一条路**，
  * 否则在不支持的表面上整个应用就没法切页了。
  */
-function useTabs(initial) {
+function useTabs(initial, resetSubpages) {
     const [tab, setTab] = React.useState(initial);
     const [native, setNative] = React.useState(false);
+    // `resetSubpages` 由 useSubpageStack 提供且当前实现稳定，但这里仍经 ref 取最新值：
+    // 订阅原生事件不该因为调用方闭包身份变化而反复解绑/重绑。
+    const resetSubpagesRef = React.useRef(resetSubpages);
+    resetSubpagesRef.current = resetSubpages;
+    const applySelection = React.useCallback((id) => {
+        // 根 Tab 与子页栈不能同时生效。先清栈再换根页，避免出现「我的已选中，画面仍是详情页」。
+        resetSubpagesRef.current();
+        setTab(id);
+    }, []);
     React.useEffect(() => {
         const api = bridge();
         if (!api?.tabs)
@@ -69,7 +78,7 @@ function useTabs(initial) {
                 const state = await api.tabs.getState?.();
                 setNative(!!state?.rendered);
                 if (state?.selected && isTabID(state.selected))
-                    setTab(state.selected);
+                    applySelection(state.selected);
             }
             catch {
                 setNative(false);
@@ -79,7 +88,7 @@ function useTabs(initial) {
                 // `rendered` 也在里面，所以呈现表面变化（page → sheet）时自绘条能跟着切回来。
                 off = api.tabs.on?.('changed', (state) => {
                     if (state?.selected && isTabID(state.selected))
-                        setTab(state.selected);
+                        applySelection(state.selected);
                     setNative(!!state?.rendered);
                 });
             }
@@ -95,9 +104,9 @@ function useTabs(initial) {
                 /* 已卸载 */
             }
         };
-    }, [initial]);
+    }, [applySelection]);
     const select = React.useCallback((id) => {
-        setTab(id);
+        applySelection(id);
         // 桥方法回的是 **Promise**，同步 try/catch 抓不住它的 rejection——那会变成
         // 「Unhandled promise rejection」污染 console。桥在能力不可用时是 reject 而不是 throw
         // （无头运行、sheet/card 表面上 tabs 都会拒），所以 `.catch` 是必需的，不是防御性冗余。
@@ -109,7 +118,7 @@ function useTabs(initial) {
         catch {
             /* 连命名空间都没有 */
         }
-    }, []);
+    }, [applySelection]);
     return { tab, native, select };
 }
 /** 自绘底部条 —— 只在宿主没渲染原生 TabBar 时出现。 */
@@ -132,12 +141,12 @@ function FallbackTabBar({ value, onChange }) {
 }
 export default function App() {
     useTheme();
-    const tabs = useTabs('feed');
     // 详情页走原生页栈：推入动画、边缘返回手势、顶栏标题全由宿主给。
     const stack = useSubpageStack({
         pathFor: (route) => `#/video/${route.bvid}`,
         titleFor: (route) => route.title || '视频',
     });
+    const tabs = useTabs('feed', stack.reset);
     const openVideo = React.useCallback((video) => {
         stack.push({ bvid: video.bvid, title: video.title });
     }, [stack]);
@@ -161,5 +170,5 @@ export default function App() {
             background: C.bg,
             color: C.text,
             overflow: 'hidden',
-        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: body }), !tabs.native && !stack.route ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
+        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: body }), !tabs.native ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
 }

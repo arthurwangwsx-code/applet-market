@@ -19,6 +19,12 @@ const shell = shellHTML('Compatibility')
 assert.match(shell, /await import\('aibox\/sdk'\)/, '业务模块前必须先探测共享 SDK')
 assert.match(shell, /checkCompatibility/)
 assert.match(shell, /incompatible-host/)
+assert.match(
+  shell,
+  /new RegExp\('aibox-sdk\[\.\]mjs\|aibox\/sdk\|incompatible-host', 'i'\)/,
+  '共享 SDK 缺失判定不能生成含未转义路径斜杠的正则字面量',
+)
+assert.doesNotMatch(shell, /\/aibox-sdk[^\n]*aibox\/sdk/, '生成外壳不能把 aibox/sdk 放进正则字面量')
 assert.match(shell, /sharedSDKReady = true/, '业务模块异常不得误报为宿主 SDK 缺失')
 assert.doesNotMatch(
   shell,

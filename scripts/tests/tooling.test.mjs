@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
+import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import { buildApplet } from '../../packages/aibox-tsbuild/index.mjs'
 import {
@@ -13,7 +14,7 @@ import {
   parseUITypeInterfaceProperties,
   parseVirtualListRuntimeProps,
 } from '../audit-runtime-contracts.mjs'
-import { ROOT } from '../lib/market.mjs'
+import { ROOT, latestAvailableRelease } from '../lib/market.mjs'
 import { RUNTIME_MODULE_FILES } from '../lib/runtime-modules.mjs'
 import { PACKAGE_JSON, rewriteRelativeImports, TSCONFIG } from '../migrate-to-ts.mjs'
 import { APP_TSX } from '../new-app.mjs'
@@ -83,6 +84,34 @@ test('迁移模板只生成 aibox-tsbuild 工程并保留运行时 .js 扩展名
     rewriteRelativeImports("import A from './A.jsx'\nexport { x } from '../lib/x.ts'"),
     "import A from './A.js'\nexport { x } from '../lib/x.js'",
   )
+})
+
+test('市场最新版跳过已撤回版本，发布与校验共用同一裁决', () => {
+  assert.equal(latestAvailableRelease([{ version: '1.5.0', yanked: true }, { version: '1.4.0' }])?.version, '1.4.0')
+  assert.equal(latestAvailableRelease([{ version: '1.5.0', yanked: true }])?.version, '1.5.0')
+  assert.equal(latestAvailableRelease([]), null)
+})
+
+test('Bilibili 播放预检要求解析器与播放器同时可用', async () => {
+  const moduleURL = pathToFileURL(path.join(ROOT, 'apps/com.aibox.bilibili/dist/lib/types.js')).href
+  const { classifyVideoReadiness, playbackErrorMessage } = await import(`${moduleURL}?test=${Date.now()}`)
+
+  assert.deepEqual(classifyVideoReadiness(null, { play: false, resolve: false }), {
+    ok: false,
+    reason: 'noBridge',
+    resolve: false,
+    dash: false,
+  })
+  assert.equal(
+    classifyVideoReadiness({ available: true, resolve: false, dash: true }, { play: true, resolve: true }).reason,
+    'noResolver',
+  )
+  assert.equal(
+    classifyVideoReadiness({ available: true, resolve: true, dash: false }, { play: true, resolve: true }).ok,
+    true,
+  )
+  assert.match(playbackErrorMessage(new Error("aibox/not-granted: 'video' denied")), /应用详情.*能力/)
+  assert.match(playbackErrorMessage(new Error('aibox/resolve-failed: HTTP 403')), /B 站视频解析失败.*HTTP 403/)
 })
 
 test('唯一构建器拒绝 JS/JSX 绕过严格类型检查', async () => {

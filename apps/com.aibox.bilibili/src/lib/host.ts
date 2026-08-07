@@ -8,7 +8,7 @@ import type { JSONValue } from '@aibox/applet-sdk'
 
 import { imageURL as uiImageURL } from 'aibox/ui'
 import type { AppletRequestError, PlaybackSettings, VideoProgress, VideoReadiness } from './types.js'
-import { errorMessage } from './types.js'
+import { classifyVideoReadiness, errorMessage } from './types.js'
 
 // —— 网络 ——————————————————————————————————————————————
 
@@ -102,16 +102,14 @@ export function imageURL(url: string, width?: number): string {
 export async function videoReadiness(): Promise<VideoReadiness> {
   const api = bridge()
   if (!api?.video?.availability) {
-    return { ok: false, reason: 'noBridge', resolve: false, dash: false }
+    return classifyVideoReadiness(null, { play: false, resolve: false })
   }
   try {
     const res = await api.video.availability()
-    return {
-      ok: !!res?.available,
-      reason: res?.available ? 'ok' : 'noEngine',
-      resolve: !!res?.resolve,
-      dash: !!res?.dash,
-    }
+    return classifyVideoReadiness(res, {
+      play: typeof api.video.play === 'function',
+      resolve: typeof api.video.resolve === 'function',
+    })
   } catch (err: unknown) {
     return {
       ok: false,

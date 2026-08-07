@@ -37,7 +37,7 @@ import {
 import { formatCount, formatDate, formatDuration } from '../lib/format.js'
 import { loadSettings } from '../lib/settings.js'
 import type { VideoDetail, VideoProgress, VideoReadiness, VideoSummary, WatchProgress } from '../lib/types.js'
-import { errorMessage } from '../lib/types.js'
+import { errorMessage, playbackErrorMessage } from '../lib/types.js'
 
 const PROGRESS_KEY = 'watch-progress'
 
@@ -56,8 +56,10 @@ export default function DetailPage({ bvid, onOpen }: { bvid: string; onOpen: (vi
   const [activeCid, setActiveCid] = React.useState(0)
   // `null` = 还没探测出来。**别用 true 当初值**：那会让页面先显示「能播」再跳成「不能播」。
   const [videoState, setVideoState] = React.useState<VideoReadiness | null>(null)
-  const playable = videoState?.ok !== false
+  // 探测完成前也不允许点：旧逻辑把 null 当可播，慢设备上会先进入一条尚未确认的桥链路。
+  const playable = videoState?.ok === true
   const [busy, setBusy] = React.useState(false)
+  const [playError, setPlayError] = React.useState('')
   // 舞台开着时，视频由**宿主**画在页面顶部，页面自己那块封面就该让位——
   // 否则用户会同时看到「上面在放的视频」和「下面一张静止封面」。
   const [stageOn, setStageOn] = React.useState(false)
@@ -147,6 +149,7 @@ export default function DetailPage({ bvid, onOpen }: { bvid: string; onOpen: (vi
     async (cid?: number) => {
       if (!detail || busy) return
       setBusy(true)
+      setPlayError('')
       haptic('medium')
       try {
         const targetCid = cid || activeCid || detail.cid
@@ -181,7 +184,9 @@ export default function DetailPage({ bvid, onOpen }: { bvid: string; onOpen: (vi
         // 失败就把舞台收掉，让封面回来——留着一块黑舞台比什么都不显示更糟。
         closeStage()
         setStageOn(false)
-        toast(`播放失败：${errorMessage(err)}`)
+        const message = playbackErrorMessage(err)
+        setPlayError(message)
+        toast(`播放失败：${message}`)
       } finally {
         setBusy(false)
       }
@@ -270,9 +275,27 @@ export default function DetailPage({ bvid, onOpen }: { bvid: string; onOpen: (vi
         <div style={{ padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
           {videoState.reason === 'noBridge'
             ? '这个 App 版本还没有视频播放桥（aibox.video）。需要重新构建安装 App 本体，' + '换小应用版本没用。'
-            : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。'}
+            : videoState.reason === 'noResolver'
+              ? '这个 App 构建没有链入媒体解析模块（MODULE_VIDEODOWNLOAD），解析不了 B 站视频。'
+              : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。'}
           <br />
           只能先用浏览器打开。
+        </div>
+      ) : null}
+
+      {playError ? (
+        <div
+          role="alert"
+          style={{ padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }}
+        >
+          播放失败：{playError}
+          <button
+            type="button"
+            onClick={() => openInBrowser(`https://www.bilibili.com/video/${bvid}`)}
+            style={{ marginLeft: SPACE.s2, border: 0, padding: 0, background: 'transparent', color: C.brand }}
+          >
+            用浏览器打开
+          </button>
         </div>
       ) : null}
 
@@ -335,7 +358,7 @@ export default function DetailPage({ bvid, onOpen }: { bvid: string; onOpen: (vi
 
         <div style={{ display: 'flex', gap: SPACE.s2, marginTop: SPACE.s4 }}>
           <PrimaryButton onClick={() => play()} disabled={!playable || busy}>
-            {busy ? '正在准备…' : '播放'}
+            {busy ? '正在准备…' : videoState === null ? '正在检查播放能力…' : '播放'}
           </PrimaryButton>
           <button
             type="button"

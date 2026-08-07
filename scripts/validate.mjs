@@ -25,6 +25,7 @@ import {
   isValidAppID,
   listAppIDs,
   listReleaseVersions,
+  latestAvailableRelease,
   ok,
   parseSemver,
   readJSON,
@@ -369,6 +370,7 @@ function validateBuiltShape(appId, manifest, names) {
 function validateReleases(appId) {
   const paths = appPaths(appId)
   const versions = listReleaseVersions(appId)
+  const publishedReleases = []
   if (versions.length === 0) {
     wrn(appId, '还没有任何已发布版本（node scripts/release.mjs 发一个）')
     return
@@ -388,6 +390,7 @@ function validateReleases(appId) {
 
     const release = readJSON(releaseFile)
     const bundle = readJSON(bundleFile)
+    publishedReleases.push({ version, yanked: release.yanked === true })
     if (release.version !== version) err(appId, `${version}/release.json 的 version 字段是 ${release.version}`)
     if (bundle.version !== version) err(appId, `${version}/bundle.json 的 version 字段是 ${bundle.version}`)
 
@@ -422,8 +425,9 @@ function validateReleases(appId) {
     for (const version of versions) {
       if (!indexed.has(version)) err(appId, `releases.json 漏登记版本 ${version}（重跑 build-registry.mjs）`)
     }
-    if (index.latestVersion !== versions[0]) {
-      err(appId, `releases.json latestVersion=${index.latestVersion}，实际最新是 ${versions[0]}`)
+    const expectedLatest = latestAvailableRelease(publishedReleases)?.version
+    if (index.latestVersion !== expectedLatest) {
+      err(appId, `releases.json latestVersion=${index.latestVersion}，实际可更新最新版是 ${expectedLatest}`)
     }
   } else {
     err(appId, '缺少 releases.json（重跑 build-registry.mjs）')

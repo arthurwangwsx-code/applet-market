@@ -56,9 +56,16 @@ function isTabID(value: string): value is TabID {
  * 底部 Tab。身份在 manifest 里声明（宿主渲染真原生 TabBar），这里只接选中事件。
  * 宿主没渲染出来时回落自绘条——**永远不能只有原生一条路**，否则在不支持的表面上没法切页。
  */
-function useTabs(initial: TabID) {
+function useTabs(initial: TabID, resetSubpages: () => void) {
   const [tab, setTab] = React.useState(initial)
   const [native, setNative] = React.useState(false)
+  const resetSubpagesRef = React.useRef(resetSubpages)
+  resetSubpagesRef.current = resetSubpages
+
+  const applySelection = React.useCallback((id: TabID) => {
+    resetSubpagesRef.current()
+    setTab(id)
+  }, [])
 
   React.useEffect(() => {
     const api = bridge()
@@ -68,14 +75,14 @@ function useTabs(initial: TabID) {
       try {
         const state = await api.tabs.getState?.()
         setNative(!!state?.rendered)
-        if (state?.selected && isTabID(state.selected)) setTab(state.selected)
+        if (state?.selected && isTabID(state.selected)) applySelection(state.selected)
       } catch {
         setNative(false)
       }
       try {
         // 事件名是 'changed'，回调收的是整个 State（不是 {id}）。
         off = api.tabs.on?.('changed', (state) => {
-          if (state?.selected && isTabID(state.selected)) setTab(state.selected)
+          if (state?.selected && isTabID(state.selected)) applySelection(state.selected)
           setNative(!!state?.rendered)
         })
       } catch {
@@ -89,19 +96,22 @@ function useTabs(initial: TabID) {
         /* 已卸载 */
       }
     }
-  }, [initial])
+  }, [applySelection])
 
-  const select = React.useCallback((id: TabID) => {
-    setTab(id)
-    // 桥方法回的是 Promise，同步 try/catch 抓不住 rejection。
-    try {
-      bridge()
-        ?.tabs?.select?.(id)
-        ?.catch?.(() => {})
-    } catch {
-      /* 连命名空间都没有 */
-    }
-  }, [])
+  const select = React.useCallback(
+    (id: TabID) => {
+      applySelection(id)
+      // 桥方法回的是 Promise，同步 try/catch 抓不住 rejection。
+      try {
+        bridge()
+          ?.tabs?.select?.(id)
+          ?.catch?.(() => {})
+      } catch {
+        /* 连命名空间都没有 */
+      }
+    },
+    [applySelection],
+  )
 
   return { tab, native, select }
 }
@@ -141,12 +151,12 @@ function FallbackTabBar({ value, onChange }: { value: TabID; onChange: (id: TabI
 
 export default function App() {
   useTheme()
-  const tabs = useTabs('search')
   // 播放页走原生页栈：推入动画、边缘返回手势由宿主给。
   const stack = useSubpageStack<VideoRoute>({
     pathFor: (route) => `#/watch/${route.video.id}`,
     titleFor: (route) => route.video.title || '视频',
   })
+  const tabs = useTabs('search', stack.reset)
 
   const open = React.useCallback(
     (video: VideoSummary) => {
@@ -175,8 +185,8 @@ export default function App() {
           <SearchPage onOpen={open} />
         )}
       </div>
-      {/* 详情页在页栈里时不显示 Tab 条（原生 TabBar 由宿主自己处理显隐） */}
-      {!tabs.native && !stack.route ? <FallbackTabBar value={tabs.tab} onChange={tabs.select} /> : null}
+      {/* 没有原生 TabBar 的表面也保留根导航；从详情点 Tab 时会先 reset 子页栈。 */}
+      {!tabs.native ? <FallbackTabBar value={tabs.tab} onChange={tabs.select} /> : null}
     </div>
   )
 }

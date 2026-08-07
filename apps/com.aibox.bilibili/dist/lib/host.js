@@ -4,7 +4,7 @@
 // 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
 import { bridge, system } from 'aibox/sdk';
 import { imageURL as uiImageURL } from 'aibox/ui';
-import { errorMessage } from './types.js';
+import { classifyVideoReadiness, errorMessage } from './types.js';
 // —— 网络 ——————————————————————————————————————————————
 /**
  * 取 JSON。用 `responseType: 'json'` 让原生侧解析——省一次 JS 侧 JSON.parse，
@@ -84,16 +84,14 @@ export function imageURL(url, width) {
 export async function videoReadiness() {
     const api = bridge();
     if (!api?.video?.availability) {
-        return { ok: false, reason: 'noBridge', resolve: false, dash: false };
+        return classifyVideoReadiness(null, { play: false, resolve: false });
     }
     try {
         const res = await api.video.availability();
-        return {
-            ok: !!res?.available,
-            reason: res?.available ? 'ok' : 'noEngine',
-            resolve: !!res?.resolve,
-            dash: !!res?.dash,
-        };
+        return classifyVideoReadiness(res, {
+            play: typeof api.video.play === 'function',
+            resolve: typeof api.video.resolve === 'function',
+        });
     }
     catch (err) {
         return {

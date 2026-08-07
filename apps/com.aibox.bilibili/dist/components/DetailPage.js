@@ -20,7 +20,7 @@ import { pickBestFormat as pickFormat } from 'aibox/sdk';
 import { aspectFor, closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser, openStage, playVideo, resolveVideo, savePref, share, toast, videoReadiness, } from '../lib/host.js';
 import { formatCount, formatDate, formatDuration } from '../lib/format.js';
 import { loadSettings } from '../lib/settings.js';
-import { errorMessage } from '../lib/types.js';
+import { errorMessage, playbackErrorMessage } from '../lib/types.js';
 const PROGRESS_KEY = 'watch-progress';
 export default function DetailPage({ bvid, onOpen }) {
     const [detail, setDetail] = React.useState(null);
@@ -30,8 +30,10 @@ export default function DetailPage({ bvid, onOpen }) {
     const [activeCid, setActiveCid] = React.useState(0);
     // `null` = 还没探测出来。**别用 true 当初值**：那会让页面先显示「能播」再跳成「不能播」。
     const [videoState, setVideoState] = React.useState(null);
-    const playable = videoState?.ok !== false;
+    // 探测完成前也不允许点：旧逻辑把 null 当可播，慢设备上会先进入一条尚未确认的桥链路。
+    const playable = videoState?.ok === true;
     const [busy, setBusy] = React.useState(false);
+    const [playError, setPlayError] = React.useState('');
     // 舞台开着时，视频由**宿主**画在页面顶部，页面自己那块封面就该让位——
     // 否则用户会同时看到「上面在放的视频」和「下面一张静止封面」。
     const [stageOn, setStageOn] = React.useState(false);
@@ -118,6 +120,7 @@ export default function DetailPage({ bvid, onOpen }) {
         if (!detail || busy)
             return;
         setBusy(true);
+        setPlayError('');
         haptic('medium');
         try {
             const targetCid = cid || activeCid || detail.cid;
@@ -149,7 +152,9 @@ export default function DetailPage({ bvid, onOpen }) {
             // 失败就把舞台收掉，让封面回来——留着一块黑舞台比什么都不显示更糟。
             closeStage();
             setStageOn(false);
-            toast(`播放失败：${errorMessage(err)}`);
+            const message = playbackErrorMessage(err);
+            setPlayError(message);
+            toast(`播放失败：${message}`);
         }
         finally {
             setBusy(false);
@@ -195,7 +200,9 @@ export default function DetailPage({ bvid, onOpen }) {
                             background: C.brand,
                         } })) : null] })), videoState && !videoState.ok ? (_jsxs("div", { style: { padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }, children: [videoState.reason === 'noBridge'
                         ? '这个 App 版本还没有视频播放桥（aibox.video）。需要重新构建安装 App 本体，' + '换小应用版本没用。'
-                        : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。', _jsx("br", {}), "\u53EA\u80FD\u5148\u7528\u6D4F\u89C8\u5668\u6253\u5F00\u3002"] })) : null, _jsxs("div", { style: { padding: SPACE.s4 }, children: [_jsx("div", { style: { fontSize: 17, fontWeight: 600, color: C.text, lineHeight: 1.4 }, children: detail.title }), _jsxs("div", { style: { fontSize: 12, color: C.faint, marginTop: SPACE.s2 }, children: [formatCount(detail.play), "\u89C2\u770B \u00B7 ", formatDate(detail.pubdate)] }), _jsxs("div", { className: "bl-press", onClick: () => openInBrowser(`https://space.bilibili.com/${detail.mid}`), style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [detail.avatar ? (_jsx("img", { src: imageURL(detail.avatar, 36), alt: "", style: { width: 36, height: 36, borderRadius: 18, objectFit: 'cover', background: C.surface } })) : null, _jsx("div", { style: { fontSize: 14, color: C.text }, children: detail.author })] }), _jsxs("div", { style: {
+                        : videoState.reason === 'noResolver'
+                            ? '这个 App 构建没有链入媒体解析模块（MODULE_VIDEODOWNLOAD），解析不了 B 站视频。'
+                            : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。', _jsx("br", {}), "\u53EA\u80FD\u5148\u7528\u6D4F\u89C8\u5668\u6253\u5F00\u3002"] })) : null, playError ? (_jsxs("div", { role: "alert", style: { padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }, children: ["\u64AD\u653E\u5931\u8D25\uFF1A", playError, _jsx("button", { type: "button", onClick: () => openInBrowser(`https://www.bilibili.com/video/${bvid}`), style: { marginLeft: SPACE.s2, border: 0, padding: 0, background: 'transparent', color: C.brand }, children: "\u7528\u6D4F\u89C8\u5668\u6253\u5F00" })] })) : null, _jsxs("div", { style: { padding: SPACE.s4 }, children: [_jsx("div", { style: { fontSize: 17, fontWeight: 600, color: C.text, lineHeight: 1.4 }, children: detail.title }), _jsxs("div", { style: { fontSize: 12, color: C.faint, marginTop: SPACE.s2 }, children: [formatCount(detail.play), "\u89C2\u770B \u00B7 ", formatDate(detail.pubdate)] }), _jsxs("div", { className: "bl-press", onClick: () => openInBrowser(`https://space.bilibili.com/${detail.mid}`), style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [detail.avatar ? (_jsx("img", { src: imageURL(detail.avatar, 36), alt: "", style: { width: 36, height: 36, borderRadius: 18, objectFit: 'cover', background: C.surface } })) : null, _jsx("div", { style: { fontSize: 14, color: C.text }, children: detail.author })] }), _jsxs("div", { style: {
                             display: 'flex',
                             marginTop: SPACE.s4,
                             padding: `${SPACE.s3}px 0`,
@@ -210,7 +217,7 @@ export default function DetailPage({ bvid, onOpen }) {
                             wordBreak: 'break-word',
                             maxHeight: descOpen ? 'none' : 60,
                             overflow: 'hidden',
-                        }, children: detail.desc })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [_jsx(PrimaryButton, { onClick: () => play(), disabled: !playable || busy, children: busy ? '正在准备…' : '播放' }), _jsx("button", { type: "button", onClick: async () => {
+                        }, children: detail.desc })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [_jsx(PrimaryButton, { onClick: () => play(), disabled: !playable || busy, children: busy ? '正在准备…' : videoState === null ? '正在检查播放能力…' : '播放' }), _jsx("button", { type: "button", onClick: async () => {
                                     await copyText(url);
                                     toast('链接已复制');
                                 }, style: {

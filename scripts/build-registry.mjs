@@ -14,6 +14,7 @@ import {
   info,
   listAppIDs,
   listReleaseVersions,
+  latestAvailableRelease,
   ok,
   readJSON,
   sha256,
@@ -59,7 +60,7 @@ function buildReleasesIndex(appId) {
   // latest 跳过已撤回的版本——撤回的意思就是「不要再让新用户装到它」。
   // 全部都被撤回时回落到最新那一条：没有 latestVersion 的应用在客户端是一张点不动的卡片，
   // 比诚实地显示一个「已撤回」的版本更糟。
-  const latest = releases.find((r) => !r.yanked) ?? releases[0]
+  const latest = latestAvailableRelease(releases)
   writeJSON(paths.releasesJSON, {
     schemaVersion: SCHEMA_VERSION,
     appId,

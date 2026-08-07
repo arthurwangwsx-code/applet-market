@@ -58,9 +58,21 @@
       },
       {
         "action": "eval",
+        "expr": "(() => { const r = document.querySelector('[data-row-id]'); if (!r) throw new Error('无搜索结果行'); r.click(); return 'ok' })()",
+        "note": "先进入详情，再从根 Tab 切走；这才覆盖用户遇到的『我的已选中但详情仍覆盖』"
+      },
+      { "action": "wait", "ms": 2500 },
+      {
+        "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '我的'); if (!b) throw new Error('我的 tab not found'); b.click(); return 'ok' })()"
       },
       { "action": "wait", "ms": 2500 },
+      {
+        "action": "assert",
+        "expr": "/播放设置/.test(document.body.innerText) && !/相关推荐/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "切根 Tab 必须清空详情子页栈，而不是只把原生选中态换成『我的』"
+      },
       {
         "action": "eval",
         "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '扫码登录'); if (!b) throw new Error('登录按钮未找到'); b.click(); return 'ok' })()"

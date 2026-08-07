@@ -47,9 +47,15 @@ function isTabID(value) {
  * 底部 Tab。身份在 manifest 里声明（宿主渲染真原生 TabBar），这里只接选中事件。
  * 宿主没渲染出来时回落自绘条——**永远不能只有原生一条路**，否则在不支持的表面上没法切页。
  */
-function useTabs(initial) {
+function useTabs(initial, resetSubpages) {
     const [tab, setTab] = React.useState(initial);
     const [native, setNative] = React.useState(false);
+    const resetSubpagesRef = React.useRef(resetSubpages);
+    resetSubpagesRef.current = resetSubpages;
+    const applySelection = React.useCallback((id) => {
+        resetSubpagesRef.current();
+        setTab(id);
+    }, []);
     React.useEffect(() => {
         const api = bridge();
         if (!api?.tabs)
@@ -60,7 +66,7 @@ function useTabs(initial) {
                 const state = await api.tabs.getState?.();
                 setNative(!!state?.rendered);
                 if (state?.selected && isTabID(state.selected))
-                    setTab(state.selected);
+                    applySelection(state.selected);
             }
             catch {
                 setNative(false);
@@ -69,7 +75,7 @@ function useTabs(initial) {
                 // 事件名是 'changed'，回调收的是整个 State（不是 {id}）。
                 off = api.tabs.on?.('changed', (state) => {
                     if (state?.selected && isTabID(state.selected))
-                        setTab(state.selected);
+                        applySelection(state.selected);
                     setNative(!!state?.rendered);
                 });
             }
@@ -85,9 +91,9 @@ function useTabs(initial) {
                 /* 已卸载 */
             }
         };
-    }, [initial]);
+    }, [applySelection]);
     const select = React.useCallback((id) => {
-        setTab(id);
+        applySelection(id);
         // 桥方法回的是 Promise，同步 try/catch 抓不住 rejection。
         try {
             bridge()
@@ -97,7 +103,7 @@ function useTabs(initial) {
         catch {
             /* 连命名空间都没有 */
         }
-    }, []);
+    }, [applySelection]);
     return { tab, native, select };
 }
 function FallbackTabBar({ value, onChange }) {
@@ -119,12 +125,12 @@ function FallbackTabBar({ value, onChange }) {
 }
 export default function App() {
     useTheme();
-    const tabs = useTabs('search');
     // 播放页走原生页栈：推入动画、边缘返回手势由宿主给。
     const stack = useSubpageStack({
         pathFor: (route) => `#/watch/${route.video.id}`,
         titleFor: (route) => route.video.title || '视频',
     });
+    const tabs = useTabs('search', stack.reset);
     const open = React.useCallback((video) => {
         stack.push({ video });
     }, [stack]);
@@ -135,5 +141,5 @@ export default function App() {
             background: C.bg,
             color: C.text,
             overflow: 'hidden',
-        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: stack.route ? (_jsx(PlayerPage, { video: stack.route.video, onOpen: open })) : tabs.tab === 'mine' ? (_jsx(MinePage, { onOpen: open })) : (_jsx(SearchPage, { onOpen: open })) }), !tabs.native && !stack.route ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
+        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: stack.route ? (_jsx(PlayerPage, { video: stack.route.video, onOpen: open })) : tabs.tab === 'mine' ? (_jsx(MinePage, { onOpen: open })) : (_jsx(SearchPage, { onOpen: open })) }), !tabs.native ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
 }

@@ -47,6 +47,18 @@
         "expr": "/清晰度|解析不了|没有可播放/.test(document.body.innerText)",
         "matcher": "truthy",
         "note": "播放页有明确结论：要么列出清晰度，要么说清为什么播不了 —— 不允许停在空白"
+      },
+      {
+        "action": "eval",
+        "expr": "(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '我的'); if (!b) throw new Error('我的 tab not found'); b.click(); return 'ok' })()",
+        "note": "从播放子页直接切根 Tab，覆盖与 Bilibili 相同的残留详情栈问题"
+      },
+      { "action": "wait", "ms": 1500 },
+      {
+        "action": "assert",
+        "expr": "/播放设置|观看历史/.test(document.body.innerText) && !/清晰度/.test(document.body.innerText)",
+        "matcher": "truthy",
+        "note": "我的页必须真正替换播放页，不能只改变原生 Tab 选中态"
       }
     ]
   }

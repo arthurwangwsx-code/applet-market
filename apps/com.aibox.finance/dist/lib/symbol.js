@@ -38,11 +38,16 @@ export function canonicalOf(symbol) {
     if (!symbol)
         return '';
     switch (symbol.market) {
-        case 'ashare': return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
-        case 'hk': return `hk${symbol.code}`;
-        case 'us': return `us${symbol.code}`;
-        case 'fund': return `fund${symbol.code}`;
-        default: return symbol.code;
+        case 'ashare':
+            return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
+        case 'hk':
+            return `hk${symbol.code}`;
+        case 'us':
+            return `us${symbol.code}`;
+        case 'fund':
+            return `fund${symbol.code}`;
+        default:
+            return symbol.code;
     }
 }
 /**
@@ -66,7 +71,7 @@ export function parseStrict(input) {
     if (match)
         return makeSymbol('hk', padHK(match[1]), null);
     match = /^us(.+)$/.exec(raw);
-    if (match && /^[A-Za-z0-9.\-]+$/.test(match[1]))
+    if (match?.[1] && /^[A-Za-z0-9.\-]+$/.test(match[1]))
         return makeSymbol('us', match[1].toUpperCase(), null);
     if (/^\d+$/.test(raw)) {
         if (raw.length === 6)
@@ -96,34 +101,46 @@ export function symbolFromCanonical(canonical) {
     return parseStrict(canonical);
 }
 export function currencyOf(symbol) {
-    return MARKET_CURRENCY[symbol && symbol.market] || 'CNY';
+    return symbol ? MARKET_CURRENCY[symbol.market] : 'CNY';
 }
 // —— Provider 代码映射（规格 §8）——
 /** 腾讯实时行情代码：A股 sh/sz/bj+6位；港股 r_hk+5位；美股 us+大写 ticker。 */
 export function tencentQuoteCode(symbol) {
     switch (symbol.market) {
-        case 'ashare': return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
-        case 'hk': return `r_hk${symbol.code}`;
-        case 'us': return `us${symbol.code}`;
-        default: return null;
+        case 'ashare':
+            return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
+        case 'hk':
+            return `r_hk${symbol.code}`;
+        case 'us':
+            return `us${symbol.code}`;
+        default:
+            return null;
     }
 }
 /** 腾讯 K 线代码：港股用 `hk`+5 位（**不是** r_hk）。 */
 export function tencentKlineCode(symbol) {
     switch (symbol.market) {
-        case 'ashare': return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
-        case 'hk': return `hk${symbol.code}`;
-        case 'us': return `us${symbol.code}`;
-        default: return null;
+        case 'ashare':
+            return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
+        case 'hk':
+            return `hk${symbol.code}`;
+        case 'us':
+            return `us${symbol.code}`;
+        default:
+            return null;
     }
 }
 /** 新浪实时行情代码：A股 sh/sz/bj+码；港股 rt_hk+码；美股 gb_+小写 ticker。 */
 export function sinaQuoteCode(symbol) {
     switch (symbol.market) {
-        case 'ashare': return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
-        case 'hk': return `rt_hk${symbol.code}`;
-        case 'us': return `gb_${symbol.code.toLowerCase()}`;
-        default: return null;
+        case 'ashare':
+            return `${symbol.exchange || exchangeForAShare(symbol.code)}${symbol.code}`;
+        case 'hk':
+            return `rt_hk${symbol.code}`;
+        case 'us':
+            return `gb_${symbol.code.toLowerCase()}`;
+        default:
+            return null;
     }
 }
 /** 东财 SECUCODE：`600519.SH`（大写交易所）。 */

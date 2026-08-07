@@ -130,9 +130,7 @@ export function exportMarkdown(input) {
 }
 /** 纯文本导出：同结构，标题不带 `#`、正文不带 `**`。 */
 export function exportText(input) {
-    return exportMarkdown(input)
-        .replace(/^#+ /gm, '')
-        .replace(/\*\*/g, '');
+    return exportMarkdown(input).replace(/^#+ /gm, '').replace(/\*\*/g, '');
 }
 function transcriptBody(input, markdown) {
     if (input.correctionTurns.length) {

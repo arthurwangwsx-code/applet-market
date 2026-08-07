@@ -3,9 +3,21 @@
 /** 每日一句种子池。AI 失败时按日期稳定取一条兜底。 */
 export const DAILY_SEED = [
     { en: 'Chance fights ever on the side of the prudent.', zh: '机遇永远站在谨慎者一边。', author: '欧里庇得斯' },
-    { en: 'The only way to do great work is to love what you do.', zh: '成就伟业的唯一途径就是热爱自己所做的事。', author: '史蒂夫·乔布斯' },
-    { en: 'It is never too late to be what you might have been.', zh: '成为你本可以成为的人，永远不会太晚。', author: '乔治·艾略特' },
-    { en: 'The future belongs to those who believe in the beauty of their dreams.', zh: '未来属于那些相信自己梦想之美的人。', author: '埃莉诺·罗斯福' },
+    {
+        en: 'The only way to do great work is to love what you do.',
+        zh: '成就伟业的唯一途径就是热爱自己所做的事。',
+        author: '史蒂夫·乔布斯',
+    },
+    {
+        en: 'It is never too late to be what you might have been.',
+        zh: '成为你本可以成为的人，永远不会太晚。',
+        author: '乔治·艾略特',
+    },
+    {
+        en: 'The future belongs to those who believe in the beauty of their dreams.',
+        zh: '未来属于那些相信自己梦想之美的人。',
+        author: '埃莉诺·罗斯福',
+    },
     { en: 'Well begun is half done.', zh: '良好的开始是成功的一半。', author: '亚里士多德' },
     { en: 'Knowledge speaks, but wisdom listens.', zh: '知识在说，智慧在听。', author: '吉米·亨德里克斯' },
     { en: 'A journey of a thousand miles begins with a single step.', zh: '千里之行，始于足下。', author: '老子' },

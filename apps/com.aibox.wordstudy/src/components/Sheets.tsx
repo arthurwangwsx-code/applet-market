@@ -2,8 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  cancelRecognizing, lookUpFromPhoto, partialTranscript, probeSpeech, recognize, shareWordContext,
-  stopRecognizing, type SpeechUnavailable,
+  cancelRecognizing,
+  lookUpFromPhoto,
+  partialTranscript,
+  probeSpeech,
+  recognize,
+  shareWordContext,
+  stopRecognizing,
+  type SpeechUnavailable,
 } from '../lib/host.js'
 import { scorePronunciation } from '../lib/logic.js'
 import type { T } from '../lib/strings.js'
@@ -15,13 +21,7 @@ import { EmptyState, Icon, PrimaryButton, SecondaryButton, Sheet } from './primi
 
 type PracticeState = 'idle' | 'requestingPermission' | 'recording' | 'scoring' | 'result' | 'unavailable'
 
-export function PracticeSheet(props: {
-  palette: Palette
-  t: T
-  open: boolean
-  sentence: string
-  onClose: () => void
-}) {
+export function PracticeSheet(props: { palette: Palette; t: T; open: boolean; sentence: string; onClose: () => void }) {
   const { palette, t } = props
   const [state, setState] = useState<PracticeState>('idle')
   const [score, setScore] = useState<PronunciationScore | null>(null)
@@ -44,7 +44,9 @@ export function PracticeSheet(props: {
       }
     })()
     // sheet 消失时取消录音。
-    return () => { void cancelRecognizing() }
+    return () => {
+      void cancelRecognizing()
+    }
   }, [props.open])
 
   // 录音中轮询中间文本，让用户看到"在听"。
@@ -80,16 +82,31 @@ export function PracticeSheet(props: {
   return (
     <Sheet palette={palette} open={props.open} onClose={props.onClose}>
       <div style={{ display: 'flex', alignItems: 'center', padding: SPACE.s4 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 500, color: palette.ink }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 15,
+            fontWeight: 500,
+            color: palette.ink,
+          }}
+        >
           <Icon name="mic" size={15} /> {t('practiceTitle')}
         </div>
         <div style={{ flex: 1 }} />
-        <button type="button" onClick={props.onClose} style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer' }}>
+        <button
+          type="button"
+          onClick={props.onClose}
+          style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer' }}
+        >
           {t('done')}
         </button>
       </div>
 
-      <div style={{ padding: `0 ${SPACE.s5}px`, fontSize: 17, fontWeight: 500, color: palette.ink, textAlign: 'center' }}>
+      <div
+        style={{ padding: `0 ${SPACE.s5}px`, fontSize: 17, fontWeight: 500, color: palette.ink, textAlign: 'center' }}
+      >
         {props.sentence}
       </div>
 
@@ -99,7 +116,13 @@ export function PracticeSheet(props: {
             <button
               type="button"
               onClick={start}
-              style={{ border: 'none', background: 'transparent', color: palette.accent, cursor: 'pointer', lineHeight: 1 }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: palette.accent,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
               aria-label={t('practiceTapToStart')}
             >
               <Icon name="mic" size={64} />
@@ -109,9 +132,7 @@ export function PracticeSheet(props: {
         ) : null}
 
         {state === 'requestingPermission' || state === 'scoring' ? (
-          <div style={{ fontSize: 12, color: palette.muted }}>
-            {state === 'scoring' ? t('practiceScoring') : '…'}
-          </div>
+          <div style={{ fontSize: 12, color: palette.muted }}>{state === 'scoring' ? t('practiceScoring') : '…'}</div>
         ) : null}
 
         {state === 'recording' ? (
@@ -119,7 +140,13 @@ export function PracticeSheet(props: {
             <button
               type="button"
               onClick={finish}
-              style={{ border: 'none', background: 'transparent', color: palette.red, cursor: 'pointer', lineHeight: 1 }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: palette.red,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
               aria-label={t('practiceRecording')}
             >
               <Icon name="stop" size={64} />
@@ -131,7 +158,9 @@ export function PracticeSheet(props: {
 
         {state === 'result' && score ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s4, alignItems: 'center' }}>
-            <div style={{ fontSize: 40, fontWeight: 500, color: scoreColor(palette, score.percent) }}>{score.percent}%</div>
+            <div style={{ fontSize: 40, fontWeight: 500, color: scoreColor(palette, score.percent) }}>
+              {score.percent}%
+            </div>
             {/* ⚠️ 文案刻意声明这是**文本匹配**，不是音素级发音评分 —— 复刻时别改成"发音得分"。 */}
             <div style={{ fontSize: 12, color: palette.muted }}>{t('practiceMatchLabel')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
@@ -139,7 +168,10 @@ export function PracticeSheet(props: {
                 <span
                   key={`${word.text}-${index}`}
                   style={{
-                    fontSize: 14, fontWeight: 500, borderRadius: 999, padding: '5px 10px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    borderRadius: 999,
+                    padding: '5px 10px',
                     color: word.matched ? palette.green : palette.red,
                     background: alpha(word.matched ? palette.green : palette.red, 0.12),
                   }}
@@ -148,7 +180,12 @@ export function PracticeSheet(props: {
                 </span>
               ))}
             </div>
-            <SecondaryButton palette={palette} title={t('practiceRetry')} icon="refresh" onClick={() => setState('idle')} />
+            <SecondaryButton
+              palette={palette}
+              title={t('practiceRetry')}
+              icon="refresh"
+              onClick={() => setState('idle')}
+            />
           </div>
         ) : null}
 
@@ -173,11 +210,16 @@ function scoreColor(palette: Palette, percent: number): string {
 
 function unavailableText(t: T, reason: SpeechUnavailable | null, detail: string): string {
   switch (reason) {
-    case 'recognizerUnavailable': return t('speechRecognizerUnavailable')
-    case 'onDeviceUnsupported': return t('speechOnDeviceUnsupported')
-    case 'micDenied': return t('speechMicDenied')
-    case 'speechDenied': return t('speechDenied')
-    default: return detail || t('speechRecognizerUnavailable')
+    case 'recognizerUnavailable':
+      return t('speechRecognizerUnavailable')
+    case 'onDeviceUnsupported':
+      return t('speechOnDeviceUnsupported')
+    case 'micDenied':
+      return t('speechMicDenied')
+    case 'speechDenied':
+      return t('speechDenied')
+    default:
+      return detail || t('speechRecognizerUnavailable')
   }
 }
 
@@ -217,7 +259,11 @@ export function PhotoSheet(props: {
       <div style={{ display: 'flex', alignItems: 'center', padding: SPACE.s4 }}>
         <div style={{ fontSize: 15, fontWeight: 500, color: palette.ink }}>{t('photoLookup')}</div>
         <div style={{ flex: 1 }} />
-        <button type="button" onClick={props.onClose} style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer' }}>
+        <button
+          type="button"
+          onClick={props.onClose}
+          style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer' }}
+        >
           {t('done')}
         </button>
       </div>
@@ -234,11 +280,19 @@ export function PhotoSheet(props: {
         ) : (
           <>
             {preview ? (
-              <img src={preview} alt="" style={{ maxWidth: '100%', maxHeight: 240, borderRadius: RADIUS.card, objectFit: 'contain' }} />
+              <img
+                src={preview}
+                alt=""
+                style={{ maxWidth: '100%', maxHeight: 240, borderRadius: RADIUS.card, objectFit: 'contain' }}
+              />
             ) : null}
             <div style={{ marginTop: SPACE.s4 }}>
-              {error === 'load' ? <div style={{ fontSize: 13, color: palette.muted }}>{t('photoLoadFailed')}</div> : null}
-              {error === 'unsupported' ? <div style={{ fontSize: 13, color: palette.muted }}>{t('photoUnsupported')}</div> : null}
+              {error === 'load' ? (
+                <div style={{ fontSize: 13, color: palette.muted }}>{t('photoLoadFailed')}</div>
+              ) : null}
+              {error === 'unsupported' ? (
+                <div style={{ fontSize: 13, color: palette.muted }}>{t('photoUnsupported')}</div>
+              ) : null}
               {error === 'empty' ? <div style={{ fontSize: 13, color: palette.muted }}>{t('photoNoText')}</div> : null}
               {!error && words?.length ? (
                 <>
@@ -253,8 +307,13 @@ export function PhotoSheet(props: {
                           props.onClose()
                         }}
                         style={{
-                          border: 'none', borderRadius: 999, padding: '5px 10px', fontSize: 14,
-                          color: palette.accent, background: alpha(palette.accent, 0.12), cursor: 'pointer',
+                          border: 'none',
+                          borderRadius: 999,
+                          padding: '5px 10px',
+                          fontSize: 14,
+                          color: palette.accent,
+                          background: alpha(palette.accent, 0.12),
+                          cursor: 'pointer',
                         }}
                       >
                         {word}
@@ -346,7 +405,10 @@ export function AiCompanion(props: {
   const chips: { label: string; seed: string }[] = [
     { label: t('chipSimpler'), seed: `Give me a simpler example sentence for "${props.word}".` },
     { label: t('chipOther'), seed: `Does "${props.word}" have other common meanings or uses I should know about?` },
-    { label: t('chipStory'), seed: `Tell me a short, vivid memory story or association to help me remember "${props.word}".` },
+    {
+      label: t('chipStory'),
+      seed: `Tell me a short, vivid memory story or association to help me remember "${props.word}".`,
+    },
     { label: t('chipWrite'), seed: `Help me write my own sentence using "${props.word}", and correct it if needed.` },
     { label: t('chipQuiz'), seed: `Quiz me on "${props.word}" with a couple of quick questions.` },
   ]
@@ -354,7 +416,16 @@ export function AiCompanion(props: {
   return (
     <Sheet palette={palette} open={props.open} onClose={props.onClose}>
       <div style={{ display: 'flex', alignItems: 'center', padding: SPACE.s4 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 500, color: palette.ink }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 15,
+            fontWeight: 500,
+            color: palette.ink,
+          }}
+        >
           <Icon name="sparkles" size={15} color={palette.accent} /> {t('companionTitle')}
         </div>
         <div style={{ flex: 1 }} />
@@ -365,7 +436,18 @@ export function AiCompanion(props: {
         >
           {t('sendToChat')}
         </button>
-        <button type="button" onClick={props.onClose} style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer', marginLeft: SPACE.s3 }}>
+        <button
+          type="button"
+          onClick={props.onClose}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: palette.accent,
+            fontSize: 15,
+            cursor: 'pointer',
+            marginLeft: SPACE.s3,
+          }}
+        >
           {t('done')}
         </button>
       </div>
@@ -377,8 +459,14 @@ export function AiCompanion(props: {
             type="button"
             onClick={() => void send(chip.seed)}
             style={{
-              border: 'none', borderRadius: 999, padding: '8px 12px', fontSize: 13, fontWeight: 500,
-              color: palette.accent, background: alpha(palette.accent, 0.1), cursor: 'pointer',
+              border: 'none',
+              borderRadius: 999,
+              padding: '8px 12px',
+              fontSize: 13,
+              fontWeight: 500,
+              color: palette.accent,
+              background: alpha(palette.accent, 0.1),
+              cursor: 'pointer',
             }}
           >
             {chip.label}
@@ -395,7 +483,10 @@ export function AiCompanion(props: {
             key={index}
             style={{
               alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '85%', borderRadius: 18, padding: '10px 13px', fontSize: 15,
+              maxWidth: '85%',
+              borderRadius: 18,
+              padding: '10px 13px',
+              fontSize: 15,
               whiteSpace: 'pre-wrap',
               color: message.role === 'user' ? palette.onAccent : palette.ink,
               background: message.role === 'user' ? palette.accent : palette.surface,
@@ -410,14 +501,27 @@ export function AiCompanion(props: {
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => { if (event.key === 'Enter') void send(input) }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void send(input)
+          }}
           placeholder={t('companionPlaceholder')}
           style={{
-            flex: 1, borderRadius: RADIUS.field, border: `1px solid ${palette.line}`,
-            padding: '10px 12px', fontSize: 15, background: palette.surface, color: palette.ink,
+            flex: 1,
+            borderRadius: RADIUS.field,
+            border: `1px solid ${palette.line}`,
+            padding: '10px 12px',
+            fontSize: 15,
+            background: palette.surface,
+            color: palette.ink,
           }}
         />
-        <PrimaryButton palette={palette} title="↑" busy={busy} disabled={!input.trim()} onClick={() => void send(input)} />
+        <PrimaryButton
+          palette={palette}
+          title="↑"
+          busy={busy}
+          disabled={!input.trim()}
+          onClick={() => void send(input)}
+        />
       </div>
     </Sheet>
   )

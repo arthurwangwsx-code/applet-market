@@ -54,7 +54,9 @@ export function ActionItemsSheet(props: {
     if (!props.artifacts) return
     const merged: MemoArtifacts = {
       ...props.artifacts,
-      actionItems: props.artifacts.actionItems.map((item) => (item.id === id ? { ...item, isDone: !item.isDone } : item)),
+      actionItems: props.artifacts.actionItems.map((item) =>
+        item.id === id ? { ...item, isDone: !item.isDone } : item,
+      ),
     }
     props.onArtifacts(merged)
     // 勾选立即落盘。
@@ -77,7 +79,9 @@ export function ActionItemsSheet(props: {
         doneLabel={t('done')}
       />
       <div style={{ padding: `0 ${SPACE.s4}px ${SPACE.s6}px` }}>
-        {busy ? <div style={{ fontSize: 14, color: palette.muted, textAlign: 'center', padding: SPACE.s5 }}>…</div> : null}
+        {busy ? (
+          <div style={{ fontSize: 14, color: palette.muted, textAlign: 'center', padding: SPACE.s5 }}>…</div>
+        ) : null}
         {!busy && items.length === 0 ? (
           failed ? (
             <div style={{ textAlign: 'center', padding: SPACE.s5 }}>
@@ -93,7 +97,15 @@ export function ActionItemsSheet(props: {
           if (rows.length === 0) return null
           return (
             <section key={group.kind} style={{ marginTop: SPACE.s4 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: palette.muted, textTransform: 'uppercase', marginBottom: 6 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: palette.muted,
+                  textTransform: 'uppercase',
+                  marginBottom: 6,
+                }}
+              >
                 {group.label}
               </div>
               {rows.map((item) => (
@@ -124,7 +136,14 @@ function ActionRow(props: { palette: Palette; item: ActionItem; onToggle: () => 
       <button
         type="button"
         onClick={props.onToggle}
-        style={{ border: 'none', background: 'transparent', color: item.isDone ? palette.accent : palette.muted, cursor: 'pointer', padding: 0, fontSize: 16 }}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: item.isDone ? palette.accent : palette.muted,
+          cursor: 'pointer',
+          padding: 0,
+          fontSize: 16,
+        }}
         aria-label="Toggle"
       >
         {item.isDone ? '◉' : '○'}
@@ -135,7 +154,15 @@ function ActionRow(props: { palette: Palette; item: ActionItem; onToggle: () => 
         </div>
         <div style={{ display: 'flex', gap: 6, marginTop: 3, flexWrap: 'wrap', alignItems: 'center' }}>
           {item.owner ? (
-            <span style={{ fontSize: 11, color: palette.accent, background: alpha(palette.accent, 0.18), borderRadius: 999, padding: '2px 8px' }}>
+            <span
+              style={{
+                fontSize: 11,
+                color: palette.accent,
+                background: alpha(palette.accent, 0.18),
+                borderRadius: 999,
+                padding: '2px 8px',
+              }}
+            >
               {item.owner}
             </span>
           ) : null}
@@ -146,7 +173,14 @@ function ActionRow(props: { palette: Palette; item: ActionItem; onToggle: () => 
         <button
           type="button"
           onClick={props.onSeek}
-          style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 12, cursor: 'pointer', fontFamily: 'ui-monospace, monospace' }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: palette.accent,
+            fontSize: 12,
+            cursor: 'pointer',
+            fontFamily: 'ui-monospace, monospace',
+          }}
         >
           {clockString(item.sourceTime)}
         </button>
@@ -155,13 +189,7 @@ function ActionRow(props: { palette: Palette; item: ActionItem; onToggle: () => 
   )
 }
 
-export function AskSheet(props: {
-  palette: Palette
-  t: T
-  open: boolean
-  transcript: string
-  onClose: () => void
-}) {
+export function AskSheet(props: { palette: Palette; t: T; open: boolean; transcript: string; onClose: () => void }) {
   const { palette, t } = props
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
@@ -200,8 +228,13 @@ export function AskSheet(props: {
                   // 点击即作为真实提问发送。
                   onClick={() => void send(starter)}
                   style={{
-                    border: 'none', borderRadius: 999, padding: '8px 12px', fontSize: 13,
-                    color: palette.accent, background: alpha(palette.accent, 0.15), cursor: 'pointer',
+                    border: 'none',
+                    borderRadius: 999,
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    color: palette.accent,
+                    background: alpha(palette.accent, 0.15),
+                    cursor: 'pointer',
                   }}
                 >
                   {starter}
@@ -211,10 +244,24 @@ export function AskSheet(props: {
           </>
         ) : null}
 
-        {busy ? <div style={{ fontSize: 14, color: palette.muted, padding: SPACE.s5, textAlign: 'center' }}>{t('askThinking')}</div> : null}
+        {busy ? (
+          <div style={{ fontSize: 14, color: palette.muted, padding: SPACE.s5, textAlign: 'center' }}>
+            {t('askThinking')}
+          </div>
+        ) : null}
 
         {answer ? (
-          <div style={{ background: palette.surface, borderRadius: RADIUS.field, padding: SPACE.s4, fontSize: 15, lineHeight: 1.6, color: palette.ink, whiteSpace: 'pre-wrap' }}>
+          <div
+            style={{
+              background: palette.surface,
+              borderRadius: RADIUS.field,
+              padding: SPACE.s4,
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: palette.ink,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
             {answer}
           </div>
         ) : null}
@@ -223,14 +270,27 @@ export function AskSheet(props: {
         <input
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          onKeyDown={(event) => { if (event.key === 'Enter') void send(question) }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void send(question)
+          }}
           placeholder={t('askPlaceholder')}
           style={{
-            flex: 1, borderRadius: RADIUS.field, border: `1px solid ${palette.line}`, padding: '10px 12px',
-            fontSize: 15, background: palette.surface, color: palette.ink,
+            flex: 1,
+            borderRadius: RADIUS.field,
+            border: `1px solid ${palette.line}`,
+            padding: '10px 12px',
+            fontSize: 15,
+            background: palette.surface,
+            color: palette.ink,
           }}
         />
-        <PrimaryButton palette={palette} title="↑" busy={busy} disabled={!question.trim()} onClick={() => void send(question)} />
+        <PrimaryButton
+          palette={palette}
+          title="↑"
+          busy={busy}
+          disabled={!question.trim()}
+          onClick={() => void send(question)}
+        />
       </div>
     </Sheet>
   )
@@ -255,10 +315,20 @@ export function CleanUpSheet(props: {
       <div style={{ padding: `0 ${SPACE.s4}px ${SPACE.s6}px` }}>
         {/* 2.0.0 起 Clean Up **不再是破坏性的**：整理结果写回本条剪辑的转写，原文可随时重转拿回；
             1.x 走的宿主 `memo_clean_transcript` 是直接改写宿主库里的 fullText 且不可逆。 */}
-        <div style={{ background: alpha(palette.orange, 0.1), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 13, color: palette.orange }}>
+        <div
+          style={{
+            background: alpha(palette.orange, 0.1),
+            borderRadius: RADIUS.field,
+            padding: SPACE.s3,
+            fontSize: 13,
+            color: palette.orange,
+          }}
+        >
           <Icon name="warning" size={13} /> {t('cleanUpWarning')}
         </div>
-        {failed ? <div style={{ fontSize: 14, color: palette.muted, marginTop: SPACE.s3 }}>{t('cleanUpFailed')}</div> : null}
+        {failed ? (
+          <div style={{ fontSize: 14, color: palette.muted, marginTop: SPACE.s3 }}>{t('cleanUpFailed')}</div>
+        ) : null}
         <div style={{ marginTop: SPACE.s4 }}>
           <PrimaryButton
             palette={palette}
@@ -301,7 +371,13 @@ function SheetHeader(props: {
       <button
         type="button"
         onClick={props.onDone}
-        style={{ border: 'none', background: 'transparent', color: props.palette.accent, fontSize: 15, cursor: 'pointer' }}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: props.palette.accent,
+          fontSize: 15,
+          cursor: 'pointer',
+        }}
       >
         {props.doneLabel}
       </button>

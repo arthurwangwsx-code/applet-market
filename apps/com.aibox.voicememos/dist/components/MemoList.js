@@ -39,7 +39,10 @@ export function MemoList(props) {
             return {
                 transcribe: { hidden: memo.hasTranscript },
                 copy: { hidden: !memo.hasTranscript },
-                fav: { title: memo.isFavourite ? t('unfavourite') : t('favourite'), icon: memo.isFavourite ? 'star.slash' : 'star' },
+                fav: {
+                    title: memo.isFavourite ? t('unfavourite') : t('favourite'),
+                    icon: memo.isFavourite ? 'star.slash' : 'star',
+                },
                 share: { hidden: !memo.hasAudio },
             };
         },
@@ -63,26 +66,59 @@ function MemoRow(props) {
     const tint = memo.hasAudio ? palette.accent : palette.muted;
     let pressTimer = null;
     // 手势层在场时 `onMenu` 是 undefined —— 自绘长按整条停用，不与原生 context menu 打架。
-    const startPress = () => { if (props.onMenu)
-        pressTimer = window.setTimeout(props.onMenu, 550); };
-    const endPress = () => { if (pressTimer !== null) {
-        window.clearTimeout(pressTimer);
-        pressTimer = null;
-    } };
-    return (_jsxs("div", { role: "button", "data-row-id": props.rowId, onClick: props.onOpen, onPointerDown: startPress, onPointerUp: endPress, onPointerLeave: endPress, onContextMenu: (event) => { event.preventDefault(); props.onMenu?.(); }, style: {
-            display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: `8px ${SPACE.s4}px`,
-            borderBottom: `1px solid ${palette.line}`, cursor: 'pointer',
+    const startPress = () => {
+        if (props.onMenu)
+            pressTimer = window.setTimeout(props.onMenu, 550);
+    };
+    const endPress = () => {
+        if (pressTimer !== null) {
+            window.clearTimeout(pressTimer);
+            pressTimer = null;
+        }
+    };
+    return (_jsxs("div", { role: "button", "data-row-id": props.rowId, onClick: props.onOpen, onPointerDown: startPress, onPointerUp: endPress, onPointerLeave: endPress, onContextMenu: (event) => {
+            event.preventDefault();
+            props.onMenu?.();
+        }, style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s3,
+            padding: `8px ${SPACE.s4}px`,
+            borderBottom: `1px solid ${palette.line}`,
+            cursor: 'pointer',
         }, children: [_jsx("div", { style: {
-                    width: 34, height: 34, borderRadius: 17, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: alpha(tint, 0.12), color: tint, fontSize: 14, fontWeight: 600,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: alpha(tint, 0.12),
+                    color: tint,
+                    fontSize: 14,
+                    fontWeight: 600,
                 }, children: _jsx(Icon, { name: memo.hasAudio ? 'waveform' : 'doc', size: 14 }) }), _jsxs("div", { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 4 }, children: [_jsx("span", { style: {
-                                    fontSize: 16, fontWeight: 500, color: palette.ink,
-                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    fontSize: 16,
+                                    fontWeight: 500,
+                                    color: palette.ink,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
                                 }, children: memo.title }), memo.isFavourite ? _jsx(Icon, { name: "star.fill", size: 11, color: favouriteTint(props.dark) }) : null, _jsx("span", { style: { flex: 1, minWidth: 8 } }), props.busy ? (_jsx("span", { style: {
-                                    fontSize: 11, color: palette.accent, background: alpha(palette.accent, 0.12),
-                                    borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap',
-                                }, children: props.busy })) : null] }), _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, fontSize: 12, color: palette.muted, flexWrap: 'wrap' }, children: [_jsx("span", { children: shortDate(memo.createdAt, 'default') }), _jsx("span", { children: clockString(memo.duration) }), !memo.hasAudio ? _jsxs("span", { children: [_jsx(Icon, { name: "waveform.slash", size: 11 }), " ", t('transcriptOnly')] }) : null, memo.hasTranscript ? _jsxs("span", { style: { opacity: 0.8 }, children: [_jsx(Icon, { name: "bubble", size: 11 }), " ", t('hasTranscript')] }) : null] }), memo.snippet ? (_jsxs("div", { style: { fontSize: 12, color: palette.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: [_jsx(Icon, { name: "bubble", size: 11 }), " ", memo.snippet] })) : null] })] }));
+                                    fontSize: 11,
+                                    color: palette.accent,
+                                    background: alpha(palette.accent, 0.12),
+                                    borderRadius: 999,
+                                    padding: '3px 8px',
+                                    whiteSpace: 'nowrap',
+                                }, children: props.busy })) : null] }), _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, fontSize: 12, color: palette.muted, flexWrap: 'wrap' }, children: [_jsx("span", { children: shortDate(memo.createdAt, 'default') }), _jsx("span", { children: clockString(memo.duration) }), !memo.hasAudio ? (_jsxs("span", { children: [_jsx(Icon, { name: "waveform.slash", size: 11 }), " ", t('transcriptOnly')] })) : null, memo.hasTranscript ? (_jsxs("span", { style: { opacity: 0.8 }, children: [_jsx(Icon, { name: "bubble", size: 11 }), " ", t('hasTranscript')] })) : null] }), memo.snippet ? (_jsxs("div", { style: {
+                            fontSize: 12,
+                            color: palette.accent,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }, children: [_jsx(Icon, { name: "bubble", size: 11 }), " ", memo.snippet] })) : null] })] }));
 }
 /** 筛选 5 段（规格 §2.3）。日期一律按 `now − N × 86400 秒`。 */
 export function applyFilter(memos, filter, query) {
@@ -115,11 +151,16 @@ export function applyFilter(memos, filter, query) {
     });
     rows = [...rows].sort((a, b) => {
         switch (filter.sort) {
-            case 'oldest': return a.createdAt - b.createdAt;
-            case 'longest': return b.duration - a.duration;
-            case 'shortest': return a.duration - b.duration;
-            case 'name': return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-            default: return b.createdAt - a.createdAt;
+            case 'oldest':
+                return a.createdAt - b.createdAt;
+            case 'longest':
+                return b.duration - a.duration;
+            case 'shortest':
+                return a.duration - b.duration;
+            case 'name':
+                return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+            default:
+                return b.createdAt - a.createdAt;
         }
     });
     return rows;
@@ -127,15 +168,40 @@ export function applyFilter(memos, filter, query) {
 export function FilterSheet(props) {
     const { palette, t, filter } = props;
     const isDefault = JSON.stringify(filter) === JSON.stringify(DEFAULT_FILTER);
-    const section = (title, key, options) => (_jsxs("section", { style: { marginBottom: SPACE.s4 }, children: [_jsx("div", { style: { fontSize: 12, fontWeight: 500, color: palette.muted, padding: `0 ${SPACE.s4}px 6px`, textTransform: 'uppercase' }, children: title }), options.map((option) => (_jsxs("button", { type: "button", onClick: () => props.onChange({ ...filter, [key]: option.value }), style: {
-                    display: 'flex', width: '100%', alignItems: 'center', border: 'none', background: 'transparent',
-                    padding: `10px ${SPACE.s4}px`, fontSize: 15, color: palette.ink, cursor: 'pointer',
+    const section = (title, key, options) => (_jsxs("section", { style: { marginBottom: SPACE.s4 }, children: [_jsx("div", { style: {
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: palette.muted,
+                    padding: `0 ${SPACE.s4}px 6px`,
+                    textTransform: 'uppercase',
+                }, children: title }), options.map((option) => (_jsxs("button", { type: "button", onClick: () => props.onChange({ ...filter, [key]: option.value }), style: {
+                    display: 'flex',
+                    width: '100%',
+                    alignItems: 'center',
+                    border: 'none',
+                    background: 'transparent',
+                    padding: `10px ${SPACE.s4}px`,
+                    fontSize: 15,
+                    color: palette.ink,
+                    cursor: 'pointer',
                     borderBottom: `1px solid ${palette.line}`,
                 }, children: [_jsx("span", { style: { flex: 1, textAlign: 'left' }, children: option.label }), filter[key] === option.value ? _jsx(Icon, { name: "check", size: 14, color: palette.accent }) : null] }, String(option.value))))] }, String(key)));
     return (_jsxs(Sheet, { palette: palette, open: props.open, onClose: props.onClose, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', padding: SPACE.s4 }, children: [_jsx("button", { type: "button", disabled: isDefault, onClick: () => props.onChange(DEFAULT_FILTER), style: {
-                            border: 'none', background: 'transparent', color: palette.accent, fontSize: 15,
-                            cursor: isDefault ? 'default' : 'pointer', opacity: isDefault ? 0.4 : 1, padding: 0,
-                        }, children: t('reset') }), _jsx("div", { style: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 600, color: palette.ink }, children: t('filter') }), _jsx("button", { type: "button", onClick: props.onClose, style: { border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer', padding: 0 }, children: t('done') })] }), section(t('filterDuration'), 'duration', [
+                            border: 'none',
+                            background: 'transparent',
+                            color: palette.accent,
+                            fontSize: 15,
+                            cursor: isDefault ? 'default' : 'pointer',
+                            opacity: isDefault ? 0.4 : 1,
+                            padding: 0,
+                        }, children: t('reset') }), _jsx("div", { style: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 600, color: palette.ink }, children: t('filter') }), _jsx("button", { type: "button", onClick: props.onClose, style: {
+                            border: 'none',
+                            background: 'transparent',
+                            color: palette.accent,
+                            fontSize: 15,
+                            cursor: 'pointer',
+                            padding: 0,
+                        }, children: t('done') })] }), section(t('filterDuration'), 'duration', [
                 { value: 'any', label: t('durationAny') },
                 { value: 'under1m', label: t('durationUnder1m') },
                 { value: '1to5m', label: t('duration1to5m') },
@@ -156,14 +222,31 @@ export function FilterSheet(props) {
 }
 export function Toggle(props) {
     return (_jsxs("label", { style: {
-            display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: '10px 0',
-            fontSize: 15, color: props.palette.ink, cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s3,
+            padding: '10px 0',
+            fontSize: 15,
+            color: props.palette.ink,
+            cursor: 'pointer',
         }, children: [_jsxs("span", { style: { flex: 1 }, children: [props.label, props.hint ? _jsx("div", { style: { fontSize: 12, color: props.palette.muted, marginTop: 2 }, children: props.hint }) : null] }), _jsx("span", { onClick: () => props.onChange(!props.value), style: {
-                    width: 46, height: 28, borderRadius: 14, position: 'relative', flexShrink: 0,
-                    background: props.value ? props.palette.green : props.palette.line, transition: 'background 0.15s',
+                    width: 46,
+                    height: 28,
+                    borderRadius: 14,
+                    position: 'relative',
+                    flexShrink: 0,
+                    background: props.value ? props.palette.green : props.palette.line,
+                    transition: 'background 0.15s',
                 }, children: _jsx("span", { style: {
-                        position: 'absolute', top: 2, left: props.value ? 20 : 2, width: 24, height: 24, borderRadius: 12,
-                        background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.15s',
+                        position: 'absolute',
+                        top: 2,
+                        left: props.value ? 20 : 2,
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        background: '#FFFFFF',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        transition: 'left 0.15s',
                     } }) })] }));
 }
 export { RADIUS };

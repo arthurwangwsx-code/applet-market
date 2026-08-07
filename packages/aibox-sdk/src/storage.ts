@@ -1,6 +1,6 @@
-import { bridge } from './bridge';
-import type { JSONValue } from './json';
-import { AiboxError, normalizeError } from './errors';
+import { bridge } from './bridge'
+import type { JSONValue } from './json'
+import { AiboxError, normalizeError } from './errors'
 
 /**
  * `aibox.storage` 的类型化封装。
@@ -11,25 +11,25 @@ import { AiboxError, normalizeError } from './errors';
  */
 
 function requireStorage(): NonNullable<ReturnType<typeof bridge>>['storage'] {
-  const host = bridge();
+  const host = bridge()
   if (!host?.storage || typeof host.storage.get !== 'function') {
     throw new AiboxError(
       'aibox/unavailable',
       'aibox/unavailable: aibox.storage is not available. Set "storage": true in manifest.permissions.',
-    );
+    )
   }
-  return host.storage;
+  return host.storage
 }
 
 /** 读一个键。不存在或桥不可用时返回 `fallback`。 */
 export async function get<T = JSONValue>(key: string, fallback: T): Promise<T> {
-  const host = bridge();
-  if (!host?.storage) return fallback;
+  const host = bridge()
+  if (!host?.storage) return fallback
   try {
-    const value = await host.storage.get(key);
-    return (value === null || value === undefined) ? fallback : (value as T);
+    const value = await host.storage.get(key)
+    return value === null || value === undefined ? fallback : (value as T)
   } catch {
-    return fallback;
+    return fallback
   }
 }
 
@@ -43,60 +43,63 @@ export async function getParsed<T>(
   fallback: T,
   onInvalid?: (raw: JSONValue) => void,
 ): Promise<T> {
-  const host = bridge();
-  if (!host?.storage) return fallback;
-  let raw: JSONValue | null = null;
+  const host = bridge()
+  if (!host?.storage) return fallback
+  let raw: JSONValue | null = null
   try {
-    raw = await host.storage.get(key);
+    raw = await host.storage.get(key)
   } catch {
-    return fallback;
+    return fallback
   }
-  if (raw === null || raw === undefined) return fallback;
+  if (raw === null || raw === undefined) return fallback
   try {
-    const parsed = parse(raw);
-    if (parsed === undefined) { onInvalid?.(raw); return fallback; }
-    return parsed;
+    const parsed = parse(raw)
+    if (parsed === undefined) {
+      onInvalid?.(raw)
+      return fallback
+    }
+    return parsed
   } catch {
-    onInvalid?.(raw);
-    return fallback;
+    onInvalid?.(raw)
+    return fallback
   }
 }
 
 /** 写一个键。 */
 export async function set(key: string, value: JSONValue): Promise<boolean> {
   try {
-    return await requireStorage().set(key, value);
+    return await requireStorage().set(key, value)
   } catch (error) {
-    throw normalizeError(error);
+    throw normalizeError(error)
   }
 }
 
 /** 删一个键。 */
 export async function remove(key: string): Promise<boolean> {
   try {
-    return await requireStorage().remove(key);
+    return await requireStorage().remove(key)
   } catch (error) {
-    throw normalizeError(error);
+    throw normalizeError(error)
   }
 }
 
 /** 列出全部键。 */
 export async function list(): Promise<string[]> {
   try {
-    return await requireStorage().list();
+    return await requireStorage().list()
   } catch {
-    return [];
+    return []
   }
 }
 
 /** 一个键的编解码器。给了 `parse` 就等于给这份持久化数据加了「跨版本读」的保护。 */
 export interface KeyCodec<T> {
   /** 原始 JSON -> 领域类型。返回 undefined 表示形状不认识，回落默认值。 */
-  parse?: (raw: JSONValue) => T | undefined;
+  parse?: (raw: JSONValue) => T | undefined
   /** 领域类型 -> 原始 JSON。省略时按结构等价直传。 */
-  serialize?: (value: T) => JSONValue;
+  serialize?: (value: T) => JSONValue
   /** 读到不认识的形状时的回调（记日志、上报，别静默）。 */
-  onInvalid?: (raw: JSONValue) => void;
+  onInvalid?: (raw: JSONValue) => void
 }
 
 /**
@@ -109,14 +112,12 @@ export interface KeyCodec<T> {
  * ```
  */
 export function defineKey<T>(key: string, fallback: T, codec: KeyCodec<T> = {}) {
-  const encode = (value: T): JSONValue =>
-    (codec.serialize ? codec.serialize(value) : (value as unknown as JSONValue));
+  const encode = (value: T): JSONValue => (codec.serialize ? codec.serialize(value) : (value as unknown as JSONValue))
   return {
     key,
-    read: (): Promise<T> => (codec.parse
-      ? getParsed<T>(key, codec.parse, fallback, codec.onInvalid)
-      : get<T>(key, fallback)),
+    read: (): Promise<T> =>
+      codec.parse ? getParsed<T>(key, codec.parse, fallback, codec.onInvalid) : get<T>(key, fallback),
     write: (value: T) => set(key, encode(value)),
     clear: () => remove(key),
-  };
+  }
 }

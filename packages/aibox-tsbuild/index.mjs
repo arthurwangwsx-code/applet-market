@@ -1,5 +1,7 @@
-export { renderActionTypes, checkManifest } from './lib/action-types.mjs'
-// 源码型小应用的 TS → JS 构建。
+import { checkManifest, renderActionTypes } from './lib/action-types.mjs'
+
+export { checkManifest, renderActionTypes }
+// 标准小应用的严格 TypeScript → 保结构 ESM 构建。
 //
 // ## 为什么要这条管线（而不是都改成 bundle）
 //
@@ -15,7 +17,7 @@ export { renderActionTypes, checkManifest } from './lib/action-types.mjs'
 // 所以「预构建、端上不转译」正是对它的**如实**描述；标成 source 反而会让宿主白加载一套转译器。
 // 也就是说：保住的是**文件结构与模块图**（这才是可读、可定位、可回滚的那部分），
 // 不是「一个字节都没变」——加载器确实从 shim 换成了原生 ESM。
-//   src/**（.tsx/.ts/.jsx/.js，唯一手写源）  --tsc-->  dist/**（.js，签入，发版打它）
+//   src/**（.tsx/.ts，唯一手写源）  --tsc-->  dist/**（.js，签入，发版打它）
 //
 // 目录用 `src/` → `dist/` 而不是另造一对名字：市场工具链**已经**按「有 package.json = 构建型、
 // 进包的是 dist/ 平铺到包根、manifest.json/.tests.json 从 src/ 取」这套约定工作
@@ -33,15 +35,14 @@ export { renderActionTypes, checkManifest } from './lib/action-types.mjs'
 //    （重写只发生在转译路径上）。少一个扩展名，浏览器就去请求一个不存在的路径，表现是白屏。
 //    所以源码里就要写 `./foo.js`（TS 的 bundler 解析允许这么写，实际文件是 `foo.tsx`）。
 // 2. **裸说明符只能是 import map 里那几个。** 宿主 import map 之外的裸 import 在运行时解析不到。
-// 3. **`@aibox/applet-sdk`（含 `/react` 子路径）要落成本地生成文件。** tsc 不重写 paths（TS 的已知限制），
-//    所以这里在产物上做一次确定性替换 → `./…/lib/aibox-sdk.js`，那个文件由 esbuild 从 SDK 打出来。
-//    它是**生成物不是分叉**：单一真值仍在 packages/aibox-sdk，与 bundle 应用签入 dist/ 同理。
+// 3. **`@aibox/applet-sdk`（含 `/react` 子路径）必须改写到宿主共享运行时。** tsc 不重写裸说明符，
+//    所以这里把 npm 开发期入口确定性替换为 `aibox/sdk` / `aibox/sdk/react`。两者由宿主 import map
+//    指向同一个 `aibox-sdk.mjs`，应用产物不再各带一份 SDK 实现。
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
-import * as esbuild from 'esbuild'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -51,19 +52,20 @@ export const HOST_BARE_SPECIFIERS = new Set([
   'react-dom',
   'react-dom/client',
   'react/jsx-runtime',
-  'react/jsx-dev-runtime',
   'chart.js',
   'antd-mobile',
   'aibox/ui',
+  'aibox/sdk',
+  'aibox/sdk/react',
 ])
 
 const SDK_SPECIFIER = '@aibox/applet-sdk'
-const SDK_LOCAL = 'lib/aibox-sdk.js'
+const SDK_RUNTIME_SPECIFIER = 'aibox/sdk'
 
 // SDK 的 React 子路径。它是**另一个入口**（hooks），不在 `dist/index.js` 的导出面里，
 // 所以要单独打一份。只有真用到时才 emit —— 否则已经在架上的 7 个应用会凭空多出一个产物文件。
 const SDK_REACT_SPECIFIER = '@aibox/applet-sdk/react'
-const SDK_REACT_LOCAL = 'lib/aibox-sdk-react.js'
+const SDK_REACT_RUNTIME_SPECIFIER = 'aibox/sdk/react'
 
 /** 从一段 JS 里抓出所有 import/export 说明符（含动态 import）。 */
 export function specifiersIn(code) {
@@ -137,7 +139,7 @@ export function verify(files) {
  * 挂载契约与宿主默认外壳**逐字一致**：`app.js` 只需 `export default function App(){…}`，
  * 也兼容自挂载（root 非空就跳过）。少了这条兼容，两种外壳之间来回切就会白屏。
  */
-function shellHTML(title) {
+export function shellHTML(title) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -154,7 +156,9 @@ function shellHTML(title) {
       "react/jsx-runtime": "applet://localhost/runtime/react.mjs",
       "chart.js": "applet://localhost/runtime/chart.mjs",
       "antd-mobile": "applet://localhost/runtime/antd-mobile.mjs",
-      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs"
+      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs",
+      "aibox/sdk": "applet://localhost/runtime/aibox-sdk.mjs",
+      "aibox/sdk/react": "applet://localhost/runtime/aibox-sdk.mjs"
     }
   }
   </script>
@@ -191,7 +195,22 @@ function shellHTML(title) {
   <script type="module">
     import { createElement, StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
+    var sharedSDKReady = false;
     try {
+      // 共享 SDK 先于业务模块预检。老宿主 / 资产缺失时在这里给出可见、可捕获的兼容页，
+      // 不让 app.js 的静态 import 直接把整页打成白屏。
+      const sdk = await import('aibox/sdk');
+      const compatibility = sdk.checkCompatibility({
+        minSDKVersion: '1.1.0',
+        runtimeModules: ['aibox/sdk']
+      });
+      if (!compatibility.compatible) {
+        const problem = compatibility.errors.map(function (item) {
+          return item.target + (item.required ? ' >= ' + item.required : '');
+        }).join(', ');
+        throw new Error('aibox/incompatible-host: ' + (problem || 'shared SDK runtime unavailable'));
+      }
+      sharedSDKReady = true;
       const mod = await import('./app.js');
       const root = document.getElementById('root');
       if (mod && mod.default && root && root.children.length === 0) {
@@ -199,7 +218,19 @@ function shellHTML(title) {
       } else if (root && root.children.length === 0) {
         __showErr('app.js must \`export default function App(){…}\` (a React component). Nothing mounted.');
       }
-    } catch (e) { __showErr('Failed to run app.js: ' + ((e && e.stack) || e)); }
+    } catch (e) {
+      var message = String((e && e.message) || e || '');
+      // 通用动态 import 失败文案本身不含 URL；只有 SDK 预检阶段失败时才能据此归因宿主过旧。
+      // app.js 自己 404 或其业务依赖失败必须保留真实的运行错误，不能误导成「请升级容器」。
+      var sharedSDKMissing = !sharedSDKReady || /aibox-sdk\.mjs|aibox\/sdk|incompatible-host/i.test(message);
+      var locale = String((navigator && navigator.language) || document.documentElement.lang || '').toLowerCase();
+      var upgradeHint = locale.indexOf('zh') === 0
+        ? '这个小应用需要更新版本的 AiBox（宿主共享 aibox/sdk 运行时）。请升级 AiBox 后重新打开。'
+        : 'This applet needs a newer AiBox container (shared aibox/sdk runtime). Update AiBox and reopen it.';
+      __showErr(sharedSDKMissing
+        ? upgradeHint + '\\n\\n' + message
+        : 'Failed to run app.js: ' + ((e && e.stack) || e));
+    }
   </script>
 </body>
 </html>
@@ -210,52 +241,18 @@ function escapeHTML(value) {
   return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 }
 
-/** `@aibox/applet-sdk`（含 `/react` 子路径）→ 相对路径（按该文件在 dist/ 下的深度算）。 */
-function rewriteSDKSpecifier(code, relPath) {
-  const depth = relPath.split('/').length - 1
-  const prefix = depth === 0 ? './' : '../'.repeat(depth)
-  // 长的写在前：带引号时 `'@aibox/applet-sdk'` 并不是 `'@aibox/applet-sdk/react'` 的前缀
-  // （闭合引号挡着），顺序其实无所谓；仍这么写，免得将来加子路径时踩到。
+/** npm 开发期 SDK 入口 → 宿主共享运行时裸说明符。 */
+export function rewriteSDKSpecifier(code) {
   let out = code
-  for (const [specifier, local] of [
-    [SDK_REACT_SPECIFIER, SDK_REACT_LOCAL],
-    [SDK_SPECIFIER, SDK_LOCAL],
+  for (const [specifier, runtimeSpecifier] of [
+    [SDK_REACT_SPECIFIER, SDK_REACT_RUNTIME_SPECIFIER],
+    [SDK_SPECIFIER, SDK_RUNTIME_SPECIFIER],
   ]) {
-    const target = `${prefix}${local}`
-    out = out.replaceAll(`'${specifier}'`, `'${target}'`).replaceAll(`"${specifier}"`, `"${target}"`)
+    out = out
+      .replaceAll(`'${specifier}'`, `'${runtimeSpecifier}'`)
+      .replaceAll(`"${specifier}"`, `"${runtimeSpecifier}"`)
   }
   return out
-}
-
-/**
- * 把 SDK 的一个入口打成单文件 ESM（核心 → dist/lib/aibox-sdk.js，hooks → dist/lib/aibox-sdk-react.js）。
- *
- * `react` 恒 external：它由宿主随运行时资产提供、经 import map 解析。打进来就是**两份 React
- * 实例**（宿主的 antd-mobile / aibox-ui 用宿主那份、hooks 用这份），useState 立刻炸。
- * 核心入口本身不 import react，所以真正需要这条的是 `/react` 那份；两处写一致更稳。
- */
-async function bundleSDKEntry(marketRoot, ...relEntry) {
-  const entry = path.join(marketRoot, 'packages', 'aibox-sdk', 'dist', ...relEntry)
-  if (!fs.existsSync(entry)) {
-    throw new Error(`SDK 产物不在：${entry} —— 先跑 npm run build --workspace @aibox/applet-sdk`)
-  }
-  const result = await esbuild.build({
-    entryPoints: [entry],
-    bundle: true,
-    format: 'esm',
-    target: 'safari17',
-    platform: 'browser',
-    external: ['react'],
-    write: false,
-    legalComments: 'none',
-    banner: {
-      js:
-        '// 本文件由 @aibox/applet-tsbuild 从 packages/aibox-sdk 打出，**请勿手改**。\n' +
-        '// 它是生成物，不是这个应用私有的桥胶水——单一真值在 SDK 包里，重新构建即可刷新。\n' +
-        '// 重新生成： npm run build --prefix apps/<id>',
-    },
-  })
-  return result.outputFiles[0].text
 }
 
 /**
@@ -269,8 +266,28 @@ export async function buildApplet({ appDir, check = false }) {
   const srcDir = path.join(appDir, 'src')
   const outDir = path.join(appDir, 'dist')
   if (!fs.existsSync(srcDir)) throw new Error(`找不到手写源目录：${srcDir}`)
+  const legacySources = walk(srcDir).filter((relative) => /\.(?:js|jsx)$/.test(relative))
+  if (legacySources.length > 0) {
+    throw new Error(`标准工程禁止 JS/JSX 源码：\n  · ${legacySources.join('\n  · ')}`)
+  }
 
-  const marketRoot = path.resolve(appDir, '..', '..')
+  // manifest action 类型是源码合同的一部分。旧 Vite 插件退役后必须在唯一构建器里继续生成，
+  // 否则 manifest 改了而 handler 仍按旧类型编译，`check:build` 也发现不了这类漂移。
+  const manifestPath = path.join(srcDir, 'manifest.json')
+  if (!fs.existsSync(manifestPath)) throw new Error(`缺少声明：${manifestPath}`)
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  const manifestProblems = checkManifest(manifest)
+  if (manifestProblems.length > 0) throw new Error(`manifest 校验失败：\n  · ${manifestProblems.join('\n  · ')}`)
+  const actionTypesPath = path.join(srcDir, 'aibox-actions.d.ts')
+  const nextActionTypes = renderActionTypes(manifest)
+  const currentActionTypes = fs.existsSync(actionTypesPath) ? fs.readFileSync(actionTypesPath, 'utf8') : null
+  if (currentActionTypes !== nextActionTypes) {
+    if (check) {
+      throw new Error('src/aibox-actions.d.ts 与 manifest.actions 不一致；先运行 npm run build 并提交生成文件')
+    }
+    fs.writeFileSync(actionTypesPath, nextActionTypes, 'utf8')
+  }
+
   const configPath = path.join(HERE, 'tsconfig.base.json')
   const base = ts.readConfigFile(configPath, ts.sys.readFile)
   if (base.error) throw new Error(ts.flattenDiagnosticMessageText(base.error.messageText, '\n'))
@@ -302,13 +319,13 @@ export async function buildApplet({ appDir, check = false }) {
   const host = ts.createCompilerHost(parsed.options)
   const writeFile = (fileName, text) => {
     const rel = path.relative(outDir, fileName).split(path.sep).join('/')
-    emitted.set(rel, rewriteSDKSpecifier(text, rel))
+    emitted.set(rel, rewriteSDKSpecifier(text))
   }
   const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options, host })
   const result = program.emit(undefined, writeFile)
 
   const diagnostics = [...ts.getPreEmitDiagnostics(program), ...result.diagnostics].filter(
-    // 只拦真正的错误；`allowJs` 迁移期的 JS 文件不参与类型检查（checkJs:false）。
+    // 只拦真正的错误；标准工程的每个源码文件都必须进入严格 TypeScript 检查。
     (d) => d.category === ts.DiagnosticCategory.Error,
   )
   if (diagnostics.length) {
@@ -320,20 +337,8 @@ export async function buildApplet({ appDir, check = false }) {
     throw new Error(`TypeScript 报错，未写盘：\n${text}`)
   }
 
-  emitted.set(SDK_LOCAL, await bundleSDKEntry(marketRoot, 'index.js'))
-
-  // hooks 那份**按需**才打：产物里出现指向它的路径才 emit。无条件带上会让不用 hooks 的应用
-  // 凭空多一个 dist 文件（`--check` 立刻判漂移，且发版包白白多几 KB）。
-  const usesSDKReact = [...emitted.values()].some(
-    (code) => typeof code === 'string' && code.includes(SDK_REACT_LOCAL),
-  )
-  if (usesSDKReact) emitted.set(SDK_REACT_LOCAL, await bundleSDKEntry(marketRoot, 'react', 'index.js'))
-
   // 自带外壳：宿主默认外壳硬编码 import('./app.jsx')，而本管线的入口是已编译的 app.js。
-  const manifestPath = path.join(srcDir, 'manifest.json')
-  const title = fs.existsSync(manifestPath)
-    ? (JSON.parse(fs.readFileSync(manifestPath, 'utf8')).name ?? 'Applet')
-    : 'Applet'
+  const title = fs.existsSync(manifestPath) ? (manifest.name ?? 'Applet') : 'Applet'
   emitted.set('index.html', shellHTML(title))
 
   // 非代码资源（.css / 图片…）原样带过去。

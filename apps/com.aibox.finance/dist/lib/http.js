@@ -7,7 +7,7 @@
 //
 // 请求头是能透传的（这是「网络必须经原生中转」的红利：浏览器 fetch 设不了 Referer）。
 // 所有失败一律回落成可判定的返回值，**不抛到 UI 层**（规格 §8.9）。
-const bridge = () => (typeof window !== 'undefined' ? window.aibox : undefined);
+import { bridge } from 'aibox/sdk';
 export const FAILURE = {
     configuration: 'configuration',
     invalidURL: 'invalidURL',
@@ -28,8 +28,11 @@ function classify(message) {
         return FAILURE.timeout;
     if (text.includes('invalid') || text.includes('non-http'))
         return FAILURE.invalidURL;
-    if (text.includes('offline') || text.includes('network') || text.includes('connection')
-        || text.includes('host') || text.includes('internet'))
+    if (text.includes('offline') ||
+        text.includes('network') ||
+        text.includes('connection') ||
+        text.includes('host') ||
+        text.includes('internet'))
         return FAILURE.network;
     return FAILURE.unknown;
 }
@@ -51,27 +54,31 @@ export async function request(url, options = {}) {
         timer = setTimeout(() => resolve({ __timeout: true }), timeoutMs);
     });
     try {
-        const payload = { method, headers: { 'User-Agent': USER_AGENT, ...headers }, responseType };
+        const payload = {
+            method,
+            headers: { 'User-Agent': USER_AGENT, ...headers },
+            responseType,
+        };
         if (maxBytes)
             payload.maxBytes = maxBytes;
         if (body !== undefined)
             payload.body = body;
         const response = await Promise.race([api.net.fetch(url, payload), timeout]);
-        if (response && response.__timeout)
+        if ('__timeout' in response)
             return { ok: false, failure: FAILURE.timeout };
-        const status = Number((response && response.status) || 0);
+        const status = Number(response.status || 0);
         if (status < 200 || status >= 300)
             return { ok: false, failure: FAILURE.http, status };
         return {
             ok: true,
             status,
-            body: response ? response.body : null,
-            contentType: response ? response.contentType : null,
-            truncated: !!(response && response.truncated),
+            body: response.body,
+            contentType: response.contentType,
+            truncated: !!response.truncated,
         };
     }
     catch (error) {
-        return { ok: false, failure: classify(error && error.message) };
+        return { ok: false, failure: classify(error instanceof Error ? error.message : error) };
     }
     finally {
         if (timer)
@@ -91,7 +98,7 @@ export async function getJSON(url, options = {}) {
     if (!result.ok)
         return result;
     if (result.body && typeof result.body === 'object')
-        return result;
+        return { ...result, body: result.body };
     try {
         return { ...result, body: JSON.parse(String(result.body || '')) };
     }
@@ -135,11 +142,14 @@ export function decodeGBK(base64) {
 // 这不是缓存，是**去重**：TTL 缓存在 quotes.js 里，这里只防「同一瞬间打两次」。
 const inflight = new Map();
 export function coalesce(key, factory) {
-    if (inflight.has(key))
-        return inflight.get(key);
+    const existing = inflight.get(key);
+    if (existing)
+        return existing;
     const promise = Promise.resolve()
         .then(factory)
-        .finally(() => { inflight.delete(key); });
+        .finally(() => {
+        inflight.delete(key);
+    });
     inflight.set(key, promise);
     return promise;
 }

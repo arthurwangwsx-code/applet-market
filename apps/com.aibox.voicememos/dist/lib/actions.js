@@ -7,10 +7,10 @@
 // ⚠️ **代价要说清楚**：延迟工具不进常驻 tools 前缀，模型的可发现性比常驻 `memo_*` 低一档
 //（从"一直看得见"变成"搜得到"）。这是「原生模块可退役」的真实代价，不是实现细节——
 // 所以每条 action 的 `keywords` 必须写足中英双语，`tool_search` 全靠它命中。
-import { registerActions } from '../lib/aibox-sdk.js';
+import { registerActions } from 'aibox/sdk';
 import { actionItems as extractActionItems, ask as askAI, summarize } from './ai.js';
 import { clockString, exportMarkdown, exportSRT, exportText, hashText, shortDate } from './format.js';
-import { clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip, } from './memos.js';
+import { clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip } from './memos.js';
 function text(value) {
     return typeof value === 'string' ? value.trim() : '';
 }
@@ -30,7 +30,9 @@ async function readableTranscript(clip) {
     const artifacts = await loadArtifacts(clip.id, raw);
     if (artifacts.correctionTurns.length) {
         return {
-            text: artifacts.correctionTurns.map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text)).join('\n\n'),
+            text: artifacts.correctionTurns
+                .map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text))
+                .join('\n\n'),
             status,
             corrected: true,
         };
@@ -54,9 +56,11 @@ export function registerMemoActions(refresh, locale, labels) {
                     memo.isFavourite ? 'favourite' : '',
                     memo.hasTranscript ? 'transcribed' : '',
                     memo.hasAudio ? '' : 'transcript-only',
-                ].filter(Boolean).join(', ');
-                return `${index + 1}. ${memo.title} — ${clockString(memo.duration)}, ${shortDate(memo.createdAt, locale)} `
-                    + `(${flags}) [id: ${memo.id}]`;
+                ]
+                    .filter(Boolean)
+                    .join(', ');
+                return (`${index + 1}. ${memo.title} — ${clockString(memo.duration)}, ${shortDate(memo.createdAt, locale)} ` +
+                    `(${flags}) [id: ${memo.id}]`);
             });
             return { ok: true, text: lines.join('\n'), count: rows.length };
         },
@@ -95,7 +99,11 @@ export function registerMemoActions(refresh, locale, labels) {
                 return { ok: false, text: 'Recording not found.' };
             const readable = await readableTranscript(clip);
             if (!readable.text) {
-                return { ok: true, text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`, status: readable.status };
+                return {
+                    ok: true,
+                    text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`,
+                    status: readable.status,
+                };
             }
             const prefix = readable.corrected ? '(speaker-corrected)\n\n' : '';
             return { ok: true, text: prefix + readable.text, status: readable.status };
@@ -144,16 +152,15 @@ export function registerMemoActions(refresh, locale, labels) {
                 return { ok: false, text: 'No transcript — run memo_transcribe first.' };
             const artifacts = await loadArtifacts(clip.id, readable.text);
             const cached = artifacts.actionItems;
-            const items = (!cached.length || input?.force === true)
-                ? await extractActionItems(readable.text).catch(() => [])
-                : cached;
+            const items = !cached.length || input?.force === true ? await extractActionItems(readable.text).catch(() => []) : cached;
             if (items !== cached)
                 await saveArtifacts({ ...artifacts, actionItems: items, sourceHash: hashText(readable.text) });
             if (items.length === 0)
                 return { ok: true, text: 'No action items found.', count: 0 };
             const lines = items.map((item) => {
                 const tail = [item.owner, item.dueHint, item.sourceTime !== undefined ? clockString(item.sourceTime) : '']
-                    .filter(Boolean).join(' · ');
+                    .filter(Boolean)
+                    .join(' · ');
                 return `- [${item.isDone ? 'x' : ' '}] (${item.kind}) ${item.text}${tail ? ` — ${tail}` : ''}`;
             });
             refresh();

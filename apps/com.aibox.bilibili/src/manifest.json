@@ -16,28 +16,12 @@
     "network": true,
     "storage": true,
     "ai": false,
-    "networkAllowed": [
-      "api.bilibili.com",
-      "passport.bilibili.com",
-      "www.bilibili.com",
-      "hdslb.com"
-    ],
-    "capabilities": [
-      "video",
-      "secrets",
-      "browser",
-      "share",
-      "clipboard",
-      "haptics",
-      "toast"
-    ]
+    "networkAllowed": ["api.bilibili.com", "passport.bilibili.com", "www.bilibili.com", "hdslb.com"],
+    "capabilities": ["video", "secrets", "browser", "share", "clipboard", "haptics", "toast"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ],
+    "surfaces": ["page", "fullscreen"],
     "subpages": true
   },
   "actions": [
@@ -46,21 +30,11 @@
       "name": "search",
       "displayName": "搜索哔哩哔哩",
       "summary": "Search Bilibili for videos by keyword. Returns each match with its BV id, title, uploader, duration and play count. Pass a BV id to the play action to watch one.",
-      "keywords": [
-        "bilibili",
-        "b站",
-        "哔哩哔哩",
-        "搜视频",
-        "找视频",
-        "search bilibili"
-      ],
+      "keywords": ["bilibili", "b站", "哔哩哔哩", "搜视频", "找视频", "search bilibili"],
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"keyword\"],\"properties\":{\"keyword\":{\"type\":\"string\",\"description\":\"What to search for.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20,\"description\":\"How many results to return (default 10).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "externalNetwork",
       "readOnly": true
     },
@@ -69,19 +43,11 @@
       "name": "trending",
       "displayName": "哔哩哔哩热门",
       "summary": "What is popular on Bilibili right now. kind 'popular' is the trending feed, 'ranking' is the all-site leaderboard.",
-      "keywords": [
-        "bilibili热门",
-        "b站排行",
-        "哔哩哔哩排行榜",
-        "bilibili trending"
-      ],
+      "keywords": ["bilibili热门", "b站排行", "哔哩哔哩排行榜", "bilibili trending"],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"kind\":{\"type\":\"string\",\"enum\":[\"popular\",\"ranking\"]},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "externalNetwork",
       "readOnly": true
     },
@@ -90,19 +56,11 @@
       "name": "play",
       "displayName": "播放哔哩哔哩视频",
       "summary": "Play a Bilibili video by its BV id on the native full-screen player, with lock-screen controls and picture-in-picture. Get a BV id from the search or trending action first.",
-      "keywords": [
-        "播放b站",
-        "看视频",
-        "播放哔哩哔哩",
-        "play bilibili"
-      ],
+      "keywords": ["播放b站", "看视频", "播放哔哩哔哩", "play bilibili"],
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"bvid\"],\"properties\":{\"bvid\":{\"type\":\"string\",\"description\":\"The BV id, e.g. BV1bz3Q6oEMP.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "mediaPlayback"
     }
   ],

@@ -15,18 +15,11 @@
   "securityMode": "secure",
   "permissions": {
     "storage": true,
-    "capabilities": [
-      "haptics",
-      "toast"
-    ]
+    "capabilities": ["haptics", "toast"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "sheet",
-      "fullscreen"
-    ]
+    "surfaces": ["page", "sheet", "fullscreen"]
   },
   "actions": [
     {

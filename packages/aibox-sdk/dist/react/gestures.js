@@ -139,7 +139,9 @@ export function createLongPress(options) {
     const slop = options.moveSlop ?? 8;
     const timers = options.timers ?? {
         set: (run, ms) => setTimeout(run, ms),
-        clear: (handle) => { clearTimeout(handle); },
+        clear: (handle) => {
+            clearTimeout(handle);
+        },
     };
     let handle = null;
     let active = false;
@@ -227,7 +229,10 @@ export function defaultSwipeThreshold(width) {
 export function createSwipePager(options) {
     const rubber = options.rubberBand ?? 0.28;
     const duration = options.durationMs ?? 220;
-    const schedule = options.schedule ?? ((run, ms) => { setTimeout(run, ms); });
+    const schedule = options.schedule ??
+        ((run, ms) => {
+            setTimeout(run, ms);
+        });
     let offset = 0;
     let animating = false;
     let dragging = false;

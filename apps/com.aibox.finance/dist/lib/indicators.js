@@ -12,9 +12,9 @@ export function sma(values, period) {
         return out;
     let sum = 0;
     for (let i = 0; i < values.length; i += 1) {
-        sum += values[i];
+        sum += values[i] ?? 0;
         if (i >= period)
-            sum -= values[i - period];
+            sum -= values[i - period] ?? 0;
         if (i >= period - 1)
             out[i] = sum / period;
     }
@@ -26,9 +26,9 @@ export function ema(values, period) {
     if (values.length === 0 || period <= 0)
         return out;
     const k = 2 / (period + 1);
-    out[0] = values[0];
+    out[0] = values[0] ?? null;
     for (let i = 1; i < values.length; i += 1) {
-        out[i] = values[i] * k + out[i - 1] * (1 - k);
+        out[i] = (values[i] ?? 0) * k + (out[i - 1] ?? 0) * (1 - k);
     }
     return out;
 }
@@ -36,9 +36,9 @@ export function ema(values, period) {
 export function macd(values, fast = 12, slow = 26, signal = 9) {
     const fastLine = ema(values, fast);
     const slowLine = ema(values, slow);
-    const dif = values.map((_, i) => fastLine[i] - slowLine[i]);
+    const dif = values.map((_, i) => (fastLine[i] ?? 0) - (slowLine[i] ?? 0));
     const dea = ema(dif, signal);
-    const hist = dif.map((value, i) => (value - dea[i]) * 2);
+    const hist = dif.map((value, i) => (value - (dea[i] ?? 0)) * 2);
     return { dif, dea, hist };
 }
 /**
@@ -56,14 +56,18 @@ export function kdj(candles, period = 9) {
         let high = -Infinity;
         let low = Infinity;
         for (let n = from; n <= i; n += 1) {
-            if (candles[n].high > high)
-                high = candles[n].high;
-            if (candles[n].low > 0 && candles[n].low < low)
-                low = candles[n].low;
+            const candle = candles[n];
+            if (!candle)
+                continue;
+            if (candle.high > high)
+                high = candle.high;
+            if (candle.low > 0 && candle.low < low)
+                low = candle.low;
         }
         if (!Number.isFinite(low))
             low = high;
-        const rsv = high > low ? ((candles[i].close - low) / (high - low)) * 100 : 50;
+        const close = candles[i]?.close ?? 0;
+        const rsv = high > low ? ((close - low) / (high - low)) * 100 : 50;
         const currentK = (rsv + prevK * 2) / 3;
         const currentD = (currentK + prevD * 2) / 3;
         k.push(currentK);
@@ -84,12 +88,12 @@ export function boll(values, period = 20, multiplier = 2) {
             continue;
         let variance = 0;
         for (let n = i - period + 1; n <= i; n += 1) {
-            const diff = values[n] - mid[i];
+            const diff = (values[n] ?? 0) - (mid[i] ?? 0);
             variance += diff * diff;
         }
         const sd = Math.sqrt(variance / period);
-        upper[i] = mid[i] + multiplier * sd;
-        lower[i] = mid[i] - multiplier * sd;
+        upper[i] = (mid[i] ?? 0) + multiplier * sd;
+        lower[i] = (mid[i] ?? 0) - multiplier * sd;
     }
     return { mid, upper, lower };
 }
@@ -133,7 +137,7 @@ export function downsample(points, target = 60) {
     for (let i = 0; i < points.length; i += step)
         out.push(points[i]);
     const last = points[points.length - 1];
-    if (out[out.length - 1] !== last)
+    if (last !== undefined && out[out.length - 1] !== last)
         out.push(last);
     return out;
 }

@@ -19,6 +19,7 @@ export const ExprError = {
     trailingInput: 'trailingInput',
 };
 export class ExpressionError extends Error {
+    code;
     constructor(code) {
         super(code);
         this.code = code;
@@ -99,7 +100,7 @@ function tokenize(source) {
     const tokens = [];
     let i = 0;
     while (i < source.length) {
-        const ch = source[i];
+        const ch = source[i] ?? '';
         if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
             i += 1;
             continue;
@@ -109,7 +110,7 @@ function tokenize(source) {
             let fraction = '';
             let separatorSeen = false;
             while (i < source.length) {
-                const c = source[i];
+                const c = source[i] ?? '';
                 if (DIGITS.includes(c)) {
                     if (separatorSeen)
                         fraction += c;
@@ -146,11 +147,15 @@ function tokenize(source) {
 }
 // MARK: - 递归下降
 class Parser {
+    tokens;
+    index;
     constructor(tokens) {
         this.tokens = tokens;
         this.index = 0;
     }
-    peek() { return this.index < this.tokens.length ? this.tokens[this.index] : null; }
+    peek() {
+        return this.index < this.tokens.length ? (this.tokens[this.index] ?? null) : null;
+    }
     expression() {
         let value = this.term();
         for (;;) {
@@ -255,7 +260,7 @@ const TOKEN_BREAKERS = '+−-×*÷/()';
 export function currentToken(input) {
     const text = String(input ?? '');
     let start = text.length;
-    while (start > 0 && !TOKEN_BREAKERS.includes(text[start - 1]))
+    while (start > 0 && !TOKEN_BREAKERS.includes(text[start - 1] ?? ''))
         start -= 1;
     return text.slice(start);
 }
@@ -264,7 +269,7 @@ export function appendOperator(input, op) {
     const text = String(input ?? '');
     if (text.length === 0)
         return op === '−' ? op : text;
-    const last = text[text.length - 1];
+    const last = text[text.length - 1] ?? '';
     if (OPERATORS.includes(last))
         return text.slice(0, -1) + op;
     return text + op;

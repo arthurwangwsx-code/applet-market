@@ -4,6 +4,7 @@
 // 记账多一条纪律：**首启种子分类/账户名按当时的 App 内语言物化，之后永不回灌**，
 // 所以 open() 前必须先拿到正确的 locale（见 app.jsx 的启动顺序）。
 import { STRINGS } from './strings.js';
+const TABLES = STRINGS;
 export function normalizeLocale(locale) {
     const raw = String(locale || 'en').toLowerCase();
     return raw.startsWith('zh') ? 'zh-Hans' : 'en';
@@ -22,11 +23,11 @@ export function onLocaleChanged(handler) {
 }
 /** 取一条文案。缺键回落 en，再回落键名本身（漏键会显形，不会渲染成空白）。 */
 export function translate(locale, key) {
-    const table = STRINGS[locale] || STRINGS.en;
+    const table = TABLES[locale] || TABLES.en;
     if (table[key] !== undefined)
         return table[key];
-    if (STRINGS.en[key] !== undefined)
-        return STRINGS.en[key];
+    if (TABLES.en[key] !== undefined)
+        return TABLES.en[key];
     return key;
 }
 export function fmt(template, ...args) {

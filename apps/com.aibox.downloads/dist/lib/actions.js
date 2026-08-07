@@ -4,7 +4,6 @@
 // （`applet_invoke` 拉起一个无头 WebView，只跑模块顶层代码然后立刻调 action）。
 import { downloads, matchesState } from './host.js';
 import { extractURLs } from '../components/AddSheet.js';
-/** UI 动作的回调挂载点。页面挂载时填，卸载时清；无头时恒为空（那三个动作本来就 headless:false）。 */
 export const uiHooks = { pauseAll: null, resumeAll: null, clearFinished: null, refresh: null };
 function targetOf(destination, folder) {
     const path = folder || '';
@@ -21,9 +20,8 @@ function describe(task) {
     const where = task.outputPath ? ` → ${task.outputPath}` : '';
     return `· ${task.filename} — ${task.state}${percent}${where}`;
 }
-export async function addDownloads({ urls, filename, destination, folder, priority }) {
-    const list = (Array.isArray(urls) ? urls : [urls])
-        .flatMap((u) => extractURLs(u).length ? extractURLs(u) : []);
+export async function addDownloads({ urls, filename, destination, folder, priority, }) {
+    const list = (Array.isArray(urls) ? urls : [urls]).flatMap((u) => (extractURLs(u).length ? extractURLs(u) : []));
     if (!list.length) {
         return { ok: false, error: 'No http(s) URL found in the input.', text: '没有可下载的链接。' };
     }
@@ -38,10 +36,15 @@ export async function addDownloads({ urls, filename, destination, folder, priori
             priority: priority || 'normal',
             groupId,
         });
-        if (result && result.taskId) {
-            tasks.push({ taskId: result.taskId, url, filename: filename || url.split('/').pop(), artifactRef: result.artifactRef });
+        if ('taskId' in result) {
+            tasks.push({
+                taskId: result.taskId,
+                url,
+                filename: filename || url.split('/').pop() || 'download',
+                artifactRef: result.artifactRef,
+            });
         }
-        else if (result && result.error) {
+        else if ('error' in result) {
             return { ok: false, error: result.error, text: `入队失败：${result.error}` };
         }
     }
@@ -79,20 +82,21 @@ export function registerActions() {
     const api = typeof window !== 'undefined' ? window.aibox : undefined;
     if (!api || !api.action || typeof api.action.register !== 'function')
         return;
-    api.action.register('add', addDownloads);
-    api.action.register('list', listDownloads);
-    api.action.register('control', controlDownloads);
-    api.action.register('pauseAll', async () => {
+    const register = api.action.register;
+    register('add', (input) => addDownloads(input));
+    register('list', (input) => listDownloads((input || {})));
+    register('control', (input) => controlDownloads(input));
+    register('pauseAll', async () => {
         if (uiHooks.pauseAll)
             return uiHooks.pauseAll();
         return controlDownloads({ action: 'pause' });
     });
-    api.action.register('resumeAll', async () => {
+    register('resumeAll', async () => {
         if (uiHooks.resumeAll)
             return uiHooks.resumeAll();
         return controlDownloads({ action: 'resume' });
     });
-    api.action.register('clearFinished', async () => {
+    register('clearFinished', async () => {
         if (uiHooks.clearFinished)
             return uiHooks.clearFinished();
         return controlDownloads({ action: 'clearFinished' });

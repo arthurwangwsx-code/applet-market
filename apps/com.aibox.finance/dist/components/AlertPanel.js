@@ -17,7 +17,7 @@ const CONDITION_KEYS = {
     up_pct: 'finance.alert.upPct',
     down_pct: 'finance.alert.downPct',
 };
-export default function AlertPanel({ ctx, route, visible, onClose }) {
+export default function AlertPanel({ ctx, route, visible, onClose, }) {
     const { t, alerts, quotes } = ctx;
     const { canonical, symbol, name } = route || {};
     const [condition, setCondition] = React.useState('above');
@@ -34,15 +34,21 @@ export default function AlertPanel({ ctx, route, visible, onClose }) {
     const value = parseNumberInput(target);
     const canSubmit = Number.isFinite(value);
     const submit = async () => {
-        if (!canSubmit)
+        if (!canSubmit || value === null || !canonical)
             return;
         await alerts.set({ symbol: canonical, name, condition, targetPrice: value });
         setTarget('');
     };
-    return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [_jsx(SheetHeader, { title: t('finance.alert.title'), onClose: onClose, closeLabel: t('finance.done') }), _jsxs("div", { className: "fin-scroll", style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsx(Segmented, { value: condition, onChange: setCondition, items: Object.keys(CONDITION_KEYS).map((id) => ({ id, label: t(CONDITION_KEYS[id]) })) }), _jsx("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: `0 ${SPACE.s3}px` }, children: _jsx(Field, { label: t('finance.alert.target'), value: target, onChange: setTarget, placeholder: "0", suffix: isPercentCondition(condition) ? '%' : (quote ? quote.currency : '') }) }), _jsx("button", { type: "button", className: "fin-btn fin-press", disabled: !canSubmit, onClick: submit, style: {
-                            textAlign: 'center', padding: '12px 0', borderRadius: RADIUS.field, fontSize: 16, fontWeight: 600,
-                            color: C.onAccent, background: C.brand, opacity: canSubmit ? 1 : 0.4,
+    return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [_jsx(SheetHeader, { title: t('finance.alert.title'), onClose: onClose, closeLabel: t('finance.done') }), _jsxs("div", { className: "fin-scroll", style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsx(Segmented, { value: condition, onChange: setCondition, items: Object.keys(CONDITION_KEYS).map((id) => ({ id, label: t(CONDITION_KEYS[id]) })) }), _jsx("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: `0 ${SPACE.s3}px` }, children: _jsx(Field, { label: t('finance.alert.target'), value: target, onChange: setTarget, placeholder: "0", suffix: isPercentCondition(condition) ? '%' : quote ? quote.currency : '' }) }), _jsx("button", { type: "button", className: "fin-btn fin-press", disabled: !canSubmit, onClick: submit, style: {
+                            textAlign: 'center',
+                            padding: '12px 0',
+                            borderRadius: RADIUS.field,
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: C.onAccent,
+                            background: C.brand,
+                            opacity: canSubmit ? 1 : 0.4,
                         }, children: t('finance.alert.set') }), _jsx("span", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45 }, children: t('finance.alert.footer') }), rows.length > 0 ? (_jsx("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: `0 ${SPACE.s3}px` }, children: rows.map((row, index) => (_jsx(Row, { title: `${t(CONDITION_KEYS[row.conditionRaw])} ${isPercentCondition(row.conditionRaw)
                                 ? formatPercent(row.targetPrice)
-                                : formatPrice(row.targetPrice, decimals)}`, subtitle: row.lastFiredAt ? new Date(row.lastFiredAt).toLocaleString() : null, last: index === rows.length - 1, accessory: (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3 }, children: [_jsx(Toggle, { checked: row.enabled, onChange: (next) => alerts.setEnabled(row.id, next), label: t('finance.alert.title') }), _jsx("button", { type: "button", className: "fin-btn fin-press", "aria-label": t('finance.alert.delete'), onClick: () => alerts.remove(row.id), style: { color: C.danger }, children: _jsx(Icon, { name: "trash", size: 16 }) })] })) }, row.id))) })) : (_jsx("span", { style: { fontSize: 13, color: C.muted }, children: t('finance.alert.empty') }))] })] }));
+                                : formatPrice(row.targetPrice, decimals)}`, subtitle: row.lastFiredAt ? new Date(row.lastFiredAt).toLocaleString() : null, last: index === rows.length - 1, accessory: _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3 }, children: [_jsx(Toggle, { checked: row.enabled, onChange: (next) => alerts.setEnabled(row.id, next), label: t('finance.alert.title') }), _jsx("button", { type: "button", className: "fin-btn fin-press", "aria-label": t('finance.alert.delete'), onClick: () => alerts.remove(row.id), style: { color: C.danger }, children: _jsx(Icon, { name: "trash", size: 16 }) })] }) }, row.id))) })) : (_jsx("span", { style: { fontSize: 13, color: C.muted }, children: t('finance.alert.empty') }))] })] }));
 }

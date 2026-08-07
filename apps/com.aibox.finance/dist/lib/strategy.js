@@ -11,12 +11,8 @@ function annualizedFrom(totalPct, days) {
     const years = days / 252;
     if (years <= 0)
         return 0;
-    return (((1 + totalPct / 100) ** (1 / years)) - 1) * 100;
+    return ((1 + totalPct / 100) ** (1 / years) - 1) * 100;
 }
-/**
- * 回测。候选 = close > 0 的 K 线，需 ≥ 20 根否则返回 null。
- * maCross 的关键细节：**开仓当根不吃涨跌**（nav 先乘再判信号）。
- */
 export function backtest(candles, strategy = 'buyhold') {
     const rows = (candles || []).filter((row) => row.close > 0);
     if (rows.length < 20)
@@ -33,44 +29,58 @@ export function backtest(candles, strategy = 'buyhold') {
         let entry = 0;
         for (let i = 0; i < rows.length; i += 1) {
             if (holding && i > 0)
-                nav *= closes[i] / closes[i - 1];
+                nav *= (closes[i] ?? 0) / (closes[i - 1] ?? 1);
             equity.push(nav);
             if (i < 20)
                 continue;
             if (ma5[i] === null || ma20[i] === null || ma5[i - 1] === null || ma20[i - 1] === null)
                 continue;
-            const golden = ma5[i - 1] <= ma20[i - 1] && ma5[i] > ma20[i];
-            const dead = ma5[i - 1] >= ma20[i - 1] && ma5[i] < ma20[i];
+            const previousFast = ma5[i - 1];
+            const previousSlow = ma20[i - 1];
+            const currentFast = ma5[i];
+            const currentSlow = ma20[i];
+            if (previousFast === null ||
+                previousFast === undefined ||
+                previousSlow === null ||
+                previousSlow === undefined ||
+                currentFast === null ||
+                currentFast === undefined ||
+                currentSlow === null ||
+                currentSlow === undefined)
+                continue;
+            const golden = previousFast <= previousSlow && currentFast > currentSlow;
+            const dead = previousFast >= previousSlow && currentFast < currentSlow;
             if (golden && !holding) {
                 holding = true;
-                entry = closes[i];
+                entry = closes[i] ?? 0;
                 trades += 1;
             }
             else if (dead && holding) {
                 holding = false;
-                if (closes[i] > entry)
+                if ((closes[i] ?? 0) > entry)
                     wins += 1;
             }
         }
-        if (holding && closes[closes.length - 1] > entry)
+        if (holding && (closes.at(-1) ?? 0) > entry)
             wins += 1;
     }
     else {
-        equity = closes.map((close) => close / closes[0]);
+        const initial = closes[0] ?? 1;
+        equity = closes.map((close) => close / initial);
     }
-    const first = equity[0];
-    const last = equity[equity.length - 1];
+    const first = equity[0] ?? 0;
+    const last = equity.at(-1) ?? 0;
     const totalReturn = first !== 0 ? ((last - first) / first) * 100 : 0;
     const dailyReturns = [];
     for (let i = 1; i < equity.length; i += 1) {
-        if (equity[i - 1] === 0)
+        const previous = equity[i - 1];
+        const current = equity[i];
+        if (previous === undefined || current === undefined || previous === 0)
             continue;
-        dailyReturns.push(equity[i] / equity[i - 1] - 1);
+        dailyReturns.push(current / previous - 1);
     }
     const sd = stdDevSample(dailyReturns);
-    const mean = dailyReturns.length
-        ? dailyReturns.reduce((sum, value) => sum + value, 0) / dailyReturns.length
-        : 0;
+    const mean = dailyReturns.length ? dailyReturns.reduce((sum, value) => sum + value, 0) / dailyReturns.length : 0;
     const volatility = sd * Math.sqrt(252) * 100;
     return {
         strategy,
@@ -81,14 +91,13 @@ export function backtest(candles, strategy = 'buyhold') {
         maxDrawdown: maxDrawdown(equity),
         volatility,
         sharpe: sd !== 0 ? (mean * 252 - 0.02) / (sd * Math.sqrt(252)) : 0,
-        buyHoldReturn: ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100,
+        buyHoldReturn: (((closes.at(-1) ?? 0) - (closes[0] ?? 0)) / (closes[0] ?? 1)) * 100,
         trades,
         wins,
         winRate: trades > 0 ? (wins / trades) * 100 : 0,
     };
 }
-/** 定投：step = 每月 21 / 每周 5（交易日）。需 K 线数 ≥ step 且 amount > 0。 */
-export function dcaPlan(candles, { amount = 1000, frequency = 'monthly' } = {}) {
+export function dcaPlan(candles, { amount = 1000, frequency = 'monthly', } = {}) {
     const rows = (candles || []).filter((row) => row.close > 0);
     const step = frequency === 'weekly' ? 5 : 21;
     if (rows.length < step || !(amount > 0))
@@ -97,11 +106,14 @@ export function dcaPlan(candles, { amount = 1000, frequency = 'monthly' } = {}) 
     let shares = 0;
     const points = [];
     for (let i = 0; i < rows.length; i += step) {
+        const close = rows[i]?.close;
+        if (close === undefined)
+            continue;
         invested += amount;
-        shares += amount / rows[i].close;
-        points.push({ index: i, value: shares * rows[i].close, base: invested });
+        shares += amount / close;
+        points.push({ index: i, value: shares * close, base: invested });
     }
-    const lastClose = rows[rows.length - 1].close;
+    const lastClose = rows.at(-1)?.close ?? 0;
     points.push({ index: rows.length - 1, value: shares * lastClose, base: invested });
     const finalValue = shares * lastClose;
     const totalReturn = invested > 0 ? ((finalValue - invested) / invested) * 100 : 0;
@@ -115,23 +127,17 @@ export function dcaPlan(candles, { amount = 1000, frequency = 'monthly' } = {}) 
         finalValue,
         totalReturn,
         annualized: annualizedFrom(totalReturn, rows.length),
-        lumpSumReturn: ((lastClose - rows[0].close) / rows[0].close) * 100,
+        lumpSumReturn: ((lastClose - (rows[0]?.close ?? 0)) / (rows[0]?.close ?? 1)) * 100,
         curve: downsample(points),
     };
 }
-/**
- * 再平衡提案（§10.13）。容差 = max(100 分, 总资产分/1000)，即「1 个货币单位」与「0.1%」取大。
- * 持有但不在目标里 → 建议清仓全部。
- */
-export function rebalance({ valuation, targets, quotes, fxMap }) {
+export function rebalance({ valuation, targets, quotes, fxMap, }) {
     const totalMinor = valuation.totalMinor;
     const weightSum = targets.reduce((sum, row) => sum + Math.max(0, row.weight), 0);
     if (weightSum <= 0)
         return [];
     const tolerance = Math.max(100, Math.round(totalMinor / 1000));
-    const currentBySymbol = new Map();
-    for (const row of valuation.rows)
-        currentBySymbol.set(row.position.instrumentSymbol, row);
+    const currentBySymbol = new Map(valuation.rows.map((row) => [row.position.instrumentSymbol, row]));
     const proposals = [];
     for (const target of targets) {
         const normalized = Math.max(0, target.weight) / weightSum;
@@ -140,10 +146,10 @@ export function rebalance({ valuation, targets, quotes, fxMap }) {
         const currentMinor = row ? row.marketValueMinor : 0;
         const delta = targetMinor - currentMinor;
         const quote = quotes ? quotes[target.symbol] : null;
-        const currency = row ? row.position.currency : (target.currency || valuation.account.currency);
-        const rate = currency === valuation.account.currency ? 1 : (fxMap ? fxMap[currency] : null);
+        const currency = row ? row.position.currency : target.currency || valuation.account.currency;
+        const rate = currency === valuation.account.currency ? 1 : fxMap ? fxMap[currency] : null;
         const price = quote && quote.price > 0 ? quote.price : null;
-        const shares = (price && rate) ? (Math.abs(delta) / 100) / (price * rate) : null;
+        const shares = price && rate ? Math.abs(delta) / 100 / (price * rate) : null;
         proposals.push({
             symbol: target.symbol,
             name: row ? row.position.name : target.symbol,
@@ -153,7 +159,7 @@ export function rebalance({ valuation, targets, quotes, fxMap }) {
             deltaMinor: delta,
             shares,
             onTarget: Math.abs(delta) < tolerance,
-            action: Math.abs(delta) < tolerance ? 'hold' : (delta > 0 ? 'buy' : 'sell'),
+            action: Math.abs(delta) < tolerance ? 'hold' : delta > 0 ? 'buy' : 'sell',
         });
         currentBySymbol.delete(target.symbol);
     }

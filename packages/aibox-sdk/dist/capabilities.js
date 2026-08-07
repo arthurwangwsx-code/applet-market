@@ -31,8 +31,8 @@ export function requireAvailable(namespace, method) {
     if (available(namespace, method))
         return;
     const target = method ? `aibox.${namespace}.${method}` : `aibox.${namespace}`;
-    throw new AiboxError('aibox/unavailable', `aibox/unavailable: ${target} is not registered in this host. `
-        + 'Declare it in manifest.permissions.capabilities, and gate the entry point on isAvailable().');
+    throw new AiboxError('aibox/unavailable', `aibox/unavailable: ${target} is not registered in this host. ` +
+        'Declare it in manifest.permissions.capabilities, and gate the entry point on isAvailable().');
 }
 /** 宿主当前注册的全部命名空间（诊断页用）。 */
 export function registeredNamespaces() {
@@ -59,8 +59,7 @@ export async function probe(namespace, method) {
     const base = { namespace, registered, allowed: null, failedGate: null, remedies: [] };
     if (!registered)
         return base;
-    const decision = await explainAccess(method ? { capability: namespace, method } : { capability: namespace })
-        .catch(() => null);
+    const decision = await explainAccess(method ? { capability: namespace, method } : { capability: namespace }).catch(() => null);
     if (!decision)
         return { ...base, allowed: null };
     return {

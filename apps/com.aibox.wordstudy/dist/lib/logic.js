@@ -43,7 +43,9 @@ export function previewDirection(text, direction) {
  * 收藏过但没查过的词会误标"已缓存"。这里改成真实判断。
  */
 export function suggest(input) {
-    const prefix = String(input.prefix ?? '').trim().toLowerCase();
+    const prefix = String(input.prefix ?? '')
+        .trim()
+        .toLowerCase();
     if (!prefix)
         return [];
     const out = [];
@@ -142,7 +144,7 @@ export function planExercise(input) {
     const term = input.item.text;
     const contexts = [
         ...(input.item.note && input.item.note.trim() ? [input.item.note.trim()] : []),
-        ...((input.entry?.payload.examples ?? []).map((example) => example.en).filter(Boolean)),
+        ...(input.entry?.payload.examples ?? []).map((example) => example.en).filter(Boolean),
     ];
     const kind = preferredKind(input.index);
     if (kind === 'listening')
@@ -175,12 +177,11 @@ export function isCorrect(response, answer) {
     return normalizeAnswer(response) === normalizeAnswer(answer);
 }
 function normalizeAnswer(text) {
-    let value = String(text ?? '').trim().replace(/\s+/g, ' ');
+    let value = String(text ?? '')
+        .trim()
+        .replace(/\s+/g, ' ');
     value = value.replace(/^[.,!?;:，。！？；：]+/, '').replace(/[.,!?;:，。！？；：]+$/, '');
-    return value
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '');
+    return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 // —— §13.3 跟读评分（LCS，纯函数，照抄） ——
 function normalizeWords(text) {

@@ -43,7 +43,7 @@ function formatRelative(value, unit, locale) {
     }
     catch (error) {
         const abs = Math.abs(value);
-        const label = { day: 'd', hour: 'h', minute: 'min', second: 's' }[unit];
+        const label = { day: 'd', hour: 'h', minute: 'min', second: 's' }[unit] ?? unit;
         return value < 0 ? `${abs}${label} ago` : `in ${abs}${label}`;
     }
 }

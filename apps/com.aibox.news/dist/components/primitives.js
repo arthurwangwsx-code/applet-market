@@ -9,7 +9,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // 各自手搓、各自写错，错法还相反。
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useDragGesture } from '../lib/aibox-sdk-react.js';
+import { useDragGesture } from 'aibox/sdk/react';
 import Icon from './Icon.js';
 import { C, SPACE } from './theme.js';
 export function Spinner({ size = 16, color = 'currentColor' }) {
@@ -17,8 +17,12 @@ export function Spinner({ size = 16, color = 'currentColor' }) {
 }
 export function EmptyState({ icon, text }) {
     return (_jsxs("div", { style: {
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-            padding: '60px 32px', textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10,
+            padding: '60px 32px',
+            textAlign: 'center',
         }, children: [_jsx(Icon, { name: icon, size: 34, color: C.muted }), _jsx("span", { style: { fontSize: 15, color: C.muted, lineHeight: 1.4 }, children: text })] }));
 }
 export function SectionHeader({ children }) {
@@ -41,25 +45,39 @@ export function Card({ children, style }) {
             ...style,
         }, children: children }));
 }
-/** 设置/列表里的一行：左图标 + 标题（+副标题）+ 右侧内容/箭头。 */
 export function Row({ icon, iconColor, title, subtitle, detail, accessory, onClick, danger, last }) {
     const Element = onClick ? 'button' : 'div';
     return (_jsxs(Element, { className: onClick ? 'news-btn news-press' : undefined, onClick: onClick, style: {
-            display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%',
-            padding: `11px ${SPACE.s4}px`, minHeight: 44,
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s3,
+            width: '100%',
+            padding: `11px ${SPACE.s4}px`,
+            minHeight: 44,
             borderBottom: last ? 'none' : `0.5px solid ${C.line}`,
             background: 'transparent',
         }, children: [icon ? _jsx(Icon, { name: icon, size: 17, color: iconColor || C.muted }) : null, _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }, children: [_jsx("span", { style: { fontSize: 15, color: danger ? C.danger : C.ink }, children: title }), subtitle ? (_jsx("span", { className: "news-clamp-1", style: { fontSize: 12, color: C.muted }, children: subtitle })) : null] }), detail !== undefined && detail !== null ? (_jsx("span", { className: "news-mono", style: { fontSize: 15, color: C.muted, flex: '0 0 auto' }, children: detail })) : null, accessory, onClick && accessory === undefined ? _jsx(Icon, { name: "chevron.right", size: 13, color: C.muted }) : null] }));
 }
-export function Toggle({ checked, onChange, label, disabled }) {
-    return (_jsx("button", { type: "button", role: "switch", "aria-checked": checked, "aria-label": label, disabled: disabled, className: "news-btn news-press", onClick: (event) => { event.stopPropagation(); if (!disabled)
-            onChange(!checked); }, style: {
-            width: 46, height: 28, borderRadius: 14, flex: '0 0 auto', padding: 2,
+export function Toggle({ checked, onChange, label, disabled, }) {
+    return (_jsx("button", { type: "button", role: "switch", "aria-checked": checked, "aria-label": label, disabled: disabled, className: "news-btn news-press", onClick: (event) => {
+            event.stopPropagation();
+            if (!disabled)
+                onChange(!checked);
+        }, style: {
+            width: 46,
+            height: 28,
+            borderRadius: 14,
+            flex: '0 0 auto',
+            padding: 2,
             opacity: disabled ? 0.45 : 1,
             background: checked ? C.brand : 'color-mix(in srgb, var(--news-line) 90%, transparent)',
             transition: 'background 180ms ease',
         }, children: _jsx("span", { style: {
-                display: 'block', width: 24, height: 24, borderRadius: 12, background: '#fff',
+                display: 'block',
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                background: '#fff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.28)',
                 transform: `translateX(${checked ? 18 : 0}px)`,
                 transition: 'transform 180ms ease',
@@ -93,24 +111,37 @@ export function Sheet({ visible, onClose, children }) {
             }, children: children }) }));
     return typeof document !== 'undefined' && document.body ? createPortal(node, document.body) : node;
 }
-/** 长按菜单 / 选项列表。actions = [{ key, label, icon, danger, onSelect }] */
-export function ActionSheet({ visible, title, actions, cancelLabel, onClose }) {
+export function ActionSheet({ visible, title, actions, cancelLabel, onClose, }) {
     return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [title ? (_jsx("div", { style: {
-                    padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s2}px`, fontSize: 13, color: C.muted,
+                    padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s2}px`,
+                    fontSize: 13,
+                    color: C.muted,
                     borderBottom: `0.5px solid ${C.line}`,
-                }, children: _jsx("span", { className: "news-clamp-2", children: title }) })) : null, actions.map((action, i) => (_jsxs("button", { type: "button", className: "news-btn news-press", onClick: () => { onClose(); action.onSelect(); }, style: {
-                    display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%',
+                }, children: _jsx("span", { className: "news-clamp-2", children: title }) })) : null, actions.map((action, i) => (_jsxs("button", { type: "button", className: "news-btn news-press", onClick: () => {
+                    onClose();
+                    action.onSelect();
+                }, style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s3,
+                    width: '100%',
                     padding: `14px ${SPACE.s4}px`,
                     borderBottom: i === actions.length - 1 ? 'none' : `0.5px solid ${C.line}`,
                     color: action.danger ? C.danger : C.ink,
                     fontSize: 16,
                 }, children: [_jsx(Icon, { name: action.icon, size: 18 }), _jsx("span", { children: action.label })] }, action.key))), cancelLabel ? (_jsx("button", { type: "button", className: "news-btn news-press", onClick: onClose, style: {
-                    display: 'block', width: '100%', padding: `14px ${SPACE.s4}px`, marginTop: 6,
-                    borderTop: `6px solid ${C.bg}`, color: C.brand, fontSize: 16, textAlign: 'center',
+                    display: 'block',
+                    width: '100%',
+                    padding: `14px ${SPACE.s4}px`,
+                    marginTop: 6,
+                    borderTop: `6px solid ${C.bg}`,
+                    color: C.brand,
+                    fontSize: 16,
+                    textAlign: 'center',
                 }, children: cancelLabel })) : null] }));
 }
 // MARK: - 左滑删除
-export function SwipeRow({ children, actionLabel, onAction, disabled }) {
+export function SwipeRow({ children, actionLabel, onAction, disabled, }) {
     const [offset, setOffset] = React.useState(0);
     const [animating, setAnimating] = React.useState(false);
     // 手势起点的基准偏移与实时偏移都放 ref：处理器身份稳定，读到的永远是最新值而不是闭包快照。
@@ -127,7 +158,9 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
     // `touchcancel` 由 SDK 定死成「弹回原位、不提交」，这里不需要（也不该）再写一遍。
     const { handlers } = useDragGesture({
         axis: 'x',
-        onStart: () => { base.current = live.current; },
+        onStart: () => {
+            base.current = live.current;
+        },
         onDrag: ({ dx }) => {
             const next = Math.max(-WIDTH, Math.min(0, base.current + dx));
             live.current = next;
@@ -138,10 +171,21 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
     });
     if (disabled)
         return children;
-    return (_jsxs("div", { style: { position: 'relative', overflow: 'hidden' }, children: [_jsx("button", { type: "button", className: "news-btn news-press", onClick: () => { settle(0); onAction(); }, style: {
-                    position: 'absolute', top: 0, right: 0, bottom: 0, width: WIDTH,
-                    background: C.danger, color: '#fff', fontSize: 15,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    return (_jsxs("div", { style: { position: 'relative', overflow: 'hidden' }, children: [_jsx("button", { type: "button", className: "news-btn news-press", onClick: () => {
+                    settle(0);
+                    onAction();
+                }, style: {
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: WIDTH,
+                    background: C.danger,
+                    color: '#fff',
+                    fontSize: 15,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                 }, children: actionLabel }), _jsx("div", { ...handlers, style: {
                     transform: `translate3d(${offset}px, 0, 0)`,
                     transition: animating ? 'transform 200ms ease' : 'none',
@@ -150,7 +194,7 @@ export function SwipeRow({ children, actionLabel, onAction, disabled }) {
                 }, children: children })] }));
 }
 // MARK: - 下拉刷新
-export function PullRefresh({ onRefresh, refreshing, children, scrollRef }) {
+export function PullRefresh({ onRefresh, refreshing, children, scrollRef, }) {
     const [pull, setPull] = React.useState(0);
     const live = React.useRef(0);
     const THRESHOLD = 64;
@@ -160,7 +204,7 @@ export function PullRefresh({ onRefresh, refreshing, children, scrollRef }) {
         axis: 'y',
         lock: 'none',
         preventDefaultWhenLocked: false,
-        canStart: () => Boolean(scrollRef.current) && scrollRef.current.scrollTop <= 0 && !refreshing,
+        canStart: () => (scrollRef.current?.scrollTop ?? 1) <= 0 && !refreshing,
         onDrag: ({ dy }) => {
             const next = dy <= 0 ? 0 : Math.min(96, dy * 0.5);
             live.current = next;
@@ -173,13 +217,19 @@ export function PullRefresh({ onRefresh, refreshing, children, scrollRef }) {
             setPull(0);
         },
         // 放弃：收起下拉区，**绝不触发刷新**（用户并没有完成这次下拉，那一下属于别的手势）。
-        onCancel: () => { live.current = 0; setPull(0); },
+        onCancel: () => {
+            live.current = 0;
+            setPull(0);
+        },
     });
     return (_jsxs("div", { ref: scrollRef, className: "news-scroll", ...handlers, children: [_jsx("div", { style: {
                     height: refreshing ? 40 : pull,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     transition: dragging ? 'none' : 'height 200ms ease',
-                    overflow: 'hidden', color: C.muted,
+                    overflow: 'hidden',
+                    color: C.muted,
                 }, children: refreshing || pull > 8 ? _jsx(Spinner, { size: 18, color: C.brand }) : null }), children] }));
 }
 // MARK: - 增量渲染
@@ -190,7 +240,9 @@ export function PullRefresh({ onRefresh, refreshing, children, scrollRef }) {
 export function useIncremental(items, step = 30) {
     const [limit, setLimit] = React.useState(step);
     const sentinel = React.useRef(null);
-    React.useEffect(() => { setLimit(step); }, [items, step]);
+    React.useEffect(() => {
+        setLimit(step);
+    }, [items, step]);
     React.useEffect(() => {
         const node = sentinel.current;
         if (!node || typeof IntersectionObserver === 'undefined')

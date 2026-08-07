@@ -1,6 +1,6 @@
-import { bridge } from './bridge';
-import type { JSONObject } from './json';
-import { AiboxError } from './errors';
+import { bridge } from './bridge'
+import type { JSONObject } from './json'
+import { AiboxError } from './errors'
 
 /**
  * `aibox.db` 的类型化封装 —— 存在的理由是**一个已经复制了两遍的静默截断 bug**。
@@ -28,38 +28,35 @@ import { AiboxError } from './errors';
  * `aggregate()` 覆盖。所以上限保留，分页由 SDK 兜住。
  */
 
-type DB = NonNullable<ReturnType<typeof bridge>>['db'];
+type DB = NonNullable<ReturnType<typeof bridge>>['db']
 
 /** 宿主 `query` 的单页硬上限。写死在这里是为了让分页步长与它一致——取小了白多跑几趟桥。 */
-const PAGE = 500;
+const PAGE = 500
 
 function requireDB(): NonNullable<DB> {
-  const host = bridge();
+  const host = bridge()
   if (!host?.db || typeof host.db.query !== 'function') {
-    throw new AiboxError(
-      'aibox/unavailable',
-      'aibox/unavailable: aibox.db is not available in this build.',
-    );
+    throw new AiboxError('aibox/unavailable', 'aibox/unavailable: aibox.db is not available in this build.')
   }
-  return host.db as NonNullable<DB>;
+  return host.db as NonNullable<DB>
 }
 
 /** `aibox.db` 在不在。用它决定要不要渲染依赖持久化的入口。 */
 export function databaseAvailable(): boolean {
-  const host = bridge();
-  return !!host?.db && typeof host.db.query === 'function';
+  const host = bridge()
+  return !!host?.db && typeof host.db.query === 'function'
 }
 
 export interface QueryAllOptions {
   /** 与 `query` 同义的筛选子句，支持 `$gte` / `$in` 等算子。 */
-  where?: JSONObject;
-  sortBy?: string;
-  descending?: boolean;
+  where?: JSONObject
+  sortBy?: string
+  descending?: boolean
   /**
    * 安全阀：最多取多少条。**默认不设**——不设时取到真正的表尾。
    * 设了它就等于接受「可能没取全」，所以调用方要么不设，要么自己处理截断。
    */
-  max?: number;
+  max?: number
 }
 
 /**
@@ -82,23 +79,23 @@ export async function queryAll<T extends object = JSONObject>(
   collection: string,
   options: QueryAllOptions = {},
 ): Promise<(T & { _id: string })[]> {
-  const db = requireDB();
-  const out: (T & { _id: string })[] = [];
-  const { where, sortBy, descending, max } = options;
+  const db = requireDB()
+  const out: (T & { _id: string })[] = []
+  const { where, sortBy, descending, max } = options
   for (let offset = 0; ; offset += PAGE) {
-    const request: Record<string, unknown> = { collection, limit: PAGE, offset };
-    if (where) request.where = where;
-    if (sortBy) request.sortBy = sortBy;
-    if (descending !== undefined) request.descending = descending;
-    const page = await db.query(request as Parameters<NonNullable<DB>['query']>[0]);
-    const rows = Array.isArray(page) ? (page as (T & { _id: string })[]) : [];
-    out.push(...rows);
-    if (max !== undefined && out.length >= max) return out.slice(0, max);
+    const request: Record<string, unknown> = { collection, limit: PAGE, offset }
+    if (where) request.where = where
+    if (sortBy) request.sortBy = sortBy
+    if (descending !== undefined) request.descending = descending
+    const page = await db.query(request as Parameters<NonNullable<DB>['query']>[0])
+    const rows = Array.isArray(page) ? (page as (T & { _id: string })[]) : []
+    out.push(...rows)
+    if (max !== undefined && out.length >= max) return out.slice(0, max)
     // 短页 = 到底了。**不能用 `rows.length === 0` 当终止条件**：那样每次都要多跑一趟空查询，
     // 而且当总数恰好是 PAGE 的整数倍时也一样要多跑一趟。
-    if (rows.length < PAGE) break;
+    if (rows.length < PAGE) break
   }
-  return out;
+  return out
 }
 
 /**
@@ -111,19 +108,19 @@ export async function queryAll<T extends object = JSONObject>(
  * 空数组是 no-op（返回 0），不会退化成「删掉整张表」——宿主侧的空 `where` 也会硬拒。
  */
 export async function removeMany(collection: string, ids: readonly string[]): Promise<number> {
-  const unique = [...new Set(ids.filter((id) => typeof id === 'string' && id.length > 0))];
-  if (unique.length === 0) return 0;
-  const db = requireDB();
+  const unique = [...new Set(ids.filter((id) => typeof id === 'string' && id.length > 0))]
+  if (unique.length === 0) return 0
+  const db = requireDB()
   if (typeof db.removeWhere !== 'function') {
     // 老宿主没有 removeWhere：退回逐条删，慢但正确。
-    let removed = 0;
+    let removed = 0
     for (const id of unique) {
-      if (await db.remove({ collection, id })) removed += 1;
+      if (await db.remove({ collection, id })) removed += 1
     }
-    return removed;
+    return removed
   }
   // 生成的类型对返回值是 `Promise<unknown>`（descriptor 的 resultSummary 是散文，不是机器类型），
   // 故在这里收口成 number 而不是把 unknown 漏给每个调用方。
-  const removed = await db.removeWhere({ collection, where: { _id: { $in: unique } } });
-  return typeof removed === 'number' ? removed : unique.length;
+  const removed = await db.removeWhere({ collection, where: { _id: { $in: unique } } })
+  return typeof removed === 'number' ? removed : unique.length
 }

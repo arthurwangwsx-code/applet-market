@@ -4,9 +4,11 @@
 // 返回 `{ found, value }` 或 `{ found: false, candidates: [...] }`。
 const SEPARATORS = ['/', '／', '>', '-', '·'];
 const hit = (value) => ({ found: true, value });
-const miss = (candidates) => ({ found: false, candidates: candidates ?? [] });
+const miss = (candidates = []) => ({ found: false, candidates });
 function lower(text) {
-    return String(text ?? '').trim().toLowerCase();
+    return String(text ?? '')
+        .trim()
+        .toLowerCase();
 }
 /**
  * 分类：
@@ -30,12 +32,12 @@ export function resolveCategory(store, raw, kind) {
             return hit(child);
     }
     const exact = pool.filter((row) => lower(row.name) === needle);
-    if (exact.length === 1)
+    if (exact.length === 1 && exact[0])
         return hit(exact[0]);
     if (exact.length > 1)
         return miss(exact.map((row) => store.categoryPath(row.id)));
     const fuzzy = pool.filter((row) => lower(row.name).includes(needle) || needle.includes(lower(row.name)));
-    if (fuzzy.length === 1)
+    if (fuzzy.length === 1 && fuzzy[0])
         return hit(fuzzy[0]);
     if (fuzzy.length > 1)
         return miss(fuzzy.map((row) => store.categoryPath(row.id)));
@@ -53,11 +55,26 @@ const KIND_WORDS = [
 ];
 // 中文品牌别名 → 英文名子串。
 const BRAND_ALIASES = [
-    [['支付宝', 'alipay', '蚂蚁'], ['alipay', '支付宝']],
-    [['微信', 'wechat', 'weixin'], ['wechat', 'weixin', '微信']],
-    [['云闪付', 'unionpay', '银联'], ['unionpay', '云闪付', '银联']],
-    [['paypal', '贝宝'], ['paypal', '贝宝']],
-    [['touch n go', 'touchngo', 'tng', '一触即通'], ['tng', 'touch']],
+    [
+        ['支付宝', 'alipay', '蚂蚁'],
+        ['alipay', '支付宝'],
+    ],
+    [
+        ['微信', 'wechat', 'weixin'],
+        ['wechat', 'weixin', '微信'],
+    ],
+    [
+        ['云闪付', 'unionpay', '银联'],
+        ['unionpay', '云闪付', '银联'],
+    ],
+    [
+        ['paypal', '贝宝'],
+        ['paypal', '贝宝'],
+    ],
+    [
+        ['touch n go', 'touchngo', 'tng', '一触即通'],
+        ['tng', 'touch'],
+    ],
 ];
 /** 账户：层层放宽（精确 → 种类词 → 品牌别名 → 模糊 → 币种收窄）。 */
 export function resolveAccount(store, raw, preferCurrency) {
@@ -66,11 +83,11 @@ export function resolveAccount(store, raw, preferCurrency) {
     if (needle.length === 0)
         return miss(pool.map((row) => row.name));
     const narrow = (rows) => {
-        if (rows.length === 1)
+        if (rows.length === 1 && rows[0])
             return hit(rows[0]);
         if (rows.length > 1 && preferCurrency) {
             const same = rows.filter((row) => row.currency === String(preferCurrency).toUpperCase());
-            if (same.length === 1)
+            if (same.length === 1 && same[0])
                 return hit(same[0]);
         }
         return rows.length > 1 ? miss(rows.map((row) => row.name)) : null;
@@ -106,12 +123,12 @@ export function resolveProject(store, raw) {
         return miss();
     const pool = store.projects.filter((row) => !row.isArchived);
     const exact = pool.filter((row) => lower(row.name) === needle);
-    if (exact.length === 1)
+    if (exact.length === 1 && exact[0])
         return hit(exact[0]);
     if (exact.length > 1)
         return miss(exact.map((row) => row.name));
     const fuzzy = pool.filter((row) => lower(row.name).includes(needle) || needle.includes(lower(row.name)));
-    if (fuzzy.length === 1)
+    if (fuzzy.length === 1 && fuzzy[0])
         return hit(fuzzy[0]);
     if (fuzzy.length > 1)
         return miss(fuzzy.map((row) => row.name));
@@ -125,7 +142,7 @@ export function resolveMember(store, projectID, raw) {
     if (needle.length === 0)
         return miss(pool.map((row) => row.name));
     const exact = pool.filter((row) => lower(row.name) === needle);
-    if (exact.length === 1)
+    if (exact.length === 1 && exact[0])
         return hit(exact[0]);
     if (ME_WORDS.includes(needle)) {
         const me = pool.find((row) => row.isMe);
@@ -133,7 +150,7 @@ export function resolveMember(store, projectID, raw) {
             return hit(me);
     }
     const fuzzy = pool.filter((row) => lower(row.name).includes(needle) || needle.includes(lower(row.name)));
-    if (fuzzy.length === 1)
+    if (fuzzy.length === 1 && fuzzy[0])
         return hit(fuzzy[0]);
     if (fuzzy.length > 1)
         return miss(fuzzy.map((row) => row.name));

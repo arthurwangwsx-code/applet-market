@@ -20,7 +20,7 @@ import { THEME_CSS, C, SPACE, formatBytes, formatSpeed, stateColor } from './com
 import { Button, Card, EmptyState, Notice, ProgressBar, SectionHeader, IconButton } from './components/primitives.js';
 import Icon from './components/Icon.js';
 import InspectSheet from './components/InspectSheet.js';
-import { capabilities, onEvent, onNamespaceEvent, queue, readClipboard, tap, toolAllowed, toolBlockReason, } from './lib/host.js';
+import { capabilities, onEvent, onNamespaceEvent, queue, readClipboard, tap, toolBlockReason, } from './lib/host.js';
 import { fetchVideo, inspectVideo, isLibraryDenied, libraryAction, registerActions, uiHooks } from './lib/actions.js';
 // 无头执行时页面不挂载任何组件——注册必须发生在模块求值期。
 registerActions();
@@ -65,7 +65,7 @@ function useJobs() {
      */
     const playJob = React.useCallback(async (job) => {
         const api = typeof window !== 'undefined' ? window.aibox : undefined;
-        const ref = (bytes[job.jobId] || {}).artifactRef;
+        const ref = bytes[job.jobId]?.artifactRef;
         if (api && api.video && ref) {
             try {
                 // 舞台是可选增强：开不出来（无头 / 这个构建没编播放器）也不该挡住播放。
@@ -92,7 +92,7 @@ function useJobs() {
         const map = {};
         for (const item of items) {
             const key = item.groupId || item.taskId;
-            const row = map[key] || { received: 0, total: 0, speed: 0, known: true, artifactRef: null };
+            const row = map[key] || { received: 0, total: 0, speed: 0, known: true };
             // 句柄留给播放用：完成的那条轨道就是可播的那个文件（DASH 双轨里取先完成的那条即可，
             // 宿主合轨后 outputPath 指向同一个成品）。
             if (!row.artifactRef && item.state === 'completed' && item.artifactRef)
@@ -117,13 +117,16 @@ function useJobs() {
             const pushed = await queue.subscribe();
             if (!alive)
                 return;
-            off = onEvent('download.progress', () => { refreshBytes(); });
+            off = onEvent('download.progress', () => {
+                refreshBytes();
+            });
             // job 状态机没有事件通道（`viddl_jobs` 是工具不是能力），所以状态仍要轮询；
             // 但**字节/速度走事件**，于是轮询周期可以放到 2.5s 而不牺牲进度条的顺滑。
             poll = setInterval(() => {
                 // 工具已被拒就停表：继续轮询只会每 2.5s 再打一条 console 错误，把真错误埋掉。
                 if (isLibraryDenied()) {
-                    clearInterval(poll);
+                    if (poll !== null)
+                        clearInterval(poll);
                     poll = null;
                     return;
                 }
@@ -144,12 +147,17 @@ function useJobs() {
     }, [refresh, refreshBytes]);
     return { jobs, bytes, loaded, refresh, denied, playJob };
 }
-function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onExport }) {
+function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onExport, }) {
     const done = DONE_STATES.includes(job.state);
     const failed = FAIL_STATES.includes(job.state);
     const active = !done && !failed;
-    const color = stateColor(job.state === 'downloading' || job.state === 'processing' ? 'running'
-        : done ? 'completed' : failed ? 'failed' : job.state);
+    const color = stateColor(job.state === 'downloading' || job.state === 'processing'
+        ? 'running'
+        : done
+            ? 'completed'
+            : failed
+                ? 'failed'
+                : job.state);
     const parts = [];
     if (detail && detail.received) {
         parts.push(detail.known && detail.total
@@ -167,17 +175,29 @@ function JobRow({ job, detail, onPause, onResume, onCancel, onRetry, onPlay, onE
     return (_jsxs("div", { "data-row-id": job.jobId, style: { padding: `${SPACE.s3}px ${SPACE.s4}px` }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3 }, children: [_jsx("div", { style: {
                             // `flex: '0 0 44px'` 不能省：只写 width 的话，flex 容器在标题长的行里会把它**压窄**，
                             // 于是每行的图标宽度和标题起点都不一样——真机上就是一列参差不齐的行（2026-08-05 实测）。
-                            flex: '0 0 44px', width: 44, height: 44, borderRadius: 8, background: C.track,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+                            flex: '0 0 44px',
+                            width: 44,
+                            height: 44,
+                            borderRadius: 8,
+                            background: C.track,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color,
                         }, children: _jsx(Icon, { name: done ? 'play.rectangle' : failed ? 'exclamationmark.circle' : 'arrow.down.circle', size: 20 }) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0 }, children: [_jsx("div", { style: {
-                                    fontSize: 15, fontWeight: 500,
-                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    fontSize: 15,
+                                    fontWeight: 500,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
                                 }, children: job.title }), _jsx("div", { style: {
-                                    fontSize: 12.5, color: failed ? C.failed : C.muted, marginTop: 2,
-                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }, children: parts.join(' · ') || job.state })] }), active && typeof job.fraction === 'number' ? (_jsxs("span", { style: { flexShrink: 0, fontSize: 12.5, color: C.muted, fontVariantNumeric: 'tabular-nums' }, children: [Math.round(job.fraction * 100), "%"] })) : null, job.state === 'downloading' ? _jsx(IconButton, { name: "pause", onClick: () => onPause(job), label: "\u6682\u505C" }) : null, job.state === 'paused' ? _jsx(IconButton, { name: "play", onClick: () => onResume(job), label: "\u7EE7\u7EED" }) : null, active ? _jsx(IconButton, { name: "xmark", onClick: () => onCancel(job), label: "\u53D6\u6D88" }) : null, failed ? _jsx(IconButton, { name: "arrow.clockwise", onClick: () => onRetry(job), label: "\u91CD\u8BD5" }) : null, done ? _jsx(IconButton, { name: "play", onClick: () => onPlay(job), label: "\u64AD\u653E" }) : null, done && job.outputName && /\.movpkg$/i.test(job.outputName)
-                        ? _jsx(IconButton, { name: "square.and.arrow.down", onClick: () => onExport(job), label: "\u5BFC\u51FA mp4" })
-                        : null] }), active ? (_jsx("div", { style: { marginTop: SPACE.s2, marginLeft: 44 + SPACE.s3 }, children: _jsx(ProgressBar, { fraction: job.fraction, color: color }) })) : null] }));
+                                    fontSize: 12.5,
+                                    color: failed ? C.failed : C.muted,
+                                    marginTop: 2,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }, children: parts.join(' · ') || job.state })] }), active && typeof job.fraction === 'number' ? (_jsxs("span", { style: { flexShrink: 0, fontSize: 12.5, color: C.muted, fontVariantNumeric: 'tabular-nums' }, children: [Math.round(job.fraction * 100), "%"] })) : null, job.state === 'downloading' ? _jsx(IconButton, { name: "pause", onClick: () => onPause(job), label: "\u6682\u505C" }) : null, job.state === 'paused' ? _jsx(IconButton, { name: "play", onClick: () => onResume(job), label: "\u7EE7\u7EED" }) : null, active ? _jsx(IconButton, { name: "xmark", onClick: () => onCancel(job), label: "\u53D6\u6D88" }) : null, failed ? _jsx(IconButton, { name: "arrow.clockwise", onClick: () => onRetry(job), label: "\u91CD\u8BD5" }) : null, done ? _jsx(IconButton, { name: "play", onClick: () => onPlay(job), label: "\u64AD\u653E" }) : null, done && job.outputName && /\.movpkg$/i.test(job.outputName) ? (_jsx(IconButton, { name: "square.and.arrow.down", onClick: () => onExport(job), label: "\u5BFC\u51FA mp4" })) : null] }), active ? (_jsx("div", { style: { marginTop: SPACE.s2, marginLeft: 44 + SPACE.s3 }, children: _jsx(ProgressBar, { fraction: job.fraction, color: color }) })) : null] }));
 }
 export default function App() {
     useThemeSetup();
@@ -198,11 +218,15 @@ export default function App() {
         });
     }, []);
     // 轮询侧探到 denied 也要把入口收掉——两条路径指向同一个事实。
-    React.useEffect(() => { if (denied)
-        setExtractorReady(false); }, [denied]);
+    React.useEffect(() => {
+        if (denied)
+            setExtractorReady(false);
+    }, [denied]);
     React.useEffect(() => {
         uiHooks.refresh = refresh;
-        return () => { uiHooks.refresh = null; };
+        return () => {
+            uiHooks.refresh = null;
+        };
     }, [refresh]);
     const done = jobs.filter((j) => DONE_STATES.includes(j.state));
     const running = jobs.filter((j) => !DONE_STATES.includes(j.state));
@@ -240,8 +264,11 @@ export default function App() {
                             setTab(state.selected);
                     }
                 }
-                catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
-                offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
+                catch (error) {
+                    /* 宿主没这能力：留给自绘 TabBar */
+                }
+                offs.push(onNamespaceEvent('tabs', 'changed', (payload) => {
+                    const state = payload;
                     if (!state)
                         return;
                     // `rendered` 会在挂载之后翻转（形态切换重发 changed），只判一次会永远多/少一条自绘条。
@@ -257,16 +284,24 @@ export default function App() {
                     if (!cancelled && state)
                         setShell((c) => ({ ...c, toolbarRendered: state.rendered !== false }));
                 }
-                catch (error) { /* 同上 */ }
-                offs.push(onNamespaceEvent('toolbar', 'invoke', (payload) => {
-                    if (payload && payload.id === 'add' && addRef.current)
+                catch (error) {
+                    /* 同上 */
+                }
+                offs.push(onNamespaceEvent('toolbar', 'invoke', (raw) => {
+                    const payload = raw;
+                    if (payload?.id === 'add' && addRef.current)
                         addRef.current();
                 }));
             }
-            offs.push(onEvent('lifecycle.foreground', () => { refresh(); }));
+            offs.push(onEvent('lifecycle.foreground', () => {
+                refresh();
+            }));
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, [refresh]);
     const runningCount = running.length;
     React.useEffect(() => {
@@ -281,28 +316,48 @@ export default function App() {
             api.toolbar.update({ items: { add: { hidden: !extractorReady } } }).catch(() => { });
         }
         if (shell.tabsRendered && api && api.tabs && typeof api.tabs.update === 'function') {
-            api.tabs.update({
+            api.tabs
+                .update({
                 items: { downloading: { badge: runningCount ? String(runningCount) : null } },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
     }, [tab, runningCount, extractorReady, shell.tabsRendered, shell.toolbarRendered]);
     return (_jsxs("div", { style: { minHeight: '100vh', paddingBottom: shell.tabsRendered ? 0 : 76 }, children: [!shell.toolbarRendered ? (_jsxs("div", { style: {
-                    display: 'flex', alignItems: 'center', gap: SPACE.s2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s2,
                     padding: `calc(${SPACE.s3}px + env(safe-area-inset-top)) ${SPACE.s4}px ${SPACE.s3}px`,
-                }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 700 }, children: tab === 'library' ? '资料库' : '下载中' }), _jsx("div", { style: { flex: '1 1 auto' } }), extractorReady
-                        ? _jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0" })
-                        : null] })) : null, _jsx(Notice, { text: notice && notice.text, tone: notice && notice.tone, onDismiss: () => setNotice(null) }), !extractorReady ? (_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(EmptyState, { icon: "exclamationmark.circle", title: "\u89E3\u6790\u80FD\u529B\u4E0D\u53EF\u7528", hint: blockHint || '视频解析工具当前不可用。' }) })) : null, _jsx("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s5}px` }, children: !loaded ? null : visible.length === 0 ? (extractorReady ? (_jsx(EmptyState, { icon: tab === 'library' ? 'film' : 'arrow.down.circle', title: tab === 'library' ? '资料库还是空的' : '没有进行中的下载', hint: tab === 'library'
+                }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 700 }, children: tab === 'library' ? '资料库' : '下载中' }), _jsx("div", { style: { flex: '1 1 auto' } }), extractorReady ? (_jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0" })) : null] })) : null, _jsx(Notice, { text: notice?.text, tone: notice?.tone, onDismiss: () => setNotice(null) }), !extractorReady ? (_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(EmptyState, { icon: "exclamationmark.circle", title: "\u89E3\u6790\u80FD\u529B\u4E0D\u53EF\u7528", hint: blockHint || '视频解析工具当前不可用。' }) })) : null, _jsx("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s5}px` }, children: !loaded ? null : visible.length === 0 ? (extractorReady ? (_jsx(EmptyState, { icon: tab === 'library' ? 'film' : 'arrow.down.circle', title: tab === 'library' ? '资料库还是空的' : '没有进行中的下载', hint: tab === 'library'
                         ? '粘贴一个视频页面地址，先看清有哪些画质，再决定下哪一个。'
-                        : '下载在后台继续，退出这个小应用也不会中断。', action: tab === 'library'
-                        ? _jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0\u89C6\u9891" })
-                        : null })) : null) : (_jsxs(_Fragment, { children: [_jsxs(SectionHeader, { children: [visible.length, " \u9879"] }), _jsx(Card, { padding: 0, children: visible.map((job, index) => (_jsx("div", { style: index ? { borderTop: `1px solid ${C.line}` } : undefined, children: _jsx(JobRow, { job: job, detail: bytes[job.jobId], onPause: (j) => act('pause', j.jobId), onResume: (j) => act('resume', j.jobId), onCancel: (j) => act('cancel', j.jobId), onRetry: (j) => act('retry', j.jobId), onPlay: (j) => { playJob(j).then((r) => { if (r && r.ok === false)
-                                        setNotice({ tone: 'error', text: r.text || '播放失败' }); }); }, onExport: (j) => act('export', j.jobId) }) }, job.jobId))) })] })) }), !shell.tabsRendered ? (_jsx("div", { style: {
-                    position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40,
-                    display: 'flex', borderTop: `1px solid ${C.line}`, background: C.surface,
+                        : '下载在后台继续，退出这个小应用也不会中断。', action: tab === 'library' ? (_jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0\u89C6\u9891" })) : null })) : null) : (_jsxs(_Fragment, { children: [_jsxs(SectionHeader, { children: [visible.length, " \u9879"] }), _jsx(Card, { padding: 0, children: visible.map((job, index) => (_jsx("div", { style: index ? { borderTop: `1px solid ${C.line}` } : undefined, children: _jsx(JobRow, { job: job, detail: bytes[job.jobId], onPause: (j) => act('pause', j.jobId), onResume: (j) => act('resume', j.jobId), onCancel: (j) => act('cancel', j.jobId), onRetry: (j) => act('retry', j.jobId), onPlay: (j) => {
+                                        playJob(j).then((r) => {
+                                            if (r && r.ok === false)
+                                                setNotice({ tone: 'error', text: r.text || '播放失败' });
+                                        });
+                                    }, onExport: (j) => act('export', j.jobId) }) }, job.jobId))) })] })) }), !shell.tabsRendered ? (_jsx("div", { style: {
+                    position: 'fixed',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 40,
+                    display: 'flex',
+                    borderTop: `1px solid ${C.line}`,
+                    background: C.surface,
                     paddingBottom: 'env(safe-area-inset-bottom)',
-                }, children: TABS.map((row) => (_jsxs("button", { type: "button", onClick: () => { setTab(row.id); tap('light'); }, style: {
-                        flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        gap: 2, padding: '8px 0 6px', background: 'none', border: 'none', cursor: 'pointer',
+                }, children: TABS.map((row) => (_jsxs("button", { type: "button", onClick: () => {
+                        setTab(row.id);
+                        tap('light');
+                    }, style: {
+                        flex: '1 1 0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                        padding: '8px 0 6px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
                         color: tab === row.id ? C.brand : C.muted,
                     }, children: [_jsx(Icon, { name: tab === row.id ? row.selectedIcon : row.icon, size: 22 }), _jsx("span", { style: { fontSize: 11 }, children: row.title })] }, row.id))) })) : null, _jsx(InspectSheet, { open: adding, onClose: () => setAdding(false), onInspect: (url) => inspectVideo({ url }), onDownload: startDownload, onPaste: capabilities.clipboard ? readClipboard : null })] }));
 }

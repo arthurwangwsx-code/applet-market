@@ -12,7 +12,7 @@ export function extractJobId(text) {
         return undefined;
     const anchored = String(text).match(/\[job:\s*([^\]]+)\]/);
     if (anchored)
-        return anchored[1].trim();
+        return anchored[1]?.trim();
     const labelled = String(text).match(/\bjobId[:\s]+([0-9a-fA-F-]{8,})/);
     return labelled ? labelled[1] : undefined;
 }
@@ -23,7 +23,8 @@ export async function inspectVideo({ url }) {
     if (!result.ok) {
         return { ok: false, error: result.error || result.text, text: result.text || '解析失败。' };
     }
-    const details = result.details && result.details.type === 'video_inspect' ? result.details : null;
+    const candidate = result.details;
+    const details = candidate?.type === 'video_inspect' ? candidate : null;
     return {
         ok: true,
         video: details
@@ -66,8 +67,13 @@ export async function fetchVideo({ url, formatId, audioOnly }) {
 /// `aibox/denied`——4 秒 20 条，把真正的错误全埋掉。这类「可选增强站在必需路径上」的形状
 /// 是横向缺陷模式之一。一旦被拒就熄火，直到调用方显式 `resetLibraryGate()`（授权变化时）。
 let libraryDenied = false;
-export function resetLibraryGate() { libraryDenied = false; preflight = null; }
-export function isLibraryDenied() { return libraryDenied; }
+export function resetLibraryGate() {
+    libraryDenied = false;
+    preflight = null;
+}
+export function isLibraryDenied() {
+    return libraryDenied;
+}
 /// 首调之前先问网关，而不是「调一次、被拒、再熄火」。
 ///
 /// 熔断闸只能拦住第二条之后：资料库挂载与首次刷新是并发的，两条请求都会抢在闸落下之前发出去，
@@ -75,12 +81,16 @@ export function isLibraryDenied() { return libraryDenied; }
 /// 问一次就能知道该不该发。**用同一个 promise 兜住并发首调**，否则 preflight 自己也会被调两次。
 let preflight = null;
 async function libraryAllowed() {
-    preflight ??= toolBlockReason('viddl_jobs').then((verdict) => {
-        if (!verdict.ok)
-            libraryDenied = true;
-        return verdict;
-    }).catch(() => ({ ok: true })); // 网关本身出错时不替它下结论，照旧走原来的「调了再说」
-    return preflight;
+    const pending = preflight ??
+        toolBlockReason('viddl_jobs')
+            .then((verdict) => {
+            if (!verdict.ok)
+                libraryDenied = true;
+            return verdict;
+        })
+            .catch(() => ({ ok: true, hint: '' })); // 网关本身出错时不替它下结论，照旧走原来的「调了再说」
+    preflight = pending;
+    return pending;
 }
 export async function libraryAction({ action, jobId } = {}) {
     const verb = action || 'list';
@@ -101,7 +111,14 @@ export async function libraryAction({ action, jobId } = {}) {
         const message = String(result.error || result.text || '');
         if (message.includes('aibox/denied') || message.includes('not granted'))
             libraryDenied = true;
-        return { ok: false, action: verb, denied: libraryDenied, error: result.error || result.text, jobs: [], text: result.text || '操作失败。' };
+        return {
+            ok: false,
+            action: verb,
+            denied: libraryDenied,
+            error: result.error || result.text,
+            jobs: [],
+            text: result.text || '操作失败。',
+        };
     }
     return { ok: true, action: verb, jobs: parseJobLines(result.text), text: result.text };
 }
@@ -109,7 +126,7 @@ export function registerActions() {
     const api = typeof window !== 'undefined' ? window.aibox : undefined;
     if (!api || !api.action || typeof api.action.register !== 'function')
         return;
-    api.action.register('inspect', inspectVideo);
-    api.action.register('fetch', fetchVideo);
-    api.action.register('library', libraryAction);
+    api.action.register('inspect', (input) => inspectVideo(input));
+    api.action.register('fetch', (input) => fetchVideo(input));
+    api.action.register('library', (input) => libraryAction((input ?? {})));
 }

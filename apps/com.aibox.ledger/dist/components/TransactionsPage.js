@@ -15,7 +15,12 @@ import { monthlyFlow } from '../lib/reporting.js';
 import { addMonths, monthKeyNow, monthStart } from '../lib/dates.js';
 import { money } from '../lib/money.js';
 import { dayExpenseTotal, dayHeaderTitle, entryAmount, entryConversion, entryGlyph, entrySubtitle, entryTitle, } from '../lib/display.js';
-const TONE = { ink: C.ink, muted: C.muted, income: C.income, expense: C.expense };
+const TONE = {
+    ink: C.ink,
+    muted: C.muted,
+    income: C.income,
+    expense: C.expense,
+};
 /** 本月摘要卡：支出（红）｜收入（绿）｜结余（ink，带正负号）。 */
 function SummaryCard({ store, t }) {
     const flow = monthlyFlow(store, monthKeyNow());
@@ -25,15 +30,24 @@ function SummaryCard({ store, t }) {
         { label: t('x.balance'), text: money(flow.net, store.baseCode, { signed: true }), color: C.ink },
     ];
     return (_jsxs(Card, { children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', marginBottom: SPACE.s3 }, children: [_jsx("span", { style: { fontSize: 12, color: C.muted }, children: t('tx.thisMonth') }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx("span", { "aria-label": t('tx.baseCurrency', store.baseCode), style: {
-                            fontSize: 11, fontWeight: 500, color: C.brand, background: fade(C.brand, 10),
-                            borderRadius: RADIUS.pill, padding: '4px 8px',
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: C.brand,
+                            background: fade(C.brand, 10),
+                            borderRadius: RADIUS.pill,
+                            padding: '4px 8px',
                         }, children: store.baseCode })] }), _jsx("div", { style: { display: 'flex', alignItems: 'center' }, children: columns.map((column, index) => (_jsxs(React.Fragment, { children: [index > 0 ? _jsx("div", { style: { width: 1, height: 32, background: C.line, flex: '0 0 auto' } }) : null, _jsxs("div", { style: {
-                                flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column',
-                                alignItems: 'center', gap: 4, padding: '0 4px',
+                                flex: '1 1 0',
+                                minWidth: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '0 4px',
                             }, children: [_jsx("span", { style: { fontSize: 12, color: C.muted }, children: column.label }), _jsx("span", { className: "lg-mono lg-clamp-1", style: { fontSize: 17, fontWeight: 500, color: column.color, maxWidth: '100%' }, children: column.text })] })] }, column.label))) })] }));
 }
 /** 一行流水。整行可点 → 打开编辑面板；左滑删除（仅 canMutate）。 */
-export function EntryRow({ store, txn, t, onOpen, onDelete, canMutate }) {
+export function EntryRow({ store, txn, t, onOpen, onDelete, canMutate, }) {
     const glyph = entryGlyph(store, txn);
     const amount = entryAmount(txn);
     const conversion = entryConversion(store, txn, t);
@@ -44,9 +58,9 @@ export function EntryRow({ store, txn, t, onOpen, onDelete, canMutate }) {
     return (_jsx(SwipeRow, { trailing: { label: t('x.delete'), icon: 'trash', destructive: true, fullSwipe: true, onAction: onDelete }, children: body }));
 }
 /** 一天一张卡（整组套 ledgerCard(padding: 0)，行间 Divider 左缩进 52）。 */
-function DayGroup({ store, group, t, locale, onOpen, onDelete, canMutate }) {
+function DayGroup({ store, group, t, locale, onOpen, onDelete, canMutate, }) {
     const total = dayExpenseTotal(store, group.rows);
-    return (_jsxs("div", { style: { marginBottom: SPACE.s4 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'baseline', padding: `0 4px ${SPACE.s2}px` }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted }, children: dayHeaderTitle(group.day, locale, t) }), _jsx("div", { style: { flex: '1 1 auto' } }), total ? _jsx("span", { className: "lg-mono", style: { fontSize: 12, color: C.muted }, children: total }) : null] }), _jsx(Card, { padding: 0, children: group.rows.map((txn, index) => (_jsxs(React.Fragment, { children: [index > 0 ? _jsx(Divider, { inset: 52 }) : null, _jsx(EntryRow, { store: store, txn: txn, t: t, locale: locale, canMutate: canMutate, onOpen: () => onOpen(txn), onDelete: () => onDelete(txn) })] }, txn.id))) })] }));
+    return (_jsxs("div", { style: { marginBottom: SPACE.s4 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'baseline', padding: `0 4px ${SPACE.s2}px` }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted }, children: dayHeaderTitle(group.day, locale, t) }), _jsx("div", { style: { flex: '1 1 auto' } }), total ? (_jsx("span", { className: "lg-mono", style: { fontSize: 12, color: C.muted }, children: total })) : null] }), _jsx(Card, { padding: 0, children: group.rows.map((txn, index) => (_jsxs(React.Fragment, { children: [index > 0 ? _jsx(Divider, { inset: 52 }) : null, _jsx(EntryRow, { store: store, txn: txn, t: t, canMutate: canMutate, onOpen: () => onOpen(txn), onDelete: () => onDelete(txn) })] }, txn.id))) })] }));
 }
 export default function TransactionsPage({ ctx }) {
     const { store, t, locale, query, actions, canMutate } = ctx;
@@ -86,14 +100,15 @@ export default function TransactionsPage({ ctx }) {
         return matchesSearch(store, txn, query);
     }), [loaded, typeFilter, accountFilter, projectFilter, query, store]);
     const groups = React.useMemo(() => groupByDay(filtered), [filtered]);
-    const hasFilter = typeFilter !== 'all' || accountFilter || projectFilter || String(query ?? '').trim().length > 0;
-    const accountName = accountFilter
-        ? (store.account(accountFilter)?.name ?? t('tx.allAccounts'))
-        : t('tx.allAccounts');
-    const projectName = projectFilter
-        ? (store.project(projectFilter)?.name ?? t('tx.allProjects'))
-        : t('tx.allProjects');
-    const typeLabel = { all: t('x.all'), expense: t('x.expense'), income: t('x.income'), transfer: t('x.transfer') }[typeFilter];
+    const hasFilter = typeFilter !== 'all' || !!accountFilter || !!projectFilter || query.trim().length > 0;
+    const accountName = accountFilter ? (store.account(accountFilter)?.name ?? t('tx.allAccounts')) : t('tx.allAccounts');
+    const projectName = projectFilter ? (store.project(projectFilter)?.name ?? t('tx.allProjects')) : t('tx.allProjects');
+    const typeLabel = {
+        all: t('x.all'),
+        expense: t('x.expense'),
+        income: t('x.income'),
+        transfer: t('x.transfer'),
+    };
     const clearFilters = () => {
         setTypeFilter('all');
         setAccountFilter(null);
@@ -101,33 +116,68 @@ export default function TransactionsPage({ ctx }) {
         actions.setQuery('');
     };
     const header = (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4, padding: SPACE.s4, paddingBottom: 0 }, children: [currentProject ? (_jsxs("div", { style: {
-                    display: 'flex', alignItems: 'center', gap: SPACE.s2, background: fade(C.brand, 10),
-                    borderRadius: RADIUS.pill, padding: '8px 12px',
-                }, children: [_jsx(Icon, { name: currentProject.systemImage || 'folder', size: 12, color: C.brand }), _jsx("span", { className: "lg-clamp-1", style: { fontSize: 12, color: C.ink, flex: '1 1 auto' }, children: t('tx.recordingInto', currentProject.name) }), canMutate ? (_jsx("button", { type: "button", className: "lg-btn", "aria-label": t('tx.clearCurrentProject'), onClick: () => actions.clearCurrentProject(), children: _jsx(Icon, { name: "xmark.circle.fill", size: 14, color: C.muted }) })) : null] })) : null, _jsx(SummaryCard, { store: store, t: t }), _jsxs("div", { className: "lg-chips", children: [_jsx(Chip, { label: typeLabel, selected: typeFilter !== 'all', onClick: () => setMenu('type') }), _jsx(Chip, { label: accountName, selected: !!accountFilter, onClick: () => setMenu('account') }), projects.length > 0 ? (_jsx(Chip, { label: projectName, selected: !!projectFilter, onClick: () => setMenu('project') })) : null, hasFilter ? (_jsxs("button", { type: "button", className: "lg-btn", onClick: clearFilters, style: { display: 'flex', alignItems: 'center', gap: 4, color: C.brand, fontSize: 12, flex: '0 0 auto', padding: '7px 4px' }, children: [_jsx(Icon, { name: "xmark.circle", size: 12, color: C.brand }), _jsx("span", { children: t('tx.clearFilters') })] })) : null] })] }));
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s2,
+                    background: fade(C.brand, 10),
+                    borderRadius: RADIUS.pill,
+                    padding: '8px 12px',
+                }, children: [_jsx(Icon, { name: currentProject.systemImage || 'folder', size: 12, color: C.brand }), _jsx("span", { className: "lg-clamp-1", style: { fontSize: 12, color: C.ink, flex: '1 1 auto' }, children: t('tx.recordingInto', currentProject.name) }), canMutate ? (_jsx("button", { type: "button", className: "lg-btn", "aria-label": t('tx.clearCurrentProject'), onClick: () => actions.clearCurrentProject(), children: _jsx(Icon, { name: "xmark.circle.fill", size: 14, color: C.muted }) })) : null] })) : null, _jsx(SummaryCard, { store: store, t: t }), _jsxs("div", { className: "lg-chips", children: [_jsx(Chip, { label: typeLabel[typeFilter], selected: typeFilter !== 'all', onClick: () => setMenu('type') }), _jsx(Chip, { label: accountName, selected: !!accountFilter, onClick: () => setMenu('account') }), projects.length > 0 ? (_jsx(Chip, { label: projectName, selected: !!projectFilter, onClick: () => setMenu('project') })) : null, hasFilter ? (_jsxs("button", { type: "button", className: "lg-btn", onClick: clearFilters, style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            color: C.brand,
+                            fontSize: 12,
+                            flex: '0 0 auto',
+                            padding: '7px 4px',
+                        }, children: [_jsx(Icon, { name: "xmark.circle", size: 12, color: C.brand }), _jsx("span", { children: t('tx.clearFilters') })] })) : null] })] }));
     const footer = (_jsx("div", { style: { padding: `0 ${SPACE.s4}px`, paddingBottom: 96 }, children: groups.length > 0 ? (_jsxs("button", { type: "button", className: "lg-btn", onClick: () => setVisibleMonths((count) => count + 3), style: {
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%',
-                height: 44, borderRadius: RADIUS.field, background: fade(C.brand, 10), color: C.brand, fontSize: 15,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                width: '100%',
+                height: 44,
+                borderRadius: RADIUS.field,
+                background: fade(C.brand, 10),
+                color: C.brand,
+                fontSize: 15,
             }, children: [_jsx(Icon, { name: "clock.arrow.circlepath", size: 15, color: C.brand }), _jsx("span", { children: t('tx.loadOlder') })] })) : null }));
-    const empty = loaded.length === 0
-        ? _jsx(EmptyState, { icon: "tray", title: t('tx.emptyTitle'), body: t('tx.emptyBody') })
-        : _jsx(EmptyState, { icon: "line.3.horizontal.decrease.circle", title: t('tx.noMatchTitle'), body: t('tx.noMatchBody') });
-    return (_jsxs(_Fragment, { children: [_jsx(VirtualList, { className: "lg-scroll", style: { flex: '1 1 auto' }, items: groups, keyExtractor: (group) => group.day, estimatedRowHeight: 140, restoreKey: "transactions", header: header, footer: groups.length === 0
-                    ? _jsx("div", { style: { padding: `${SPACE.s6}px ${SPACE.s4}px 96px` }, children: empty })
-                    : footer, renderRow: (group) => (_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(DayGroup, { store: store, group: group, t: t, locale: locale, canMutate: canMutate, onOpen: actions.editEntry, onDelete: actions.deleteEntry }) })) }), _jsx(Menu, { open: menu === 'type', onClose: () => setMenu(null), items: [
+    const empty = loaded.length === 0 ? (_jsx(EmptyState, { icon: "tray", title: t('tx.emptyTitle'), body: t('tx.emptyBody') })) : (_jsx(EmptyState, { icon: "line.3.horizontal.decrease.circle", title: t('tx.noMatchTitle'), body: t('tx.noMatchBody') }));
+    return (_jsxs(_Fragment, { children: [_jsx(VirtualList, { className: "lg-scroll", style: { flex: '1 1 auto' }, items: groups, keyExtractor: (group) => String(group.day), estimatedRowHeight: 140, restoreKey: "transactions", header: header, footer: groups.length === 0 ? _jsx("div", { style: { padding: `${SPACE.s6}px ${SPACE.s4}px 96px` }, children: empty }) : footer, renderRow: (group) => (_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(DayGroup, { store: store, group: group, t: t, locale: locale, canMutate: canMutate, onOpen: actions.editEntry, onDelete: actions.deleteEntry }) })) }), _jsx(Menu, { open: menu === 'type', onClose: () => setMenu(null), items: [
                     { id: 'all', label: t('x.all'), selected: typeFilter === 'all', onSelect: () => setTypeFilter('all') },
-                    { id: 'expense', label: t('x.expense'), selected: typeFilter === 'expense', onSelect: () => setTypeFilter('expense') },
-                    { id: 'income', label: t('x.income'), selected: typeFilter === 'income', onSelect: () => setTypeFilter('income') },
-                    { id: 'transfer', label: t('x.transfer'), selected: typeFilter === 'transfer', onSelect: () => setTypeFilter('transfer') },
+                    {
+                        id: 'expense',
+                        label: t('x.expense'),
+                        selected: typeFilter === 'expense',
+                        onSelect: () => setTypeFilter('expense'),
+                    },
+                    {
+                        id: 'income',
+                        label: t('x.income'),
+                        selected: typeFilter === 'income',
+                        onSelect: () => setTypeFilter('income'),
+                    },
+                    {
+                        id: 'transfer',
+                        label: t('x.transfer'),
+                        selected: typeFilter === 'transfer',
+                        onSelect: () => setTypeFilter('transfer'),
+                    },
                 ] }), _jsx(Menu, { open: menu === 'account', onClose: () => setMenu(null), items: [
                     { id: 'all', label: t('tx.allAccounts'), selected: !accountFilter, onSelect: () => setAccountFilter(null) },
                     ...accounts.map((account) => ({
-                        id: account.id, label: account.name, selected: accountFilter === account.id,
+                        id: account.id,
+                        label: account.name,
+                        selected: accountFilter === account.id,
                         onSelect: () => setAccountFilter(account.id),
                     })),
                 ] }), _jsx(Menu, { open: menu === 'project', onClose: () => setMenu(null), items: [
                     { id: 'all', label: t('tx.allProjects'), selected: !projectFilter, onSelect: () => setProjectFilter(null) },
                     ...projects.map((project) => ({
-                        id: project.id, label: project.name, selected: projectFilter === project.id,
+                        id: project.id,
+                        label: project.name,
+                        selected: projectFilter === project.id,
                         onSelect: () => setProjectFilter(project.id),
                     })),
                 ] })] }));

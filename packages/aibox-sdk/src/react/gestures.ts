@@ -28,7 +28,7 @@
  * 证据见 `packages/aibox-sdk/tests/gestures.test.mjs`。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
 // 0. 结构化事件类型
@@ -39,34 +39,34 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /** 一根手指。只用得到坐标。 */
 export interface TouchPointLike {
-  readonly clientX: number;
-  readonly clientY: number;
+  readonly clientX: number
+  readonly clientY: number
 }
 
 /** 触摸事件。`touches` 是「当前还在屏幕上的手指」，`touchend`/`touchcancel` 时可能为空。 */
 export interface TouchEventLike {
-  readonly touches: ArrayLike<TouchPointLike>;
-  readonly cancelable?: boolean;
-  preventDefault?(): void;
+  readonly touches: ArrayLike<TouchPointLike>
+  readonly cancelable?: boolean
+  preventDefault?(): void
 }
 
 /** 一次拖拽的采样。`dx`/`dy` 是相对**手势起点**的位移，不是相对上一帧。 */
 export interface DragSample {
-  readonly dx: number;
-  readonly dy: number;
+  readonly dx: number
+  readonly dy: number
   /** 方向锁是否已经落在主轴上。`onDrag` / `onEnd` 里恒为 true。 */
-  readonly locked: boolean;
+  readonly locked: boolean
 }
 
 /** 挂到元素上的四个处理器。**`onTouchCancel` 永远是独立的一个函数**，见文件头契约。 */
 export interface DragGestureHandlers {
-  onTouchStart(event: TouchEventLike): void;
-  onTouchMove(event: TouchEventLike): void;
-  onTouchEnd(event?: TouchEventLike): void;
-  onTouchCancel(event?: TouchEventLike): void;
+  onTouchStart(event: TouchEventLike): void
+  onTouchMove(event: TouchEventLike): void
+  onTouchEnd(event?: TouchEventLike): void
+  onTouchCancel(event?: TouchEventLike): void
 }
 
-export type DragAxis = 'x' | 'y';
+export type DragAxis = 'x' | 'y'
 
 /**
  * 方向锁模式。
@@ -76,47 +76,47 @@ export type DragAxis = 'x' | 'y';
  * · `'none'`：不判方向，`touchstart` 即视为锁定。给「只看主轴、不与横向竞争」的场景用
  *   （下拉刷新就是：它本来就只读 `dy`，加方向锁会改变既有观感）。
  */
-export type DragLockMode = 'axis' | 'none';
+export type DragLockMode = 'axis' | 'none'
 
 export interface DragGestureOptions {
   /** 主轴。 */
-  axis: DragAxis;
+  axis: DragAxis
   /** 方向锁模式，默认 `'axis'`。 */
-  lock?: DragLockMode;
+  lock?: DragLockMode
   /** 方向锁阈值（px），默认 6。`lock: 'none'` 时无意义。 */
-  lockSlop?: number;
+  lockSlop?: number
   /** 锁定成功后是否 `preventDefault`，默认 true。 */
-  preventDefaultWhenLocked?: boolean;
+  preventDefaultWhenLocked?: boolean
   /**
    * 只认单指，默认 true。
    *
    * 不加这条时，第二根手指落下会再发一次 `touchstart`，把手势的起点**重置成新坐标**，
    * 于是内容瞬移一段。资讯的分页器本来就有这条守卫，这里把它升成所有手势的默认。
    */
-  singleTouchOnly?: boolean;
+  singleTouchOnly?: boolean
   /** 手势能否开始（例：下拉刷新要求 `scrollTop === 0`；分页器要求不在切页动画中）。 */
-  canStart?(): boolean;
+  canStart?(): boolean
   /** 手势开始（尚未判方向）。用来抓基准值，例如「当前偏移量」。 */
-  onStart?(): void;
+  onStart?(): void
   /** 锁定成功后每次移动。 */
-  onDrag?(sample: DragSample): void;
+  onDrag?(sample: DragSample): void
   /** 手指正常抬起。**这是唯一允许提交的回调。** 方向锁落在副轴时不会触发。 */
-  onEnd?(sample: DragSample): void;
+  onEnd?(sample: DragSample): void
   /**
    * 触摸被抢走（`touchcancel`）：原生手势接管了这串触摸。
    *
    * 语义是**放弃**——回到手势开始前的样子。这里不该做任何「提交」：用户的意图是那个
    * 原生手势，不是你这个手势。
    */
-  onCancel?(sample: DragSample): void;
+  onCancel?(sample: DragSample): void
 }
 
 /** 手势核心：四个处理器 + 两个只读探针。 */
 export interface DragGestureCore extends DragGestureHandlers {
   /** 手势是否正在进行。 */
-  isActive(): boolean;
+  isActive(): boolean
   /** 方向锁是否已落在主轴上。 */
-  isLocked(): boolean;
+  isLocked(): boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -127,78 +127,78 @@ export interface DragGestureCore extends DragGestureHandlers {
  * 造一个轴锁拖拽手势。返回的四个处理器可以直接摊进 JSX，也可以 `addEventListener` 挂到真元素上。
  */
 export function createDragGesture(options: DragGestureOptions): DragGestureCore {
-  const lockMode: DragLockMode = options.lock ?? 'axis';
-  const slop = options.lockSlop ?? 6;
-  const preventWhenLocked = options.preventDefaultWhenLocked ?? true;
-  const singleTouch = options.singleTouchOnly ?? true;
+  const lockMode: DragLockMode = options.lock ?? 'axis'
+  const slop = options.lockSlop ?? 6
+  const preventWhenLocked = options.preventDefaultWhenLocked ?? true
+  const singleTouch = options.singleTouchOnly ?? true
 
-  let active = false;
-  let locked = false;
-  let resolved = false;
-  let startX = 0;
-  let startY = 0;
-  let dx = 0;
-  let dy = 0;
+  let active = false
+  let locked = false
+  let resolved = false
+  let startX = 0
+  let startY = 0
+  let dx = 0
+  let dy = 0
 
   /** 复位到「没有手势」。abort 与正常结束都要走它——状态复位从来不是可选项。 */
   function reset(): void {
-    active = false;
-    locked = false;
-    resolved = false;
-    startX = 0;
-    startY = 0;
-    dx = 0;
-    dy = 0;
+    active = false
+    locked = false
+    resolved = false
+    startX = 0
+    startY = 0
+    dx = 0
+    dy = 0
   }
 
   function sample(): DragSample {
-    return { dx, dy, locked };
+    return { dx, dy, locked }
   }
 
   function onTouchStart(event: TouchEventLike): void {
-    if (singleTouch && event.touches.length !== 1) return;
-    if (options.canStart && !options.canStart()) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-    active = true;
-    locked = lockMode === 'none';
-    resolved = lockMode === 'none';
-    startX = touch.clientX;
-    startY = touch.clientY;
-    dx = 0;
-    dy = 0;
-    options.onStart?.();
+    if (singleTouch && event.touches.length !== 1) return
+    if (options.canStart && !options.canStart()) return
+    const touch = event.touches[0]
+    if (!touch) return
+    active = true
+    locked = lockMode === 'none'
+    resolved = lockMode === 'none'
+    startX = touch.clientX
+    startY = touch.clientY
+    dx = 0
+    dy = 0
+    options.onStart?.()
   }
 
   function onTouchMove(event: TouchEventLike): void {
-    if (!active) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-    dx = touch.clientX - startX;
-    dy = touch.clientY - startY;
+    if (!active) return
+    const touch = event.touches[0]
+    if (!touch) return
+    dx = touch.clientX - startX
+    dy = touch.clientY - startY
 
     if (!resolved) {
       // 还没够 slop：**什么都不做，尤其不能 preventDefault**——这时候还分不清用户是想横扫
       // 还是想滚列表，抢下来就是把滚动废掉。
-      if (Math.abs(dx) < slop && Math.abs(dy) < slop) return;
-      resolved = true;
-      locked = options.axis === 'x' ? Math.abs(dx) > Math.abs(dy) : Math.abs(dy) > Math.abs(dx);
+      if (Math.abs(dx) < slop && Math.abs(dy) < slop) return
+      resolved = true
+      locked = options.axis === 'x' ? Math.abs(dx) > Math.abs(dy) : Math.abs(dy) > Math.abs(dx)
     }
-    if (!locked) return;
+    if (!locked) return
 
     // 与迁移前两个应用一致：只有 `cancelable` 为真才抢——非 passive 监听下它才是 true，
     // 对 passive 监听调 `preventDefault` 只会换来一条控制台告警，什么也拦不住。
-    if (preventWhenLocked && event.cancelable) event.preventDefault?.();
-    options.onDrag?.(sample());
+    if (preventWhenLocked && event.cancelable) event.preventDefault?.()
+    options.onDrag?.(sample())
   }
 
   function onTouchEnd(): void {
-    if (!active) return;
-    const finished = sample();
-    const wasLocked = locked;
-    reset();
+    if (!active) return
+    const finished = sample()
+    const wasLocked = locked
+    reset()
     // 方向锁落在副轴：这串触摸从来不属于本手势，自然也没有什么可提交的。
-    if (wasLocked) options.onEnd?.(finished);
+    if (wasLocked) options.onEnd?.(finished)
   }
 
   // ⚠️ **这个函数永远不能换成 `onTouchEnd`。** 它是本文件存在的理由：
@@ -209,10 +209,10 @@ export function createDragGesture(options: DragGestureOptions): DragGestureCore 
   // 顺序刻意是「先 reset 再回调」：即便调用方的 onCancel 抛了，状态机也已经是干净的——
   // 「状态永不复位」比「少一次回弹动画」严重得多。
   function onTouchCancel(): void {
-    if (!active) return;
-    const aborted = sample();
-    reset();
-    options.onCancel?.(aborted);
+    if (!active) return
+    const aborted = sample()
+    reset()
+    options.onCancel?.(aborted)
   }
 
   return {
@@ -222,7 +222,7 @@ export function createDragGesture(options: DragGestureOptions): DragGestureCore 
     onTouchCancel,
     isActive: () => active,
     isLocked: () => locked,
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -232,111 +232,113 @@ export function createDragGesture(options: DragGestureOptions): DragGestureCore 
 // 单独列出来是因为它不产生位移，套不进 `createDragGesture`。
 
 export interface LongPressOptions {
-  onLongPress(): void;
+  onLongPress(): void
   /** 轻点。触摸设备走 `touchend`，鼠标 / 辅助技术走 `click`。 */
-  onTap?(): void;
+  onTap?(): void
   /** 长按判定时长 ms，默认 480。 */
-  delayMs?: number;
+  delayMs?: number
   /** 手指走过多少 px 就不再算点击，默认 8。 */
-  moveSlop?: number;
+  moveSlop?: number
   /** 定时器。测试可注入手动时钟。 */
   timers?: {
-    set(run: () => void, ms: number): unknown;
-    clear(handle: unknown): void;
-  };
+    set(run: () => void, ms: number): unknown
+    clear(handle: unknown): void
+  }
 }
 
 export interface LongPressHandlers {
-  onTouchStart(event: TouchEventLike): void;
-  onTouchMove(event: TouchEventLike): void;
-  onTouchEnd(event?: TouchEventLike): void;
-  onTouchCancel(event?: TouchEventLike): void;
-  onContextMenu(event: { preventDefault?(): void }): void;
-  onClick(event?: unknown): void;
+  onTouchStart(event: TouchEventLike): void
+  onTouchMove(event: TouchEventLike): void
+  onTouchEnd(event?: TouchEventLike): void
+  onTouchCancel(event?: TouchEventLike): void
+  onContextMenu(event: { preventDefault?(): void }): void
+  onClick(event?: unknown): void
 }
 
 export interface LongPressCore extends LongPressHandlers {
   /** 卸载时调用：把还没触发的长按计时器掐掉。 */
-  dispose(): void;
+  dispose(): void
 }
 
 /** 造一个长按 / 点击手势。 */
 export function createLongPress(options: LongPressOptions): LongPressCore {
-  const delay = options.delayMs ?? 480;
-  const slop = options.moveSlop ?? 8;
+  const delay = options.delayMs ?? 480
+  const slop = options.moveSlop ?? 8
   const timers = options.timers ?? {
     set: (run: () => void, ms: number) => setTimeout(run, ms),
-    clear: (handle: unknown) => { clearTimeout(handle as ReturnType<typeof setTimeout>); },
-  };
+    clear: (handle: unknown) => {
+      clearTimeout(handle as ReturnType<typeof setTimeout>)
+    },
+  }
 
-  let handle: unknown = null;
-  let active = false;
-  let fired = false;
-  let moved = false;
-  let touched = false;
-  let x = 0;
-  let y = 0;
+  let handle: unknown = null
+  let active = false
+  let fired = false
+  let moved = false
+  let touched = false
+  let x = 0
+  let y = 0
 
   function clearTimer(): void {
     if (handle !== null) {
-      timers.clear(handle);
-      handle = null;
+      timers.clear(handle)
+      handle = null
     }
   }
 
   return {
     onTouchStart(event: TouchEventLike): void {
-      const touch = event.touches[0];
-      if (!touch) return;
-      x = touch.clientX;
-      y = touch.clientY;
-      active = true;
-      fired = false;
-      moved = false;
-      touched = true;
-      clearTimer();
+      const touch = event.touches[0]
+      if (!touch) return
+      x = touch.clientX
+      y = touch.clientY
+      active = true
+      fired = false
+      moved = false
+      touched = true
+      clearTimer()
       handle = timers.set(() => {
-        handle = null;
-        fired = true;
-        options.onLongPress();
-      }, delay);
+        handle = null
+        fired = true
+        options.onLongPress()
+      }, delay)
     },
     onTouchMove(event: TouchEventLike): void {
-      if (!active) return;
-      const touch = event.touches[0];
-      if (!touch) return;
+      if (!active) return
+      const touch = event.touches[0]
+      if (!touch) return
       // 手指走过 slop 就**不再是一次点击**：滚列表 / 横扫切页时手指恰好落在某一行上，
       // 松手时不能把它当成「点开这一项」。只清长按计时器是不够的，必须记住 moved。
       if (Math.abs(touch.clientX - x) > slop || Math.abs(touch.clientY - y) > slop) {
-        moved = true;
-        clearTimer();
+        moved = true
+        clearTimer()
       }
     },
     onTouchEnd(): void {
-      if (!active) return;
-      active = false;
-      clearTimer();
-      if (!fired && !moved) options.onTap?.();
+      if (!active) return
+      active = false
+      clearTimer()
+      if (!fired && !moved) options.onTap?.()
     },
     // 触摸被原生手势抢走：整串作废。**不能只清计时器**——那样虽然碰巧不会发 tap
     //（cancel 之后不会再来 touchend），但状态没复位，靠的是运气而不是契约。
     onTouchCancel(): void {
-      active = false;
-      fired = false;
-      moved = false;
-      clearTimer();
+      active = false
+      fired = false
+      moved = false
+      clearTimer()
     },
     onContextMenu(event: { preventDefault?(): void }): void {
-      event.preventDefault?.();
+      event.preventDefault?.()
     },
     onClick(): void {
       // 触摸设备上 tap 已由 `touchend` 处理（iOS 随后还会补一个合成 click，必须吞掉）；
       // 没有发生过触摸时才把 click 当成点击 —— 服务鼠标与辅助技术。
-      if (touched) return;
-      options.onTap?.();
+      if (touched) return
+      options.onTap?.()
     },
     dispose: clearTimer,
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -346,49 +348,49 @@ export function createLongPress(options: LongPressOptions): LongPressCore {
 /** 分页器对外可见的视觉状态。 */
 export interface SwipePagerView {
   /** 当前位移（px）。手指拖动中是实时位移，切页动画中是目标位移，静止时为 0。 */
-  offset: number;
+  offset: number
   /** 是否在切页 / 回弹动画中。 */
-  animating: boolean;
+  animating: boolean
   /** 是否有手指正在横向拖动。 */
-  dragging: boolean;
+  dragging: boolean
 }
 
-export type SwipeThreshold = number | ((width: number) => number);
+export type SwipeThreshold = number | ((width: number) => number)
 
 /** 默认翻页阈值：`max(48, 容器宽 × 0.22)`。与迁移前两个应用手搓的那份逐字一致。 */
 export function defaultSwipeThreshold(width: number): number {
-  return Math.max(48, width * 0.22);
+  return Math.max(48, width * 0.22)
 }
 
 export interface SwipePagerCoreOptions {
   /** 总页数（读取式：受控方随时可能改）。 */
-  count(): number;
+  count(): number
   /** 当前页码。 */
-  index(): number;
+  index(): number
   /** 容器宽度（px）。阈值与切页位移都按它算。 */
-  width(): number;
+  width(): number
   /** 真正翻页。**只有正常抬手过阈值、或 `slideTo` 才会走到这里。** */
-  commit(next: number): void;
+  commit(next: number): void
   /** 视觉状态变了。 */
-  render(view: SwipePagerView): void;
+  render(view: SwipePagerView): void
   /** 翻页阈值，默认 `defaultSwipeThreshold`。 */
-  threshold?: SwipeThreshold;
+  threshold?: SwipeThreshold
   /** 首 / 末页橡皮筋阻尼系数，默认 0.28（滑出去只走 28%，不会露出空白屏）。 */
-  rubberBand?: number;
+  rubberBand?: number
   /** 切页动画时长 ms，默认 220。 */
-  durationMs?: number;
+  durationMs?: number
   /** 方向锁阈值 px，默认 6。 */
-  lockSlop?: number;
+  lockSlop?: number
   /** 定时器。测试注入手动时钟，生产走 `setTimeout`。 */
-  schedule?(run: () => void, ms: number): void;
+  schedule?(run: () => void, ms: number): void
 }
 
 export interface SwipePagerCore extends DragGestureHandlers {
   /** 程序化切页（chip / 分段控件点一下）。越界与「切到当前页」都是空操作。 */
-  slideTo(next: number): void;
-  view(): SwipePagerView;
-  isActive(): boolean;
-  isAnimating(): boolean;
+  slideTo(next: number): void
+  view(): SwipePagerView
+  isActive(): boolean
+  isAnimating(): boolean
 }
 
 /**
@@ -398,26 +400,29 @@ export interface SwipePagerCore extends DragGestureHandlers {
  * （`useSwipePager` 会给出配套的 `trackStyle`）。
  */
 export function createSwipePager(options: SwipePagerCoreOptions): SwipePagerCore {
-  const rubber = options.rubberBand ?? 0.28;
-  const duration = options.durationMs ?? 220;
+  const rubber = options.rubberBand ?? 0.28
+  const duration = options.durationMs ?? 220
   const schedule =
-    options.schedule ?? ((run: () => void, ms: number) => { setTimeout(run, ms); });
+    options.schedule ??
+    ((run: () => void, ms: number) => {
+      setTimeout(run, ms)
+    })
 
-  let offset = 0;
-  let animating = false;
-  let dragging = false;
+  let offset = 0
+  let animating = false
+  let dragging = false
   /** 动画结束时要提交的页码。动画期间被打断的话它就是「还没落地的那一页」。 */
-  let pending: number | null = null;
+  let pending: number | null = null
   /** 手势开始那一刻的容器宽度：阈值按它算，避免动画中途宽度变化让阈值跳。 */
-  let gestureWidth = 1;
+  let gestureWidth = 1
 
   function publish(): void {
-    options.render({ offset, animating, dragging });
+    options.render({ offset, animating, dragging })
   }
 
   function thresholdFor(width: number): number {
-    const value = options.threshold ?? defaultSwipeThreshold;
-    return typeof value === 'function' ? value(width) : value;
+    const value = options.threshold ?? defaultSwipeThreshold
+    return typeof value === 'function' ? value(width) : value
   }
 
   /**
@@ -429,27 +434,27 @@ export function createSwipePager(options: SwipePagerCoreOptions): SwipePagerCore
    */
   function settle(next: number, direction: number): void {
     if (next === options.index()) {
-      animating = true;
-      offset = 0;
-      publish();
+      animating = true
+      offset = 0
+      publish()
       schedule(() => {
-        animating = false;
-        publish();
-      }, duration);
-      return;
+        animating = false
+        publish()
+      }, duration)
+      return
     }
-    pending = next;
-    animating = true;
-    offset = -direction * (options.width() || 1);
-    publish();
+    pending = next
+    animating = true
+    offset = -direction * (options.width() || 1)
+    publish()
     schedule(() => {
-      animating = false;
-      offset = 0;
-      const target = pending;
-      pending = null;
-      publish();
-      if (target !== null) options.commit(target);
-    }, duration);
+      animating = false
+      offset = 0
+      const target = pending
+      pending = null
+      publish()
+      if (target !== null) options.commit(target)
+    }, duration)
   }
 
   const gesture = createDragGesture({
@@ -457,35 +462,35 @@ export function createSwipePager(options: SwipePagerCoreOptions): SwipePagerCore
     lockSlop: options.lockSlop ?? 6,
     canStart: () => !animating,
     onStart: () => {
-      gestureWidth = options.width() || 1;
+      gestureWidth = options.width() || 1
     },
     onDrag: ({ dx }) => {
-      const index = options.index();
-      const count = options.count();
+      const index = options.index()
+      const count = options.count()
       // 首 / 末页做橡皮筋阻尼，避免滑出空白屏。
-      const atStart = index === 0 && dx > 0;
-      const atEnd = index === count - 1 && dx < 0;
-      offset = atStart || atEnd ? dx * rubber : dx;
-      dragging = true;
-      publish();
+      const atStart = index === 0 && dx > 0
+      const atEnd = index === count - 1 && dx < 0
+      offset = atStart || atEnd ? dx * rubber : dx
+      dragging = true
+      publish()
     },
     onEnd: () => {
-      const index = options.index();
-      const count = options.count();
-      const threshold = thresholdFor(gestureWidth);
-      dragging = false;
-      let next = index;
-      if (offset <= -threshold && index < count - 1) next = index + 1;
-      else if (offset >= threshold && index > 0) next = index - 1;
-      settle(next, next > index ? 1 : next < index ? -1 : 0);
+      const index = options.index()
+      const count = options.count()
+      const threshold = thresholdFor(gestureWidth)
+      dragging = false
+      let next = index
+      if (offset <= -threshold && index < count - 1) next = index + 1
+      else if (offset >= threshold && index > 0) next = index - 1
+      settle(next, next > index ? 1 : next < index ? -1 : 0)
     },
     // 放弃：回弹到本页。`settle(当前页, 0)` 走的就是上面那条回弹分支——不 commit。
     onCancel: ({ locked }) => {
-      dragging = false;
-      if (locked) settle(options.index(), 0);
-      else publish();
+      dragging = false
+      if (locked) settle(options.index(), 0)
+      else publish()
     },
-  });
+  })
 
   return {
     onTouchStart: gesture.onTouchStart,
@@ -493,14 +498,14 @@ export function createSwipePager(options: SwipePagerCoreOptions): SwipePagerCore
     onTouchEnd: gesture.onTouchEnd,
     onTouchCancel: gesture.onTouchCancel,
     slideTo(next: number): void {
-      const index = options.index();
-      if (next === index || next < 0 || next >= options.count()) return;
-      settle(next, next > index ? 1 : -1);
+      const index = options.index()
+      if (next === index || next < 0 || next >= options.count()) return
+      settle(next, next > index ? 1 : -1)
     },
     view: () => ({ offset, animating, dragging }),
     isActive: () => gesture.isActive(),
     isAnimating: () => animating,
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -509,9 +514,9 @@ export function createSwipePager(options: SwipePagerCoreOptions): SwipePagerCore
 
 export interface UseDragGestureResult {
   /** 摊进 JSX：`<div {...handlers} />`。 */
-  handlers: DragGestureHandlers;
+  handlers: DragGestureHandlers
   /** 是否有手指正在拖（已锁定到主轴）。用来在拖动中关掉 CSS transition。 */
-  dragging: boolean;
+  dragging: boolean
 }
 
 /**
@@ -522,11 +527,11 @@ export interface UseDragGestureResult {
  * 这几个**结构性**选项变化时才重建（它们在实践中都是字面量）。
  */
 export function useDragGesture(options: DragGestureOptions): UseDragGestureResult {
-  const latest = useRef(options);
-  latest.current = options;
-  const [dragging, setDragging] = useState(false);
+  const latest = useRef(options)
+  latest.current = options
+  const [dragging, setDragging] = useState(false)
 
-  const { axis, lock, lockSlop, preventDefaultWhenLocked, singleTouchOnly } = options;
+  const { axis, lock, lockSlop, preventDefaultWhenLocked, singleTouchOnly } = options
 
   const core = useMemo(
     () =>
@@ -539,20 +544,20 @@ export function useDragGesture(options: DragGestureOptions): UseDragGestureResul
         canStart: () => latest.current.canStart?.() ?? true,
         onStart: () => latest.current.onStart?.(),
         onDrag: (s) => {
-          setDragging(true);
-          latest.current.onDrag?.(s);
+          setDragging(true)
+          latest.current.onDrag?.(s)
         },
         onEnd: (s) => {
-          setDragging(false);
-          latest.current.onEnd?.(s);
+          setDragging(false)
+          latest.current.onEnd?.(s)
         },
         onCancel: (s) => {
-          setDragging(false);
-          latest.current.onCancel?.(s);
+          setDragging(false)
+          latest.current.onCancel?.(s)
         },
       }),
     [axis, lock, lockSlop, preventDefaultWhenLocked, singleTouchOnly],
-  );
+  )
 
   const handlers = useMemo<DragGestureHandlers>(
     () => ({
@@ -562,9 +567,9 @@ export function useDragGesture(options: DragGestureOptions): UseDragGestureResul
       onTouchCancel: core.onTouchCancel,
     }),
     [core],
-  );
+  )
 
-  return { handlers, dragging };
+  return { handlers, dragging }
 }
 
 /**
@@ -578,10 +583,10 @@ export function useDragGesture(options: DragGestureOptions): UseDragGestureResul
  * 以及卸载时掐掉还没触发的计时器（否则长按会在组件没了之后才回调）。
  */
 export function useLongPress(options: LongPressOptions): LongPressHandlers {
-  const latest = useRef(options);
-  latest.current = options;
+  const latest = useRef(options)
+  latest.current = options
 
-  const { delayMs, moveSlop } = options;
+  const { delayMs, moveSlop } = options
 
   const core = useMemo(
     () =>
@@ -592,9 +597,9 @@ export function useLongPress(options: LongPressOptions): LongPressHandlers {
         onTap: () => latest.current.onTap?.(),
       }),
     [delayMs, moveSlop],
-  );
+  )
 
-  useEffect(() => () => core.dispose(), [core]);
+  useEffect(() => () => core.dispose(), [core])
 
   return useMemo<LongPressHandlers>(
     () => ({
@@ -606,43 +611,43 @@ export function useLongPress(options: LongPressOptions): LongPressHandlers {
       onClick: core.onClick,
     }),
     [core],
-  );
+  )
 }
 
 export interface UseSwipePagerOptions {
   /** 总页数。 */
-  count: number;
+  count: number
   /** **受控**：外部持有页码。给了这个就应当同时给 `onIndexChange`。 */
-  index?: number;
+  index?: number
   /** **非受控**：初始页码，默认 0。 */
-  defaultIndex?: number;
+  defaultIndex?: number
   /** 翻页落地时回调。受控用法里由它写回外部 state。 */
-  onIndexChange?(index: number): void;
+  onIndexChange?(index: number): void
   /** 翻页阈值，默认 `max(48, 容器宽 × 0.22)`。 */
-  threshold?: SwipeThreshold;
+  threshold?: SwipeThreshold
   /** 首 / 末页橡皮筋阻尼，默认 0.28。 */
-  rubberBand?: number;
+  rubberBand?: number
   /** 切页动画时长 ms，默认 220。 */
-  durationMs?: number;
+  durationMs?: number
   /** 方向锁阈值 px，默认 6。 */
-  lockSlop?: number;
+  lockSlop?: number
 }
 
 export interface SwipePagerBinding {
   /** 当前页码（受控时等于传进来的 `index`）。 */
-  index: number;
-  offset: number;
-  animating: boolean;
-  dragging: boolean;
+  index: number
+  offset: number
+  animating: boolean
+  dragging: boolean
   /** 摊到滚动容器上：`<div {...pager.containerProps} />`。含量宽用的 `ref`。 */
-  containerProps: DragGestureHandlers & { ref(node: HTMLElement | null): void };
+  containerProps: DragGestureHandlers & { ref(node: HTMLElement | null): void }
   /**
    * 三屏轨道的行内样式（轨道宽 300%、每屏 `calc(100% / 3)`）。
    * 布局用**自身百分比**而不是写死 33.3333%：后者每屏差出的亚像素会随页码累积成可见错位。
    */
-  trackStyle: { transform: string; transition: string };
+  trackStyle: { transform: string; transition: string }
   /** 程序化切页。chip / 分段控件点击走它，才能和横扫共用同一条动画。 */
-  slideTo(next: number): void;
+  slideTo(next: number): void
 }
 
 /**
@@ -662,17 +667,17 @@ export interface SwipePagerBinding {
  * 方向锁与「cancel = 放弃」定死了，再挂一层就又是两份实现。
  */
 export function useSwipePager(options: UseSwipePagerOptions): SwipePagerBinding {
-  const controlled = options.index !== undefined;
-  const [internalIndex, setInternalIndex] = useState(options.defaultIndex ?? 0);
-  const index = controlled ? (options.index as number) : internalIndex;
+  const controlled = options.index !== undefined
+  const [internalIndex, setInternalIndex] = useState(options.defaultIndex ?? 0)
+  const index = controlled ? (options.index as number) : internalIndex
 
-  const [view, setView] = useState<SwipePagerView>({ offset: 0, animating: false, dragging: false });
-  const nodeRef = useRef<HTMLElement | null>(null);
+  const [view, setView] = useState<SwipePagerView>({ offset: 0, animating: false, dragging: false })
+  const nodeRef = useRef<HTMLElement | null>(null)
 
-  const latest = useRef({ ...options, controlled, index });
-  latest.current = { ...options, controlled, index };
+  const latest = useRef({ ...options, controlled, index })
+  latest.current = { ...options, controlled, index }
 
-  const { rubberBand, durationMs, lockSlop } = options;
+  const { rubberBand, durationMs, lockSlop } = options
 
   const core = useMemo(
     () =>
@@ -681,25 +686,25 @@ export function useSwipePager(options: UseSwipePagerOptions): SwipePagerBinding 
         index: () => latest.current.index,
         width: () => nodeRef.current?.clientWidth || 1,
         commit: (next) => {
-          if (!latest.current.controlled) setInternalIndex(next);
-          latest.current.onIndexChange?.(next);
+          if (!latest.current.controlled) setInternalIndex(next)
+          latest.current.onIndexChange?.(next)
         },
         render: setView,
         // 恒是函数，身份稳定：调用方传字面量还是内联箭头都不会让核心重建。
         threshold: (width) => {
-          const value = latest.current.threshold ?? defaultSwipeThreshold;
-          return typeof value === 'function' ? value(width) : value;
+          const value = latest.current.threshold ?? defaultSwipeThreshold
+          return typeof value === 'function' ? value(width) : value
         },
         rubberBand,
         durationMs,
         lockSlop,
       }),
     [rubberBand, durationMs, lockSlop],
-  );
+  )
 
   const ref = useCallback((node: HTMLElement | null) => {
-    nodeRef.current = node;
-  }, []);
+    nodeRef.current = node
+  }, [])
 
   const containerProps = useMemo(
     () => ({
@@ -710,16 +715,16 @@ export function useSwipePager(options: UseSwipePagerOptions): SwipePagerBinding 
       onTouchCancel: core.onTouchCancel,
     }),
     [core, ref],
-  );
+  )
 
-  const duration = durationMs ?? 220;
+  const duration = durationMs ?? 220
   const trackStyle = useMemo(
     () => ({
       transform: `translate3d(calc(-100% / 3 + ${view.offset}px), 0, 0)`,
       transition: view.animating ? `transform ${duration}ms cubic-bezier(0.42, 0, 0.58, 1)` : 'none',
     }),
     [view.offset, view.animating, duration],
-  );
+  )
 
   return {
     index,
@@ -729,5 +734,5 @@ export function useSwipePager(options: UseSwipePagerOptions): SwipePagerBinding 
     containerProps,
     trackStyle,
     slideTo: core.slideTo,
-  };
+  }
 }

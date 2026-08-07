@@ -1,4 +1,4 @@
-import { bridge, available } from './bridge';
+import { bridge, available } from './bridge'
 
 /**
  * 系统能力的薄封装：分享 / 打开链接 / 剪贴板 / 朗读 / 凭据会话。
@@ -18,9 +18,9 @@ import { bridge, available } from './bridge';
 
 /** 打开一个 http/https/mailto/tel 链接。带超时封顶；不可用、超时、被拒一律 false。 */
 export async function openURL(url: string, options: { timeoutMs?: number } = {}): Promise<boolean> {
-  const host = bridge();
-  if (!host?.open?.url) return false;
-  return withTimeout(host.open.url({ url }), options.timeoutMs ?? 12_000, false);
+  const host = bridge()
+  if (!host?.open?.url) return false
+  return withTimeout(host.open.url({ url }), options.timeoutMs ?? 12_000, false)
 }
 
 /** 在宿主浏览器里打开（可选呈现形态）。不可用时自动退回 `openURL`。 */
@@ -28,95 +28,95 @@ export async function openInBrowser(
   url: string,
   options: { mode?: 'inApp' | 'system' | 'external'; timeoutMs?: number } = {},
 ): Promise<boolean> {
-  const host = bridge();
-  if (!host?.browser?.open) return openURL(url, options);
+  const host = bridge()
+  if (!host?.browser?.open) return openURL(url, options)
   const result = await withTimeout(
     host.browser.open(options.mode ? { url, mode: options.mode } : { url }),
     options.timeoutMs ?? 12_000,
     null,
-  );
-  return result ? result.opened : false;
+  )
+  return result ? result.opened : false
 }
 
 /** 以阅读器形态打开一篇文章；宿主没有阅读器时退回普通打开。 */
 export async function openArticle(
   article: {
-    url: string;
-    title?: string;
-    content?: string;
-    excerpt?: string;
-    siteName?: string;
-    publishedAt?: string;
+    url: string
+    title?: string
+    content?: string
+    excerpt?: string
+    siteName?: string
+    publishedAt?: string
   },
   options: { timeoutMs?: number } = {},
 ): Promise<boolean> {
-  const host = bridge();
-  if (!host?.browser?.openArticle) return openInBrowser(article.url, options);
-  const result = await withTimeout(host.browser.openArticle(article), options.timeoutMs ?? 12_000, null);
-  return result ? result.opened : false;
+  const host = bridge()
+  if (!host?.browser?.openArticle) return openInBrowser(article.url, options)
+  const result = await withTimeout(host.browser.openArticle(article), options.timeoutMs ?? 12_000, null)
+  return result ? result.opened : false
 }
 
 /** 宿主浏览器能力探测：能不能内嵌打开、有没有阅读器。用于决定渲染哪个入口。 */
 export async function browserAvailability(): Promise<{
-  modes: Array<'inApp' | 'system' | 'external'>;
-  reader: boolean;
+  modes: Array<'inApp' | 'system' | 'external'>
+  reader: boolean
 }> {
-  const host = bridge();
-  if (!host?.browser?.availability) return { modes: [], reader: false };
+  const host = bridge()
+  if (!host?.browser?.availability) return { modes: [], reader: false }
   try {
-    return await host.browser.availability();
+    return await host.browser.availability()
   } catch {
-    return { modes: [], reader: false };
+    return { modes: [], reader: false }
   }
 }
 
 /** 分享一段文本（可带链接）。 */
 export async function shareText(text: string, url?: string): Promise<boolean> {
-  const host = bridge();
-  if (!host?.share?.text) return false;
+  const host = bridge()
+  if (!host?.share?.text) return false
   try {
-    return await host.share.text(url ? { text, url } : { text });
+    return await host.share.text(url ? { text, url } : { text })
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 导出一个**真实文件**到分享面板（CSV / JSON / OPML 导出走这条，不要用 shareText 塞正文）。 */
 export async function shareFile(input: {
-  filename: string;
-  content: string;
-  encoding?: 'utf8' | 'base64';
-  mimeType?: string;
+  filename: string
+  content: string
+  encoding?: 'utf8' | 'base64'
+  mimeType?: string
 }): Promise<boolean> {
-  const host = bridge();
-  if (!host?.share?.file) return false;
+  const host = bridge()
+  if (!host?.share?.file) return false
   try {
-    const result = await host.share.file(input as Parameters<typeof aibox.share.file>[0]);
-    return Boolean((result as { shared?: boolean })?.shared ?? true);
+    const result = await host.share.file(input as Parameters<typeof aibox.share.file>[0])
+    return Boolean((result as { shared?: boolean })?.shared ?? true)
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 读剪贴板文本（不可用或被拒回空串——调用方判空即可，不必 try/catch）。 */
 export async function readClipboard(): Promise<string> {
-  const host = bridge();
-  if (!host?.clipboard?.read) return '';
+  const host = bridge()
+  if (!host?.clipboard?.read) return ''
   try {
-    return await host.clipboard.read();
+    return await host.clipboard.read()
   } catch {
-    return '';
+    return ''
   }
 }
 
 /** 写剪贴板文本。 */
 export async function copyText(text: string): Promise<boolean> {
-  const host = bridge();
-  if (!host?.clipboard?.write) return false;
+  const host = bridge()
+  if (!host?.clipboard?.write) return false
   try {
-    return await host.clipboard.write({ text });
+    return await host.clipboard.write({ text })
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -125,59 +125,59 @@ export async function speak(
   text: string,
   options: { lang?: string; rate?: number; pitch?: number } = {},
 ): Promise<boolean> {
-  const host = bridge();
-  if (!host?.tts?.speak) return false;
+  const host = bridge()
+  if (!host?.tts?.speak) return false
   try {
-    return await host.tts.speak({ text, ...options });
+    return await host.tts.speak({ text, ...options })
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 停止朗读。 */
 export async function stopSpeaking(): Promise<boolean> {
-  const host = bridge();
-  if (!host?.tts?.stop) return false;
+  const host = bridge()
+  if (!host?.tts?.stop) return false
   try {
-    return await host.tts.stop();
+    return await host.tts.stop()
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 该站点是否已有登录会话（凭据存在 Keychain，applet 读不到明文，只能问「有没有」）。 */
 export async function hasSession(host_?: string): Promise<boolean> {
-  const host = bridge();
-  if (!host?.secrets?.hasSession) return false;
+  const host = bridge()
+  if (!host?.secrets?.hasSession) return false
   try {
-    const result = await host.secrets.hasSession(host_ ? { host: host_ } : undefined);
-    return result.hasSession;
+    const result = await host.secrets.hasSession(host_ ? { host: host_ } : undefined)
+    return result.hasSession
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 清除会话；返回清掉几条。 */
 export async function clearSession(host_?: string): Promise<number> {
-  const host = bridge();
-  if (!host?.secrets?.clearSession) return 0;
+  const host = bridge()
+  if (!host?.secrets?.clearSession) return 0
   try {
-    const result = await host.secrets.clearSession(host_ ? { host: host_ } : undefined);
-    return result.cleared;
+    const result = await host.secrets.clearSession(host_ ? { host: host_ } : undefined)
+    return result.cleared
   } catch {
-    return 0;
+    return 0
   }
 }
 
 /** Keychain 当前可写吗（模拟器未签名壳里可能不可写，此时别渲染「登录」入口）。 */
 export async function secretsWritable(): Promise<boolean> {
-  const host = bridge();
-  if (!host?.secrets?.availability) return false;
+  const host = bridge()
+  if (!host?.secrets?.availability) return false
   try {
-    const result = await host.secrets.availability();
-    return result.available;
+    const result = await host.secrets.availability()
+    return result.available
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -188,7 +188,7 @@ export const systemAvailable = {
   clipboard: () => available('clipboard'),
   tts: () => available('tts'),
   secrets: () => available('secrets'),
-};
+}
 
 /**
  * 给任意 promise 加超时封顶。超时后**不取消**底层调用（桥没有取消语义），只是不再等它。
@@ -196,28 +196,28 @@ export const systemAvailable = {
  */
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return new Promise<T>((resolve) => {
-    let settled = false;
+    let settled = false
     const timer = setTimeout(() => {
       if (!settled) {
-        settled = true;
-        resolve(fallback);
+        settled = true
+        resolve(fallback)
       }
-    }, ms);
+    }, ms)
     promise.then(
       (value) => {
         if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(value);
+          settled = true
+          clearTimeout(timer)
+          resolve(value)
         }
       },
       () => {
         if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(fallback);
+          settled = true
+          clearTimeout(timer)
+          resolve(fallback)
         }
       },
-    );
-  });
+    )
+  })
 }

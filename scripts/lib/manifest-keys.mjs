@@ -74,15 +74,22 @@ export const ROOT_STRUCT = 'AppletManifest'
  * 放这里会变成同一件事报两遍。
  */
 const HOST_OWNED_KEYS = new Set([
-  'createdAt', 'updatedAt',
-  'marketSourceID', 'marketAppID', 'marketVersion',
-  'lastOpenedAt', 'lastExecutedAt', 'pinned',
+  'createdAt',
+  'updatedAt',
+  'marketSourceID',
+  'marketAppID',
+  'marketVersion',
+  'lastOpenedAt',
+  'lastExecutedAt',
+  'pinned',
 ])
 
 /** 默认到宿主源码的相对路径；`AIBOX_HOST_SOURCE` 可覆盖。 */
 export function defaultHostSourceDir(marketRoot) {
-  return process.env.AIBOX_HOST_SOURCE
-    ?? path.join(marketRoot, '..', 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit')
+  return (
+    process.env.AIBOX_HOST_SOURCE ??
+    path.join(marketRoot, '..', 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit')
+  )
 }
 
 // —— Swift 解析 ——
@@ -96,8 +103,11 @@ const CASE_RE = /case\s+(.+)$/
 
 function structHeader(line) {
   const normalized = line.replace(/^\s+/, '')
-  if (!/^(public\s+)?(nonisolated\s+)?struct\s/.test(normalized)
-      && !/^public\s+nonisolated\s+struct\s/.test(normalized)) return null
+  if (
+    !/^(public\s+)?(nonisolated\s+)?struct\s/.test(normalized) &&
+    !/^public\s+nonisolated\s+struct\s/.test(normalized)
+  )
+    return null
   const match = /struct\s+([A-Za-z_][\w]*)\s*[:{]/.exec(normalized)
   return match ? match[1] : null
 }
@@ -155,17 +165,23 @@ function parseSwift(source, structs) {
     // CodingKeys 是权威键集，优先于属性名。
     if (/enum\s+CodingKeys\b/.test(line)) {
       current.codingKeys = current.codingKeys ?? new Map()
-      inCodingKeys = !line.includes('}')      // 单行形态 `{ case style, items }` 就地解析
+      inCodingKeys = !line.includes('}') // 单行形态 `{ case style, items }` 就地解析
       collectCases(line, current.codingKeys)
       depth += countBraces(line)
-      if (depth <= 0) { current = null; inCodingKeys = false }
+      if (depth <= 0) {
+        current = null
+        inCodingKeys = false
+      }
       continue
     }
     if (inCodingKeys) {
       collectCases(line, current.codingKeys)
       if (line.includes('}')) inCodingKeys = false
       depth += countBraces(line)
-      if (depth <= 0) { current = null; inCodingKeys = false }
+      if (depth <= 0) {
+        current = null
+        inCodingKeys = false
+      }
       continue
     }
 
@@ -178,7 +194,10 @@ function parseSwift(source, structs) {
     }
 
     depth += countBraces(line)
-    if (depth <= 0) { current = null; inCodingKeys = false }
+    if (depth <= 0) {
+      current = null
+      inCodingKeys = false
+    }
   }
 }
 
@@ -222,12 +241,12 @@ function parseEnums(source, into) {
   let depth = 0
   for (const line of lines) {
     if (!current) {
-      if (/^\s/.test(line)) continue                     // 非顶格 → 一定是嵌套枚举
+      if (/^\s/.test(line)) continue // 非顶格 → 一定是嵌套枚举
       const header = ENUM_HEADER_RE.exec(line)
       if (!header) continue
       current = { name: header[1], values: [] }
       depth = countBraces(line)
-      if (depth <= 0) current = null                     // 单行空枚举，忽略
+      if (depth <= 0) current = null // 单行空枚举，忽略
       continue
     }
     const match = CASE_RE.exec(line.trim())
@@ -326,17 +345,19 @@ export function checkManifestKeys(manifest, schema, rootStruct = ROOT_STRUCT) {
 /** 一个枚举字段的非法取值 → 可自愈错误（与宿主写入轮 `AppletSelfHealingEnum.rejection` 同款）。 */
 function enumRejection(at, typeName, raw, schema) {
   const valid = schema.enums.get(typeName) ?? []
-  let text = `manifest.${at} 的值 ${JSON.stringify(raw)} 不是合法的 ${typeName}`
-    + `（只接受：${valid.join(', ')}）—— 宿主是硬解码枚举，一个非法值会让**整份 manifest 解不出来**，`
-    + '表现为应用静默装不上，没有任何一处日志说得清原因'
+  let text =
+    `manifest.${at} 的值 ${JSON.stringify(raw)} 不是合法的 ${typeName}` +
+    `（只接受：${valid.join(', ')}）—— 宿主是硬解码枚举，一个非法值会让**整份 manifest 解不出来**，` +
+    '表现为应用静默装不上，没有任何一处日志说得清原因'
   if (typeName !== 'AppletActionEffect' || typeof raw !== 'string') return text
   const { equivalents, bridgeOnly } = schema.bridge
   if (!equivalents.has(raw) && !bridgeOnly.has(raw)) return text
   const tiers = [...equivalents.keys(), ...bridgeOnly].join(' / ')
-  text += `。\n    ${JSON.stringify(raw)} 是**桥能力的副作用档位**（read / ${tiers}`
-    + '——你在 `aibox.capabilityDescriptors()`、`.aibox/aibox.d.ts` 与 `applet_read action=capabilities`'
-    + ' 里看到的那一套），不是 manifest 的 action effect。两套词汇只共有 `read`，'
-    + '所以写 `read` 会成功、看起来像同一套'
+  text +=
+    `。\n    ${JSON.stringify(raw)} 是**桥能力的副作用档位**（read / ${tiers}` +
+    '——你在 `aibox.capabilityDescriptors()`、`.aibox/aibox.d.ts` 与 `applet_read action=capabilities`' +
+    ' 里看到的那一套），不是 manifest 的 action effect。两套词汇只共有 `read`，' +
+    '所以写 `read` 会成功、看起来像同一套'
   text += equivalents.has(raw)
     ? `。manifest 侧应写 \`${equivalents.get(raw)}\`。`
     : '。它在 manifest 侧没有对应词，按这个 action 真正做的事挑一个。'
@@ -345,15 +366,16 @@ function enumRejection(at, typeName, raw, schema) {
 
 function walk(value, typeName, prefix, schema, errors, warnings, isRoot) {
   const entry = schema.structs.get(typeName)
-  if (!entry) return                    // 未知类型（基础类型 / 别处定义）→ 无从校验，放过
+  if (!entry) return // 未知类型（基础类型 / 别处定义）→ 无从校验，放过
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return
 
   for (const [key, child] of Object.entries(value)) {
     const at = prefix ? `${prefix}.${key}` : key
     if (!entry.keys.has(key)) {
       errors.push(
-        `manifest.${at} 不是宿主认识的键（${typeName} 只接受：${[...entry.keys].sort().join(', ')}）`
-        + ' —— 合成 Codable 会静默忽略它，声明不会生效')
+        `manifest.${at} 不是宿主认识的键（${typeName} 只接受：${[...entry.keys].sort().join(', ')}）` +
+          ' —— 合成 Codable 会静默忽略它，声明不会生效',
+      )
       continue
     }
     if (isRoot && HOST_OWNED_KEYS.has(key)) {

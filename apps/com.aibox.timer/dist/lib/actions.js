@@ -1,4 +1,4 @@
-import { registerActions } from '../lib/aibox-sdk.js';
+import { registerActions } from 'aibox/sdk';
 import { appendHistory, durationFrom, formatDuration, loadRunning, newSessionID, remainingSeconds, saveRunning, } from './timer.js';
 /**
  * manifest 声明的三个 action 的实现。
@@ -17,9 +17,7 @@ export function registerAppletActions(onChange) {
     registerActions({
         async start(input) {
             const seconds = durationFrom(input);
-            const label = typeof input.label === 'string' && input.label.trim() !== ''
-                ? input.label.trim()
-                : '专注';
+            const label = typeof input.label === 'string' && input.label.trim() !== '' ? input.label.trim() : '专注';
             await saveRunning({ label, plannedSeconds: seconds, startedAt: Date.now() });
             onChange();
             return {
@@ -39,9 +37,7 @@ export function registerAppletActions(onChange) {
                 running: left > 0,
                 remainingSeconds: left,
                 label: running.label,
-                text: left > 0
-                    ? `${running.label} 还剩 ${formatDuration(left)}`
-                    : `${running.label} 已经到点了。`,
+                text: left > 0 ? `${running.label} 还剩 ${formatDuration(left)}` : `${running.label} 已经到点了。`,
             };
         },
         async stop(input) {

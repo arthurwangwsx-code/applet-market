@@ -1,0 +1,55 @@
+// 语言：跟随宿主有效 UI 语言（documentStart 就写好的 window.__aiboxEnvironment），
+// 并监听 aibox.events 的 environment.localeChanged 重渲染（不重载 WebView）。
+//
+// 记账多一条纪律：**首启种子分类/账户名按当时的 App 内语言物化，之后永不回灌**，
+// 所以 open() 前必须先拿到正确的 locale（见 app.jsx 的启动顺序）。
+
+import { STRINGS } from './strings.js'
+import type { Translate } from '../types.js'
+
+type Locale = 'en' | 'zh-Hans'
+const TABLES = STRINGS as Record<Locale, Record<string, string>>
+
+export function normalizeLocale(locale: unknown): Locale {
+  const raw = String(locale || 'en').toLowerCase()
+  return raw.startsWith('zh') ? 'zh-Hans' : 'en'
+}
+
+export function currentLocale(): Locale {
+  const env = typeof window !== 'undefined' ? window.__aiboxEnvironment : null
+  return normalizeLocale(env && (env.locale || env.language))
+}
+
+export function onLocaleChanged(handler: (locale: Locale) => void): () => void {
+  const bus = typeof window !== 'undefined' && window.aibox && window.aibox.events
+  if (!bus || typeof bus.on !== 'function') return () => {}
+  return bus.on<{ locale?: string; language?: string }>('environment.localeChanged', (payload) => {
+    handler(normalizeLocale(payload && (payload.locale || payload.language)))
+  })
+}
+
+/** 取一条文案。缺键回落 en，再回落键名本身（漏键会显形，不会渲染成空白）。 */
+export function translate(locale: Locale, key: string): string {
+  const table = TABLES[locale] || TABLES.en
+  if (table[key] !== undefined) return table[key]
+  if (TABLES.en[key] !== undefined) return TABLES.en[key]
+  return key
+}
+
+export function fmt(template: string, ...args: Array<string | number>): string {
+  return String(template).replace(/\{(\d+)\}/g, (whole, index) => {
+    const value = args[Number(index)]
+    return value === undefined || value === null ? whole : String(value)
+  })
+}
+
+export function makeT(locale: Locale): Translate {
+  return (key: string, ...args: Array<string | number>) => {
+    const value = translate(locale, key)
+    return args.length > 0 ? fmt(value, ...args) : value
+  }
+}
+
+export function bcp47(locale: string): string {
+  return locale === 'zh-Hans' ? 'zh-CN' : 'en-US'
+}

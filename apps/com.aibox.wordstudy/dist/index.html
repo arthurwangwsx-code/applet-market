@@ -14,7 +14,9 @@
       "react/jsx-runtime": "applet://localhost/runtime/react.mjs",
       "chart.js": "applet://localhost/runtime/chart.mjs",
       "antd-mobile": "applet://localhost/runtime/antd-mobile.mjs",
-      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs"
+      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs",
+      "aibox/sdk": "applet://localhost/runtime/aibox-sdk.mjs",
+      "aibox/sdk/react": "applet://localhost/runtime/aibox-sdk.mjs"
     }
   }
   </script>
@@ -51,7 +53,22 @@
   <script type="module">
     import { createElement, StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
+    var sharedSDKReady = false;
     try {
+      // 共享 SDK 先于业务模块预检。老宿主 / 资产缺失时在这里给出可见、可捕获的兼容页，
+      // 不让 app.js 的静态 import 直接把整页打成白屏。
+      const sdk = await import('aibox/sdk');
+      const compatibility = sdk.checkCompatibility({
+        minSDKVersion: '1.1.0',
+        runtimeModules: ['aibox/sdk']
+      });
+      if (!compatibility.compatible) {
+        const problem = compatibility.errors.map(function (item) {
+          return item.target + (item.required ? ' >= ' + item.required : '');
+        }).join(', ');
+        throw new Error('aibox/incompatible-host: ' + (problem || 'shared SDK runtime unavailable'));
+      }
+      sharedSDKReady = true;
       const mod = await import('./app.js');
       const root = document.getElementById('root');
       if (mod && mod.default && root && root.children.length === 0) {
@@ -59,7 +76,19 @@
       } else if (root && root.children.length === 0) {
         __showErr('app.js must `export default function App(){…}` (a React component). Nothing mounted.');
       }
-    } catch (e) { __showErr('Failed to run app.js: ' + ((e && e.stack) || e)); }
+    } catch (e) {
+      var message = String((e && e.message) || e || '');
+      // 通用动态 import 失败文案本身不含 URL；只有 SDK 预检阶段失败时才能据此归因宿主过旧。
+      // app.js 自己 404 或其业务依赖失败必须保留真实的运行错误，不能误导成「请升级容器」。
+      var sharedSDKMissing = !sharedSDKReady || /aibox-sdk.mjs|aibox/sdk|incompatible-host/i.test(message);
+      var locale = String((navigator && navigator.language) || document.documentElement.lang || '').toLowerCase();
+      var upgradeHint = locale.indexOf('zh') === 0
+        ? '这个小应用需要更新版本的 AiBox（宿主共享 aibox/sdk 运行时）。请升级 AiBox 后重新打开。'
+        : 'This applet needs a newer AiBox container (shared aibox/sdk runtime). Update AiBox and reopen it.';
+      __showErr(sharedSDKMissing
+        ? upgradeHint + '\n\n' + message
+        : 'Failed to run app.js: ' + ((e && e.stack) || e));
+    }
   </script>
 </body>
 </html>

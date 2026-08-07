@@ -4,20 +4,22 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 // **录音界面不是 Tab，是从列表页底部 FAB 弹出的 sheet**，而且「先真正起录成功，才弹面板」。
 // FAB 只在列表根页渲染；push 到详情后随根页一起退出视野。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocale, useScene, useTabs } from './lib/aibox-sdk-react.js';
+import { useLocale, useScene, useTabs } from 'aibox/sdk/react';
 import { ActionItemsSheet, AskSheet, CleanUpSheet } from './components/AiSheets.js';
-import { FilterSheet, MemoList, Toggle, applyFilter } from './components/MemoList.js';
-import { MemoDetail } from './components/MemoDetail.js';
+import { FilterSheet, MemoList, applyFilter } from './components/MemoList.js';
+import { LibraryTab, SettingsTab, TrashPage } from './components/AppPages.js';
+import { MemoDetail } from './components/MemoDetailView.js';
 import { RecordSheet } from './components/RecordSheet.js';
 import { Icon, PushPage } from './components/primitives.js';
 import { useSubpageStack } from 'aibox/ui';
 import { setNavigationTitle, useHostChrome, useHostMenu, useOverlay } from './lib/shell.js';
 import { registerMemoActions } from './lib/actions.js';
-import { clockString, defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug, byteSize } from './lib/format.js';
-import { capabilities, deleteClip, haptic, listClips, loadArtifacts, localeTag, newID, recordStart, recorderAvailability, saveClip, transcribeAvailability, transcribeClip, } from './lib/memos.js';
+import { defaultTitle, exportMarkdown, exportSRT, exportText, fileSlug } from './lib/format.js';
+import { capabilities, haptic, listClips, loadArtifacts, localeTag, newID, recordStart, recorderAvailability, saveClip, transcribeAvailability, transcribeClip, } from './lib/memos.js';
+import { actionSheet, confirmAlert, confirmDestructive, copyText, promptText, shareClipAudio, shareFile, shareText, } from './lib/dialogs.js';
 import { makeT } from './lib/strings.js';
 import { useMemoStore } from './lib/store.js';
-import { RADIUS, SPACE, alpha, brandTint, palette as makePalette } from './lib/theme.js';
+import { RADIUS, SPACE, alpha, palette as makePalette } from './lib/theme.js';
 import { DEFAULT_FILTER, QUALITY_PRESET, filterIsActive, } from './lib/types.js';
 /** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
 function routePath(route) {
@@ -213,7 +215,9 @@ export default function App() {
             setStarting(false);
         }
     }, [recorder, starting, store.settings.quality, t]);
-    beginRecordingRef.current = () => { void beginRecording(); };
+    beginRecordingRef.current = () => {
+        void beginRecording();
+    };
     /**
      * 一条录音的行级动作。**原生上下文菜单（`aibox.list.*`）与自绘 action sheet 共用这一份**——
      * 两条路各写一遍处理器，就是「同一条录音从不同入口长按看到不一样的行为」的来源。
@@ -325,7 +329,9 @@ export default function App() {
     // 用户 2026-08-04 真机反馈：「音频播放页面的标题和菜单并没有使用系统的，这个需要去对接一下。」
     // 菜单项在 manifest `scene.menu` 里冻结身份，这里只改**展示态**；点击经 `menu.invoke` 落到
     // 与自绘 sheet 同一份 `runDetailAction`。
-    const hostMenu = useHostMenu((id) => { void runDetailAction(id); });
+    const hostMenu = useHostMenu((id) => {
+        void runDetailAction(id);
+    });
     /**
      * 详情页把「菜单要按什么决定可见性」交上来。**必须持续上报，不能等用户点了 ⋯ 才知道** ——
      * 系统菜单是宿主画的，弹出那一刻不再经过页面，可见性得提前配好。
@@ -333,9 +339,7 @@ export default function App() {
     const publishDetailContext = useCallback((context) => {
         detailContext.current = context;
         setDetailArtifacts(context?.artifacts ?? null);
-        setDetailMenuState(context
-            ? { hasText: Boolean(context.text.trim()), hasSummary: Boolean(context.artifacts?.summaryText) }
-            : null);
+        setDetailMenuState(context ? { hasText: Boolean(context.text.trim()), hasSummary: Boolean(context.artifacts?.summaryText) } : null);
     }, []);
     useEffect(() => {
         if (!hostMenu.declared)
@@ -381,35 +385,82 @@ export default function App() {
     }, [t, publishDetailContext, runDetailAction]);
     const rootMemos = store.memos;
     // 2.0.0 只剩一个来源，「本机剪辑」这一段等同于「全部」，故智能列表只留 全部 / 收藏。
-    const scopedMemos = route?.kind === 'scoped'
-        ? route.scope === 'fav' ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos
-        : [];
+    const scopedMemos = route?.kind === 'scoped' ? (route.scope === 'fav' ? rootMemos.filter((memo) => memo.isFavourite) : rootMemos) : [];
     return (_jsxs("div", { style: {
-            position: 'relative', minHeight: '100dvh', background: palette.bg, color: palette.ink,
+            position: 'relative',
+            minHeight: '100dvh',
+            background: palette.bg,
+            color: palette.ink,
             fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-            display: 'flex', flexDirection: 'column',
+            display: 'flex',
+            flexDirection: 'column',
         }, children: [tab === 'record' ? (_jsxs(_Fragment, { children: [_jsxs("div", { style: { display: 'flex', gap: SPACE.s2, alignItems: 'center', padding: `${SPACE.s3}px ${SPACE.s4}px 0` }, children: [_jsx("input", { value: query, onChange: (event) => setQuery(event.target.value), placeholder: t('searchPlaceholder'), enterKeyHint: "search", style: {
-                                    flex: 1, borderRadius: 10, border: 'none', padding: '9px 12px', fontSize: 16,
-                                    background: palette.surface, color: palette.ink,
+                                    flex: 1,
+                                    borderRadius: 10,
+                                    border: 'none',
+                                    padding: '9px 12px',
+                                    fontSize: 16,
+                                    background: palette.surface,
+                                    color: palette.ink,
                                 } }), _jsx("button", { type: "button", onClick: () => setFilterOpen(true), style: {
-                                    border: 'none', background: 'transparent', cursor: 'pointer', padding: 8,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: 8,
                                     color: filterIsActive(filter) ? palette.accent : palette.muted,
-                                }, "aria-label": t('filter'), children: _jsx(Icon, { name: "list", size: 18 }) })] }), transcription && !transcription.engine ? (_jsxs("div", { style: { margin: `${SPACE.s3}px ${SPACE.s4}px 0`, background: alpha(palette.orange, 0.12), borderRadius: RADIUS.field, padding: SPACE.s3, fontSize: 12, color: palette.orange }, children: [_jsx(Icon, { name: "warning", size: 12 }), " ", t('transcribeUnavailable')] })) : null, _jsxs("main", { style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, children: [_jsx(MemoList, { palette: palette, t: t, dark: Boolean(dark), memos: rootMemos, query: query, filter: filter, scoped: false, busyIDs: busyIDs, onOpen: (memo) => subpages.push({ kind: 'detail', memo }), onMenu: openMenu, onAction: (memo, actionId) => { void runRowAction(memo, actionId); }, onClearFilter: () => setFilter(DEFAULT_FILTER) }), _jsx("div", { style: { height: 96 } })] }), recorder?.available && !overlay.rendered ? (_jsx("div", { style: {
-                            position: 'absolute', left: 0, right: 0, bottom: 0,
-                            display: 'flex', justifyContent: 'center',
+                                }, "aria-label": t('filter'), children: _jsx(Icon, { name: "list", size: 18 }) })] }), transcription && !transcription.engine ? (_jsxs("div", { style: {
+                            margin: `${SPACE.s3}px ${SPACE.s4}px 0`,
+                            background: alpha(palette.orange, 0.12),
+                            borderRadius: RADIUS.field,
+                            padding: SPACE.s3,
+                            fontSize: 12,
+                            color: palette.orange,
+                        }, children: [_jsx(Icon, { name: "warning", size: 12 }), " ", t('transcribeUnavailable')] })) : null, _jsxs("main", { style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, children: [_jsx(MemoList, { palette: palette, t: t, dark: Boolean(dark), memos: rootMemos, query: query, filter: filter, scoped: false, busyIDs: busyIDs, onOpen: (memo) => subpages.push({ kind: 'detail', memo }), onMenu: openMenu, onAction: (memo, actionId) => {
+                                    void runRowAction(memo, actionId);
+                                }, onClearFilter: () => setFilter(DEFAULT_FILTER) }), _jsx("div", { style: { height: 96 } })] }), recorder?.available && !overlay.rendered ? (_jsx("div", { style: {
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            justifyContent: 'center',
                             paddingBottom: `calc(${tabs.rendered ? 16 : 74}px + env(safe-area-inset-bottom))`,
                             pointerEvents: 'none',
                         }, children: _jsx("button", { type: "button", disabled: starting, onClick: () => void beginRecording(), style: {
-                                width: 48, height: 48, borderRadius: 24, border: 'none',
-                                cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.55 : 1,
-                                background: palette.red, color: '#FFFFFF', fontSize: 18, pointerEvents: 'auto',
+                                width: 48,
+                                height: 48,
+                                borderRadius: 24,
+                                border: 'none',
+                                cursor: starting ? 'default' : 'pointer',
+                                opacity: starting ? 0.55 : 1,
+                                background: palette.red,
+                                color: '#FFFFFF',
+                                fontSize: 18,
+                                pointerEvents: 'auto',
                                 boxShadow: '0 3px 6px rgba(0,0,0,0.18)',
-                            }, "aria-label": t('record'), children: _jsx(Icon, { name: "mic", size: 18 }) }) })) : null] })) : null, tab === 'library' ? (_jsx("main", { style: { flex: 1, overflowY: 'auto' }, children: _jsx(LibraryTab, { palette: palette, t: t, memos: rootMemos, trashCount: store.clips.filter((clip) => clip.isTrashed).length, onScope: (scope) => subpages.push({ kind: 'scoped', scope }), onTrash: () => subpages.push({ kind: 'trash' }) }) })) : null, tab === 'settings' ? (_jsx("main", { style: { flex: 1, overflowY: 'auto' }, children: _jsx(SettingsTab, { palette: palette, t: t, dark: Boolean(dark), settings: store.settings, onChange: store.updateSettings, clips: store.clips }) })) : null, !tabs.rendered ? (_jsx("nav", { style: { display: 'flex', borderTop: `1px solid ${palette.line}`, background: palette.surface, paddingBottom: 'env(safe-area-inset-bottom)' }, children: ['record', 'library', 'settings'].map((id) => (_jsxs("button", { type: "button", 
-                    // 与宿主底栏同一条语义：切 Tab = 整条子页栈作废（见上面 tabs.selected 那条 effect）。
-                    onClick: () => { setTab(id); subpages.reset(); }, style: {
-                        flex: 1, border: 'none', background: 'transparent', padding: '10px 0 12px', fontSize: 11,
-                        cursor: 'pointer', color: tab === id ? palette.accent : palette.muted,
-                    }, children: [_jsx("div", { style: { fontSize: 18, lineHeight: '22px' }, children: _jsx(Icon, { name: id === 'record' ? 'mic' : id === 'library' ? 'folder' : 'gear', size: 18 }) }), t(id === 'record' ? 'tabRecord' : id === 'library' ? 'tabFolders' : 'tabSettings')] }, id))) })) : null, route?.kind === 'detail' ? (_jsx(MemoDetail, { palette: palette, t: t, dark: Boolean(dark), memo: route.memo, settings: store.settings, onBack: subpages.back, onMenu: openDetailMenu, onContext: publishDetailContext, hostMenu: hostMenu.declared, onRefresh: store.refresh, registerPlayerCommand: (handler) => { playerCommandRef.current = handler; }, chrome: !hostChrome })) : null, route?.kind === 'scoped' ? (_jsx(PushPage, { palette: palette, title: routeTitle(route, t), onBack: subpages.back, chrome: !hostChrome, children: _jsx(MemoList, { palette: palette, t: t, dark: Boolean(dark), memos: scopedMemos, query: "", filter: DEFAULT_FILTER, scoped: true, busyIDs: busyIDs, regionId: "memos.scoped", onOpen: (memo) => subpages.push({ kind: 'detail', memo }), onMenu: openMenu, onAction: (memo, actionId) => { void runRowAction(memo, actionId); }, onClearFilter: () => undefined }) })) : null, route?.kind === 'trash' ? (_jsx(TrashPage, { palette: palette, t: t, store: store, onBack: subpages.back, chrome: !hostChrome })) : null, _jsx(FilterSheet, { palette: palette, t: t, open: filterOpen, filter: filter, onChange: setFilter, onClose: () => setFilterOpen(false) }), _jsx(RecordSheet, { palette: palette, t: t, open: recordOpen, title: draftTitle, onTitleChange: setDraftTitle, backgroundSupported: Boolean(recorder?.background), onCancel: () => setRecordOpen(false), onFinish: async (clip) => {
+                            }, "aria-label": t('record'), children: _jsx(Icon, { name: "mic", size: 18 }) }) })) : null] })) : null, tab === 'library' ? (_jsx("main", { style: { flex: 1, overflowY: 'auto' }, children: _jsx(LibraryTab, { palette: palette, t: t, memos: rootMemos, trashCount: store.clips.filter((clip) => clip.isTrashed).length, onScope: (scope) => subpages.push({ kind: 'scoped', scope }), onTrash: () => subpages.push({ kind: 'trash' }) }) })) : null, tab === 'settings' ? (_jsx("main", { style: { flex: 1, overflowY: 'auto' }, children: _jsx(SettingsTab, { palette: palette, t: t, dark: Boolean(dark), settings: store.settings, onChange: store.updateSettings, clips: store.clips }) })) : null, !tabs.rendered ? (_jsx("nav", { style: {
+                    display: 'flex',
+                    borderTop: `1px solid ${palette.line}`,
+                    background: palette.surface,
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                }, children: ['record', 'library', 'settings'].map((id) => (
+                // 与宿主底栏同一条语义：切 Tab = 整条子页栈作废（见上面 tabs.selected 那条 effect）。
+                _jsxs("button", { type: "button", onClick: () => {
+                        setTab(id);
+                        subpages.reset();
+                    }, style: {
+                        flex: 1,
+                        border: 'none',
+                        background: 'transparent',
+                        padding: '10px 0 12px',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        color: tab === id ? palette.accent : palette.muted,
+                    }, children: [_jsx("div", { style: { fontSize: 18, lineHeight: '22px' }, children: _jsx(Icon, { name: id === 'record' ? 'mic' : id === 'library' ? 'folder' : 'gear', size: 18 }) }), t(id === 'record' ? 'tabRecord' : id === 'library' ? 'tabFolders' : 'tabSettings')] }, id))) })) : null, route?.kind === 'detail' ? (_jsx(MemoDetail, { palette: palette, t: t, dark: Boolean(dark), memo: route.memo, settings: store.settings, onBack: subpages.back, onMenu: openDetailMenu, onContext: publishDetailContext, hostMenu: hostMenu.declared, onRefresh: store.refresh, registerPlayerCommand: (handler) => {
+                    playerCommandRef.current = handler;
+                }, chrome: !hostChrome })) : null, route?.kind === 'scoped' ? (_jsx(PushPage, { palette: palette, title: routeTitle(route, t), onBack: subpages.back, chrome: !hostChrome, children: _jsx(MemoList, { palette: palette, t: t, dark: Boolean(dark), memos: scopedMemos, query: "", filter: DEFAULT_FILTER, scoped: true, busyIDs: busyIDs, regionId: "memos.scoped", onOpen: (memo) => subpages.push({ kind: 'detail', memo }), onMenu: openMenu, onAction: (memo, actionId) => {
+                        void runRowAction(memo, actionId);
+                    }, onClearFilter: () => undefined }) })) : null, route?.kind === 'trash' ? (_jsx(TrashPage, { palette: palette, t: t, store: store, onBack: subpages.back, chrome: !hostChrome })) : null, _jsx(FilterSheet, { palette: palette, t: t, open: filterOpen, filter: filter, onChange: setFilter, onClose: () => setFilterOpen(false) }), _jsx(RecordSheet, { palette: palette, t: t, open: recordOpen, title: draftTitle, onTitleChange: setDraftTitle, backgroundSupported: Boolean(recorder?.background), onCancel: () => setRecordOpen(false), onFinish: async (clip) => {
                     setRecordOpen(false);
                     if (clip.discarded)
                         return;
@@ -448,83 +499,6 @@ function tabTitle(tab, t) {
         return t('tabSettings');
     return t('titleVoiceMemos');
 }
-// —— 文件夹 Tab（智能列表段可实现，用户文件夹段不行） ——
-function LibraryTab(props) {
-    const { palette, t } = props;
-    const rows = [
-        { id: 'all', icon: 'waveform', label: t('smartAllRecordings'), badge: props.memos.length },
-        { id: 'fav', icon: 'star.fill', label: t('smartFavourites'), badge: props.memos.filter((memo) => memo.isFavourite).length },
-    ];
-    return (_jsxs("div", { style: { padding: `${SPACE.s4}px 0` }, children: [rows.map((row) => (_jsxs("button", { type: "button", onClick: () => props.onScope(row.id), style: {
-                    display: 'flex', width: '100%', alignItems: 'center', gap: SPACE.s3, border: 'none',
-                    background: 'transparent', padding: `12px ${SPACE.s4}px`, cursor: 'pointer',
-                    borderBottom: `1px solid ${palette.line}`,
-                }, children: [_jsx(Icon, { name: row.icon, size: 16, color: palette.accent }), _jsx("span", { style: { flex: 1, textAlign: 'left', fontSize: 16, color: palette.ink }, children: row.label }), _jsx("span", { style: { fontSize: 14, color: palette.muted }, children: row.badge }), _jsx(Icon, { name: "chevron", size: 14, color: palette.muted })] }, row.id))), _jsxs("button", { type: "button", onClick: props.onTrash, style: {
-                    display: 'flex', width: '100%', alignItems: 'center', gap: SPACE.s3, border: 'none',
-                    background: 'transparent', padding: `12px ${SPACE.s4}px`, cursor: 'pointer',
-                    borderBottom: `1px solid ${palette.line}`, marginTop: SPACE.s4,
-                }, children: [_jsx(Icon, { name: "trash", size: 16, color: palette.accent }), _jsx("span", { style: { flex: 1, textAlign: 'left', fontSize: 16, color: palette.ink }, children: t('recentlyDeleted') }), _jsx("span", { style: { fontSize: 14, color: palette.muted }, children: props.trashCount }), _jsx(Icon, { name: "chevron", size: 14, color: palette.muted })] }), _jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px`, fontSize: 12, color: palette.muted }, children: t('foldersUnavailable') })] }));
-}
-// —— 最近删除（只覆盖本机剪辑：宿主没有 `memo_trash` 工具投影） ——
-function TrashPage(props) {
-    const { palette, t } = props;
-    const trashed = props.store.clips.filter((clip) => clip.isTrashed);
-    return (_jsx(PushPage, { palette: palette, title: t('recentlyDeleted'), onBack: props.onBack, chrome: props.chrome, trailing: trashed.length ? (_jsx("button", { type: "button", onClick: async () => {
-                const ok = await confirmDestructive(t('emptyTrashConfirmTitle'), t('emptyTrash'), t('cancel'));
-                if (!ok)
-                    return;
-                for (const clip of trashed)
-                    await deleteClip(clip.id);
-                props.store.refresh();
-            }, style: { border: 'none', background: 'transparent', color: palette.red, fontSize: 15, cursor: 'pointer', padding: 8 }, children: t('emptyTrash') })) : undefined, children: trashed.length === 0 ? (_jsxs("div", { style: { padding: `${SPACE.s8}px ${SPACE.s5}px`, textAlign: 'center' }, children: [_jsx(Icon, { name: "trash", size: 40, color: palette.muted }), _jsx("div", { style: { fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }, children: t('trashEmptyTitle') }), _jsx("div", { style: { fontSize: 14, color: palette.muted, marginTop: 6 }, children: t('trashEmptyBody') })] })) : (_jsxs(_Fragment, { children: [trashed.map((clip) => (_jsxs("div", { style: {
-                        display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: `10px ${SPACE.s4}px`,
-                        borderBottom: `1px solid ${palette.line}`,
-                    }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 16, fontWeight: 500, color: palette.ink }, children: clip.title }), _jsx("div", { style: { fontSize: 12, color: palette.muted }, children: clockString(clip.durationMs / 1000) })] }), _jsx("button", { type: "button", onClick: async () => {
-                                await saveClip({ ...clip, isTrashed: false, trashedAt: null });
-                                props.store.refresh();
-                            }, style: { border: 'none', background: 'transparent', color: palette.accent, fontSize: 18, cursor: 'pointer' }, "aria-label": t('restore'), children: _jsx(Icon, { name: "gobackward", size: 18 }) }), _jsx("button", { type: "button", onClick: async () => {
-                                const ok = await confirmDestructive(t('deleteConfirmTitle'), t('deletePermanently'), t('cancel'));
-                                if (!ok)
-                                    return;
-                                await deleteClip(clip.id);
-                                props.store.refresh();
-                            }, style: { border: 'none', background: 'transparent', color: palette.red, fontSize: 16, cursor: 'pointer' }, "aria-label": t('deletePermanently'), children: _jsx(Icon, { name: "trash", size: 16 }) })] }, clip.id))), _jsx("div", { style: { padding: SPACE.s4, fontSize: 12, color: palette.muted }, children: t('trashFooter') })] })) }));
-}
-// —— 设置 Tab ——
-function SettingsTab(props) {
-    const { palette, t, settings } = props;
-    const bytes = props.clips.reduce((sum, clip) => sum + clip.byteCount, 0);
-    const templates = ['general', 'meeting', 'interview', 'oneOnOne', 'lecture', 'podcast'];
-    const templateLabels = {
-        general: t('templateGeneral'),
-        meeting: t('templateMeeting'),
-        interview: t('templateInterview'),
-        oneOnOne: t('templateOneOnOne'),
-        lecture: t('templateLecture'),
-        podcast: t('templatePodcast'),
-    };
-    return (_jsxs("div", { style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s5 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3 }, children: [_jsx("div", { style: {
-                            width: 44, height: 44, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: alpha(brandTint(props.dark), 0.15), color: brandTint(props.dark), fontSize: 20,
-                        }, children: _jsx(Icon, { name: "mic", size: 20 }) }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 16, fontWeight: 600, color: palette.ink }, children: t('titleVoiceMemos') }), _jsxs("div", { style: { fontSize: 12, color: palette.muted }, children: [t('settingsAI'), " \u00B7 ", t('settingsRecording')] })] })] }), _jsxs("section", { children: [_jsx("div", { style: { fontSize: 12, fontWeight: 500, color: palette.muted, textTransform: 'uppercase', marginBottom: 6 }, children: t('settingsRecording') }), _jsx(Picker, { palette: palette, label: t('transcribeLanguage'), value: settings.transcribeLocale, options: [
-                            { value: 'auto', label: t('localeAuto') },
-                            { value: 'zh_CN', label: t('localeZh') },
-                            { value: 'en_US', label: t('localeEn') },
-                        ], onChange: (value) => props.onChange({ transcribeLocale: value }) }), _jsx("div", { style: { fontSize: 12, color: palette.muted, margin: '4px 0 10px' }, children: t('transcribeLanguageHint') }), _jsx(Picker, { palette: palette, label: t('quality'), value: settings.quality, options: [
-                            { value: 'high', label: t('qualityHigh') },
-                            { value: 'medium', label: t('qualityMedium') },
-                            { value: 'low', label: t('qualityLow') },
-                        ], onChange: (value) => props.onChange({ quality: value }) }), _jsx("div", { style: { fontSize: 12, color: palette.muted, marginTop: 4 }, children: t('qualityHint') })] }), _jsxs("section", { children: [_jsx("div", { style: { fontSize: 12, fontWeight: 500, color: palette.muted, textTransform: 'uppercase', marginBottom: 6 }, children: t('settingsAI') }), _jsx(Toggle, { palette: palette, label: t('autoTranscribe'), value: settings.autoTranscribe, onChange: (value) => props.onChange({ autoTranscribe: value }) }), _jsx(Toggle, { palette: palette, label: t('autoSummarize'), hint: t('autoSummarizeHint'), value: settings.autoSummarize, onChange: (value) => props.onChange({ autoSummarize: value }) }), _jsx(Picker, { palette: palette, label: t('defaultTemplate'), value: settings.defaultTemplate, options: templates.map((template) => ({ value: template, label: templateLabels[template] })), onChange: (value) => props.onChange({ defaultTemplate: value }) })] }), _jsxs("section", { children: [_jsx("div", { style: { fontSize: 12, fontWeight: 500, color: palette.muted, textTransform: 'uppercase', marginBottom: 6 }, children: t('settingsStorage') }), _jsx(StatRow, { palette: palette, label: t('clipCount'), value: String(props.clips.length) }), _jsx(StatRow, { palette: palette, label: t('clipBytes'), value: byteSize(bytes) }), _jsx("div", { style: { fontSize: 12, color: palette.muted, marginTop: 8 }, children: t('hostSettingsNote') })] })] }));
-}
-function Picker(props) {
-    return (_jsxs("label", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: '10px 0', fontSize: 15, color: props.palette.ink }, children: [_jsx("span", { style: { flex: 1 }, children: props.label }), _jsx("select", { value: props.value, onChange: (event) => props.onChange(event.target.value), style: {
-                    border: `1px solid ${props.palette.line}`, borderRadius: 8, padding: '6px 8px', fontSize: 14,
-                    background: props.palette.surface, color: props.palette.ink,
-                }, children: props.options.map((option) => _jsx("option", { value: option.value, children: option.label }, option.value)) })] }));
-}
-function StatRow(props) {
-    return (_jsxs("div", { style: { display: 'flex', alignItems: 'center', padding: '10px 0', fontSize: 15, color: props.palette.ink }, children: [_jsx("span", { style: { flex: 1 }, children: props.label }), _jsx("span", { style: { color: props.palette.muted, fontSize: 14 }, children: props.value })] }));
-}
 function errorText(t, reason) {
     const value = reason.toLowerCase();
     if (value.includes('denied') || value.includes('microphone-denied'))
@@ -532,122 +506,5 @@ function errorText(t, reason) {
     if (value.includes('busy'))
         return t('micBusy');
     return t('recorderUnavailable');
-}
-async function actionSheet(actions) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.ui || actions.length === 0)
-        return null;
-    try {
-        const result = await bridge.ui.actionSheet({
-            actions: actions.map((action) => ({
-                id: action.id,
-                title: action.title,
-                role: action.destructive ? 'destructive' : 'default',
-            })),
-        });
-        return result.cancelled ? null : result.actionId;
-    }
-    catch {
-        return null;
-    }
-}
-async function confirmDestructive(title, confirmTitle, cancelTitle) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.ui)
-        return true;
-    try {
-        const result = await bridge.ui.confirm({
-            title,
-            actions: [
-                { id: 'cancel', title: cancelTitle, role: 'cancel' },
-                { id: 'ok', title: confirmTitle, role: 'destructive' },
-            ],
-        });
-        return !result.cancelled && result.actionId === 'ok';
-    }
-    catch {
-        return false;
-    }
-}
-async function confirmAlert(title, message) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.ui)
-        return;
-    try {
-        await bridge.ui.alert({ title, message });
-    }
-    catch {
-        /* 弹不出来就算了，不该因为提示失败再抛一次 */
-    }
-}
-async function promptText(title, defaultValue) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.ui)
-        return null;
-    try {
-        const result = await bridge.ui.prompt({ title, defaultValue });
-        const value = (result.value ?? '').trim();
-        return result.cancelled || !value ? null : value;
-    }
-    catch {
-        return null;
-    }
-}
-async function copyText(text) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.clipboard)
-        return;
-    try {
-        await bridge.clipboard.write({ text });
-    }
-    catch {
-        /* 授权被拒 */
-    }
-}
-async function shareText(text) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.share || !text.trim())
-        return;
-    try {
-        await bridge.share.text({ text });
-    }
-    catch {
-        /* 用户取消分享面板不是错误 */
-    }
-}
-async function shareFile(filename, content) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.share || typeof bridge.share.file !== 'function' || !content.trim())
-        return;
-    try {
-        await bridge.share.file({ filename, content, mimeType: filename.endsWith('.srt') ? 'application/x-subrip' : 'text/plain' });
-    }
-    catch {
-        /* 同上 */
-    }
-}
-/** 本机剪辑分享的是音频本体：从 applet URL 取字节 → base64 → `share.file`。 */
-async function shareClipAudio(memo) {
-    const bridge = typeof window !== 'undefined' ? window.aibox : undefined;
-    if (!bridge?.share || typeof bridge.share.file !== 'function' || !memo.url)
-        return;
-    try {
-        const response = await fetch(memo.url);
-        const buffer = new Uint8Array(await response.arrayBuffer());
-        let binary = '';
-        // `?? 0`：下标访问在 noUncheckedIndexedAccess 下是 `number | undefined`。循环边界已经保证不越界，
-        // 这里只是把那条保证写给类型系统看。
-        for (let index = 0; index < buffer.length; index += 1)
-            binary += String.fromCharCode(buffer[index] ?? 0);
-        await bridge.share.file({
-            filename: `${fileSlug(memo.title)}.m4a`,
-            content: btoa(binary),
-            mimeType: 'audio/mp4',
-            encoding: 'base64',
-        });
-    }
-    catch {
-        /* 超过 10MB 上限或取消 */
-    }
 }
 export { applyFilter, loadArtifacts };

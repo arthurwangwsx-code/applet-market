@@ -38,7 +38,7 @@ export function reconcileShuffle(state, rng = Math.random) {
     return { ...state, shuffledTrackIDs: fresh.length > 0 ? kept.concat(shuffleIDs(fresh, rng)) : kept };
 }
 /** 重建随机序；`pinCurrent` 时把当前曲提到首位（开启随机的语义）。 */
-export function rebuildShuffle(state, { pinCurrent = false, rng = Math.random } = {}) {
+export function rebuildShuffle(state, { pinCurrent = false, rng = Math.random, } = {}) {
     const ids = state.tracks.map((track) => track.id);
     let order = shuffleIDs(ids, rng);
     const current = state.tracks[state.currentIndex];
@@ -74,7 +74,9 @@ export function add(state, tracks, at = null, rng = Math.random) {
     next.splice(insertAt, 0, ...tracks);
     const currentIndex = state.tracks.length === 0
         ? 0
-        : (state.currentIndex >= insertAt ? state.currentIndex + tracks.length : state.currentIndex);
+        : state.currentIndex >= insertAt
+            ? state.currentIndex + tracks.length
+            : state.currentIndex;
     return reconcileShuffle({ ...state, tracks: next, currentIndex }, rng);
 }
 /**
@@ -103,9 +105,11 @@ export function move(state, from, to, rng = Math.random) {
     if (from < 0 || from >= state.tracks.length)
         return state;
     const destination = clamp(to, 0, state.tracks.length - 1);
-    const currentID = state.tracks[state.currentIndex] ? state.tracks[state.currentIndex].id : null;
+    const currentID = state.tracks[state.currentIndex]?.id ?? null;
     const tracks = state.tracks.slice();
     const [moved] = tracks.splice(from, 1);
+    if (!moved)
+        return state;
     tracks.splice(destination, 0, moved);
     const found = currentID ? tracks.findIndex((track) => track.id === currentID) : -1;
     return reconcileShuffle({ ...state, tracks, currentIndex: found >= 0 ? found : 0 }, rng);
@@ -131,7 +135,7 @@ function indexOfID(state, id) {
  * - 顺序：index + 1；越界且 repeat=all 回绕，否则 null
  * - repeat=one 不在这里处理（曲终逻辑是 seek 0 + resume，不换曲）
  */
-export function nextIndex(state, { shuffled = false, repeatMode = 'off' } = {}) {
+export function nextIndex(state, { shuffled = false, repeatMode = 'off', } = {}) {
     const count = state.tracks.length;
     if (count === 0)
         return null;
@@ -148,7 +152,7 @@ export function nextIndex(state, { shuffled = false, repeatMode = 'off' } = {}) 
     return repeatMode === 'all' ? 0 : null;
 }
 /** 上一首的队列下标。语义与 nextIndex 对称（`currentTime > 3` 的「回到开头」在播放层处理）。 */
-export function previousIndex(state, { shuffled = false, repeatMode = 'off' } = {}) {
+export function previousIndex(state, { shuffled = false, repeatMode = 'off', } = {}) {
     const count = state.tracks.length;
     if (count === 0)
         return null;
@@ -158,9 +162,7 @@ export function previousIndex(state, { shuffled = false, repeatMode = 'off' } = 
             return indexOfID(state, state.shuffledTrackIDs[0]);
         if (cursor - 1 >= 0)
             return indexOfID(state, state.shuffledTrackIDs[cursor - 1]);
-        return repeatMode === 'all'
-            ? indexOfID(state, state.shuffledTrackIDs[state.shuffledTrackIDs.length - 1])
-            : null;
+        return repeatMode === 'all' ? indexOfID(state, state.shuffledTrackIDs[state.shuffledTrackIDs.length - 1]) : null;
     }
     if (state.currentIndex - 1 >= 0)
         return state.currentIndex - 1;

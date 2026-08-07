@@ -105,7 +105,9 @@ if (UPDATE) {
 }
 
 const coverage = total === 0 ? 100 : Math.round((typed / total) * 1000) / 10
-console.log(`返回类型覆盖：${typed}/${total}（${coverage}%）—— 只算**生成签名**的命名空间，那是真正吃 Promise<unknown> 的那批。`)
+console.log(
+  `返回类型覆盖：${typed}/${total}（${coverage}%）—— 只算**生成签名**的命名空间，那是真正吃 Promise<unknown> 的那批。`,
+)
 const cosmeticMissing = [...cosmetic.values()].reduce((a, b) => a + b, 0)
 console.log(
   `另有 ${exempt} 条工具投影按类型豁免；${cosmeticMissing}/${cosmeticTotal} 条落在手写签名命名空间` +
@@ -118,7 +120,9 @@ if (perNamespace.size > 0) {
 }
 
 if (!fs.existsSync(BASELINE)) {
-  console.error(`\n缺少基线 ${path.relative(ROOT, BASELINE)} —— 先跑：node scripts/audit-result-schema.mjs --update-baseline`)
+  console.error(
+    `\n缺少基线 ${path.relative(ROOT, BASELINE)} —— 先跑：node scripts/audit-result-schema.mjs --update-baseline`,
+  )
   process.exit(REPORT_ONLY ? 0 : 2)
 }
 

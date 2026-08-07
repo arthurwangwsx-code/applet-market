@@ -56,8 +56,18 @@ function stripComments(source) {
     const c = source[i]
     const next = source[i + 1]
     if (mode === 'code') {
-      if (c === '/' && next === '/') { mode = 'line'; out += '  '; i += 1; continue }
-      if (c === '/' && next === '*') { mode = 'block'; out += '  '; i += 1; continue }
+      if (c === '/' && next === '/') {
+        mode = 'line'
+        out += '  '
+        i += 1
+        continue
+      }
+      if (c === '/' && next === '*') {
+        mode = 'block'
+        out += '  '
+        i += 1
+        continue
+      }
       if (c === "'") mode = 'single'
       else if (c === '"') mode = 'double'
       else if (c === '`') mode = 'template'
@@ -65,16 +75,27 @@ function stripComments(source) {
       continue
     }
     if (mode === 'line') {
-      if (c === '\n') { mode = 'code'; out += c } else out += ' '
+      if (c === '\n') {
+        mode = 'code'
+        out += c
+      } else out += ' '
       continue
     }
     if (mode === 'block') {
-      if (c === '*' && next === '/') { mode = 'code'; out += '  '; i += 1 } else out += c === '\n' ? c : ' '
+      if (c === '*' && next === '/') {
+        mode = 'code'
+        out += '  '
+        i += 1
+      } else out += c === '\n' ? c : ' '
       continue
     }
     // 字符串内部：只管找到闭合，顺带跳过转义。
     out += c
-    if (c === '\\') { out += source[i + 1] ?? ''; i += 1; continue }
+    if (c === '\\') {
+      out += source[i + 1] ?? ''
+      i += 1
+      continue
+    }
     if ((mode === 'single' && c === "'") || (mode === 'double' && c === '"') || (mode === 'template' && c === '`')) {
       // 开引号本身也会走到这里；用长度判断是否是闭合的那一个。
       if (out.length > 1) mode = 'code'

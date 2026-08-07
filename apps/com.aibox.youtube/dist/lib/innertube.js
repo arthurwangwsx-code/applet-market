@@ -16,9 +16,10 @@
 // **取流不在这里**：拿播放地址走宿主的 `aibox.video.resolve`（它内部有完整的客户端选型与握手），
 // 小应用不重造那一套 —— 那是会随 YouTube 对抗策略每周失效的东西。
 import { fetchJSON } from './host.js';
+import { isRecord } from './types.js';
 const BASE = 'https://www.youtube.com/youtubei/v1';
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
-    + '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 /** 客户端上下文。`hl`/`gl` 决定返回语言与地区。 */
 function context(locale) {
     return {
@@ -59,7 +60,7 @@ function collect(node, key, out = []) {
         return out;
     }
     for (const [k, v] of Object.entries(node)) {
-        if (k === key && v && typeof v === 'object')
+        if (k === key && isRecord(v))
             out.push(v);
         else
             collect(v, key, out);
@@ -68,20 +69,23 @@ function collect(node, key, out = []) {
 }
 /** `{runs:[{text}]}` 或 `{simpleText}` → 纯文本。两种形态在同一份响应里混用。 */
 function text(node) {
-    if (!node)
+    if (!isRecord(node))
         return '';
     if (typeof node.simpleText === 'string')
         return node.simpleText;
-    if (Array.isArray(node.runs))
-        return node.runs.map((r) => r.text || '').join('');
+    if (Array.isArray(node.runs)) {
+        return node.runs.map((run) => (isRecord(run) && typeof run.text === 'string' ? run.text : '')).join('');
+    }
     return '';
 }
 /** "3:10:59" / "12:34" → 秒。 */
 function durationSeconds(label) {
     if (!label)
         return 0;
-    return String(label).split(':').map((n) => parseInt(n, 10) || 0)
-        .reduce((acc, n) => acc * 60 + n, 0);
+    return String(label)
+        .split(':')
+        .map((n) => parseInt(n, 10) || 0)
+        .reduce((acc, part) => acc * 60 + part, 0);
 }
 /**
  * 缩略图 URL。
@@ -95,7 +99,7 @@ function thumbnail(id) {
 }
 /** 一条视频的统一投影。 */
 function normalize(renderer) {
-    const id = renderer?.videoId;
+    const id = typeof renderer.videoId === 'string' ? renderer.videoId : '';
     if (!id)
         return null;
     return {
@@ -113,13 +117,15 @@ function normalize(renderer) {
 /** 搜索。回视频列表。 */
 export async function search(query, locale) {
     const json = await post('search', { query: String(query || '').trim() }, locale);
-    return collect(json, 'videoRenderer').map(normalize).filter(Boolean);
+    return collect(json, 'videoRenderer')
+        .map(normalize)
+        .filter((video) => video !== null);
 }
 /**
  * 搜索建议。走 suggestqueries（不是 InnerTube），返回 JSONP，需要自己剥壳。
  * 失败一律回空数组——建议是锦上添花，不该让搜索框开不了。
  */
-export async function suggest(prefix, locale) {
+export async function suggest(prefix, _locale) {
     const q = String(prefix || '').trim();
     if (!q)
         return [];
@@ -131,7 +137,10 @@ export async function suggest(prefix, locale) {
         if (start < 0 || end <= start)
             return [];
         const parsed = JSON.parse(String(raw).slice(start + 1, end));
-        return (parsed?.[1] || []).map((entry) => entry?.[0]).filter((s) => typeof s === 'string');
+        const candidates = Array.isArray(parsed) && Array.isArray(parsed[1]) ? parsed[1] : [];
+        return candidates
+            .map((entry) => (Array.isArray(entry) ? entry[0] : undefined))
+            .filter((suggestion) => typeof suggestion === 'string');
     }
     catch {
         return [];

@@ -1,5 +1,5 @@
-import { bridge } from './bridge';
-import { normalizeError } from './errors';
+import { bridge } from './bridge'
+import { normalizeError } from './errors'
 
 /**
  * 视频播放的桥胶水。
@@ -13,26 +13,26 @@ import { normalizeError } from './errors';
 
 /** 宿主解析出的一路流。字段与 `aibox.video.resolve` 的返回逐一对应。 */
 export interface ResolvedFormat {
-  id: string;
-  width?: number;
-  height?: number;
-  quality?: string;
-  kind?: string;
-  bitrate?: number;
-  fps?: number;
+  id: string
+  width?: number
+  height?: number
+  quality?: string
+  kind?: string
+  bitrate?: number
+  fps?: number
   /** 宿主判定这一路能不能直接播。**缺省视为可播**——老宿主不回这个字段。 */
-  playable?: boolean;
+  playable?: boolean
 }
 
 export interface ResolvedVideo {
-  ok: boolean;
-  title?: string;
-  uploader?: string;
-  thumbnailURL?: string;
-  durationSeconds?: number;
-  extractor?: string;
-  formats: ResolvedFormat[];
-  error?: string;
+  ok: boolean
+  title?: string
+  uploader?: string
+  thumbnailURL?: string
+  durationSeconds?: number
+  extractor?: string
+  formats: ResolvedFormat[]
+  error?: string
 }
 
 /**
@@ -46,14 +46,14 @@ export interface ResolvedVideo {
  * 宿主的抽取器认识这些站点，解析时自带 Referer 与 UA；随后 `play({sourceURL})` 复用同一份结果。
  */
 export async function resolveVideo(pageURL: string): Promise<ResolvedVideo> {
-  const host = bridge();
-  if (!host?.video?.resolve) throw new Error('宿主没有视频解析能力');
+  const host = bridge()
+  if (!host?.video?.resolve) throw new Error('宿主没有视频解析能力')
   try {
-    const r = (await host.video.resolve({ url: pageURL })) as ResolvedVideo | null;
-    if (!r?.ok) throw new Error(r?.error || '解析不出可播放的地址');
-    return { ...r, formats: Array.isArray(r.formats) ? r.formats : [] };
+    const r = (await host.video.resolve({ url: pageURL })) as ResolvedVideo | null
+    if (!r?.ok) throw new Error(r?.error || '解析不出可播放的地址')
+    return { ...r, formats: Array.isArray(r.formats) ? r.formats : [] }
   } catch (error) {
-    throw normalizeError(error);
+    throw normalizeError(error)
   }
 }
 
@@ -64,10 +64,10 @@ export async function resolveVideo(pageURL: string): Promise<ResolvedVideo> {
  * 字典序排出来 "1080P" 恰好在 "480P" 前面纯属巧合，遇到 "4K" 就翻车。宿主给了数字，用数字。
  */
 export function pickBestFormat(formats: ResolvedFormat[] | undefined): ResolvedFormat | null {
-  const usable = (formats || []).filter((f) => f && f.playable !== false);
-  if (!usable.length) return null;
-  const area = (f: ResolvedFormat) => (Number(f.width) || 0) * (Number(f.height) || 0);
-  return usable.reduce((best, f) => (area(f) > area(best) ? f : best));
+  const usable = (formats || []).filter((f) => f && f.playable !== false)
+  if (!usable.length) return null
+  const area = (f: ResolvedFormat) => (Number(f.width) || 0) * (Number(f.height) || 0)
+  return usable.reduce((best, f) => (area(f) > area(best) ? f : best))
 }
 
 /**
@@ -80,11 +80,12 @@ export function pickBestFormat(formats: ResolvedFormat[] | undefined): ResolvedF
  * 而不是页面传了 `9:21` 却拿到一个 16:9 舞台还不知道为什么。
  */
 export function stageAspect(width?: number, height?: number): string {
-  const w = Number(width), h = Number(height);
-  if (!(w > 0) || !(h > 0)) return '16:9';
-  const ratio = Math.min(4, Math.max(0.5, w / h));
+  const w = Number(width),
+    h = Number(height)
+  if (!(w > 0) || !(h > 0)) return '16:9'
+  const ratio = Math.min(4, Math.max(0.5, w / h))
   // 用 100 作分母保留两位有效比例，避免 "852:480" 这种长串（宿主只做除法，形式不敏感）。
-  return `${Math.round(ratio * 100)}:100`;
+  return `${Math.round(ratio * 100)}:100`
 }
 
 /**
@@ -94,23 +95,27 @@ export function stageAspect(width?: number, height?: number): string {
  * `url` 是直给 AVPlayer，遇上要 Referer 的站点必 403。**能解析就别传 url。**
  */
 export async function playVideo(args: {
-  sourceURL?: string; formatID?: string; url?: string;
-  title?: string; resumeFrom?: number;
+  sourceURL?: string
+  formatID?: string
+  url?: string
+  title?: string
+  resumeFrom?: number
 }): Promise<unknown> {
-  const host = bridge();
-  if (!host?.video?.play) throw new Error('宿主没有视频播放能力');
+  const host = bridge()
+  if (!host?.video?.play) throw new Error('宿主没有视频播放能力')
   const payload: Record<string, unknown> = {
-    title: args.title, resumeFrom: args.resumeFrom ?? 0,
-  };
+    title: args.title,
+    resumeFrom: args.resumeFrom ?? 0,
+  }
   if (args.sourceURL) {
-    payload.sourceURL = args.sourceURL;
-    if (args.formatID) payload.formatID = args.formatID;
+    payload.sourceURL = args.sourceURL
+    if (args.formatID) payload.formatID = args.formatID
   } else {
-    payload.url = args.url;
+    payload.url = args.url
   }
   try {
-    return await host.video.play(payload);
+    return await host.video.play(payload)
   } catch (error) {
-    throw normalizeError(error);
+    throw normalizeError(error)
   }
 }

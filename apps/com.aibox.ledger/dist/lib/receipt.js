@@ -17,10 +17,28 @@
 // 所以这里认符号也认代码，认不出就**明确回 null** 让页面问用户，而不是猜。
 /** 常见货币符号 → ISO 代码。`¥` 有歧义（CNY/JPY），单独处理。 */
 const SYMBOL_TO_CODE = {
-    '$': 'USD', 'US$': 'USD', 'HK$': 'HKD', 'NT$': 'TWD', 'C$': 'CAD', 'A$': 'AUD',
-    '€': 'EUR', '£': 'GBP', '₩': 'KRW', '₹': 'INR', '₽': 'RUB', '฿': 'THB',
-    '₫': 'VND', '₪': 'ILS', '₺': 'TRY', 'R$': 'BRL', 'S$': 'SGD', 'RM': 'MYR',
-    '₱': 'PHP', 'Rp': 'IDR', 'CHF': 'CHF', 'kr': 'SEK',
+    $: 'USD',
+    US$: 'USD',
+    HK$: 'HKD',
+    NT$: 'TWD',
+    C$: 'CAD',
+    A$: 'AUD',
+    '€': 'EUR',
+    '£': 'GBP',
+    '₩': 'KRW',
+    '₹': 'INR',
+    '₽': 'RUB',
+    '฿': 'THB',
+    '₫': 'VND',
+    '₪': 'ILS',
+    '₺': 'TRY',
+    R$: 'BRL',
+    S$: 'SGD',
+    RM: 'MYR',
+    '₱': 'PHP',
+    Rp: 'IDR',
+    CHF: 'CHF',
+    kr: 'SEK',
 };
 /** 明写的 ISO 代码（票面上常见的那些）。 */
 const CODE_RE = /\b(CNY|RMB|USD|EUR|GBP|JPY|HKD|TWD|KRW|SGD|AUD|CAD|CHF|THB|MYR|PHP|IDR|VND|INR|RUB|NZD|SEK|NOK|DKK|BRL|TRY|ILS|AED|SAR|ZAR|MXN|PLN)\b/i;
@@ -34,14 +52,14 @@ export function detectCurrency(text) {
     const s = String(text || '');
     const code = s.match(CODE_RE);
     if (code) {
-        const upper = code[1].toUpperCase();
+        const upper = code[1]?.toUpperCase() ?? '';
         return upper === 'RMB' ? 'CNY' : upper;
     }
     // 多字符符号优先（HK$ 要先于 $ 匹配，否则 HK$ 会被认成 USD）
     const symbols = Object.keys(SYMBOL_TO_CODE).sort((a, b) => b.length - a.length);
     for (const sym of symbols) {
         if (s.includes(sym))
-            return SYMBOL_TO_CODE[sym];
+            return SYMBOL_TO_CODE[sym] ?? null;
     }
     if (s.includes('¥') || s.includes('￥')) {
         return /[ぁ-んァ-ヶ]|円|税込|合計/.test(s) ? 'JPY' : 'CNY';
@@ -90,10 +108,7 @@ export function detectAmount(text) {
 export function detectDate(text, now = Date.now()) {
     const s = String(text || '');
     const thisYear = new Date(now).getFullYear();
-    const patterns = [
-        /(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})/,
-        /(\d{1,2})[-/月.](\d{1,2})[日]?(?!\d)/,
-    ];
+    const patterns = [/(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})/, /(\d{1,2})[-/月.](\d{1,2})[日]?(?!\d)/];
     for (const [i, re] of patterns.entries()) {
         const m = s.match(re);
         if (!m)
@@ -116,7 +131,10 @@ export function detectDate(text, now = Date.now()) {
  * 只回一个候选串给页面做默认值，用户可改。
  */
 export function detectPayee(text) {
-    const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = String(text || '')
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
     for (const line of lines.slice(0, 6)) {
         if (line.length < 2 || line.length > 24)
             continue;

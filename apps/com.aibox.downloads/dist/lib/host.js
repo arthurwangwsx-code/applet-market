@@ -7,19 +7,35 @@
 // 所以内存实现**假装**在下载（定时推进 fraction），只为让布局、空态、按钮态在无宿主时也能验。
 // 桥探测、事件、剪贴板、对话框一律走 SDK：它们是**所有应用共享的同一份实现**。
 // 本文件只保留这个应用自己的东西——无宿主兜底的假下载引擎、状态筛选、以及 download 命名空间的调用。
-import { available, bridge, events, system, ui } from '../lib/aibox-sdk.js';
+import { available, bridge, events, system, ui } from 'aibox/sdk';
 export function hasNamespace(name, method) {
     return available(name, method);
 }
 export const capabilities = {
-    get download() { return hasNamespace('download', 'enqueue'); },
-    get clipboard() { return hasNamespace('clipboard', 'read'); },
-    get share() { return hasNamespace('share', 'file'); },
-    get openURL() { return hasNamespace('open', 'url'); },
-    get haptics() { return hasNamespace('haptics', 'impact'); },
-    get toolbar() { return hasNamespace('toolbar', 'getState'); },
-    get tabs() { return hasNamespace('tabs', 'getState'); },
-    get ui() { return hasNamespace('ui', 'confirm'); },
+    get download() {
+        return hasNamespace('download', 'enqueue');
+    },
+    get clipboard() {
+        return hasNamespace('clipboard', 'read');
+    },
+    get share() {
+        return hasNamespace('share', 'file');
+    },
+    get openURL() {
+        return hasNamespace('open', 'url');
+    },
+    get haptics() {
+        return hasNamespace('haptics', 'impact');
+    },
+    get toolbar() {
+        return hasNamespace('toolbar', 'getState');
+    },
+    get tabs() {
+        return hasNamespace('tabs', 'getState');
+    },
+    get ui() {
+        return hasNamespace('ui', 'confirm');
+    },
 };
 // ---------------------------------------------------------------- 无宿主兜底
 let fakeSeq = 0;
@@ -31,10 +47,11 @@ function tickFakes() {
         if (t.state !== 'running')
             continue;
         live = true;
-        t.bytesReceived = Math.min(t.totalBytes, t.bytesReceived + 180_000);
-        t.fraction = t.bytesReceived / t.totalBytes;
+        const totalBytes = t.totalBytes ?? 0;
+        t.bytesReceived = Math.min(totalBytes, (t.bytesReceived ?? 0) + 180_000);
+        t.fraction = totalBytes > 0 ? t.bytesReceived / totalBytes : 0;
         t.speed = 180_000;
-        if (t.bytesReceived >= t.totalBytes) {
+        if (t.bytesReceived >= totalBytes) {
             t.state = 'completed';
             t.fraction = 1;
             t.outputPath = `/Preview/Downloads/${t.filename}`;
@@ -47,8 +64,10 @@ function tickFakes() {
     notifyFakeListeners();
 }
 const fakeListeners = new Set();
-function notifyFakeListeners() { for (const fn of fakeListeners)
-    fn(); }
+function notifyFakeListeners() {
+    for (const fn of fakeListeners)
+        fn();
+}
 const memory = {
     enqueue({ url, filename }) {
         fakeSeq += 1;
@@ -67,7 +86,9 @@ const memory = {
             fakeTimer = setInterval(tickFakes, 400);
         return { taskId: task.taskId, artifactRef: task.artifactRef };
     },
-    list() { return fakeTasks.map((t) => ({ ...t })); },
+    list() {
+        return fakeTasks.map((t) => ({ ...t }));
+    },
     control(action, taskId) {
         const apply = (t) => {
             if (action === 'pause' && (t.state === 'running' || t.state === 'queued'))
@@ -78,9 +99,7 @@ const memory = {
                 t.state = 'cancelled';
         };
         if (action === 'clearFinished' || (action === 'remove' && !taskId)) {
-            const keep = fakeTasks.filter((t) => (action === 'clearFinished'
-                ? !['completed', 'failed', 'cancelled'].includes(t.state)
-                : false));
+            const keep = fakeTasks.filter((t) => action === 'clearFinished' ? !['completed', 'failed', 'cancelled'].includes(t.state) : false);
             fakeTasks.length = 0;
             fakeTasks.push(...keep);
         }
@@ -90,8 +109,11 @@ const memory = {
                 return false;
             if (action === 'remove')
                 fakeTasks.splice(index, 1);
-            else
-                apply(fakeTasks[index]);
+            else {
+                const task = fakeTasks[index];
+                if (task)
+                    apply(task);
+            }
         }
         else {
             fakeTasks.forEach(apply);
@@ -107,24 +129,25 @@ export const downloads = {
     /** 入队一条。回 `{taskId, artifactRef}`，失败回 `{error}`（不抛）。 */
     async enqueue(request) {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return memory.enqueue(request);
         try {
             const result = await api.download.enqueue(request);
             return result || { error: 'empty response' };
         }
         catch (error) {
-            return { error: String((error && error.message) || error) };
+            return { error: error instanceof Error ? error.message : String(error) };
         }
     },
     /** 本应用的任务列表。永远只有自己的——归属由宿主自动绑定，页面说不出「看别人的」这句话。 */
     async list(filter) {
         const api = bridge();
-        if (!capabilities.download) {
+        if (!api || !capabilities.download) {
             const all = memory.list();
-            if (!filter || !filter.state)
+            const state = filter?.state;
+            if (!state)
                 return all;
-            return all.filter((t) => matchesState(filter.state, t.state));
+            return all.filter((t) => matchesState(state, t.state));
         }
         try {
             const items = await api.download.list(filter || {});
@@ -136,19 +159,34 @@ export const downloads = {
     },
     async control(action, taskId) {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return memory.control(action, taskId);
         try {
             if (taskId) {
                 if (action === 'clearFinished')
                     return false;
-                await api.download[action]({ taskId });
+                if (action === 'pause')
+                    await api.download.pause({ taskId });
+                else if (action === 'resume')
+                    await api.download.resume({ taskId });
+                else if (action === 'cancel')
+                    await api.download.cancel({ taskId });
+                else if (action === 'remove')
+                    await api.download.remove({ taskId });
+                else
+                    return false;
                 return true;
             }
-            const bulk = { pause: 'pauseAll', resume: 'resumeAll', cancel: 'cancelAll', clearFinished: 'clearFinished' }[action];
-            if (!bulk)
+            if (action === 'pause')
+                await api.download.pauseAll({});
+            else if (action === 'resume')
+                await api.download.resumeAll({});
+            else if (action === 'cancel')
+                await api.download.cancelAll({});
+            else if (action === 'clearFinished')
+                await api.download.clearFinished({});
+            else
                 return false;
-            await api.download[bulk]({});
             return true;
         }
         catch (error) {
@@ -158,7 +196,7 @@ export const downloads = {
     /** 让宿主开始推 `download.progress` 事件。轮询是**兜底**，不是主路径。 */
     async subscribe() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return false;
         try {
             await api.download.subscribe({});
@@ -170,7 +208,7 @@ export const downloads = {
     },
     async unsubscribe() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return false;
         try {
             await api.download.unsubscribe({});
@@ -182,7 +220,7 @@ export const downloads = {
     },
     async openIn(taskId) {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return false;
         try {
             return !!(await api.download.openIn({ taskId }));
@@ -193,7 +231,7 @@ export const downloads = {
     },
     async share(taskId) {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return false;
         try {
             return !!(await api.download.share({ taskId }));
@@ -204,7 +242,7 @@ export const downloads = {
     },
     async availability() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!api || !capabilities.download)
             return { available: false, reason: 'preview' };
         try {
             return await api.download.availability({});
@@ -228,8 +266,11 @@ export function onEvent(name, handler) {
     // 浏览器里没有等价物），所以它留在应用里、没进 SDK。
     if (!available('events', 'on')) {
         if (name === 'download.progress') {
-            fakeListeners.add(handler);
-            return () => fakeListeners.delete(handler);
+            const listener = handler;
+            fakeListeners.add(listener);
+            return () => {
+                fakeListeners.delete(listener);
+            };
         }
         return () => { };
     }
@@ -237,14 +278,16 @@ export function onEvent(name, handler) {
 }
 // ---------------------------------------------------------------- 其它能力
 export const readClipboard = system.readClipboard;
-export function tap(style) {
+export function tap(style = 'light') {
     const api = bridge();
-    if (!capabilities.haptics)
+    if (!api || !capabilities.haptics)
         return;
     try {
         api.haptics.impact({ style: style || 'light' });
     }
-    catch (error) { /* 触感失败无所谓 */ }
+    catch (error) {
+        /* 触感失败无所谓 */
+    }
 }
 /**
  * 确认框。**语义已按 SDK 统一：问不出来 = 没确认（false）。**

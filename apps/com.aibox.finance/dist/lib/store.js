@@ -49,6 +49,16 @@ export function newID(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${counter.toString(36)}`;
 }
 export class FinanceStore {
+    groups;
+    items;
+    instruments;
+    settings;
+    recent;
+    alerts;
+    version;
+    storageHealthy;
+    listeners;
+    lastQuoteWriteAt;
     constructor() {
         this.groups = SEED_GROUPS.map((row) => ({ ...row }));
         this.items = []; // { id, instrumentSymbol, groupID, sortOrder, addedAt }
@@ -72,7 +82,10 @@ export class FinanceStore {
     }
     async load() {
         const [watch, settings, recent, alerts] = await Promise.all([
-            storage.get(KEYS.watch), storage.get(KEYS.settings), storage.get(KEYS.recent), storage.get(KEYS.alerts),
+            storage.get(KEYS.watch),
+            storage.get(KEYS.settings),
+            storage.get(KEYS.recent),
+            storage.get(KEYS.alerts),
         ]);
         if (watch && typeof watch === 'object') {
             if (Array.isArray(watch.groups) && watch.groups.length > 0)
@@ -92,7 +105,9 @@ export class FinanceStore {
     }
     async persistWatch() {
         const ok = await storage.set(KEYS.watch, {
-            groups: this.groups, items: this.items, instruments: this.instruments,
+            groups: this.groups,
+            items: this.items,
+            instruments: this.instruments,
         });
         this.storageHealthy = ok;
         if (!ok)
@@ -120,19 +135,19 @@ export class FinanceStore {
         return meta && meta.name ? meta.name : canonical;
     }
     /** 回写标的名字到本地元数据（拉到行情后调用）。 */
-    noteInstrument(canonical, { name, market, currency, kind }) {
-        const current = this.instruments[canonical] || {};
-        if (name && current.name === name && current.market === market)
+    noteInstrument(canonical, { name, market, currency, kind, }) {
+        const current = this.instruments[canonical];
+        if (name && current?.name === name && current.market === market)
             return;
         this.instruments[canonical] = {
-            ...current,
-            name: name || current.name || canonical,
-            market: market || current.market || null,
-            currency: currency || current.currency || null,
-            kind: kind || current.kind || 'stock',
+            ...(current || {}),
+            name: name || current?.name || canonical,
+            market: market || current?.market || null,
+            currency: currency || current?.currency || null,
+            kind: kind || current?.kind || 'stock',
             updatedAt: Date.now(),
         };
-        this.persistWatch();
+        void this.persistWatch();
     }
     /**
      * 加自选：优先落到**与标的市场同名的种子分组**（`group.<market>`），找不到落默认组；
@@ -144,23 +159,29 @@ export class FinanceStore {
         if (this.isWatched(canonical))
             return { ok: true, existed: true };
         const symbol = resolveSymbol(canonical);
-        const preferred = groupID
-            || (symbol && this.groups.find((row) => row.id === `group.${symbol.market}`)?.id)
-            || (this.groups.find((row) => row.isDefault) || this.groups[0] || {}).id
-            || null;
+        const preferred = groupID ||
+            (symbol && this.groups.find((row) => row.id === `group.${symbol.market}`)?.id) ||
+            (this.groups.find((row) => row.isDefault) || this.groups[0] || {}).id ||
+            null;
         const maxOrder = this.items.reduce((max, row) => Math.max(max, row.sortOrder), -1);
-        this.items = [...this.items, {
+        this.items = [
+            ...this.items,
+            {
                 id: newID('w'),
                 instrumentSymbol: canonical,
                 groupID: preferred,
                 sortOrder: maxOrder + 1,
                 addedAt: Date.now(),
-            }];
+            },
+        ];
         if (name) {
+            const current = this.instruments[canonical];
             this.instruments[canonical] = {
-                ...(this.instruments[canonical] || {}),
+                ...(current || {}),
                 name,
                 market: symbol ? symbol.market : null,
+                currency: current?.currency || null,
+                kind: current?.kind || 'stock',
                 updatedAt: Date.now(),
             };
         }
@@ -179,7 +200,7 @@ export class FinanceStore {
     /** 拖拽重排：只在手动排序 + 编辑态下由 UI 调用。 */
     async reorderWatch(canonicals) {
         const order = new Map(canonicals.map((canonical, index) => [canonical, index]));
-        this.items = this.items.map((row) => (order.has(row.instrumentSymbol) ? { ...row, sortOrder: order.get(row.instrumentSymbol) } : row));
+        this.items = this.items.map((row) => order.has(row.instrumentSymbol) ? { ...row, sortOrder: order.get(row.instrumentSymbol) ?? row.sortOrder } : row);
         this.bump();
         await this.persistWatch();
     }
@@ -209,7 +230,8 @@ export class FinanceStore {
     }
     /** 删组：组内条目落回默认组（不连坐删自选）。 */
     async deleteGroup(id) {
-        const fallback = (this.groups.find((row) => row.isDefault && row.id !== id) || this.groups.find((row) => row.id !== id) || {}).id || null;
+        const fallback = (this.groups.find((row) => row.isDefault && row.id !== id) || this.groups.find((row) => row.id !== id) || {})
+            .id || null;
         this.groups = this.groups.filter((row) => row.id !== id);
         this.items = this.items.map((row) => (row.groupID === id ? { ...row, groupID: fallback } : row));
         this.bump();

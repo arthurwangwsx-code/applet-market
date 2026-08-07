@@ -28,7 +28,7 @@ export function monthEnd(monthKey) {
 }
 export function addMonths(monthKey, delta) {
     const year = Math.trunc(monthKey / 100);
-    const month = monthKey % 100 - 1 + delta;
+    const month = (monthKey % 100) - 1 + delta;
     const nextYear = year + Math.floor(month / 12);
     const nextMonth = ((month % 12) + 12) % 12;
     return nextYear * 100 + nextMonth + 1;
@@ -54,7 +54,7 @@ export function daysRemainingInMonth(monthKey, now = Date.now()) {
 // MARK: - 本地化格式
 const BCP47 = { 'zh-Hans': 'zh-CN', en: 'en-US' };
 function tag(locale) {
-    return BCP47[locale] ?? 'en-US';
+    return locale === 'zh-Hans' ? BCP47['zh-Hans'] : BCP47.en;
 }
 const cache = new Map();
 function formatter(locale, options) {
@@ -95,7 +95,9 @@ export function isoTimestamp(value) {
 }
 /** 宽松日期解析：取前 10 字符按 `yyyy-MM-dd`；失败返回 null。 */
 export function parseISODay(text) {
-    const raw = String(text ?? '').trim().slice(0, 10);
+    const raw = String(text ?? '')
+        .trim()
+        .slice(0, 10);
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
     if (!match)
         return null;

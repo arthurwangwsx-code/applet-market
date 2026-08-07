@@ -57,14 +57,14 @@ function SubIndicator({ indicator, candles, upIsRed }) {
             ] }));
     }
     if (indicator === 'VOL') {
-        return (_jsx(SubChart, { bars: candles.map((row) => row.volume), barColors: candles.map((row) => ((row.close >= row.open) === upIsRed ? C.red : C.green)) }));
+        return (_jsx(SubChart, { bars: candles.map((row) => row.volume), barColors: candles.map((row) => (row.close >= row.open === upIsRed ? C.red : C.green)) }));
     }
     return null;
 }
 /** 五档：先卖五→卖一（asks 取前 5 后 reverse），再买一→买五。量 = 原始量 ÷ 100（手）。 */
-function OrderBook({ quote, t, upIsRed, decimals }) {
-    const asks = quote.asks.slice(0, 5).reverse();
-    const bids = quote.bids.slice(0, 5);
+function OrderBook({ quote, t, upIsRed, decimals, }) {
+    const asks = (quote.asks ?? []).slice(0, 5).reverse();
+    const bids = (quote.bids ?? []).slice(0, 5);
     const line = (row, kind, index) => (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, padding: '3px 0' }, children: [_jsx("span", { style: { fontSize: 12, color: C.muted, flex: '0 0 auto' }, children: t(kind === 'ask' ? 'finance.book.ask' : 'finance.book.bid') }), _jsx("span", { style: { flex: '1 1 auto' } }), _jsx("span", { className: "fin-mono", style: { fontSize: 15, color: (kind === 'ask') === upIsRed ? C.green : C.red }, children: formatPrice(row.price, decimals) }), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted, width: 70, textAlign: 'right', flex: '0 0 auto' }, children: toLots(row.volume) })] }, `${kind}-${index}`));
     return (_jsxs(Card, { title: t('finance.orderbook'), children: [asks.map((row, index) => line(row, 'ask', index)), bids.map((row, index) => line(row, 'bid', index))] }));
 }
@@ -98,7 +98,9 @@ export default function DetailPage({ ctx, route }) {
                 store.noteInstrument(canonical, fresh);
         };
         run();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [canonical, quotes, store]);
     // K 线：拿到空结果时**保留上一份 candles**（不清空图）。
     React.useEffect(() => {
@@ -113,7 +115,9 @@ export default function DetailPage({ ctx, route }) {
             setChartLoading(false);
         };
         run();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [symbol, period, adjust, quotes]);
     const refresh = React.useCallback(async () => {
         setRefreshing(true);
@@ -134,50 +138,109 @@ export default function DetailPage({ ctx, route }) {
         { key: 'open', label: t('finance.stat.open'), value: quote ? formatPrice(quote.open, decimals) : '—' },
         { key: 'high', label: t('finance.stat.high'), value: quote ? formatPrice(quote.high, decimals) : '—' },
         { key: 'low', label: t('finance.stat.low'), value: quote ? formatPrice(quote.low, decimals) : '—' },
-        { key: 'prevClose', label: t('finance.stat.prevClose'), value: quote ? formatPrice(quote.prevClose, decimals) : '—' },
+        {
+            key: 'prevClose',
+            label: t('finance.stat.prevClose'),
+            value: quote ? formatPrice(quote.prevClose, decimals) : '—',
+        },
     ];
     if (quote) {
         // 条件格：数据存在才渲染（不要一排「—」占位）。
         if (quote.amount)
-            stats.push({ key: 'amount', label: t('finance.stat.amount'), value: formatCompactCurrency(quote.amount, quote.currency) });
+            stats.push({
+                key: 'amount',
+                label: t('finance.stat.amount'),
+                value: formatCompactCurrency(quote.amount, quote.currency),
+            });
         if (quote.turnover)
             stats.push({ key: 'turnover', label: t('finance.stat.turnover'), value: formatPercent(quote.turnover, false) });
-        if (quote.pe > 0)
+        if ((quote.pe ?? 0) > 0)
             stats.push({ key: 'pe', label: t('finance.stat.pe'), value: formatPrice(quote.pe, 2) });
-        if (quote.pb > 0)
+        if ((quote.pb ?? 0) > 0)
             stats.push({ key: 'pb', label: t('finance.stat.pb'), value: formatPrice(quote.pb, 2) });
         // 总市值原始单位是「亿」。
-        if (quote.marketCap > 0)
-            stats.push({ key: 'mktcap', label: t('finance.stat.mktcap'), value: formatCompact(quote.marketCap * 1e8) });
+        if ((quote.marketCap ?? 0) > 0)
+            stats.push({ key: 'mktcap', label: t('finance.stat.mktcap'), value: formatCompact((quote.marketCap ?? 0) * 1e8) });
         if (quote.amplitude)
             stats.push({ key: 'amplitude', label: t('finance.stat.amplitude'), value: formatPercent(quote.amplitude, false) });
     }
     // 提醒入口住在这一排，不住顶栏：详情页改由**宿主**画顶栏（原生子页栈接管返回），
     // 自绘顶栏只在没有宿主顶栏的形态下出现，把入口挂在那儿等于「有时有、有时没有」。
     const actionButtons = [
-        { id: 'watch', icon: watched ? 'star.fill' : 'star', label: t(watched ? 'finance.action.watching' : 'finance.action.watch'), onClick: () => actions.toggleWatch(canonical, name) },
-        { id: 'alert', icon: 'bell', label: t('finance.alert.title'), onClick: () => actions.openAlert(canonical, symbol, name) },
-        { id: 'trade', icon: 'arrow.left.arrow.right', label: t('finance.action.trade'), disabled: !quote, onClick: () => actions.openTrade(canonical, symbol, name) },
-        { id: 'strategy', icon: 'function', label: t('finance.action.strategy'), onClick: () => actions.openStrategy(canonical, symbol, name) },
+        {
+            id: 'watch',
+            icon: watched ? 'star.fill' : 'star',
+            label: t(watched ? 'finance.action.watching' : 'finance.action.watch'),
+            onClick: () => actions.toggleWatch(canonical, name),
+        },
+        {
+            id: 'alert',
+            icon: 'bell',
+            label: t('finance.alert.title'),
+            onClick: () => actions.openAlert(canonical, symbol, name),
+        },
+        {
+            id: 'trade',
+            icon: 'arrow.left.arrow.right',
+            label: t('finance.action.trade'),
+            disabled: !quote,
+            onClick: () => actions.openTrade(canonical, symbol, name),
+        },
+        {
+            id: 'strategy',
+            icon: 'function',
+            label: t('finance.action.strategy'),
+            onClick: () => actions.openStrategy(canonical, symbol, name),
+        },
     ];
     if (ctx.hasAI) {
-        actionButtons.push({ id: 'ai', icon: 'sparkles', label: t('finance.action.ai'), onClick: () => actions.askAboutSymbol(canonical, name, quote) });
+        actionButtons.push({
+            id: 'ai',
+            icon: 'sparkles',
+            label: t('finance.action.ai'),
+            onClick: () => actions.askAboutSymbol(canonical, name, quote),
+        });
     }
     return (_jsx(PullRefresh, { scrollRef: scrollRef, refreshing: refreshing, onRefresh: refresh, children: _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4, padding: SPACE.s4 }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'baseline', gap: SPACE.s2, flexWrap: 'wrap' }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 500 }, children: name }), _jsx("span", { className: "fin-mono", style: { fontSize: 13, color: C.muted }, children: canonical }), quote && quote.isEstimate ? (_jsx("span", { style: {
-                                        fontSize: 12, color: C.muted, padding: '1px 6px', borderRadius: RADIUS.pill,
+                                        fontSize: 12,
+                                        color: C.muted,
+                                        padding: '1px 6px',
+                                        borderRadius: RADIUS.pill,
                                         background: 'color-mix(in srgb, var(--fin-muted) 12%, transparent)',
-                                    }, children: t('finance.estimate') })) : null] }), _jsxs("div", { style: { display: 'flex', alignItems: 'baseline', gap: 10 }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 38, fontWeight: 500, color: quote ? trendColor(quote.changePct, upIsRed) : C.ink, lineHeight: 1.05 }, children: quote ? formatPrice(quote.price, decimals) : '—' }), quote ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column' }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 15, color: trendColor(quote.changePct, upIsRed) }, children: formatChange(quote.change, decimals) }), _jsx("span", { className: "fin-mono", style: { fontSize: 15, color: trendColor(quote.changePct, upIsRed) }, children: formatPercent(quote.changePct) })] })) : null] }), quote && quote.time ? (_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted }, children: quote.time })) : null, quoteFailed ? (_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: C.muted }, children: [_jsx(Icon, { name: "wifi.exclamationmark", size: 11 }), t('finance.quote.stale')] })) : null] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s4, flexWrap: 'wrap' }, children: [_jsx(Menu, { icon: "clock", label: periodLabel(t, period), value: period, items: PERIODS.map((id) => ({ id, label: periodLabel(t, id) })), onSelect: setPeriod }), showsAdjust ? (_jsx(Menu, { icon: "arrow.triangle.2.circlepath", label: t(`finance.chart.${adjust}`), value: adjust, items: [
+                                    }, children: t('finance.estimate') })) : null] }), _jsxs("div", { style: { display: 'flex', alignItems: 'baseline', gap: 10 }, children: [_jsx("span", { className: "fin-mono", style: {
+                                        fontSize: 38,
+                                        fontWeight: 500,
+                                        color: quote ? trendColor(quote.changePct, upIsRed) : C.ink,
+                                        lineHeight: 1.05,
+                                    }, children: quote ? formatPrice(quote.price, decimals) : '—' }), quote ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column' }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 15, color: trendColor(quote.changePct, upIsRed) }, children: formatChange(quote.change, decimals) }), _jsx("span", { className: "fin-mono", style: { fontSize: 15, color: trendColor(quote.changePct, upIsRed) }, children: formatPercent(quote.changePct) })] })) : null] }), quote && quote.time ? (_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted }, children: quote.time })) : null, quoteFailed ? (_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: C.muted }, children: [_jsx(Icon, { name: "wifi.exclamationmark", size: 11 }), t('finance.quote.stale')] })) : null] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s4, flexWrap: 'wrap' }, children: [_jsx(Menu, { icon: "clock", label: periodLabel(t, period), value: period, items: PERIODS.map((id) => ({ id, label: periodLabel(t, id) })), onSelect: setPeriod }), showsAdjust ? (_jsx(Menu, { icon: "arrow.triangle.2.circlepath", label: t(`finance.chart.${adjust}`), value: adjust, items: [
                                 { id: 'qfq', label: t('finance.chart.qfq') },
                                 { id: 'hfq', label: t('finance.chart.hfq') },
                             ], onSelect: setAdjust })) : null, _jsx(Menu, { icon: "function", label: indicator, value: indicator, items: INDICATORS.map((id) => ({ id, label: id })), onSelect: setIndicator })] }), candles.length > 1 ? (_jsxs("div", { children: [_jsx(AreaLineChart, { values: closes, overlays: overlaysFor(indicator, closes), height: 200, upIsRed: upIsRed }), hasSub ? (_jsx("div", { style: { marginTop: SPACE.s2 }, children: _jsx(SubIndicator, { indicator: indicator, candles: candles, upIsRed: upIsRed }) })) : null] })) : chartLoading ? (_jsx("div", { style: {
-                        height: 200, background: C.surface, borderRadius: RADIUS.card,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        height: 200,
+                        background: C.surface,
+                        borderRadius: RADIUS.card,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                     }, children: _jsx(Spinner, { size: 22, color: C.muted }) })) : (_jsxs("div", { style: {
-                        height: 200, background: C.surface, borderRadius: RADIUS.card,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        height: 200,
+                        background: C.surface,
+                        borderRadius: RADIUS.card,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
                     }, children: [_jsx(Icon, { name: "chart.line.downtrend.xyaxis", size: 28, color: C.muted }), _jsx("span", { style: { fontSize: 15, color: C.muted }, children: t('finance.chart.unavailable') }), _jsx("button", { type: "button", className: "fin-btn fin-press", onClick: refresh, style: { color: C.brand, fontSize: 15 }, children: t('finance.retry') })] })), _jsx("div", { style: { display: 'flex', gap: SPACE.s2 }, children: actionButtons.map((button) => (_jsxs("button", { type: "button", className: "fin-btn fin-press", disabled: button.disabled, onClick: button.onClick, style: {
-                            flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                            padding: '8px 4px', background: C.surface, borderRadius: RADIUS.field,
-                            color: C.brand, opacity: button.disabled ? 0.4 : 1,
-                        }, children: [_jsx(Icon, { name: button.icon, size: 17, weight: "semibold" }), _jsx("span", { style: { fontSize: 12 }, children: button.label })] }, button.id))) }), _jsx("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: SPACE.s3 }, children: stats.map((row) => _jsx(Stat, { label: row.label, value: row.value }, row.key)) }), quote && quote.bids.length > 0 && quote.asks.length > 0 ? (_jsx(OrderBook, { quote: quote, t: t, upIsRed: upIsRed, decimals: decimals })) : null, _jsx(FundamentalsView, { ctx: ctx, symbol: symbol })] }) }));
+                            flex: '1 1 0',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '8px 4px',
+                            background: C.surface,
+                            borderRadius: RADIUS.field,
+                            color: C.brand,
+                            opacity: button.disabled ? 0.4 : 1,
+                        }, children: [_jsx(Icon, { name: button.icon, size: 17, weight: "semibold" }), _jsx("span", { style: { fontSize: 12 }, children: button.label })] }, button.id))) }), _jsx("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: SPACE.s3 }, children: stats.map((row) => (_jsx(Stat, { label: row.label, value: row.value }, row.key))) }), quote && (quote.bids?.length ?? 0) > 0 && (quote.asks?.length ?? 0) > 0 ? (_jsx(OrderBook, { quote: quote, t: t, upIsRed: upIsRed, decimals: decimals })) : null, _jsx(FundamentalsView, { ctx: ctx, symbol: symbol })] }) }));
 }

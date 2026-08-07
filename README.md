@@ -14,10 +14,14 @@
 registry.json                       # 市场索引（查询列表）——生成物
 apps/<appId>/
   app.json                          # 应用元数据（手写）
+  package.json                      # TypeScript / 构建脚本
+  tsconfig.json                     # 继承 @aibox/applet-tsbuild
   src/                              # 源码，单一真值（手写，直接 commit）
     manifest.json                   # AppletManifest 子集
-    app.jsx                         # React 入口（export default App）
+    app.tsx                         # React 入口（export default App）
+    .tests.json                     # 应用自带的 smoke 验收
     ...
+  dist/                             # 保结构多文件 ESM（生成并签入）
   releases.json                     # 版本索引（查询发布版本）——生成物
   releases/<version>/
     release.json                    # 版本元数据 + 文件清单 + sha256——生成物
@@ -33,19 +37,22 @@ apps/<appId>/
 # 1. 新建一个应用骨架
 node scripts/new-app.mjs com.aibox.weather --name "天气" --icon cloud.sun.fill
 
-# 2. 在 apps/<appId>/src/ 里写代码（AiBox App 内的小应用工作台也可以直接改这里）
+# 2. 安装 workspace 依赖并构建
+npm install
+npm run typecheck --prefix apps/com.aibox.weather
+npm run build --prefix apps/com.aibox.weather
 
-# 3. 校验（manifest / 能力声明 / import 白名单 / 文件大小）
-node scripts/validate.mjs
+# 3. 提交前统一验证（格式、类型、合同、构建漂移、包体与发布冒烟）
+npm run verify
 
 # 4. 发布一个版本（生成 releases/<version>/ 并刷新索引）
 node scripts/release.mjs com.aibox.news 1.0.0 --notes "首个版本"
 
-# 5. 提交
-git add -A && git commit -m "release(news): 1.0.0" && git push
+# 5. 只暂存本次应用与生成索引，再提交/推送
 ```
 
-`release.mjs` 会自动跑一次 `validate`，并在结尾重建 `registry.json`。
+`release.mjs` 会自动 typecheck、构建、validate，并在结尾重建 `registry.json`。SDK 的运行时实现由宿主以
+`aibox-sdk.mjs` 单实例提供，小应用源码仍 import `@aibox/applet-sdk` 获取稳定 API 与类型。
 
 ## 版本纪律
 
@@ -57,13 +64,15 @@ git add -A && git commit -m "release(news): 1.0.0" && git push
 
 ## 校验闸门
 
-`scripts/validate.mjs` 是提交前的硬闸门，检查：
+`npm run verify` 是本地和 CI 的统一硬闸门。`validate.mjs` 只是其中的包结构分区，不能代替全量验证。
 
 | 项 | 规则 |
 |---|---|
 | appId | 反向域名、与目录名一致、全局唯一 |
 | manifest | 必填字段齐全、能力命名空间在已知集合内、securityMode 合法 |
 | 版本 | semver、releases.json 单调、已发布版本内容未被篡改（sha256 复核） |
-| import | 只允许离线白名单裸模块（react / react-dom / antd-mobile / chart.js） |
-| 体积 | 单文件 ≤ 2 MB，单版本 ≤ 8 MB，单应用文件数 ≤ 500 |
+| import | 构建器 / 市场 / 宿主 Swift 的运行时模块合同逐条相等 |
+| 类型 | 应用源码全量 TS/TSX；构建器与审计共同拒绝 JS、显式 `any` 和类型绕过指令 |
+| SDK/UI | SDK 类型与宿主能力、`aibox/ui` 类型与运行时导出不得漂移 |
+| 体积/性能 | 协议绝对上限 + 每应用包体基线；常驻 timer/rAF/无限动画只减不增 |
 | 路径 | 禁止 `..`、绝对路径、符号链接 |

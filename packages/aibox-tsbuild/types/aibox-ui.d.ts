@@ -16,14 +16,14 @@
 //
 //  ## 真值与漂移
 //  实现的真值在主仓库 `WebAssets/applet-runtime/src/aibox-ui/`（`aibox-ui-bundle.js` 是导出面）。
-//  本文件是它的**类型侧镜像**，手工维护：改了那边的导出面，这里要跟着改。
-//  判断有没有漂：`grep -o "export{[^}]*}" Resources/Runtime/aibox-ui.mjs` 对一遍导出名即可。
+//  本文件是它的类型侧镜像。`scripts/audit-runtime-contracts.mjs` 会把这里的值导出、
+//  `aibox-ui-contract.json` 与宿主源码三方比对；新增导出但漏类型会直接让 verify 失败。
 //
-//  对应资产版本：aibox-ui 1.2.0
+//  对应资产版本：aibox-ui 1.5.0
 //
 
 declare module 'aibox/ui' {
-  import type { CSSProperties, ReactNode, Ref } from 'react'
+  import type { CSSProperties, ReactNode, Ref, RefObject } from 'react'
 
   // ──────────────────────────────────────────────────────────────────────────
   // 行手势（§3.1）
@@ -140,6 +140,23 @@ declare module 'aibox/ui' {
     source: 'host' | 'viewport' | 'none'
   }
 
+  /** 原生 chrome 在当前 Web 视口内占用的边缘与键盘数据，单位均为 CSS px。 */
+  export interface AppletInsets {
+    top: number
+    right: number
+    bottom: number
+    left: number
+    keyboard: number
+    keyboardAnimationMs: number
+    viewportHeight: number
+  }
+
+  /**
+   * 读取原生 chrome 内缩。纯 CSS 布局优先使用 `--aibox-inset-*`，
+   * 只有虚拟列表/canvas 等 JS 驱动布局才需要这个 hook。
+   */
+  export function useAppletInsets(): AppletInsets
+
   // ──────────────────────────────────────────────────────────────────────────
   // 图片（§3.3）
   // ──────────────────────────────────────────────────────────────────────────
@@ -160,8 +177,15 @@ declare module 'aibox/ui' {
 
   /** SF Symbol 字重档，与 `UIImage.SymbolWeight` 一一对应。 */
   export type SymbolWeight =
-    | 'ultralight' | 'thin' | 'light' | 'regular' | 'medium'
-    | 'semibold' | 'bold' | 'heavy' | 'black'
+    | 'ultralight'
+    | 'thin'
+    | 'light'
+    | 'regular'
+    | 'medium'
+    | 'semibold'
+    | 'bold'
+    | 'heavy'
+    | 'black'
 
   export interface SymbolOptions {
     /** 字号（**CSS 点**，1…256），默认 17。**不要自己乘 devicePixelRatio**。 */
@@ -241,6 +265,8 @@ declare module 'aibox/ui' {
     restoreKey?: string
     /** 与 `useListGestures(regionId)` 对应，宿主据此把手势层叠到正确的区域上。 */
     regionId?: string
+    /** 下拉刷新等组合场景可把真实滚动容器交给外层；省略时列表自己滚动。 */
+    scrollParentRef?: RefObject<HTMLElement>
     className?: string
     style?: CSSProperties
     rowStyle?: CSSProperties

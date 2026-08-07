@@ -11,9 +11,7 @@
 import { registerActions } from '@aibox/applet-sdk'
 import { actionItems as extractActionItems, ask as askAI, summarize } from './ai.js'
 import { clockString, exportMarkdown, exportSRT, exportText, hashText, shortDate } from './format.js'
-import {
-  clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
-} from './memos.js'
+import { clipToMemo, listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip } from './memos.js'
 import type { LocalClip, Memo, SummaryTemplate } from './types.js'
 
 function text(value: unknown): string {
@@ -39,7 +37,9 @@ async function readableTranscript(clip: LocalClip): Promise<{ text: string; stat
   const artifacts = await loadArtifacts(clip.id, raw)
   if (artifacts.correctionTurns.length) {
     return {
-      text: artifacts.correctionTurns.map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text)).join('\n\n'),
+      text: artifacts.correctionTurns
+        .map((turn) => (turn.speaker ? `${turn.speaker}: ${turn.text}` : turn.text))
+        .join('\n\n'),
       status,
       corrected: true,
     }
@@ -47,16 +47,20 @@ async function readableTranscript(clip: LocalClip): Promise<{ text: string; stat
   return { text: raw, status, corrected: false }
 }
 
-export function registerMemoActions(refresh: () => void, locale: string, labels: {
-  createdAt: string
-  duration: string
-  summary: string
-  corrected: string
-  transcript: string
-  chapters: string
-  actionItems: string
-  translation: string
-}): void {
+export function registerMemoActions(
+  refresh: () => void,
+  locale: string,
+  labels: {
+    createdAt: string
+    duration: string
+    summary: string
+    corrected: string
+    transcript: string
+    chapters: string
+    actionItems: string
+    translation: string
+  },
+): void {
   registerActions({
     async memo_list(input) {
       const query = text(input?.query).toLowerCase()
@@ -70,9 +74,13 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
           memo.isFavourite ? 'favourite' : '',
           memo.hasTranscript ? 'transcribed' : '',
           memo.hasAudio ? '' : 'transcript-only',
-        ].filter(Boolean).join(', ')
-        return `${index + 1}. ${memo.title} — ${clockString(memo.duration)}, ${shortDate(memo.createdAt, locale)} `
-          + `(${flags}) [id: ${memo.id}]`
+        ]
+          .filter(Boolean)
+          .join(', ')
+        return (
+          `${index + 1}. ${memo.title} — ${clockString(memo.duration)}, ${shortDate(memo.createdAt, locale)} ` +
+          `(${flags}) [id: ${memo.id}]`
+        )
       })
       return { ok: true, text: lines.join('\n'), count: rows.length }
     },
@@ -108,7 +116,11 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
       if (!clip) return { ok: false, text: 'Recording not found.' }
       const readable = await readableTranscript(clip)
       if (!readable.text) {
-        return { ok: true, text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`, status: readable.status }
+        return {
+          ok: true,
+          text: `No transcript yet (status: ${readable.status}). Run memo_transcribe first.`,
+          status: readable.status,
+        }
       }
       const prefix = readable.corrected ? '(speaker-corrected)\n\n' : ''
       return { ok: true, text: prefix + readable.text, status: readable.status }
@@ -152,14 +164,15 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
       if (!readable.text.trim()) return { ok: false, text: 'No transcript — run memo_transcribe first.' }
       const artifacts = await loadArtifacts(clip.id, readable.text)
       const cached = artifacts.actionItems
-      const items = (!cached.length || input?.force === true)
-        ? await extractActionItems(readable.text).catch(() => [])
-        : cached
-      if (items !== cached) await saveArtifacts({ ...artifacts, actionItems: items, sourceHash: hashText(readable.text) })
+      const items =
+        !cached.length || input?.force === true ? await extractActionItems(readable.text).catch(() => []) : cached
+      if (items !== cached)
+        await saveArtifacts({ ...artifacts, actionItems: items, sourceHash: hashText(readable.text) })
       if (items.length === 0) return { ok: true, text: 'No action items found.', count: 0 }
       const lines = items.map((item) => {
         const tail = [item.owner, item.dueHint, item.sourceTime !== undefined ? clockString(item.sourceTime) : '']
-          .filter(Boolean).join(' · ')
+          .filter(Boolean)
+          .join(' · ')
         return `- [${item.isDone ? 'x' : ' '}] (${item.kind}) ${item.text}${tail ? ` — ${tail}` : ''}`
       })
       refresh()
@@ -197,7 +210,8 @@ export function registerMemoActions(refresh: () => void, locale: string, labels:
         translation: artifacts.translationText,
         labels,
       }
-      const body = format === 'srt' ? exportSRT(payload) : format === 'text' ? exportText(payload) : exportMarkdown(payload)
+      const body =
+        format === 'srt' ? exportSRT(payload) : format === 'text' ? exportText(payload) : exportMarkdown(payload)
       if (!body.trim()) return { ok: false, text: 'Nothing to export yet — transcribe the recording first.' }
       return { ok: true, text: body, format }
     },

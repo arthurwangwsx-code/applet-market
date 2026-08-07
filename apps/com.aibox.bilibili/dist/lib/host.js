@@ -2,8 +2,9 @@
 // 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
 // （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
 // 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
-import { available, bridge, events, system, intelligence, ui } from '../lib/aibox-sdk.js';
+import { bridge, system } from 'aibox/sdk';
 import { imageURL as uiImageURL } from 'aibox/ui';
+import { errorMessage } from './types.js';
 // —— 网络 ——————————————————————————————————————————————
 /**
  * 取 JSON。用 `responseType: 'json'` 让原生侧解析——省一次 JS 侧 JSON.parse，
@@ -20,8 +21,8 @@ import { imageURL as uiImageURL } from 'aibox/ui';
  *
  * 这条判定**只认前缀**，不认整句：错误文案是宿主的，不该被这里的字符串匹配钉死。
  */
-const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，'
-    + '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）';
+const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，' +
+    '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）';
 function isPermissionError(message) {
     return /aibox\/(not-granted|denied|not-visible)/.test(String(message || ''));
 }
@@ -34,7 +35,7 @@ export async function fetchJSON(url, headers = {}) {
         res = await api.net.fetch(url, { headers, responseType: 'json', maxBytes: 2 * 1024 * 1024 });
     }
     catch (cause) {
-        const raw = String(cause?.message || cause);
+        const raw = errorMessage(cause);
         if (isPermissionError(raw)) {
             const denied = new Error(PERMISSION_HINT);
             denied.permission = true; // 页面据此换成「去授权」而不是「重试」
@@ -52,7 +53,7 @@ export async function fetchJSON(url, headers = {}) {
         err.retryable = res.status >= 500 || res.status === 429;
         throw err;
     }
-    return res?.body;
+    return res.body;
 }
 // —— 图片 ——————————————————————————————————————————————
 /**
@@ -83,7 +84,7 @@ export function imageURL(url, width) {
 export async function videoReadiness() {
     const api = bridge();
     if (!api?.video?.availability) {
-        return { ok: false, reason: 'noBridge' };
+        return { ok: false, reason: 'noBridge', resolve: false, dash: false };
     }
     try {
         const res = await api.video.availability();
@@ -95,7 +96,13 @@ export async function videoReadiness() {
         };
     }
     catch (err) {
-        return { ok: false, reason: 'noBridge', error: String(err?.message || err) };
+        return {
+            ok: false,
+            reason: 'noBridge',
+            resolve: false,
+            dash: false,
+            error: errorMessage(err),
+        };
     }
 }
 /** 兼容旧调用点：只关心能不能播。 */
@@ -110,7 +117,7 @@ export async function videoAvailable() {
  */
 // 舞台宽高比换算已收编进 SDK（`stageAspect`）—— 那是宿主契约知识（合法区间 [0.5,4]），
 // 不是本应用的领域逻辑。这里只做重导出，调用点不用改。
-export { stageAspect as aspectFor, resolveVideo, playVideo } from '../lib/aibox-sdk.js';
+export { stageAspect as aspectFor, resolveVideo, playVideo } from 'aibox/sdk';
 export async function openStage(settings, aspect) {
     const api = bridge();
     if (!api?.video?.stage)
@@ -163,7 +170,9 @@ export function onVideoProgress(handler) {
         try {
             off();
         }
-        catch { /* 已经退订了 */ }
+        catch {
+            /* 已经退订了 */
+        }
     };
 }
 // —— 登录态 ——————————————————————————————————————————
@@ -191,7 +200,9 @@ export async function clearSession() {
     try {
         await api?.secrets?.clearSession?.({ host: 'bilibili.com' });
     }
-    catch { /* 没有就算了 */ }
+    catch {
+        /* 没有就算了 */
+    }
 }
 /** Keychain 在这个构建里能不能写（未签名模拟器构建写不了，登录态存不住）。 */
 export async function secretsWritable() {
@@ -207,7 +218,7 @@ export async function secretsWritable() {
     }
 }
 // —— 本地存储（偏好，不是凭据）——————————————————————————
-export async function loadPref(key, fallback = null) {
+export async function loadPref(key, fallback) {
     const api = bridge();
     if (!api?.storage?.get)
         return fallback;
@@ -224,7 +235,9 @@ export async function savePref(key, value) {
     try {
         await api?.storage?.set?.(key, value);
     }
-    catch { /* 偏好存不住不该影响主流程 */ }
+    catch {
+        /* 偏好存不住不该影响主流程 */
+    }
 }
 // —— 交互 ——————————————————————————————————————————————
 /**
@@ -237,10 +250,12 @@ export async function savePref(key, value) {
 function fireAndForget(thunk) {
     try {
         const result = thunk();
-        if (result && typeof result.catch === 'function')
+        if (result instanceof Promise)
             result.catch(() => { });
     }
-    catch { /* 连命名空间都不在 */ }
+    catch {
+        /* 连命名空间都不在 */
+    }
 }
 export function haptic(kind = 'light') {
     fireAndForget(() => bridge()?.haptics?.impact?.({ style: kind }));

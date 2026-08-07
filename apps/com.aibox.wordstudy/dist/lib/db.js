@@ -5,7 +5,7 @@
 //  1. **归一化是键的一部分**：`entries`/`vocab` 用 `trim + toLowerCase()`，`history` 额外折叠连续空白。
 //  2. **`upsert` 与 `replace` 语义不同，别合并**（规格 §15.1）：前者命中只加计数，后者原位覆盖全字段。
 //  3. 桥不在场（普通浏览器里预览）时整层退化成内存实现，页面仍能跑。
-import { queryAll, removeMany } from '../lib/aibox-sdk.js';
+import { queryAll, removeMany } from 'aibox/sdk';
 const COLLECTIONS = {
     entries: 'wordEntries',
     history: 'lookupHistory',
@@ -108,11 +108,17 @@ export function cryptoID() {
 // —— 归一化 ——
 /** 词条 / 生词本的键归一：trim + 小写。 */
 export function normalizeTerm(text) {
-    return String(text ?? '').trim().toLowerCase();
+    return String(text ?? '')
+        .trim()
+        .toLowerCase();
 }
 /** 查询历史的键归一：**按空白切分再用单空格 join**，再小写（折叠连续空白，不是简单 trim）。 */
 export function normalizeHistoryTerm(text) {
-    return String(text ?? '').split(/\s+/).filter(Boolean).join(' ').toLowerCase();
+    return String(text ?? '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
 }
 /** 一行简义 = 首个 `sense.pos` + 空格 + 首个 gloss；无 sense 时空串。 */
 export function deriveBrief(payload) {

@@ -13,14 +13,5 @@
   "category": "productivity",
   "author": "AiBox",
   "minHostVersion": "1.0.0",
-  "tags": [
-    "ledger",
-    "budget",
-    "expense",
-    "multi-currency",
-    "split",
-    "记账",
-    "预算",
-    "AA"
-  ]
+  "tags": ["ledger", "budget", "expense", "multi-currency", "split", "记账", "预算", "AA"]
 }

@@ -12,10 +12,16 @@
 // 相对原生的额外一招：整数秒的**进位沿**是免费的高精度信息。
 // 轮询到 `reported` 比上一次大 1 时，说明「这一秒刚刚跨过去」，误差不超过一个轮询周期，
 // 于是把锚点钉在那一刻；同一秒内的重复观测只用来兜底纠偏，不重新锚定。
-const DEFAULT_NOW = () => (typeof performance !== 'undefined' && performance.now
-    ? performance.now()
-    : Date.now());
+const DEFAULT_NOW = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
 export class SmoothClock {
+    now;
+    anchorMedia = 0;
+    anchorUptime = 0;
+    rate = 0;
+    duration = 0;
+    lastReported = null;
+    timeline = 0;
+    anchoredOnEdge = false;
     constructor({ now = DEFAULT_NOW } = {}) {
         this.now = now;
         this.reset();
@@ -30,7 +36,7 @@ export class SmoothClock {
         this.anchoredOnEdge = false;
     }
     /** 有效速率：暂停 / 忙 → 0；本地音效路径 → 实际倍速；Apple Music 与普通本地 → 1。 */
-    static effectiveRate({ playbackState, isPlaying, effectsRate = 1, appliesEffects = false }) {
+    static effectiveRate({ playbackState, isPlaying, effectsRate = 1, appliesEffects = false, }) {
         if (playbackState === 'loading' || playbackState === 'buffering')
             return 0;
         if (playbackState === 'failed' || playbackState === 'idle')
@@ -40,7 +46,7 @@ export class SmoothClock {
         return appliesEffects ? Math.max(0.25, Math.min(4, Number(effectsRate) || 1)) : 1;
     }
     /** 强制重新锚定（切歌 / seek / stop 后调用）。 */
-    reanchor(seconds, { duration, rate, timeline } = {}) {
+    reanchor(seconds, { duration, rate, timeline, } = {}) {
         this.anchorMedia = clamp(Number(seconds) || 0, 0, duration === undefined ? Infinity : duration);
         this.anchorUptime = this.now();
         if (duration !== undefined)
@@ -56,7 +62,7 @@ export class SmoothClock {
      * 吃一次轮询快照。`reported` 是整数秒。
      * 返回 true 表示这次观测触发了重新锚定（调试与自测用）。
      */
-    observe(reported, { duration, rate, timeline } = {}) {
+    observe(reported, { duration, rate, timeline, } = {}) {
         const seconds = Math.max(0, Math.floor(Number(reported) || 0));
         if (duration !== undefined)
             this.duration = Math.max(0, Number(duration) || 0);

@@ -7,7 +7,7 @@
 //  ② `word_vocab_remove` 的"需确认"语义靠 manifest 的 `destructive: true` 表达。
 //
 // 返回一律**纯文本**（规格 §16），不是裸 JSON —— 模型读文本比读 JSON 稳。
-import { registerActions } from '../lib/aibox-sdk.js';
+import { registerActions } from 'aibox/sdk';
 import { cryptoID, getEntry, listVocab, normalizeTerm, recordHistory, removeVocab, saveTranslation, upsertEntry, upsertVocab, } from './db.js';
 import { LookupError, lookupWord, translateText } from './dict.js';
 import { formatEntryText, formatVocabList, previewDirection } from './logic.js';
@@ -24,7 +24,13 @@ export function registerWordActions(refresh) {
             // 缓存命中直出，零网络零 AI。
             const cached = await getEntry(term);
             if (cached) {
-                return { ok: true, text: formatEntryText(cached.payload), word: cached.word, source: cached.source, cached: true };
+                return {
+                    ok: true,
+                    text: formatEntryText(cached.payload),
+                    word: cached.word,
+                    source: cached.source,
+                    cached: true,
+                };
             }
             try {
                 const payload = await lookupWord(term);
@@ -131,10 +137,15 @@ export function registerWordActions(refresh) {
 }
 function matchesFilter(item, filter) {
     switch (filter) {
-        case 'word': return item.kind === 'word';
-        case 'sentence': return item.kind === 'sentence';
-        case 'mastered': return item.masteredAt !== null;
-        case 'unmastered': return item.masteredAt === null;
-        default: return true;
+        case 'word':
+            return item.kind === 'word';
+        case 'sentence':
+            return item.kind === 'sentence';
+        case 'mastered':
+            return item.masteredAt !== null;
+        case 'unmastered':
+            return item.masteredAt === null;
+        default:
+            return true;
     }
 }

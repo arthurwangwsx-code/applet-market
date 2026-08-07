@@ -29,6 +29,14 @@ export function seedAccount() {
     };
 }
 export class Ledger {
+    accounts;
+    positions;
+    orders;
+    cashFlows;
+    snapshots;
+    storageHealthy;
+    version;
+    listeners;
     constructor() {
         this.accounts = [];
         this.positions = [];
@@ -112,20 +120,20 @@ export class Ledger {
             return { ok: true, account: byID };
         const exact = active.filter((row) => row.name === text);
         if (exact.length === 1)
-            return { ok: true, account: exact[0] };
+            return { ok: true, account: exact[0] ?? null };
         const lower = text.toLowerCase();
         const currency = CURRENCY_WORDS.find((row) => row.words.some((word) => lower.includes(word)));
         if (currency) {
             const matched = active.filter((row) => row.currency === currency.code);
             if (matched.length === 1)
-                return { ok: true, account: matched[0] };
+                return { ok: true, account: matched[0] ?? null };
             if (matched.length > 1) {
                 return { ok: false, error: 'ambiguous', candidates: matched.map(describeAccount) };
             }
         }
         const fuzzy = active.filter((row) => row.name.toLowerCase().includes(lower));
         if (fuzzy.length === 1)
-            return { ok: true, account: fuzzy[0] };
+            return { ok: true, account: fuzzy[0] ?? null };
         if (fuzzy.length > 1)
             return { ok: false, error: 'ambiguous', candidates: fuzzy.map(describeAccount) };
         return { ok: false, error: 'notFound', candidates: active.map(describeAccount) };
@@ -143,16 +151,14 @@ export class Ledger {
             .slice(0, limit);
     }
     cashFlowsOf(accountID, limit) {
-        const rows = this.cashFlows
-            .filter((row) => row.accountID === accountID)
-            .sort((a, b) => b.occurredAt - a.occurredAt);
+        const rows = this.cashFlows.filter((row) => row.accountID === accountID).sort((a, b) => b.occurredAt - a.occurredAt);
         return limit ? rows.slice(0, limit) : rows;
     }
     snapshotsOf(accountID) {
         return this.snapshots.filter((row) => row.accountID === accountID).sort((a, b) => a.date - b.date);
     }
     // —— 交易 ——
-    async buy({ accountID, symbol, name, market, currency, quantity, price, fxRate: rate, feeMinor, note, source }) {
+    async buy({ accountID, symbol, name, market, currency, quantity, price, fxRate: rate, feeMinor, note, source, }) {
         if (!this.storageHealthy)
             return { ok: false, error: 'storageUnavailable' };
         const account = this.accountByID(accountID);
@@ -160,15 +166,28 @@ export class Ledger {
         let result;
         try {
             result = applyBuy({
-                account, position, symbol, name, market, currency, quantity, price, fxRate: rate, feeMinor, note, source,
+                account,
+                position,
+                symbol,
+                name,
+                market,
+                currency,
+                quantity,
+                price,
+                fxRate: rate,
+                feeMinor,
+                note,
+                source,
             });
         }
         catch (error) {
-            return { ok: false, error: error instanceof MoneyError ? error.code : 'unknown', detail: error.detail };
+            return {
+                ok: false,
+                error: error instanceof MoneyError ? error.code : 'unknown',
+                detail: error instanceof MoneyError ? error.detail : null,
+            };
         }
-        const nextPosition = position
-            ? { ...result.position }
-            : { ...result.position, id: newID('p'), realizedPnlMinor: 0 };
+        const nextPosition = position ? { ...result.position } : { ...result.position, id: newID('p'), realizedPnlMinor: 0 };
         const next = {
             ...this.state(),
             accounts: this.accounts.map((row) => (row.id === accountID ? result.account : row)),
@@ -178,7 +197,9 @@ export class Ledger {
             orders: [...this.orders, { ...result.order, id: newID('o') }],
         };
         const ok = await this.commit(next);
-        return ok ? { ok: true, order: result.order, debitMinor: result.debitMinor } : { ok: false, error: 'storageUnavailable' };
+        return ok
+            ? { ok: true, order: result.order, debitMinor: result.debitMinor }
+            : { ok: false, error: 'storageUnavailable' };
     }
     async sell({ accountID, symbol, quantity, price, fxRate: rate, feeMinor, note, source }) {
         if (!this.storageHealthy)
@@ -190,17 +211,26 @@ export class Ledger {
             result = applySell({ account, position, quantity, price, fxRate: rate, feeMinor, note, source });
         }
         catch (error) {
-            return { ok: false, error: error instanceof MoneyError ? error.code : 'unknown', detail: error.detail };
+            return {
+                ok: false,
+                error: error instanceof MoneyError ? error.code : 'unknown',
+                detail: error instanceof MoneyError ? error.detail : null,
+            };
         }
         const next = {
             ...this.state(),
             accounts: this.accounts.map((row) => (row.id === accountID ? result.account : row)),
-            positions: this.positions.map((row) => (row.id === position.id ? result.position : row)),
+            positions: this.positions.map((row) => (row.id === result.position.id ? result.position : row)),
             orders: [...this.orders, { ...result.order, id: newID('o') }],
         };
         const ok = await this.commit(next);
         return ok
-            ? { ok: true, order: result.order, proceedsMinor: result.proceedsMinor, realizedDeltaMinor: result.realizedDeltaMinor }
+            ? {
+                ok: true,
+                order: result.order,
+                proceedsMinor: result.proceedsMinor,
+                realizedDeltaMinor: result.realizedDeltaMinor,
+            }
             : { ok: false, error: 'storageUnavailable' };
     }
     async addCashFlow({ accountID, kind, amountMinor, note, source }) {
@@ -223,7 +253,7 @@ export class Ledger {
         return ok ? { ok: true, flow: result.flow } : { ok: false, error: 'storageUnavailable' };
     }
     // —— 账户生命周期 ——
-    async createAccount({ name, currency = 'CNY', initialCashMinor = 100000000, note = '', isRealCopy = false }) {
+    async createAccount({ name, currency = 'CNY', initialCashMinor = 100000000, note = '', isRealCopy = false, }) {
         if (!this.storageHealthy)
             return { ok: false, error: 'storageUnavailable' };
         const account = {
@@ -304,7 +334,10 @@ export class Ledger {
         });
     }
     performance(accountID) {
-        return performance({ orders: this.orders.filter((row) => row.accountID === accountID), snapshots: this.snapshotsOf(accountID) });
+        return performance({
+            orders: this.orders.filter((row) => row.accountID === accountID),
+            snapshots: this.snapshotsOf(accountID),
+        });
     }
     allocation(valuation) {
         return allocation(valuation.rows);

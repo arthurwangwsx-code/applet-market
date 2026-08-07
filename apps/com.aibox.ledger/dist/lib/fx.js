@@ -99,11 +99,6 @@ export function formatRate(rate) {
     const value = Number(rate) || 0;
     return value >= 100 ? value.toFixed(2) : value.toFixed(4);
 }
-/**
- * 在线汇率：`GET https://open.er-api.com/v6/latest/{BASE}`（免费、无需 key），超时 12 秒。
- * 返回 `rates[X] = 1 基准币 = 多少 X`；失败一律返回 null（**静默降级**，绝不用 1 兜底）。
- * 隐私：只把基准币码发出去，不含任何用户财务数据。
- */
 export async function fetchRates(base, httpGetJSON) {
     const code = String(base ?? '').toUpperCase();
     if (code.length !== 3)
@@ -112,10 +107,19 @@ export async function fetchRates(base, httpGetJSON) {
     if (!result.ok || !result.body)
         return null;
     const payload = result.body;
-    if (payload.result === 'error')
+    if (!payload || typeof payload !== 'object')
         return null;
-    const rates = payload.rates;
+    const record = payload;
+    if (record.result === 'error')
+        return null;
+    const rates = record.rates;
     if (!rates || typeof rates !== 'object' || Object.keys(rates).length === 0)
         return null;
-    return rates;
+    const parsed = {};
+    for (const [code, value] of Object.entries(rates)) {
+        const number = Number(value);
+        if (Number.isFinite(number))
+            parsed[code] = number;
+    }
+    return Object.keys(parsed).length > 0 ? parsed : null;
 }

@@ -29,6 +29,25 @@ const EMPTY_STATUS = {
     lastError: null,
 };
 export class MusicController {
+    store;
+    status;
+    clock;
+    queue;
+    listeners;
+    timer;
+    polling;
+    visible;
+    trackKey;
+    timeline;
+    scrub;
+    scrubHoldUntil;
+    heldTime;
+    availability;
+    sleepTimer;
+    effects;
+    queueRevision;
+    pendingOptimistic;
+    version;
     constructor({ store }) {
         this.store = store;
         this.status = { ...EMPTY_STATUS };
@@ -114,8 +133,7 @@ export class MusicController {
         const next = { ...EMPTY_STATUS, ...result.json };
         const key = trackIdentity(next.currentTrack);
         const trackChanged = key !== this.trackKey;
-        const stateChanged = next.playbackState !== this.status.playbackState
-            || next.isPlaying !== this.status.isPlaying;
+        const stateChanged = next.playbackState !== this.status.playbackState || next.isPlaying !== this.status.isPlaying;
         if (trackChanged) {
             this.trackKey = key;
             this.timeline += 1;
@@ -147,7 +165,9 @@ export class MusicController {
             this.notify();
     }
     // MARK: - 读
-    get currentTrack() { return this.status.currentTrack; }
+    get currentTrack() {
+        return this.status.currentTrack;
+    }
     get isBusy() {
         return this.status.playbackState === 'loading' || this.status.playbackState === 'buffering';
     }
@@ -186,10 +206,10 @@ export class MusicController {
         this.timeline += 1;
         this.clock.reanchor(0, { duration: this.status.duration, rate: 0, timeline: this.timeline });
         this.notify();
-        const args = playArgs(track);
-        if (Array.isArray(queueTracks) && queueTracks.length > 0) {
+        const base = playArgs(track);
+        const args = { ...base };
+        if (Array.isArray(queueTracks) && queueTracks.length > 0)
             args.queue = queueTracks.map(playArgs);
-        }
         const result = await callMusic('play', args);
         if (!result.ok) {
             // 失败分支如实纠回，绝不留个假的「正在播放」。
@@ -260,7 +280,9 @@ export class MusicController {
         this.clock.reanchor(seconds, { timeline: ++this.timeline });
         this.notify();
         await callMusic('seek', { seconds });
-        setTimeout(() => { this.refreshStatus().then(() => this.notify()); }, SCRUB_HOLD_MS);
+        setTimeout(() => {
+            this.refreshStatus().then(() => this.notify());
+        }, SCRUB_HOLD_MS);
     }
     async seekTo(seconds) {
         this.clock.reanchor(seconds, { timeline: ++this.timeline });
@@ -302,7 +324,7 @@ export class MusicController {
         this.notify();
     }
     async addToQueue(tracks, at = null) {
-        const list = (Array.isArray(tracks) ? tracks : [tracks]).filter(Boolean);
+        const list = (Array.isArray(tracks) ? tracks : [tracks]).filter((track) => Boolean(track));
         if (list.length === 0)
             return;
         haptics.impact('light');

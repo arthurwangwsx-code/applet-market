@@ -58,7 +58,9 @@ function repairTruncatedXML(xml) {
  * @param {number} now 无 pubDate 时的兜底时间（毫秒）
  */
 export function parseFeed(xml, source, now = Date.now(), max = MAX_ITEMS_PER_FEED) {
-    const text = String(xml || '').replace(/^﻿/, '').trim();
+    const text = String(xml || '')
+        .replace(/^﻿/, '')
+        .trim();
     if (!text)
         return [];
     const doc = parseXML(text) || repairTruncatedXML(text);

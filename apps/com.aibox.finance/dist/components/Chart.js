@@ -18,7 +18,6 @@ function useGradientID() {
     }
     return ref.current;
 }
-/** 数值序列 → SVG 路径点。`nulls` 段自动断开（暖机期不画点）。 */
 function pathFor(values, { width, height, min, max, padTop = 0, padBottom = 0 }) {
     const span = max - min || 1;
     const usable = height - padTop - padBottom;
@@ -64,13 +63,13 @@ function extent(series) {
 export function AreaLineChart({ values, overlays = [], height = 200, color, upIsRed = true, baseline, }) {
     const gradientID = useGradientID();
     const width = 1000; // viewBox 宽；实际宽度由 CSS 撑满
-    const clean = values.filter((value) => Number.isFinite(value));
+    const clean = values.filter((value) => typeof value === 'number' && Number.isFinite(value));
     if (clean.length < 2)
         return _jsx("div", { style: { height } });
-    const first = clean[0];
-    const last = clean[clean.length - 1];
+    const first = clean[0] ?? 0;
+    const last = clean.at(-1) ?? 0;
     const rising = last >= first;
-    const trend = color || ((rising === upIsRed) ? C.red : C.green);
+    const trend = color || (rising === upIsRed ? C.red : C.green);
     const series = [values, ...overlays.map((row) => row.values)];
     if (Array.isArray(baseline))
         series.push(baseline);
@@ -85,7 +84,7 @@ export function AreaLineChart({ values, overlays = [], height = 200, color, upIs
  * 副图（100pt）：柱 + 若干条线。MACD / KDJ / VOL 共用。
  * `bars` 按正负着涨跌色（VOL 则由调用方直接给每根的颜色）。
  */
-export function SubChart({ bars, barColors, lines = [], height = 100, upIsRed = true }) {
+export function SubChart({ bars, barColors, lines = [], height = 100, upIsRed = true, }) {
     const width = 1000;
     const series = lines.map((row) => row.values);
     if (bars)
@@ -95,22 +94,23 @@ export function SubChart({ bars, barColors, lines = [], height = 100, upIsRed = 
     const span = max - min || 1;
     const usable = height - 8;
     const zeroY = 4 + usable - ((0 - min) / span) * usable;
-    const count = bars ? bars.length : (lines[0] ? lines[0].values.length : 0);
+    const count = bars ? bars.length : lines[0] ? lines[0].values.length : 0;
     const slot = count > 0 ? width / count : 0;
     const barWidth = Math.max(0.8, slot * 0.62);
-    return (_jsxs("svg", { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "none", width: "100%", height: height, style: { display: 'block' }, "aria-hidden": "true", children: [bars ? bars.map((value, index) => {
-                if (!Number.isFinite(value))
-                    return null;
-                const y = 4 + usable - ((value - min) / span) * usable;
-                const top = Math.min(y, zeroY);
-                const barHeight = Math.max(0.6, Math.abs(y - zeroY));
-                const fill = barColors ? barColors[index]
-                    : ((value >= 0) === upIsRed ? C.red : C.green);
-                return (_jsx("rect", { x: index * slot + (slot - barWidth) / 2, y: top, width: barWidth, height: barHeight, fill: fill }, index));
-            }) : null, lines.map((row) => (_jsx("path", { d: pathFor(row.values, geometry), fill: "none", stroke: row.color, strokeWidth: "1", vectorEffect: "non-scaling-stroke" }, row.id)))] }));
+    return (_jsxs("svg", { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "none", width: "100%", height: height, style: { display: 'block' }, "aria-hidden": "true", children: [bars
+                ? bars.map((value, index) => {
+                    if (typeof value !== 'number' || !Number.isFinite(value))
+                        return null;
+                    const y = 4 + usable - ((value - min) / span) * usable;
+                    const top = Math.min(y, zeroY);
+                    const barHeight = Math.max(0.6, Math.abs(y - zeroY));
+                    const fill = barColors ? barColors[index] : value >= 0 === upIsRed ? C.red : C.green;
+                    return (_jsx("rect", { x: index * slot + (slot - barWidth) / 2, y: top, width: barWidth, height: barHeight, fill: fill ?? C.muted }, index));
+                })
+                : null, lines.map((row) => (_jsx("path", { d: pathFor(row.values, geometry), fill: "none", stroke: row.color, strokeWidth: "1", vectorEffect: "non-scaling-stroke" }, row.id)))] }));
 }
 /** 资金流柱状图：y 单位「亿元」，按正负着色，高 90，x 轴隐藏。 */
-export function BarChart({ values, height = 90, upIsRed = true }) {
+export function BarChart({ values, height = 90, upIsRed = true, }) {
     if (!values || values.length === 0)
         return null;
     return _jsx(SubChart, { bars: values, height: height, upIsRed: upIsRed });
@@ -118,7 +118,7 @@ export function BarChart({ values, height = 90, upIsRed = true }) {
 /**
  * 资产配置环形图：`innerRadius = 0.62`、`angularInset 1.5`、110×110。图例由调用方自己画。
  */
-export function DonutChart({ slices, size = 110, colors }) {
+export function DonutChart({ slices, size = 110, colors, }) {
     const total = slices.reduce((sum, row) => sum + Math.max(0, row.value), 0);
     if (total <= 0)
         return null;
@@ -143,13 +143,13 @@ export function DonutChart({ slices, size = 110, colors }) {
         const x4 = radius + inner * Math.cos(rad(from));
         const y4 = radius + inner * Math.sin(rad(from));
         const large = to - from > 180 ? 1 : 0;
-        return (_jsx("path", { d: `M${x1} ${y1}A${radius} ${radius} 0 ${large} 1 ${x2} ${y2}L${x3} ${y3}A${inner} ${inner} 0 ${large} 0 ${x4} ${y4}Z`, fill: colors[index % colors.length] }, row.id || index));
+        return (_jsx("path", { d: `M${x1} ${y1}A${radius} ${radius} 0 ${large} 1 ${x2} ${y2}L${x3} ${y3}A${inner} ${inner} 0 ${large} 0 ${x4} ${y4}Z`, fill: colors[index % colors.length] ?? C.brand }, row.id || index));
     });
     return (_jsx("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, style: { display: 'block', flex: '0 0 auto' }, "aria-hidden": "true", children: paths }));
 }
 /** 环形图与图例共用的配色（brand 起头，其余取中性可辨识色）。 */
 export const ALLOCATION_COLORS = [C.brand, C.blue, C.amber, C.green, C.muted];
 /** 折线（持仓收益曲线 h140 / 策略曲线 h130）——无面积、Y 不含 0。 */
-export function LineChart({ values, baseline, height = 140, color, upIsRed = true }) {
-    return (_jsx(AreaLineChart, { values: values, baseline: baseline, height: height, color: color, upIsRed: upIsRed }));
+export function LineChart({ values, baseline, height = 140, color, upIsRed = true, }) {
+    return _jsx(AreaLineChart, { values: values, baseline: baseline, height: height, color: color, upIsRed: upIsRed });
 }

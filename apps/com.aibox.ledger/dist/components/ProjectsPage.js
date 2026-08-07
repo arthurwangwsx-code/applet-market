@@ -28,7 +28,7 @@ function subtitleFor(project, t, locale) {
         return null; // 只有止 → 不显示副标题
     return project.isActive ? t('prj.ongoing') : null;
 }
-function ProjectRow({ ctx, project, canMutate, archived }) {
+function ProjectRow({ ctx, project, canMutate, archived = false, }) {
     const { store, t, locale, actions } = ctx;
     const spent = projectSpentMinor(store, project.id);
     const subtitle = subtitleFor(project, t, locale);
@@ -36,18 +36,46 @@ function ProjectRow({ ctx, project, canMutate, archived }) {
         if (!canMutate)
             return;
         const items = archived
-            ? [{ id: 'restore', label: t('x.restore'), icon: 'arrow.uturn.backward', onSelect: () => actions.archiveProject(project, false) }]
+            ? [
+                {
+                    id: 'restore',
+                    label: t('x.restore'),
+                    icon: 'arrow.uturn.backward',
+                    onSelect: () => actions.archiveProject(project, false),
+                },
+            ]
             : [
                 project.isActive
-                    ? { id: 'clear', label: t('prj.clearCurrent'), icon: 'circle.slash', onSelect: () => actions.clearCurrentProject() }
-                    : { id: 'set', label: t('prj.setCurrent'), icon: 'checkmark.circle', onSelect: () => actions.activateProject(project) },
+                    ? {
+                        id: 'clear',
+                        label: t('prj.clearCurrent'),
+                        icon: 'circle.slash',
+                        onSelect: () => actions.clearCurrentProject(),
+                    }
+                    : {
+                        id: 'set',
+                        label: t('prj.setCurrent'),
+                        icon: 'checkmark.circle',
+                        onSelect: () => actions.activateProject(project),
+                    },
                 { id: 'edit', label: t('x.edit'), icon: 'pencil', onSelect: () => actions.editProject(project) },
-                { id: 'archive', label: t('x.archive'), icon: 'archivebox', destructive: true, onSelect: () => actions.archiveProject(project, true) },
+                {
+                    id: 'archive',
+                    label: t('x.archive'),
+                    icon: 'archivebox',
+                    destructive: true,
+                    onSelect: () => actions.archiveProject(project, true),
+                },
             ];
         actions.showMenu(items);
     });
     return (_jsxs("button", { type: "button", className: "lg-btn", onClick: () => actions.openProject(project), ...longPress, style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%', padding: SPACE.s3 }, children: [_jsx(IconBadge, { name: project.systemImage, size: 40, color: project.colorHex, background: alpha(project.colorHex, 0.16) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }, children: [_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }, children: [_jsx("span", { className: "lg-clamp-1", style: { fontSize: 15, fontWeight: 500, color: C.ink }, children: project.name }), project.isActive ? (_jsx("span", { style: {
-                                    fontSize: 10, fontWeight: 500, color: C.brand, background: fade(C.brand, 14),
-                                    borderRadius: RADIUS.pill, padding: '1px 6px', flex: '0 0 auto',
-                                }, children: t('prj.current') })) : null] }), subtitle ? _jsx("span", { className: "lg-clamp-1", style: { fontSize: 12, color: C.muted }, children: subtitle }) : null] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }, children: [_jsx("span", { className: "lg-mono", style: { fontSize: 16, fontWeight: 500, color: C.ink }, children: money(spent, store.baseCode) }), project.budgetMinor > 0 ? (_jsx("span", { className: "lg-mono", style: { fontSize: 12, color: C.muted }, children: t('prj.of', moneyCompact(project.budgetMinor, store.baseCode)) })) : null] })] }));
+                                    fontSize: 10,
+                                    fontWeight: 500,
+                                    color: C.brand,
+                                    background: fade(C.brand, 14),
+                                    borderRadius: RADIUS.pill,
+                                    padding: '1px 6px',
+                                    flex: '0 0 auto',
+                                }, children: t('prj.current') })) : null] }), subtitle ? (_jsx("span", { className: "lg-clamp-1", style: { fontSize: 12, color: C.muted }, children: subtitle })) : null] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }, children: [_jsx("span", { className: "lg-mono", style: { fontSize: 16, fontWeight: 500, color: C.ink }, children: money(spent, store.baseCode) }), project.budgetMinor > 0 ? (_jsx("span", { className: "lg-mono", style: { fontSize: 12, color: C.muted }, children: t('prj.of', moneyCompact(project.budgetMinor, store.baseCode)) })) : null] })] }));
 }

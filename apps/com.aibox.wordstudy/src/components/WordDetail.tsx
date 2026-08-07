@@ -17,7 +17,10 @@ import type { WordLookupPayload } from '../lib/types.js'
 import { ChipsFlow, EmptyState, Icon, InfoChip, PrimaryButton, PushPage, SectionHeader } from './primitives.js'
 import { pickAction } from './SearchPage.js'
 
-interface Meta { isCached: boolean; source: string | null }
+interface Meta {
+  isCached: boolean
+  source: string | null
+}
 
 export function WordDetail(props: {
   palette: Palette
@@ -38,10 +41,7 @@ export function WordDetail(props: {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
 
-  const saved = useMemo(
-    () => store.vocab.some((item) => item.text === word.trim().toLowerCase()),
-    [store.vocab, word],
-  )
+  const saved = useMemo(() => store.vocab.some((item) => item.text === word.trim().toLowerCase()), [store.vocab, word])
 
   // `task(id: word)` —— 换词即重跑。
   useEffect(() => {
@@ -78,7 +78,9 @@ export function WordDetail(props: {
         if (!cancelled) setLoading(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
     // store 每次 refresh 都会换引用，放进依赖会把这条 task 变成死循环。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [word])
@@ -122,7 +124,12 @@ export function WordDetail(props: {
     const action = await pickAction(props, [
       { id: 'star', title: saved ? t('unfavourite') : t('favourite') },
       ...(payload && !regenerating ? [{ id: 'regen', title: t('regenerate') }] : []),
-      ...(entryText ? [{ id: 'copy', title: t('copyEntry') }, { id: 'share', title: t('share') }] : []),
+      ...(entryText
+        ? [
+            { id: 'copy', title: t('copyEntry') },
+            { id: 'share', title: t('share') },
+          ]
+        : []),
     ])
     if (action === 'star') await toggleSave()
     if (action === 'regen') await regenerate()
@@ -141,7 +148,15 @@ export function WordDetail(props: {
             <button
               type="button"
               onClick={() => props.onCompanion(null, entryText)}
-              style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 17, cursor: 'pointer', width: 44, height: 44 }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: palette.accent,
+                fontSize: 17,
+                cursor: 'pointer',
+                width: 44,
+                height: 44,
+              }}
               aria-label={t('companionTitle')}
             >
               <Icon name="sparkles" size={17} />
@@ -150,7 +165,15 @@ export function WordDetail(props: {
           <button
             type="button"
             onClick={menu}
-            style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 17, cursor: 'pointer', width: 44, height: 44 }}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: palette.accent,
+              fontSize: 17,
+              cursor: 'pointer',
+              width: 44,
+              height: 44,
+            }}
             aria-label="More"
           >
             ⋯
@@ -201,13 +224,23 @@ export function WordDetail(props: {
               </ChipsFlow>
             ) : null}
 
-            {(payload.phoneticUK || payload.phoneticUS || payload.frequency !== null) ? (
+            {payload.phoneticUK || payload.phoneticUS || payload.frequency !== null ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2 }}>
                 {payload.phoneticUK ? (
-                  <InfoChip palette={palette} icon="speaker" label={`UK /${payload.phoneticUK}/`} onClick={() => void speak(word, 'uk')} />
+                  <InfoChip
+                    palette={palette}
+                    icon="speaker"
+                    label={`UK /${payload.phoneticUK}/`}
+                    onClick={() => void speak(word, 'uk')}
+                  />
                 ) : null}
                 {payload.phoneticUS ? (
-                  <InfoChip palette={palette} icon="speaker" label={`US /${payload.phoneticUS}/`} onClick={() => void speak(word, 'us')} />
+                  <InfoChip
+                    palette={palette}
+                    icon="speaker"
+                    label={`US /${payload.phoneticUS}/`}
+                    onClick={() => void speak(word, 'us')}
+                  />
                 ) : null}
                 <div style={{ flex: 1 }} />
                 {payload.frequency !== null ? <Frequency palette={palette} value={payload.frequency} /> : null}
@@ -216,7 +249,9 @@ export function WordDetail(props: {
 
             {payload.examTags.length ? (
               <ChipsFlow>
-                {payload.examTags.map((tag) => <InfoChip key={tag} palette={palette} label={tag} />)}
+                {payload.examTags.map((tag) => (
+                  <InfoChip key={tag} palette={palette} label={tag} />
+                ))}
               </ChipsFlow>
             ) : null}
 
@@ -236,8 +271,23 @@ export function WordDetail(props: {
               <section>
                 <SectionHeader palette={palette} title={t('sectionCompanion')} />
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE.s2 }}>
-                  <Pill palette={palette} icon="quote" label={t('chipSimpler')} onClick={() => props.onCompanion(`Give me a simpler example sentence for "${word}".`, entryText)} />
-                  <Pill palette={palette} icon="list" label={t('chipOther')} onClick={() => props.onCompanion(`Does "${word}" have other common meanings or uses I should know about?`, entryText)} />
+                  <Pill
+                    palette={palette}
+                    icon="quote"
+                    label={t('chipSimpler')}
+                    onClick={() => props.onCompanion(`Give me a simpler example sentence for "${word}".`, entryText)}
+                  />
+                  <Pill
+                    palette={palette}
+                    icon="list"
+                    label={t('chipOther')}
+                    onClick={() =>
+                      props.onCompanion(
+                        `Does "${word}" have other common meanings or uses I should know about?`,
+                        entryText,
+                      )
+                    }
+                  />
                 </div>
               </section>
             ) : null}
@@ -263,19 +313,37 @@ export function WordDetail(props: {
                 <SectionHeader palette={palette} title={t('sectionExamples')} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s3 }}>
                   {payload.examples.map((example, index) => (
-                    <div key={`${example.en}-${index}`} style={{ display: 'flex', alignItems: 'flex-start', gap: SPACE.s2 }}>
+                    <div
+                      key={`${example.en}-${index}`}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: SPACE.s2 }}
+                    >
                       <button
                         type="button"
                         onClick={() => void speak(example.en, 'us')}
-                        style={{ flex: 1, border: 'none', background: 'transparent', padding: 0, textAlign: 'left', cursor: 'pointer' }}
+                        style={{
+                          flex: 1,
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                        }}
                       >
                         <div style={{ fontSize: 14, color: palette.ink }}>{example.en}</div>
-                        {example.zh ? <div style={{ fontSize: 13, color: palette.muted, marginTop: 2 }}>{example.zh}</div> : null}
+                        {example.zh ? (
+                          <div style={{ fontSize: 13, color: palette.muted, marginTop: 2 }}>{example.zh}</div>
+                        ) : null}
                       </button>
                       <button
                         type="button"
                         onClick={() => props.onPractice(example.en)}
-                        style={{ border: 'none', background: 'transparent', color: palette.accent, cursor: 'pointer', padding: 4 }}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: palette.accent,
+                          cursor: 'pointer',
+                          padding: 4,
+                        }}
                         aria-label={t('practiceTitle')}
                       >
                         <Icon name="mic" size={16} />
@@ -289,7 +357,15 @@ export function WordDetail(props: {
             {payload.memoryTip ? (
               <section>
                 <SectionHeader palette={palette} title={t('sectionMemoryTip')} />
-                <div style={{ background: palette.surface, borderRadius: RADIUS.card, padding: SPACE.s3, fontSize: 14, color: palette.ink }}>
+                <div
+                  style={{
+                    background: palette.surface,
+                    borderRadius: RADIUS.card,
+                    padding: SPACE.s3,
+                    fontSize: 14,
+                    color: palette.ink,
+                  }}
+                >
                   {payload.memoryTip}
                 </div>
               </section>
@@ -300,10 +376,23 @@ export function WordDetail(props: {
                 <SectionHeader palette={palette} title={t('sectionRelated')} />
                 <ChipsFlow>
                   {payload.synonyms.map((item) => (
-                    <InfoChip key={`syn-${item}`} palette={palette} label={item} filled onClick={() => props.onOpenWord(item)} />
+                    <InfoChip
+                      key={`syn-${item}`}
+                      palette={palette}
+                      label={item}
+                      filled
+                      onClick={() => props.onOpenWord(item)}
+                    />
                   ))}
                   {payload.antonyms.map((item) => (
-                    <InfoChip key={`ant-${item}`} palette={palette} label={item} tint={palette.red} filled onClick={() => props.onOpenWord(item)} />
+                    <InfoChip
+                      key={`ant-${item}`}
+                      palette={palette}
+                      label={item}
+                      tint={palette.red}
+                      filled
+                      onClick={() => props.onOpenWord(item)}
+                    />
                   ))}
                 </ChipsFlow>
               </section>
@@ -334,7 +423,10 @@ function Frequency({ palette, value }: { palette: Palette; value: number }) {
         <span
           key={index}
           style={{
-            width: 6, height: 6, borderRadius: 3, display: 'inline-block',
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            display: 'inline-block',
             background: index <= level ? palette.accent : 'transparent',
             border: index <= level ? 'none' : `1px solid ${palette.line}`,
           }}
@@ -350,9 +442,17 @@ function Pill(props: { palette: Palette; icon: string; label: string; onClick: (
       type="button"
       onClick={props.onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none',
-        borderRadius: RADIUS.pill, padding: '8px 12px', fontSize: 13, fontWeight: 500,
-        color: props.palette.accent, background: alpha(props.palette.accent, 0.1), cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        border: 'none',
+        borderRadius: RADIUS.pill,
+        padding: '8px 12px',
+        fontSize: 13,
+        fontWeight: 500,
+        color: props.palette.accent,
+        background: alpha(props.palette.accent, 0.1),
+        cursor: 'pointer',
       }}
     >
       <Icon name={props.icon} size={12} /> {props.label}

@@ -7,8 +7,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  REGISTRY_PATH, SCHEMA_VERSION, appPaths, fail, info, listAppIDs, listReleaseVersions,
-  ok, readJSON, sha256, writeJSON,
+  REGISTRY_PATH,
+  SCHEMA_VERSION,
+  appPaths,
+  fail,
+  info,
+  listAppIDs,
+  listReleaseVersions,
+  ok,
+  readJSON,
+  sha256,
+  writeJSON,
 } from './lib/market.mjs'
 
 const MARKET_NAME = 'AiBox 官方小应用市场'
@@ -71,18 +80,20 @@ function buildRegistryEntry(appId) {
   }
   const manifest = fs.existsSync(paths.manifest) ? readJSON(paths.manifest) : {}
   const permissions = manifest.permissions ?? {}
-  const capabilities = [...new Set([
-    ...(permissions.network ? ['net'] : []),
-    ...(permissions.storage ? ['storage'] : []),
-    ...(permissions.ai ? ['ai'] : []),
-    ...(permissions.capabilities ?? []),
-    // 外壳能力：manifest 里的**静态声明门**是 `scene.tabBar` / `scene.toolbar`
-    // （app-shell-and-market.md §1.1 / §2.1，Swift 侧 `AppletSceneDeclaration` 的 CodingKeys 同名）。
-    // `aibox.tabs` 只是运行时 API 的命名空间，manifest 里没有这个键——曾经写成 `scene.tabs`，
-    // 结果是「声明了底部 Tab 的应用在市场列表里看不出来」。
-    ...(manifest.scene?.tabBar ? ['tabs'] : []),
-    ...(manifest.scene?.toolbar ? ['toolbar'] : []),
-  ])].sort()
+  const capabilities = [
+    ...new Set([
+      ...(permissions.network ? ['net'] : []),
+      ...(permissions.storage ? ['storage'] : []),
+      ...(permissions.ai ? ['ai'] : []),
+      ...(permissions.capabilities ?? []),
+      // 外壳能力：manifest 里的**静态声明门**是 `scene.tabBar` / `scene.toolbar`
+      // （app-shell-and-market.md §1.1 / §2.1，Swift 侧 `AppletSceneDeclaration` 的 CodingKeys 同名）。
+      // `aibox.tabs` 只是运行时 API 的命名空间，manifest 里没有这个键——曾经写成 `scene.tabs`，
+      // 结果是「声明了底部 Tab 的应用在市场列表里看不出来」。
+      ...(manifest.scene?.tabBar ? ['tabs'] : []),
+      ...(manifest.scene?.toolbar ? ['toolbar'] : []),
+    ]),
+  ].sort()
 
   const entry = {
     appId,

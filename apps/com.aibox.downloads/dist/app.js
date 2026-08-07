@@ -93,9 +93,11 @@ export default function App() {
     const [shell, setShell] = React.useState({ tabsRendered: false, toolbarRendered: false });
     const [adding, setAdding] = React.useState(false);
     const [notice, setNotice] = React.useState(null);
-    const [engine, setEngine] = React.useState({ available: true, reason: '' });
+    const [engine, setEngine] = React.useState({ available: true });
     const { tasks, loaded, refresh, setTasks } = useTasks();
-    React.useEffect(() => { downloads.availability().then(setEngine); }, []);
+    React.useEffect(() => {
+        downloads.availability().then(setEngine);
+    }, []);
     const active = tasks.filter((t) => ACTIVE_STATES.includes(t.state));
     const finished = tasks.filter((t) => !ACTIVE_STATES.includes(t.state));
     const visible = tab === 'active' ? active : finished;
@@ -104,7 +106,8 @@ export default function App() {
         tap('light');
         // 乐观更新：桥是异步的，等一趟往返再变按钮态，手感就是「点了没反应」。
         if (taskId) {
-            setTasks((current) => current.map((t) => {
+            setTasks((current) => current
+                .map((t) => {
                 if (t.taskId !== taskId)
                     return t;
                 if (action === 'pause' && ACTIVE_STATES.includes(t.state))
@@ -114,7 +117,8 @@ export default function App() {
                 if (action === 'cancel')
                     return { ...t, state: 'cancelled' };
                 return t;
-            }).filter((t) => !(action === 'remove' && t.taskId === taskId)));
+            })
+                .filter((t) => !(action === 'remove' && t.taskId === taskId)));
         }
         await downloads.control(action, taskId);
         if (!taskId)
@@ -122,9 +126,7 @@ export default function App() {
     }, [refresh, setTasks]);
     const submit = React.useCallback(async (request) => {
         const result = await addDownloads(request);
-        setNotice(result.ok
-            ? { tone: 'success', text: result.text }
-            : { tone: 'error', text: result.error || '入队失败' });
+        setNotice(result.ok ? { tone: 'success', text: result.text } : { tone: 'error', text: result.error || '入队失败' });
         if (result.ok) {
             tap('medium');
             setTab('active');
@@ -134,10 +136,24 @@ export default function App() {
     // ⋯ 菜单的三个 UI 动作接到页面（无头时它们回落到 lib/actions.js 的纯桥调用）。
     React.useEffect(() => {
         uiHooks.refresh = refresh;
-        uiHooks.pauseAll = async () => { await control('pause'); return { ok: true, text: '已暂停全部下载。' }; };
-        uiHooks.resumeAll = async () => { await control('resume'); return { ok: true, text: '已继续全部下载。' }; };
-        uiHooks.clearFinished = async () => { await control('clearFinished'); return { ok: true, text: '已清空已完成记录。' }; };
-        return () => { uiHooks.refresh = null; uiHooks.pauseAll = null; uiHooks.resumeAll = null; uiHooks.clearFinished = null; };
+        uiHooks.pauseAll = async () => {
+            await control('pause');
+            return { ok: true, text: '已暂停全部下载。' };
+        };
+        uiHooks.resumeAll = async () => {
+            await control('resume');
+            return { ok: true, text: '已继续全部下载。' };
+        };
+        uiHooks.clearFinished = async () => {
+            await control('clearFinished');
+            return { ok: true, text: '已清空已完成记录。' };
+        };
+        return () => {
+            uiHooks.refresh = null;
+            uiHooks.pauseAll = null;
+            uiHooks.resumeAll = null;
+            uiHooks.clearFinished = null;
+        };
     }, [control, refresh]);
     // —— 宿主外壳接线 ——
     const addRef = React.useRef(null);
@@ -152,11 +168,13 @@ export default function App() {
                     const state = await api.tabs.getState();
                     if (!cancelled && state && state.rendered) {
                         setShell((c) => ({ ...c, tabsRendered: true }));
-                        if (state.selected)
+                        if (state.selected === 'active' || state.selected === 'done')
                             setTab(state.selected);
                     }
                 }
-                catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
+                catch (error) {
+                    /* 宿主没这能力：留给自绘 TabBar */
+                }
                 if (typeof api.tabs.on === 'function') {
                     offs.push(api.tabs.on('changed', (state) => {
                         if (!state)
@@ -164,7 +182,7 @@ export default function App() {
                         // `rendered` 会**在挂载之后翻转**（形态切换会重发 changed），只判一次就会永远多/少一条自绘条。
                         const rendered = state.rendered !== false;
                         setShell((c) => (c.tabsRendered === rendered ? c : { ...c, tabsRendered: rendered }));
-                        if (state.selected)
+                        if (state.selected === 'active' || state.selected === 'done')
                             setTab(state.selected);
                     }));
                 }
@@ -175,7 +193,9 @@ export default function App() {
                     if (!cancelled && state)
                         setShell((c) => ({ ...c, toolbarRendered: state.rendered !== false }));
                 }
-                catch (error) { /* 同上 */ }
+                catch (error) {
+                    /* 同上 */
+                }
                 if (typeof api.toolbar.on === 'function') {
                     offs.push(api.toolbar.on('invoke', (payload) => {
                         if (payload && payload.id === 'add' && addRef.current)
@@ -184,10 +204,15 @@ export default function App() {
                 }
             }
             // 回到前台时对一次账：后台期间 WebView 挂起收不到事件，但下载一直在跑。
-            offs.push(onEvent('lifecycle.foreground', () => { refresh(); }));
+            offs.push(onEvent('lifecycle.foreground', () => {
+                refresh();
+            }));
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, [refresh]);
     const activeCount = active.length;
     const finishedCount = finished.length;
@@ -203,21 +228,25 @@ export default function App() {
         // 只在宿主真的画了外壳时才发 update：无头运行没有可见容器，这些调用恒回
         // `aibox/not-visible`，把每一轮验收日志染红，掩盖真正的错误。
         if (shell.toolbarRendered && api && api.menu && typeof api.menu.update === 'function') {
-            api.menu.update({
+            api.menu
+                .update({
                 items: {
                     pauseAll: { enabled: hasRunning },
                     resumeAll: { enabled: hasPaused },
                     clearFinished: { enabled: finishedCount > 0 },
                 },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
         if (shell.tabsRendered && api && api.tabs && typeof api.tabs.update === 'function') {
-            api.tabs.update({
+            api.tabs
+                .update({
                 items: {
                     active: { badge: activeCount ? String(activeCount) : null },
                     done: { badge: null },
                 },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
     }, [tab, activeCount, finishedCount, hasRunning, hasPaused, shell.tabsRendered, shell.toolbarRendered]);
     // —— 渲染 ——
@@ -225,13 +254,13 @@ export default function App() {
         return (_jsx("div", { style: { padding: SPACE.s4 }, children: _jsx(EmptyState, { icon: "exclamationmark.triangle", title: "\u4E0B\u8F7D\u5F15\u64CE\u4E0D\u53EF\u7528", hint: engine.reason || '这个宿主没有装下载引擎，暂时不能下载任何东西。' }) }));
     }
     return (_jsxs("div", { style: { minHeight: '100vh', paddingBottom: shell.tabsRendered ? 0 : 76 }, children: [!shell.toolbarRendered ? (_jsxs("div", { style: {
-                    display: 'flex', alignItems: 'center', gap: SPACE.s2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s2,
                     padding: `calc(${SPACE.s3}px + env(safe-area-inset-top)) ${SPACE.s4}px ${SPACE.s3}px`,
-                }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 700 }, children: tab === 'active' ? '进行中' : '已完成' }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0" })] })) : null, _jsx(Notice, { text: notice && notice.text, tone: notice && notice.tone, onDismiss: () => setNotice(null) }), _jsx("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s5}px` }, children: !loaded ? null : visible.length === 0 ? (_jsx(EmptyState, { icon: tab === 'active' ? 'arrow.down.circle' : 'checkmark.circle', title: tab === 'active' ? '没有进行中的下载' : '还没有完成的下载', hint: tab === 'active'
+                }, children: [_jsx("span", { style: { fontSize: 22, fontWeight: 700 }, children: tab === 'active' ? '进行中' : '已完成' }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0" })] })) : null, _jsx(Notice, { text: notice?.text, tone: notice?.tone, onDismiss: () => setNotice(null) }), _jsx("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s5}px` }, children: !loaded ? null : visible.length === 0 ? (_jsx(EmptyState, { icon: tab === 'active' ? 'arrow.down.circle' : 'checkmark.circle', title: tab === 'active' ? '没有进行中的下载' : '还没有完成的下载', hint: tab === 'active'
                         ? '粘贴任意 http(s) 链接就能开始。下载在后台继续，退出这个小应用也不会中断。'
-                        : '完成的文件留在宿主侧，可以直接打开或分享。', action: tab === 'active'
-                        ? _jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0\u4E0B\u8F7D" })
-                        : null })) : (_jsxs(_Fragment, { children: [_jsxs(SectionHeader, { trailing: tab === 'done' && finishedCount ? (_jsx("button", { type: "button", onClick: async () => {
+                        : '完成的文件留在宿主侧，可以直接打开或分享。', action: tab === 'active' ? (_jsx(Button, { kind: "primary", icon: "plus", onClick: () => setAdding(true), children: "\u6DFB\u52A0\u4E0B\u8F7D" })) : null })) : (_jsxs(_Fragment, { children: [_jsxs(SectionHeader, { trailing: tab === 'done' && finishedCount ? (_jsx("button", { type: "button", onClick: async () => {
                                     const ok = await confirm({
                                         title: '清空已完成？',
                                         message: '只会清掉列表记录，已经下好的文件不会被删除。',
@@ -243,12 +272,28 @@ export default function App() {
                                     if (ok)
                                         control('clearFinished');
                                 }, style: { background: 'none', border: 'none', color: C.brand, fontSize: 13, cursor: 'pointer' }, children: "\u6E05\u7A7A" })) : null, children: [visible.length, " \u9879"] }), _jsx(Card, { padding: 0, children: visible.map((task, index) => (_jsx("div", { style: index ? { borderTop: `1px solid ${C.line}` } : undefined, children: _jsx(TaskRow, { task: task, onPause: (t) => control('pause', t.taskId), onResume: (t) => control('resume', t.taskId), onCancel: (t) => control('cancel', t.taskId), onRemove: (t) => control('remove', t.taskId), onOpen: capabilities.openURL ? (t) => downloads.openIn(t.taskId) : null, onShare: capabilities.share ? (t) => downloads.share(t.taskId) : null }) }, task.taskId))) })] })) }), !shell.tabsRendered ? (_jsx("div", { style: {
-                    position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40,
-                    display: 'flex', borderTop: `1px solid ${C.line}`, background: C.surface,
+                    position: 'fixed',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 40,
+                    display: 'flex',
+                    borderTop: `1px solid ${C.line}`,
+                    background: C.surface,
                     paddingBottom: 'env(safe-area-inset-bottom)',
-                }, children: TABS.map((row) => (_jsxs("button", { type: "button", onClick: () => { setTab(row.id); tap('light'); }, style: {
-                        flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        gap: 2, padding: '8px 0 6px', background: 'none', border: 'none', cursor: 'pointer',
+                }, children: TABS.map((row) => (_jsxs("button", { type: "button", onClick: () => {
+                        setTab(row.id);
+                        tap('light');
+                    }, style: {
+                        flex: '1 1 0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                        padding: '8px 0 6px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
                         color: tab === row.id ? C.brand : C.muted,
                     }, children: [_jsx(Icon, { name: tab === row.id ? row.selectedIcon : row.icon, size: 22 }), _jsx("span", { style: { fontSize: 11 }, children: row.title })] }, row.id))) })) : null, _jsx(AddSheet, { open: adding, onClose: () => setAdding(false), onSubmit: submit, onPaste: capabilities.clipboard ? readClipboard : null })] }));
 }

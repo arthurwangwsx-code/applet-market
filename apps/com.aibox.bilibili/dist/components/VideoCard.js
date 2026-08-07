@@ -1,11 +1,4 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// 视频卡片 —— 列表的基本行。对标 B 站 App 的横向卡：左封面 16:9，右标题两行 + UP 主 + 播放量。
-//
-// 两处关键：
-//  · 封面走 `imageURL()`（`applet://image/`）。裸 https 会被 CSP 静默拦成空白。
-//  · 卡片高度**固定**（COVER_H + 上下 padding）。虚拟列表靠估高定位，行高一变就会跳；
-//    标题用 `.bl-clamp2` 截两行正是为了让高度恒定。
-import React from 'react';
 import { C, RADIUS, SPACE } from './theme.js';
 import { imageURL } from '../lib/host.js';
 import { formatCount, formatDuration } from '../lib/format.js';
@@ -39,7 +32,10 @@ export default function VideoCard({ video, onOpen }) {
                             fontSize: 11,
                             fontVariantNumeric: 'tabular-nums',
                         }, children: formatDuration(video.duration) })) : null] }), _jsxs("div", { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: COVER_H }, children: [_jsx("div", { className: "bl-clamp2", style: { fontSize: 14, lineHeight: 1.35, color: C.text, fontWeight: 500 }, children: video.title }), _jsx("div", { style: { flex: 1 } }), video.author ? (_jsx("div", { style: {
-                            fontSize: 12, color: C.faint, whiteSpace: 'nowrap',
-                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            fontSize: 12,
+                            color: C.faint,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }, children: video.author })) : null, _jsxs("div", { style: { fontSize: 12, color: C.faint, marginTop: 2, fontVariantNumeric: 'tabular-nums' }, children: [formatCount(video.play), "\u89C2\u770B", video.danmaku > 0 ? ` · ${formatCount(video.danmaku)}弹幕` : ''] })] })] }));
 }

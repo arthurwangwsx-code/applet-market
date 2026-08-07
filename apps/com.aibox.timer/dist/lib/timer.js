@@ -1,4 +1,4 @@
-import { storage } from '../lib/aibox-sdk.js';
+import { storage } from 'aibox/sdk';
 export const DEFAULT_SECONDS = 25 * 60;
 const HISTORY_LIMIT = 100;
 // 编解码收在一处：旧版本写进去的形状不认识时回落默认值，而不是让整个应用白屏。
@@ -7,9 +7,7 @@ const running = storage.defineKey('timer.running', null, {
     serialize: (value) => (value === null ? null : { ...value }),
 });
 const history = storage.defineKey('timer.history', [], {
-    parse: (raw) => (Array.isArray(raw)
-        ? raw.map(toSession).filter((entry) => entry !== undefined)
-        : undefined),
+    parse: (raw) => Array.isArray(raw) ? raw.map(toSession).filter((entry) => entry !== undefined) : undefined,
     serialize: (value) => value,
 });
 function asRecord(value) {

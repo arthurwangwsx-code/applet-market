@@ -2,43 +2,65 @@
 // 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
 // （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
 // 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
-import { available, bridge, events, system, intelligence, ui } from '../lib/aibox-sdk.js';
+import { available, bridge, events, registerAction as registerSDKAction, system, ui } from 'aibox/sdk';
 export function hasNamespace(name, method) {
     return available(name, method);
 }
 export const capabilities = {
-    get music() { return hasNamespace('music', 'status'); },
-    get haptics() { return hasNamespace('haptics', 'impact'); },
-    get share() { return hasNamespace('share', 'text'); },
-    get openURL() { return hasNamespace('open', 'url'); },
-    get ui() { return hasNamespace('ui', 'confirm'); },
-    get tabs() { return hasNamespace('tabs', 'getState'); },
-    get toolbar() { return hasNamespace('toolbar', 'on'); },
-    get net() { return hasNamespace('net', 'fetch'); },
-    get storage() { return hasNamespace('storage', 'get'); },
-    get overlay() { return hasNamespace('overlay', 'getState'); },
-    get listGestures() { return hasNamespace('list', 'configure'); },
+    get music() {
+        return hasNamespace('music', 'status');
+    },
+    get haptics() {
+        return hasNamespace('haptics', 'impact');
+    },
+    get share() {
+        return hasNamespace('share', 'text');
+    },
+    get openURL() {
+        return hasNamespace('open', 'url');
+    },
+    get ui() {
+        return hasNamespace('ui', 'confirm');
+    },
+    get tabs() {
+        return hasNamespace('tabs', 'getState');
+    },
+    get toolbar() {
+        return hasNamespace('toolbar', 'on');
+    },
+    get net() {
+        return hasNamespace('net', 'fetch');
+    },
+    get storage() {
+        return hasNamespace('storage', 'get');
+    },
+    get overlay() {
+        return hasNamespace('overlay', 'getState');
+    },
+    get listGestures() {
+        return hasNamespace('list', 'configure');
+    },
 };
-// MARK: - music（19 个宿主工具的一等投影）
-/**
- * 调一个 `aibox.music.<method>`。统一回 `{ ok, text, json, error }`：
- * - `text` 是工具的原始文本（多数音乐工具把 JSON 直接放在 text 里，不走 details）；
- * - `json` 是 text 能解析成 JSON 时的对象/数组，否则 null；
- * - 失败不抛，`ok:false` + `error` 文本（UI 靠它反推「未授权 / 无订阅 / 真的空」）。
- */
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
+}
 export async function music(method, args = {}) {
     const api = bridge();
-    if (!api || !api.music || typeof api.music[method] !== 'function') {
+    const namespace = api?.music;
+    const invoke = namespace?.[method];
+    if (typeof invoke !== 'function') {
         return { ok: false, text: '', json: null, error: 'aibox/music-unavailable' };
     }
     try {
-        const raw = await api.music[method](args);
-        const text = String((raw && raw.text) || '');
-        const ok = !(raw && (raw.ok === false || raw.isError === true));
-        return { ok, text, json: parseJSON(text), details: raw && raw.details, error: ok ? null : text };
+        const value = await invoke(args);
+        const raw = isRecord(value) ? value : {};
+        const text = String(raw.text || '');
+        const ok = !(raw.ok === false || raw.isError === true);
+        return { ok, text, json: parseJSON(text), details: raw.details, error: ok ? null : text };
     }
     catch (error) {
-        return { ok: false, text: '', json: null, error: String((error && error.message) || error) };
+        const message = error instanceof Error ? error.message : String(error);
+        return { ok: false, text: '', json: null, error: message };
     }
 }
 export function parseJSON(text) {
@@ -60,8 +82,7 @@ export function classifyMusicError(text) {
     const value = String(text || '').toLowerCase();
     if (!value)
         return 'none';
-    if (value.includes('not authorized') || value.includes('access not granted')
-        || value.includes('authorization'))
+    if (value.includes('not authorized') || value.includes('access not granted') || value.includes('authorization'))
         return 'denied';
     if (value.includes('subscription'))
         return 'noSubscription';
@@ -73,25 +94,42 @@ export function classifyMusicError(text) {
 }
 // MARK: - 触感
 export const haptics = {
-    impact(style = 'light') { fireAndForget('haptics', 'impact', { style }); },
-    selection() { fireAndForget('haptics', 'selection', {}); },
-    notify(type = 'success') { fireAndForget('haptics', 'notify', { type }); },
+    impact(style = 'light') {
+        fireAndForget('haptics', 'impact', { style });
+    },
+    selection() {
+        fireAndForget('haptics', 'selection', {});
+    },
+    notify(type = 'success') {
+        fireAndForget('haptics', 'notify', { type });
+    },
 };
 function fireAndForget(namespace, method, args) {
     const api = bridge();
-    if (!api || !api[namespace] || typeof api[namespace][method] !== 'function')
+    const root = api;
+    const invoke = root?.[namespace]?.[method];
+    if (typeof invoke !== 'function')
         return;
     try {
-        const result = api[namespace][method](args);
-        if (result && typeof result.catch === 'function')
-            result.catch(() => { });
+        void invoke(args).catch(() => { });
     }
-    catch (error) { /* 触感失败无所谓 */ }
+    catch (error) {
+        /* 触感失败无所谓 */
+    }
 }
 // MARK: - 原生弹层（antd-mobile 的 Toast.show 在本宿主渲染为空，命令式弹层一律走原生或自绘）
 /** 二次确认。返回 true 表示用户点了确认键。宿主没有 ui 能力时保守返回 false（不误删）。 */
 /** 语义已统一：问不出来 = 没确认。 */
-export const confirm = ui.confirm;
+export async function confirm(input) {
+    return ui.confirm({
+        title: input.title,
+        message: input.message,
+        actions: [
+            { id: 'confirm', title: input.confirmTitle || 'OK', role: input.destructive ? 'destructive' : 'default' },
+            { id: 'cancel', title: input.cancelTitle || 'Cancel', role: 'cancel' },
+        ],
+    });
+}
 /** 原生 action sheet（长按菜单）。actions = [{id,title,role}]，返回被点中的 id 或 null。 */
 export const actionSheet = ui.actionSheet;
 export const prompt = ui.prompt;
@@ -142,12 +180,12 @@ export async function fetchImageDataURL(url, { maxBytes = 400000 } = {}) {
     if (!/^https?:\/\//i.test(String(url || '')))
         return null;
     try {
-        const response = await api.net.fetch(url, { method: 'GET', responseType: 'base64', maxBytes });
+        const response = await api.net.fetch(String(url), { method: 'GET', responseType: 'base64', maxBytes });
         const status = Number((response && response.status) || 0);
         const body = String((response && response.body) || '');
         if (status < 200 || status >= 300 || !body)
             return null;
-        const mime = String((response && response.contentType) || 'image/jpeg').split(';')[0].trim();
+        const mime = (String((response && response.contentType) || 'image/jpeg').split(';')[0] ?? '').trim();
         return `data:${mime || 'image/jpeg'};base64,${body}`;
     }
     catch (error) {
@@ -157,16 +195,12 @@ export async function fetchImageDataURL(url, { maxBytes = 400000 } = {}) {
 // MARK: - 事件与动作
 export const onEvent = events.on;
 /** 外壳命名空间自带回调，与 aibox.events 是两套机制。 */
-export const onNamespaceEvent = events.shellOn;
+export function onNamespaceEvent(namespace, event, handler) {
+    return events.shellOn(namespace, event, (payload) => handler(payload));
+}
 /** 注册一个对外动作（AI / 自动化 / 快捷指令可调用）。处理器必须返回 JSON 可序列化值。 */
 export function registerAction(name, handler) {
-    const api = bridge();
-    if (!api || !api.action || typeof api.action.register !== 'function')
-        return;
-    try {
-        api.action.register(name, handler);
-    }
-    catch (error) { /* 宿主没开放动作注册：静默 */ }
+    registerSDKAction(name, handler);
 }
 // MARK: - tabs / toolbar / navigation
 export const tabs = {
@@ -181,8 +215,12 @@ export const tabs = {
             return null;
         }
     },
-    select(id) { fireAndForget('tabs', 'select', { id }); },
-    update(items) { fireAndForget('tabs', 'update', { items }); },
+    select(id) {
+        fireAndForget('tabs', 'select', { id });
+    },
+    update(items) {
+        fireAndForget('tabs', 'update', { items });
+    },
 };
 export const toolbar = {
     async getState() {
@@ -196,8 +234,12 @@ export const toolbar = {
             return null;
         }
     },
-    update(items) { fireAndForget('toolbar', 'update', { items }); },
-    setSearch(patch) { fireAndForget('toolbar', 'setSearch', patch); },
+    update(items) {
+        fireAndForget('toolbar', 'update', { items });
+    },
+    setSearch(patch) {
+        fireAndForget('toolbar', 'setSearch', patch);
+    },
 };
 /**
  * 悬浮层（`aibox.overlay`，合同 app-shell-and-market.md §2.5）。
@@ -219,8 +261,12 @@ export const overlay = {
             return null;
         }
     },
-    update(items) { fireAndForget('overlay', 'update', { items }); },
-    reset() { fireAndForget('overlay', 'reset', {}); },
+    update(items) {
+        fireAndForget('overlay', 'update', { items });
+    },
+    reset() {
+        fireAndForget('overlay', 'reset', {});
+    },
 };
 export function setNavigationTitle(title) {
     const api = bridge();
@@ -231,5 +277,7 @@ export function setNavigationTitle(title) {
         if (result && typeof result.catch === 'function')
             result.catch(() => { });
     }
-    catch (error) { /* 忽略 */ }
+    catch (error) {
+        /* 忽略 */
+    }
 }

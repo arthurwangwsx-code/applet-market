@@ -20,7 +20,12 @@ const obj = (properties, required = []) => JSON.stringify({
 });
 const str = (description, extra = {}) => ({ type: 'string', description, ...extra });
 const num = (description, extra = {}) => ({ type: 'number', description, ...extra });
-const enumOf = (values, description, extra = {}) => ({ type: 'string', enum: values, description, ...extra });
+const enumOf = (values, description, extra = {}) => ({
+    type: 'string',
+    enum: values,
+    description,
+    ...extra,
+});
 const SYMBOL_HINT = 'Canonical symbol: A-shares sh600519 / sz000001, HK hk00700, US usAAPL, fund fund161725. A bare 6-digit code is accepted for A-shares.';
 /** 读型工具的公共字段。 */
 const read = { effect: 'read', readOnly: true, idempotent: true };
@@ -62,13 +67,17 @@ export const TOOL_DEFS = [
             period: enumOf(['5m', '15m', '30m', '60m', 'day', 'week', 'month'], 'Candle period. Default day.'),
             count: num('Number of candles, 1..800. Default 120.'),
             adjust: enumOf(['qfq', 'hfq'], 'Price adjustment for daily/weekly/monthly. Default qfq.'),
-            indicators: { type: 'array', items: enumOf(['ma', 'macd', 'kdj', 'boll'], 'Indicator'), description: 'Indicators to summarize.' },
+            indicators: {
+                type: 'array',
+                items: enumOf(['ma', 'macd', 'kdj', 'boll'], 'Indicator'),
+                description: 'Indicators to summarize.',
+            },
         }, ['symbol']),
     },
     {
         name: 'finance_watch',
         displayName: '管理自选',
-        summary: 'List, add, remove or regroup the watchlist, and manage watchlist groups. Writes to the user\'s watchlist.',
+        summary: "List, add, remove or regroup the watchlist, and manage watchlist groups. Writes to the user's watchlist.",
         keywords: ['watchlist', 'follow', 'add', 'remove', '自选', '关注', '添加'],
         ...write,
         idempotent: true,
@@ -188,7 +197,7 @@ export const TOOL_DEFS = [
     {
         name: 'finance_sector',
         displayName: '板块行情',
-        summary: 'List industry or concept sectors ranked by change or main capital inflow, or list a sector\'s constituents. Needs a mainland-China network connection; returns empty otherwise.',
+        summary: "List industry or concept sectors ranked by change or main capital inflow, or list a sector's constituents. Needs a mainland-China network connection; returns empty otherwise.",
         keywords: ['sector', 'industry', 'concept', 'board', '板块', '行业', '概念'],
         ...read,
         input: obj({
@@ -220,7 +229,7 @@ export const TOOL_DEFS = [
     {
         name: 'finance_sentiment',
         displayName: '市场情绪',
-        summary: 'Fetch today\'s market breadth: limit-up count, limit-down count, broken-board count, seal rate and the longest consecutive limit-up streak. Needs a mainland-China network connection.',
+        summary: "Fetch today's market breadth: limit-up count, limit-down count, broken-board count, seal rate and the longest consecutive limit-up streak. Needs a mainland-China network connection.",
         keywords: ['sentiment', 'limit up', 'breadth', '情绪', '涨停', '跌停', '封板'],
         ...read,
         input: obj({}),

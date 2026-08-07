@@ -9,13 +9,19 @@ import Pager from './Pager.js';
 import { SearchField } from './Shell.js';
 import { C, SPACE } from './theme.js';
 import { HISTORY_UI_LIMIT } from '../lib/store.js';
-function Segmented({ options, index, onSelect }) {
+function Segmented({ options, index, onSelect, }) {
     return (_jsx("div", { style: { padding: `${SPACE.s2}px ${SPACE.s4}px`, flex: '0 0 auto', background: C.bg }, children: _jsx("div", { style: {
-                display: 'flex', padding: 2, borderRadius: 9,
+                display: 'flex',
+                padding: 2,
+                borderRadius: 9,
                 background: 'color-mix(in srgb, var(--news-line) 45%, transparent)',
             }, children: options.map((option, i) => (_jsx("button", { type: "button", className: "news-btn news-press", onClick: () => onSelect(i), style: {
-                    flex: '1 1 0', textAlign: 'center', padding: '6px 0', borderRadius: 7,
-                    fontSize: 13, fontWeight: i === index ? 600 : 400,
+                    flex: '1 1 0',
+                    textAlign: 'center',
+                    padding: '6px 0',
+                    borderRadius: 7,
+                    fontSize: 13,
+                    fontWeight: i === index ? 600 : 400,
                     color: C.ink,
                     background: i === index ? C.surface : 'transparent',
                     boxShadow: i === index ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
@@ -23,7 +29,9 @@ function Segmented({ options, index, onSelect }) {
                 }, children: option }, option))) }) }));
 }
 function matches(text, query) {
-    return String(text || '').toLowerCase().includes(query);
+    return String(text || '')
+        .toLowerCase()
+        .includes(query);
 }
 export default function SavedPage({ ctx }) {
     const [index, setIndex] = React.useState(0);
@@ -35,8 +43,10 @@ export default function SavedPage({ ctx }) {
     const savedItems = React.useMemo(() => {
         const rows = [...ctx.store.saved].sort((a, b) => b.savedAt - a.savedAt);
         const filtered = normalized
-            ? rows.filter((row) => matches(row.title, normalized) || matches(row.summary, normalized)
-                || matches(row.sourceName, normalized) || matches(row.author, normalized))
+            ? rows.filter((row) => matches(row.title, normalized) ||
+                matches(row.summary, normalized) ||
+                matches(row.sourceName, normalized) ||
+                matches(row.author, normalized))
             : rows;
         return filtered.map((row) => ({ id: row.id, lead: toArticle(row), related: [] }));
     }, [ctx.store.saved, ctx.storeVersion, normalized]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -53,10 +63,20 @@ export default function SavedPage({ ctx }) {
     const menuFor = React.useCallback((article) => {
         const actions = [];
         if (ctx.hasAI) {
-            actions.push({ key: 'analyze', icon: 'sparkles', label: ctx.t('news.action.analyze'), onSelect: () => ctx.actions.analyze(article) });
+            actions.push({
+                key: 'analyze',
+                icon: 'sparkles',
+                label: ctx.t('news.action.analyze'),
+                onSelect: () => ctx.actions.analyze(article),
+            });
         }
         if (ctx.hasTTS) {
-            actions.push({ key: 'listen', icon: 'speaker.wave.2', label: ctx.t('news.action.listen'), onSelect: () => ctx.actions.listenFrom(article, [article]) });
+            actions.push({
+                key: 'listen',
+                icon: 'speaker.wave.2',
+                label: ctx.t('news.action.listen'),
+                onSelect: () => ctx.actions.listenFrom(article, [article]),
+            });
         }
         const saved = ctx.savedKeys.has(article.id);
         actions.push({
@@ -73,25 +93,38 @@ export default function SavedPage({ ctx }) {
             onSelect: () => ctx.actions.toggleRead(article),
         });
         if (ctx.hasKnowledgeCapture) {
-            actions.push({ key: 'kb', icon: 'books.vertical', label: ctx.t('Save to Knowledge Base'), onSelect: () => ctx.actions.saveToKnowledgeBase(article) });
+            actions.push({
+                key: 'kb',
+                icon: 'books.vertical',
+                label: ctx.t('Save to Knowledge Base'),
+                onSelect: () => ctx.actions.saveToKnowledgeBase(article),
+            });
         }
         return actions;
     }, [ctx]);
     const renderPage = (page) => {
         const items = page === 0 ? savedItems : historyItems;
         if (items.length === 0) {
-            const icon = normalized ? 'magnifyingglass' : (page === 0 ? 'bookmark' : 'clock.arrow.circlepath');
-            const key = normalized ? 'news.empty.search' : (page === 0 ? 'news.empty.saved' : 'news.empty.history');
-            return _jsx("div", { className: "news-scroll", children: _jsx(EmptyState, { icon: icon, text: ctx.t(key) }) });
+            const icon = normalized ? 'magnifyingglass' : page === 0 ? 'bookmark' : 'clock.arrow.circlepath';
+            const key = normalized ? 'news.empty.search' : page === 0 ? 'news.empty.saved' : 'news.empty.history';
+            return (_jsx("div", { className: "news-scroll", children: _jsx(EmptyState, { icon: icon, text: ctx.t(key) }) }));
         }
         return (_jsxs("div", { className: "news-scroll", children: [_jsx(ArticleList, { items: items, ctx: ctx, menuFor: menuFor, swipe: page === 0
-                        ? { label: ctx.t('news.action.unsave'), onAction: (article) => ctx.actions.unsave(article.id) }
-                        : { label: ctx.t('news.action.delete'), onAction: (article) => ctx.actions.removeHistory(article.id) } }), _jsx("div", { style: { height: 24 } })] }));
+                        ? {
+                            label: ctx.t('news.action.unsave'),
+                            onAction: (article) => ctx.actions.unsave(article.id),
+                        }
+                        : {
+                            label: ctx.t('news.action.delete'),
+                            onAction: (article) => ctx.actions.removeHistory(article.id),
+                        } }), _jsx("div", { style: { height: 24 } })] }));
     };
-    return (_jsxs(_Fragment, { children: [_jsx(Segmented, { options: [ctx.t('news.saved.favorites'), ctx.t('news.saved.history')], index: index, onSelect: (next) => { if (pagerRef.current)
-                    pagerRef.current.slideTo(next);
-                else
-                    setIndex(next); } }), ctx.searchRendered ? null : (_jsx(SearchField, { value: localQuery, onChange: setLocalQuery, placeholder: ctx.t('news.search.prompt') })), _jsx(Pager, { ref: pagerRef, count: 2, index: index, onIndex: setIndex, renderPage: renderPage })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(Segmented, { options: [ctx.t('news.saved.favorites'), ctx.t('news.saved.history')], index: index, onSelect: (next) => {
+                    if (pagerRef.current)
+                        pagerRef.current.slideTo(next);
+                    else
+                        setIndex(next);
+                } }), ctx.searchRendered ? null : (_jsx(SearchField, { value: localQuery, onChange: setLocalQuery, placeholder: ctx.t('news.search.prompt') })), _jsx(Pager, { ref: pagerRef, count: 2, index: index, onIndex: setIndex, renderPage: renderPage })] }));
 }
 function toArticle(row) {
     return {

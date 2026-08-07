@@ -5,7 +5,13 @@
 //  · **涨跌幅为 0 用中性灰**，不是红也不是绿。
 import { decimalsFor } from './symbol.js';
 export const CURRENCY_SYMBOL = {
-    CNY: '¥', RMB: '¥', HKD: 'HK$', USD: '$', EUR: '€', GBP: '£', JPY: 'JP¥',
+    CNY: '¥',
+    RMB: '¥',
+    HKD: 'HK$',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: 'JP¥',
 };
 export function currencySymbol(code) {
     return CURRENCY_SYMBOL[code] || `${code} `;
@@ -67,13 +73,13 @@ export function formatCompactCurrency(value, currency = 'CNY') {
 /** 千分位只加在整数部分，小数部分原样。 */
 export function groupInteger(text) {
     const [whole, fraction] = String(text).split('.');
-    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const grouped = (whole ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return fraction === undefined ? grouped : `${grouped}.${fraction}`;
 }
 /** 金额（分）：`符号 + 货币符号 + 千分位("%.2f" of 绝对值)`。 */
 export function formatMinor(minor, currency = 'CNY', { signed = false } = {}) {
     const value = (Number(minor) || 0) / 100;
-    const sign = value < 0 ? '-' : (signed && value > 0 ? '+' : '');
+    const sign = value < 0 ? '-' : signed && value > 0 ? '+' : '';
     return `${sign}${currencySymbol(currency)}${groupInteger(Math.abs(value).toFixed(2))}`;
 }
 /** 成交量 → 手（÷100）。五档盘口与新浪 A 股成交量都用它。 */
@@ -99,7 +105,7 @@ export function trendColor(value, upIsRed = true) {
     if (key === 'flat')
         return 'var(--fin-muted)';
     const rising = key === 'up';
-    return (rising === upIsRed) ? 'var(--fin-red)' : 'var(--fin-green)';
+    return rising === upIsRed ? 'var(--fin-red)' : 'var(--fin-green)';
 }
 /** 半透明底（自选行的涨跌 pill 用 13%）。 */
 export function trendTint(value, upIsRed = true, alpha = 0.13) {
@@ -107,7 +113,7 @@ export function trendTint(value, upIsRed = true, alpha = 0.13) {
     if (key === 'flat')
         return `color-mix(in srgb, var(--fin-muted) ${alpha * 100}%, transparent)`;
     const rising = key === 'up';
-    const token = (rising === upIsRed) ? 'var(--fin-red)' : 'var(--fin-green)';
+    const token = rising === upIsRed ? 'var(--fin-red)' : 'var(--fin-green)';
     return `color-mix(in srgb, ${token} ${alpha * 100}%, transparent)`;
 }
 // —— 时间 ——
@@ -134,7 +140,9 @@ export function formatStamp(timestamp, locale) {
     const tag = locale === 'zh-Hans' ? 'zh-CN' : 'en-US';
     try {
         const text = new Intl.DateTimeFormat(tag, {
-            dateStyle: 'medium', timeStyle: 'short', timeZoneName: 'short',
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZoneName: 'short',
         }).format(new Date(timestamp));
         return text;
     }
@@ -150,8 +158,8 @@ export function formatShortStamp(timestamp, now) {
     const today = new Date(now || Date.now());
     const pad = (value) => String(value).padStart(2, '0');
     const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    const sameDay = date.getFullYear() === today.getFullYear()
-        && date.getMonth() === today.getMonth()
-        && date.getDate() === today.getDate();
+    const sameDay = date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate();
     return sameDay ? time : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`;
 }

@@ -6,9 +6,10 @@
 //  · 「暂停」= stop；「继续」= 从当前这篇的开头重新读（不是从断点续读）；
 //  · 进度条按估算时长线性推进，不是真实播放进度。
 // 其余行为（队列上限 20、懒加载正文、拼「标题. 正文」、失败提示、跳到正在朗读那篇）与原生一致。
-import { speak, stopSpeaking, capabilities } from './host.js';
+import { speak, stopSpeaking } from './host.js';
 import { extract } from './extractor.js';
 import { bcp47 } from '../i18n/index.js';
+import { isAvailable } from 'aibox/sdk';
 export const BROADCAST_QUEUE_LIMIT = 20;
 const CJK_CHARS_PER_SECOND = 4.5;
 const LATIN_CHARS_PER_SECOND = 15;
@@ -18,7 +19,7 @@ function estimateSeconds(text) {
     let cjk = 0;
     let other = 0;
     for (const ch of String(text || '')) {
-        const code = ch.codePointAt(0);
+        const code = ch.codePointAt(0) ?? 0;
         if ((code >= 0x3400 && code <= 0x9fff) || (code >= 0xf900 && code <= 0xfaff))
             cjk += 1;
         else
@@ -28,6 +29,20 @@ function estimateSeconds(text) {
     return Math.max(2, seconds);
 }
 export class BroadcastController {
+    store;
+    items;
+    index;
+    active;
+    playing;
+    progress;
+    noticeKey;
+    spokeAtLeastOnce;
+    timer;
+    noticeTimer;
+    startedAt;
+    estimated;
+    listeners;
+    token;
     constructor(store) {
         this.store = store;
         this.items = [];
@@ -45,7 +60,7 @@ export class BroadcastController {
         this.token = 0;
     }
     get available() {
-        return capabilities.tts;
+        return isAvailable('tts', 'speak');
     }
     get current() {
         return this.items[this.index] || null;
@@ -168,7 +183,7 @@ export class BroadcastController {
         if (token !== this.token)
             return;
         const lang = /[㐀-鿿]/.test(text) ? 'zh-CN' : bcp47('en');
-        const ok = await speak(text, lang);
+        const ok = await speak(text, { lang });
         if (token !== this.token)
             return;
         if (!ok) {

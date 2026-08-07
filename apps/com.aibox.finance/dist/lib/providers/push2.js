@@ -11,20 +11,25 @@
 import { getJSON, num, str } from '../http.js';
 import { shanghaiYMD } from '../format.js';
 const QUOTE_REFERER = { Referer: 'https://quote.eastmoney.com/' };
+function isRecord(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 /** `data.diff` 归一成数组。 */
 function diffRows(body) {
-    const diff = body && body.data ? body.data.diff : null;
+    if (!isRecord(body) || !isRecord(body.data))
+        return [];
+    const diff = body.data.diff;
     if (Array.isArray(diff))
-        return diff;
-    if (diff && typeof diff === 'object')
-        return Object.keys(diff).map((key) => diff[key]);
+        return diff.filter(isRecord);
+    if (isRecord(diff))
+        return Object.values(diff).filter(isRecord);
     return [];
 }
 /** clist 通用列表。数值**直接取用，不除 100**（对齐 akshare）。 */
-async function clist({ fs, fields, fid, limit, ascending = false }) {
-    const url = 'https://push2.eastmoney.com/api/qt/clist/get'
-        + `?pn=1&pz=${limit}&po=${ascending ? 0 : 1}&fid=${fid}`
-        + `&fs=${encodeURIComponent(fs)}&fields=${fields}`;
+async function clist({ fs, fields, fid, limit, ascending = false, }) {
+    const url = 'https://push2.eastmoney.com/api/qt/clist/get' +
+        `?pn=1&pz=${limit}&po=${ascending ? 0 : 1}&fid=${fid}` +
+        `&fs=${encodeURIComponent(fs)}&fields=${fields}`;
     const result = await getJSON(url, { headers: QUOTE_REFERER });
     if (!result.ok)
         return [];
@@ -32,10 +37,11 @@ async function clist({ fs, fields, fid, limit, ascending = false }) {
 }
 const SECTOR_FIELDS = 'f12,f14,f3,f62,f104,f105,f128,f136';
 /** 行业/概念板块列表。 */
-export async function fetchSectors({ kind = 'industry', sort = 'change', limit = 60 } = {}) {
+export async function fetchSectors({ kind = 'industry', sort = 'change', limit = 60, } = {}) {
     const fs = kind === 'concept' ? 'm:90+t:3' : 'm:90+t:2';
     const rows = await clist({ fs, fields: SECTOR_FIELDS, fid: sort === 'moneyflow' ? 'f62' : 'f3', limit });
-    return rows.map((row) => ({
+    return rows
+        .map((row) => ({
         code: str(row.f12),
         name: str(row.f14),
         kind,
@@ -45,7 +51,8 @@ export async function fetchSectors({ kind = 'industry', sort = 'change', limit =
         downCount: num(row.f105),
         leaderName: str(row.f128),
         leaderChangePct: num(row.f136),
-    })).filter((row) => row.code);
+    }))
+        .filter((row) => row.code);
 }
 /** 板块成分股。 */
 export async function fetchConstituents(code, limit = 40) {
@@ -55,14 +62,16 @@ export async function fetchConstituents(code, limit = 40) {
         fid: 'f3',
         limit,
     });
-    return rows.map((row) => ({
+    return rows
+        .map((row) => ({
         code: str(row.f12),
         marketFlag: num(row.f13),
         name: str(row.f14),
         price: num(row.f2),
         changePct: num(row.f3),
         mainNet: num(row.f62),
-    })).filter((row) => row.code);
+    }))
+        .filter((row) => row.code);
 }
 const ALL_A = 'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048';
 /** 全市场主力资金排行。`ascending = !inflow`。 */
@@ -74,7 +83,8 @@ export async function fetchMoneyRank({ inflow = true, limit = 30 } = {}) {
         limit,
         ascending: !inflow,
     });
-    return rows.map((row) => ({
+    return rows
+        .map((row) => ({
         code: str(row.f12),
         marketFlag: num(row.f13),
         name: str(row.f14),
@@ -83,7 +93,8 @@ export async function fetchMoneyRank({ inflow = true, limit = 30 } = {}) {
         mainNet: num(row.f62),
         mainRatio: num(row.f184),
         sector: str(row.f100),
-    })).filter((row) => row.code);
+    }))
+        .filter((row) => row.code);
 }
 /** 选股扫描：拉前 400 再本地过滤。`marketCapYi = f20/1e8`。 */
 export async function fetchScreenerUniverse(limit = 400) {
@@ -93,7 +104,8 @@ export async function fetchScreenerUniverse(limit = 400) {
         fid: 'f3',
         limit,
     });
-    return rows.map((row) => ({
+    return rows
+        .map((row) => ({
         code: str(row.f12),
         marketFlag: num(row.f13),
         name: str(row.f14),
@@ -105,15 +117,15 @@ export async function fetchScreenerUniverse(limit = 400) {
         marketCapYi: num(row.f20) / 1e8,
         mainNet: num(row.f62),
         industry: str(row.f100),
-    })).filter((row) => row.code);
+    }))
+        .filter((row) => row.code);
 }
-/** 个股资金流（近 n 日）。`data.klines[]` 每行 `日期,主力,小单,中单,大单,超大单`，单位元。 */
 export async function fetchFundFlow(secidValue, days = 60) {
     if (!secidValue)
         return [];
-    const url = 'https://push2.eastmoney.com/api/qt/stock/fflow/kline/get'
-        + `?lmt=${Math.max(1, Math.min(120, days))}&klt=101&secid=${secidValue}`
-        + '&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56';
+    const url = 'https://push2.eastmoney.com/api/qt/stock/fflow/kline/get' +
+        `?lmt=${Math.max(1, Math.min(120, days))}&klt=101&secid=${secidValue}` +
+        '&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56';
     const result = await getJSON(url, { headers: QUOTE_REFERER });
     if (!result.ok)
         return [];
@@ -140,13 +152,13 @@ const POOLS = {
 };
 async function pool(kind, ymd) {
     const spec = POOLS[kind];
-    const url = `https://push2ex.eastmoney.com/${spec.path}`
-        + `?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=${spec.dpt}&Pageindex=0&pagesize=300&sort=fbt%3Aasc&date=${ymd}&_=0`;
+    const url = `https://push2ex.eastmoney.com/${spec.path}` +
+        `?ut=7eea3edcaed734bea9cbfc24409ed989&dpt=${spec.dpt}&Pageindex=0&pagesize=300&sort=fbt%3Aasc&date=${ymd}&_=0`;
     const result = await getJSON(url, { headers: QUOTE_REFERER });
     if (!result.ok)
         return [];
     const rows = result.body && result.body.data ? result.body.data.pool : null;
-    return Array.isArray(rows) ? rows : [];
+    return Array.isArray(rows) ? rows.filter(isRecord) : [];
 }
 /**
  * 市场情绪。三个池并发。`date` 用**上海时区**的 yyyyMMdd。
@@ -160,7 +172,7 @@ export async function fetchBreadth(now) {
     let maxContBoards = 0;
     let contLeaderName = '';
     for (const row of up) {
-        const boards = num(row.lbc, 0) || (row.zttj && num(row.zttj.ct, 0)) || 1;
+        const boards = num(row.lbc, 0) || (isRecord(row.zttj) ? num(row.zttj.ct, 0) : 0) || 1;
         if (boards > maxContBoards) {
             maxContBoards = boards;
             contLeaderName = str(row.n);
@@ -175,6 +187,6 @@ export async function fetchBreadth(now) {
         brokenBoard,
         maxContBoards,
         contLeaderName,
-        limitUpRatio: (limitUp + brokenBoard) > 0 ? (limitUp / (limitUp + brokenBoard)) * 100 : 0,
+        limitUpRatio: limitUp + brokenBoard > 0 ? (limitUp / (limitUp + brokenBoard)) * 100 : 0,
     };
 }

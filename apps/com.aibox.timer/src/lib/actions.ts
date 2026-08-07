@@ -1,8 +1,13 @@
-import { registerActions } from '@aibox/applet-sdk';
+import { registerActions } from '@aibox/applet-sdk'
 import {
-  appendHistory, durationFrom, formatDuration, loadRunning, newSessionID,
-  remainingSeconds, saveRunning,
-} from './timer.js';
+  appendHistory,
+  durationFrom,
+  formatDuration,
+  loadRunning,
+  newSessionID,
+  remainingSeconds,
+  saveRunning,
+} from './timer.js'
 
 /**
  * manifest 声明的三个 action 的实现。
@@ -20,41 +25,37 @@ import {
 export function registerAppletActions(onChange: () => void): void {
   registerActions({
     async start(input) {
-      const seconds = durationFrom(input);
-      const label = typeof input.label === 'string' && input.label.trim() !== ''
-        ? input.label.trim()
-        : '专注';
-      await saveRunning({ label, plannedSeconds: seconds, startedAt: Date.now() });
-      onChange();
+      const seconds = durationFrom(input)
+      const label = typeof input.label === 'string' && input.label.trim() !== '' ? input.label.trim() : '专注'
+      await saveRunning({ label, plannedSeconds: seconds, startedAt: Date.now() })
+      onChange()
       return {
         ok: true,
         remainingSeconds: seconds,
         label,
         text: `已开始计时：${label}，${formatDuration(seconds)}`,
-      };
+      }
     },
 
     async status() {
-      const running = await loadRunning();
-      if (!running) return { ok: true, running: false, text: '当前没有正在进行的计时。' };
-      const left = remainingSeconds(running);
+      const running = await loadRunning()
+      if (!running) return { ok: true, running: false, text: '当前没有正在进行的计时。' }
+      const left = remainingSeconds(running)
       return {
         ok: true,
         running: left > 0,
         remainingSeconds: left,
         label: running.label,
-        text: left > 0
-          ? `${running.label} 还剩 ${formatDuration(left)}`
-          : `${running.label} 已经到点了。`,
-      };
+        text: left > 0 ? `${running.label} 还剩 ${formatDuration(left)}` : `${running.label} 已经到点了。`,
+      }
     },
 
     async stop(input) {
-      const running = await loadRunning();
-      if (!running) return { ok: true, stopped: false, text: '没有正在进行的计时。' };
-      const left = remainingSeconds(running);
-      const actual = running.plannedSeconds - left;
-      await saveRunning(null);
+      const running = await loadRunning()
+      if (!running) return { ok: true, stopped: false, text: '没有正在进行的计时。' }
+      const left = remainingSeconds(running)
+      const actual = running.plannedSeconds - left
+      await saveRunning(null)
       if (input.record === true) {
         await appendHistory({
           id: newSessionID(),
@@ -63,10 +64,10 @@ export function registerAppletActions(onChange: () => void): void {
           actualSeconds: actual,
           finishedAt: Date.now(),
           completed: left === 0,
-        });
+        })
       }
-      onChange();
-      return { ok: true, stopped: true, text: `已停止：${running.label}（计了 ${formatDuration(actual)}）` };
+      onChange()
+      return { ok: true, stopped: true, text: `已停止：${running.label}（计了 ${formatDuration(actual)}）` }
     },
-  });
+  })
 }

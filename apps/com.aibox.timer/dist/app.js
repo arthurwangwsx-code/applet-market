@@ -1,8 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, NavBar, Space } from 'antd-mobile';
-import { haptic, isAvailable } from './lib/aibox-sdk.js';
-import { useKeyboardInset, useLocale, useScene } from './lib/aibox-sdk-react.js';
+import { haptic, isAvailable } from 'aibox/sdk';
+import { useKeyboardInset, useLocale, useScene } from 'aibox/sdk/react';
 import { Dial } from './components/Dial.js';
 import { HistoryList } from './components/HistoryList.js';
 import { registerAppletActions } from './lib/actions.js';
@@ -42,7 +42,9 @@ export default function App() {
     useEffect(() => {
         void refresh().finally(() => setReady(true));
         // action 可能在页面没打开时改了状态，注册时带一个回调把 UI 拉回来。
-        registerAppletActions(() => { void refresh(); });
+        registerAppletActions(() => {
+            void refresh();
+        });
     }, [refresh]);
     // 倒计时：**按墙钟差值算**而不是每秒 -1。后台/锁屏时 setInterval 会被节流，
     // 递减法回到前台就少了一截；差值法永远准。
@@ -70,7 +72,9 @@ export default function App() {
             settling.current = false;
         };
         void tick();
-        const id = window.setInterval(() => { void tick(); }, POLL_MS);
+        const id = window.setInterval(() => {
+            void tick();
+        }, POLL_MS);
         return () => window.clearInterval(id);
     }, [running]);
     const start = useCallback(async (seconds) => {
@@ -99,5 +103,16 @@ export default function App() {
         void haptic('warning');
     }, [running]);
     const safeBottom = scene?.safeArea.bottom ?? 0;
-    return (_jsxs("div", { style: { minHeight: '100dvh', display: 'flex', flexDirection: 'column' }, children: [_jsx(NavBar, { back: null, children: "\u8BA1\u65F6\u5668" }), _jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '32px 16px 0' }, children: [_jsx(Dial, { remaining: remaining, planned: running?.plannedSeconds ?? DEFAULT_SECONDS, label: running ? running.label : '准备开始', running: Boolean(running) }), running ? (_jsx(Button, { color: "danger", fill: "outline", size: "large", onClick: () => { void stop(); }, children: "\u505C\u6B62" })) : (_jsx(Space, { wrap: true, justify: "center", children: [5, 15, 25, 45].map((minutes) => (_jsxs(Button, { color: minutes === 25 ? 'primary' : 'default', size: "large", onClick: () => { void start(minutes * 60); }, children: [minutes, " \u5206\u949F"] }, minutes))) })), !isAvailable('haptics') && (_jsx("div", { className: "ax-muted", style: { fontSize: 12 }, children: "\u8FD9\u53F0\u8BBE\u5907\u6CA1\u6709\u89E6\u89C9\u53CD\u9988\uFF0C\u8BA1\u65F6\u7ED3\u675F\u53EA\u6709\u89C6\u89C9\u63D0\u793A\u3002" }))] }), _jsx("div", { style: { marginTop: 24, paddingBottom: safeBottom + keyboard.height }, children: ready && _jsx(HistoryList, { sessions: history, locale: locale }) })] }));
+    return (_jsxs("div", { style: { minHeight: '100dvh', display: 'flex', flexDirection: 'column' }, children: [_jsx(NavBar, { back: null, children: "\u8BA1\u65F6\u5668" }), _jsxs("div", { style: {
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 24,
+                    padding: '32px 16px 0',
+                }, children: [_jsx(Dial, { remaining: remaining, planned: running?.plannedSeconds ?? DEFAULT_SECONDS, label: running ? running.label : '准备开始', running: Boolean(running) }), running ? (_jsx(Button, { color: "danger", fill: "outline", size: "large", onClick: () => {
+                            void stop();
+                        }, children: "\u505C\u6B62" })) : (_jsx(Space, { wrap: true, justify: "center", children: [5, 15, 25, 45].map((minutes) => (_jsxs(Button, { color: minutes === 25 ? 'primary' : 'default', size: "large", onClick: () => {
+                                void start(minutes * 60);
+                            }, children: [minutes, " \u5206\u949F"] }, minutes))) })), !isAvailable('haptics') && (_jsx("div", { className: "ax-muted", style: { fontSize: 12 }, children: "\u8FD9\u53F0\u8BBE\u5907\u6CA1\u6709\u89E6\u89C9\u53CD\u9988\uFF0C\u8BA1\u65F6\u7ED3\u675F\u53EA\u6709\u89C6\u89C9\u63D0\u793A\u3002" }))] }), _jsx("div", { style: { marginTop: 24, paddingBottom: safeBottom + keyboard.height }, children: ready && _jsx(HistoryList, { sessions: history, locale: locale }) })] }));
 }

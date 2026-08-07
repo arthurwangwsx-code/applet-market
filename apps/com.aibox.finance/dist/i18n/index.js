@@ -14,15 +14,16 @@ export function onLocaleChanged(handler) {
     if (!bus || typeof bus.on !== 'function')
         return () => { };
     return bus.on('environment.localeChanged', (payload) => {
-        handler(normalizeLocale(payload && (payload.locale || payload.language)));
+        handler(normalizeLocale(payload?.locale || payload?.language));
     });
 }
 export function translate(locale, key) {
     const table = STRINGS[locale] || STRINGS.en;
+    const fallback = STRINGS.en;
     if (table[key] !== undefined)
         return table[key];
-    if (STRINGS.en[key] !== undefined)
-        return STRINGS.en[key];
+    if (fallback[key] !== undefined)
+        return fallback[key];
     return key;
 }
 /** 位置占位符：fmt('更新于 {0}', '15:04')。 */

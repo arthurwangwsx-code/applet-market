@@ -3,22 +3,22 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 // 长按菜单的**项与顺序**按 spec §2.5 / §4：条件不满足则整项不出现。
 import React from 'react';
 import ArticleRow from './ArticleRow.js';
-import { useLongPress } from '../lib/aibox-sdk-react.js';
+import { useLongPress } from 'aibox/sdk/react';
 import { ActionSheet, SwipeRow, useIncremental } from './primitives.js';
 import { C, SPACE } from './theme.js';
-function Item({ article, item, ctx, menuFor, swipe, sequence }) {
+function Item({ article, item, ctx, menuFor, swipe, sequence, }) {
     const [menu, setMenu] = React.useState(false);
     const actions = menu ? menuFor(article, item, sequence) : [];
     const press = useLongPress({ onLongPress: () => setMenu(true), onTap: () => ctx.actions.openArticle(article) });
     const body = (_jsxs("div", { className: "news-press", style: { padding: `0 ${SPACE.s4}px`, background: C.surface }, ...press, children: [_jsx(ArticleRow, { article: article, isRead: ctx.readKeys.has(article.id), relatedCount: item ? item.related.length : 0, isSaved: ctx.savedKeys.has(article.id), isSpeaking: ctx.speakingId === article.id, locale: ctx.locale, t: ctx.t, now: ctx.now }), _jsx("div", { style: { height: 0, borderBottom: `0.5px solid ${C.line}` } })] }));
-    return (_jsxs(_Fragment, { children: [swipe ? (_jsx(SwipeRow, { actionLabel: swipe.label, onAction: () => swipe.onAction(article), children: body })) : body, _jsx(ActionSheet, { visible: menu, title: article.title, actions: actions, cancelLabel: ctx.t('news.action.cancel'), onClose: () => setMenu(false) })] }));
+    return (_jsxs(_Fragment, { children: [swipe ? (_jsx(SwipeRow, { actionLabel: swipe.label, onAction: () => swipe.onAction(article), children: body })) : (body), _jsx(ActionSheet, { visible: menu, title: article.title, actions: actions, cancelLabel: ctx.t('news.action.cancel'), onClose: () => setMenu(false) })] }));
 }
 /**
  * @param items    时间线条目 `{ id, lead, related }`；或直接给 articles
  * @param menuFor  (article, item, sequence) => ActionSheet actions
  * @param swipe    `{ label, onAction }`，不给则无左滑
  */
-export default function ArticleList({ items, ctx, menuFor, swipe, header, footer }) {
+export default function ArticleList({ items, ctx, menuFor, swipe, header, footer, }) {
     const { visible, sentinel, hasMore } = useIncremental(items, 30);
     return (_jsxs("div", { children: [header, visible.map((entry) => (_jsx(Item, { article: entry.lead, item: entry, ctx: ctx, menuFor: menuFor, swipe: swipe, sequence: items }, entry.id))), _jsx("div", { ref: sentinel, style: { height: hasMore ? 24 : 0 } }), footer] }));
 }
@@ -47,7 +47,7 @@ export function buildArticleMenu(ctx, { includeRelated = true, includeCluster = 
                 key: 'listen',
                 icon: 'speaker.wave.2',
                 label: ctx.t('news.action.listen'),
-                onSelect: () => ctx.actions.listenFrom(article, (sequence || []).map((row) => row.lead)),
+                onSelect: () => ctx.actions.listenFrom(article, sequence.map((row) => row.lead)),
             });
         }
         const saved = ctx.savedKeys.has(article.id);

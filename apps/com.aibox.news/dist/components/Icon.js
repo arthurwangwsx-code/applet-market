@@ -1,7 +1,4 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
-// SF Symbol → 内联 SVG。小应用跑在 WebView 里，拿不到 SF Symbols，
-// 这里按原生用到的符号名手绘一套等价图形（几何近似，非像素级复刻），统一 24×24、currentColor。
-import React from 'react';
 const STROKE = {
     fill: 'none',
     stroke: 'currentColor',
@@ -12,9 +9,7 @@ const STROKE = {
 const SOLID = { fill: 'currentColor', stroke: 'none' };
 /** 圆环 + 内部字形（checkmark.circle / plus.circle / … 一族共用）。 */
 function ringed(glyph, filled) {
-    return filled
-        ? (_jsxs(_Fragment, { children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2", fill: "currentColor" }), _jsx("g", { fill: "none", stroke: "var(--news-surface)", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", children: glyph })] }))
-        : (_jsxs(_Fragment, { children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2", ...STROKE }), _jsx("g", { ...STROKE, children: glyph })] }));
+    return filled ? (_jsxs(_Fragment, { children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2", fill: "currentColor" }), _jsx("g", { fill: "none", stroke: "var(--news-surface)", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", children: glyph })] })) : (_jsxs(_Fragment, { children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2", ...STROKE }), _jsx("g", { ...STROKE, children: glyph })] }));
 }
 const CHECK = _jsx("path", { d: "M8 12.3l2.7 2.7L16 9.6" });
 const PLUS = _jsx("path", { d: "M12 8v8M8 12h8" });
@@ -27,8 +22,8 @@ const SHAPES = {
     newspaper: (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M3.2 6.4h12.4v11.2a2 2 0 0 0 2 2H5.2a2 2 0 0 1-2-2z" }), _jsx("path", { d: "M15.6 8.6h3.2a2 2 0 0 1 2 2v6.6a2.4 2.4 0 0 1-2.4 2.4" }), _jsx("path", { d: "M5.8 9.2h7M5.8 12h7M5.8 14.8h4.4" })] })),
     'newspaper.fill': (_jsxs("g", { children: [_jsx("path", { d: "M3.2 6.4h12.4v11.2a2 2 0 0 0 2 2H5.2a2 2 0 0 1-2-2z", fill: "currentColor" }), _jsx("path", { d: "M15.6 8.6h3.2a2 2 0 0 1 2 2v6.6a2.4 2.4 0 0 1-2.4 2.4", ...STROKE })] })),
     'dot.radiowaves.up.forward': (_jsxs("g", { ...STROKE, children: [_jsx("circle", { cx: "6.4", cy: "17.6", r: "1.5", fill: "currentColor", stroke: "none" }), _jsx("path", { d: "M10.4 17.6a4.4 4.4 0 0 0-4.4-4.4" }), _jsx("path", { d: "M14.6 17.6A8.6 8.6 0 0 0 6 9" }), _jsx("path", { d: "M18.8 17.6A12.8 12.8 0 0 0 6 4.8" })] })),
-    bookmark: _jsx("g", { ...STROKE, children: _jsx("path", { d: "M6.6 4.6h10.8v15.2L12 15.6l-5.4 4.2z" }) }),
-    'bookmark.fill': _jsx("g", { ...SOLID, children: _jsx("path", { d: "M6.6 4.6h10.8v15.2L12 15.6l-5.4 4.2z" }) }),
+    bookmark: (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M6.6 4.6h10.8v15.2L12 15.6l-5.4 4.2z" }) })),
+    'bookmark.fill': (_jsx("g", { ...SOLID, children: _jsx("path", { d: "M6.6 4.6h10.8v15.2L12 15.6l-5.4 4.2z" }) })),
     'bookmark.slash': (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M6.6 4.6h10.8v15.2L12 15.6l-5.4 4.2z" }), _jsx("path", { d: "M4.2 3.6l15.6 16.8" })] })),
     sparkles: (_jsxs("g", { ...SOLID, children: [_jsx("path", { d: "M13.4 3.2l1.3 3.6 3.6 1.3-3.6 1.3-1.3 3.6-1.3-3.6L8.5 8.1l3.6-1.3z" }), _jsx("path", { d: "M6.6 13l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" }), _jsx("path", { d: "M18 14.2l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z" })] })),
     ellipsis: (_jsxs("g", { ...SOLID, children: [_jsx("circle", { cx: "5.6", cy: "12", r: "1.6" }), _jsx("circle", { cx: "12", cy: "12", r: "1.6" }), _jsx("circle", { cx: "18.4", cy: "12", r: "1.6" })] })),
@@ -36,7 +31,7 @@ const SHAPES = {
     'speaker.wave.2.fill': (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M4 9.4h3.2L11 6v12l-3.8-3.4H4z", fill: "currentColor" }), _jsx("path", { d: "M14.4 9.4a3.8 3.8 0 0 1 0 5.2M17.2 7a7.4 7.4 0 0 1 0 10" })] })),
     'rectangle.stack': (_jsxs("g", { ...STROKE, children: [_jsx("rect", { x: "4", y: "9.6", width: "16", height: "9.6", rx: "2" }), _jsx("path", { d: "M6.4 6.8h11.2M8 4.4h8" })] })),
     'rectangle.3.group': (_jsxs("g", { ...STROKE, children: [_jsx("rect", { x: "3.4", y: "4.6", width: "17.2", height: "6.2", rx: "1.6" }), _jsx("rect", { x: "3.4", y: "13.2", width: "7.6", height: "6.2", rx: "1.6" }), _jsx("rect", { x: "13", y: "13.2", width: "7.6", height: "6.2", rx: "1.6" })] })),
-    circle: _jsx("g", { ...STROKE, children: _jsx("circle", { cx: "12", cy: "12", r: "9.2" }) }),
+    circle: (_jsx("g", { ...STROKE, children: _jsx("circle", { cx: "12", cy: "12", r: "9.2" }) })),
     'checkmark.circle': ringed(CHECK, false),
     'checkmark.circle.fill': ringed(CHECK, true),
     'plus.circle': ringed(PLUS, false),
@@ -47,9 +42,9 @@ const SHAPES = {
     'xmark.circle.fill': ringed(XMARK, true),
     'stop.circle.fill': (_jsxs("g", { children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2", fill: "currentColor" }), _jsx("rect", { x: "9.2", y: "9.2", width: "5.6", height: "5.6", rx: "1.2", fill: "var(--news-surface)" })] })),
     'books.vertical': (_jsxs("g", { ...STROKE, children: [_jsx("rect", { x: "4", y: "4.4", width: "4", height: "15.2", rx: "1" }), _jsx("rect", { x: "10", y: "4.4", width: "4", height: "15.2", rx: "1" }), _jsx("path", { d: "M16.6 5.2l3.2.8-3 14-3.2-.8z" })] })),
-    'chevron.right': _jsx("g", { ...STROKE, children: _jsx("path", { d: "M9.4 5.6l6.4 6.4-6.4 6.4" }) }),
-    'chevron.left': _jsx("g", { ...STROKE, children: _jsx("path", { d: "M14.6 5.6L8.2 12l6.4 6.4" }) }),
-    'chevron.down': _jsx("g", { ...STROKE, children: _jsx("path", { d: "M5.6 9.4l6.4 6.4 6.4-6.4" }) }),
+    'chevron.right': (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M9.4 5.6l6.4 6.4-6.4 6.4" }) })),
+    'chevron.left': (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M14.6 5.6L8.2 12l6.4 6.4" }) })),
+    'chevron.down': (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M5.6 9.4l6.4 6.4 6.4-6.4" }) })),
     clock: (_jsxs("g", { ...STROKE, children: [_jsx("circle", { cx: "12", cy: "12", r: "9.2" }), _jsx("path", { d: "M12 6.6V12l3.6 2.2" })] })),
     'clock.arrow.circlepath': (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M3.8 12a8.2 8.2 0 1 1 2.6 6" }), _jsx("path", { d: "M3.4 20.4v-4.2h4.2" }), _jsx("path", { d: "M12 7.2V12l3.4 2" })] })),
     'clock.badge.questionmark': (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M20.4 13.6A8.6 8.6 0 1 1 12 3.4" }), _jsx("path", { d: "M12 6.6V12l3 1.9" }), _jsx("path", { d: "M16.4 4.2a1.8 1.8 0 1 1 2.2 2v1.1M18.6 9.2v.2" })] })),
@@ -86,14 +81,14 @@ const SHAPES = {
     'heart.text.square': (_jsxs("g", { ...STROKE, children: [_jsx("rect", { x: "3.4", y: "3.4", width: "17.2", height: "17.2", rx: "4" }), _jsx("path", { d: "M12 16.4s-3.6-2.4-3.6-4.8a2 2 0 0 1 3.6-1.2 2 2 0 0 1 3.6 1.2c0 2.4-3.6 4.8-3.6 4.8z" })] })),
     'square.grid.2x2': (_jsxs("g", { ...STROKE, children: [_jsx("rect", { x: "3.6", y: "3.6", width: "7.2", height: "7.2", rx: "1.6" }), _jsx("rect", { x: "13.2", y: "3.6", width: "7.2", height: "7.2", rx: "1.6" }), _jsx("rect", { x: "3.6", y: "13.2", width: "7.2", height: "7.2", rx: "1.6" }), _jsx("rect", { x: "13.2", y: "13.2", width: "7.2", height: "7.2", rx: "1.6" })] })),
     trash: (_jsxs("g", { ...STROKE, children: [_jsx("path", { d: "M4.6 6.4h14.8M9.4 6.4V4.6h5.2v1.8" }), _jsx("path", { d: "M6.6 6.4l1 13.2h8.8l1-13.2" }), _jsx("path", { d: "M10.2 9.8v6.4M13.8 9.8v6.4" })] })),
-    'arrow.up': _jsx("g", { ...STROKE, children: _jsx("path", { d: "M12 20V4M5.6 10.4L12 4l6.4 6.4" }) }),
-    'arrow.down': _jsx("g", { ...STROKE, children: _jsx("path", { d: "M12 4v16M5.6 13.6L12 20l6.4-6.4" }) }),
-    xmark: _jsx("g", { ...STROKE, children: _jsx("path", { d: "M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" }) }),
-    checkmark: _jsx("g", { ...STROKE, children: _jsx("path", { d: "M4.6 12.6l5 5 9.8-11" }) }),
-    'play.fill': _jsx("g", { ...SOLID, children: _jsx("path", { d: "M7 4.6l12 7.4-12 7.4z" }) }),
-    'pause.fill': _jsxs("g", { ...SOLID, children: [_jsx("rect", { x: "6.4", y: "4.6", width: "3.8", height: "14.8", rx: "1.4" }), _jsx("rect", { x: "13.8", y: "4.6", width: "3.8", height: "14.8", rx: "1.4" })] }),
-    'backward.fill': _jsx("g", { ...SOLID, children: _jsx("path", { d: "M11.6 12L20 6.4v11.2zM3.4 12l8.4-5.6v11.2z" }) }),
-    'forward.fill': _jsx("g", { ...SOLID, children: _jsx("path", { d: "M12.4 12L4 17.6V6.4zM20.6 12l-8.4 5.6V6.4z" }) }),
+    'arrow.up': (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M12 20V4M5.6 10.4L12 4l6.4 6.4" }) })),
+    'arrow.down': (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M12 4v16M5.6 13.6L12 20l6.4-6.4" }) })),
+    xmark: (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" }) })),
+    checkmark: (_jsx("g", { ...STROKE, children: _jsx("path", { d: "M4.6 12.6l5 5 9.8-11" }) })),
+    'play.fill': (_jsx("g", { ...SOLID, children: _jsx("path", { d: "M7 4.6l12 7.4-12 7.4z" }) })),
+    'pause.fill': (_jsxs("g", { ...SOLID, children: [_jsx("rect", { x: "6.4", y: "4.6", width: "3.8", height: "14.8", rx: "1.4" }), _jsx("rect", { x: "13.8", y: "4.6", width: "3.8", height: "14.8", rx: "1.4" })] })),
+    'backward.fill': (_jsx("g", { ...SOLID, children: _jsx("path", { d: "M11.6 12L20 6.4v11.2zM3.4 12l8.4-5.6v11.2z" }) })),
+    'forward.fill': (_jsx("g", { ...SOLID, children: _jsx("path", { d: "M12.4 12L4 17.6V6.4zM20.6 12l-8.4 5.6V6.4z" }) })),
 };
 export default function Icon({ name, size = 17, color, style, className, title }) {
     const shape = SHAPES[name] || SHAPES.circle;

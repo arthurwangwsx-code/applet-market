@@ -13,12 +13,15 @@
  *  · **类型化 action**：manifest 声明的 action 与注册的 handler 在**编译期**对齐。
  *  · **React hooks**：`useTabs` / `useToolbarSearch` / `useKeyboardInset` / `useLocale` / `useScene`。
  *
- * ## 零运行时依赖
- * 本包不 import 任何第三方模块（`react` 只在 `@aibox/applet-sdk/react` 子入口出现，且是 peer）。
- * 构建时会被打进应用产物并 tree-shake，不额外占宿主体积。
+ * ## 开发包与运行时分离
+ * 本包为 npm 开发期入口，提供类型、测试与源码真值；`@aibox/applet-tsbuild` 会把产物说明符
+ * 确定性改写到宿主内置的 `aibox/sdk` / `aibox/sdk/react`。因此 SDK 只随 AiBox 宿主交付一次，
+ * 每个小应用包都不会再携带一份实现。`react` 仍只在 React 子入口出现，且是 peer dependency。
  */
 export { bridge, isApplet, available, namespaceOf, capabilityMap } from './bridge';
 export type { AiboxBridge, AiboxNamespace } from './bridge';
+export { SDK_VERSION, SDK_COMPATIBILITY_SCHEMA, containerInfo, supports, checkCompatibility, } from './runtime';
+export type { SDKDelivery, ContainerRuntimeMetadata, ContainerInfo, CapabilityRequirement, CompatibilityRequirement, CompatibilityIssueKind, CompatibilityIssue, CompatibilityReport, } from './runtime';
 export type { JSONValue, JSONObject } from './json';
 export { AiboxError, isAiboxError, hasCode, isPermissionDenied, isTransient, normalizeError, attempt, withFallback, } from './errors';
 export type { AiboxErrorCode, KnownAiboxErrorCode, AiboxResult } from './errors';

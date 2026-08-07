@@ -13,7 +13,10 @@ export function parseJobLines(text) {
         const anchor = line.match(/\[job:\s*([^\]]+)\]\s*$/);
         if (!anchor)
             continue;
-        const body = line.slice(0, anchor.index).replace(/^[•\-\s]+/, '').trim();
+        const body = line
+            .slice(0, anchor.index ?? line.length)
+            .replace(/^[•\-\s]+/, '')
+            .trim();
         const dash = body.indexOf(' — ');
         const title = (dash >= 0 ? body.slice(0, dash) : body).trim();
         const tail = dash >= 0 ? body.slice(dash + 3) : '';
@@ -24,12 +27,12 @@ export function parseJobLines(text) {
         const output = tail.match(/→\s*([^·]+)/);
         const source = tail.match(/source:\s*([^·]+)/);
         out.push({
-            jobId: anchor[1].trim(),
+            jobId: (anchor[1] ?? '').trim(),
             state: state || 'unknown',
-            fraction: percent ? Number(percent[1]) / 100 : undefined,
-            title: title || anchor[1].trim(),
-            outputName: output ? output[1].trim() : undefined,
-            source: source ? source[1].trim() : undefined,
+            fraction: percent ? Number(percent[1] ?? 0) / 100 : undefined,
+            title: title || (anchor[1] ?? '').trim(),
+            outputName: output ? output[1]?.trim() : undefined,
+            source: source ? source[1]?.trim() : undefined,
         });
     }
     return out;

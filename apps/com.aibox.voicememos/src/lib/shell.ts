@@ -13,16 +13,12 @@
 //  · `useHostMenu` / `useHostChrome` —— 系统 ⋯ 菜单与「宿主画没画顶栏」，判据同上。
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-type Bridge = Record<string, any> | undefined
-
-const bridge = (): Bridge => (typeof window !== 'undefined' ? (window as any).aibox : undefined)
+import { bridge } from '@aibox/applet-sdk'
 
 // MARK: - 顶栏标题
 
-function hostNavigation(): any {
-  const api = bridge()
-  return (api && api.navigation) || null
+function hostNavigation() {
+  return bridge()?.navigation ?? null
 }
 
 /** 顶栏标题。宿主画了顶栏时**页面不要自绘**，标题由这里写进宿主的标题栈。 */
@@ -32,7 +28,9 @@ export function setNavigationTitle(title: string): void {
   try {
     const result = nav.setTitle(title)
     if (result && typeof result.catch === 'function') result.catch(() => {})
-  } catch { /* 标题是装饰 */ }
+  } catch {
+    /* 标题是装饰 */
+  }
 }
 
 // MARK: - 宿主顶栏
@@ -55,8 +53,9 @@ export function useHostChrome(): boolean {
     if (!nav || typeof nav.getState !== 'function') return undefined
     let cancelled = false
     const read = () => {
-      nav.getState()
-        .then((state: any) => {
+      nav
+        .getState()
+        .then((state) => {
           if (cancelled || !state) return
           setChrome(typeof state.hostChrome === 'boolean' ? state.hostChrome : state.transition === 'native')
         })
@@ -67,11 +66,19 @@ export function useHostChrome(): boolean {
     const scene = bridge()?.scene
     let off: (() => void) | undefined
     if (scene && typeof scene.on === 'function') {
-      try { off = scene.on('changed', read) } catch { /* 宿主未实现事件订阅 */ }
+      try {
+        off = scene.on('changed', read)
+      } catch {
+        /* 宿主未实现事件订阅 */
+      }
     }
     return () => {
       cancelled = true
-      try { off?.() } catch { /* 忽略 */ }
+      try {
+        off?.()
+      } catch {
+        /* 忽略 */
+      }
     }
   }, [])
 
@@ -109,19 +116,30 @@ export function useHostMenu(onInvoke: (id: string) => void): {
     let cancelled = false
     const offs: Array<() => void> = []
 
-    menu.getState()
-      .then((state: any) => { if (!cancelled) setDeclared(!!(state && state.declared)) })
+    menu
+      .getState()
+      .then((state) => {
+        if (!cancelled) setDeclared(state.declared)
+      })
       .catch(() => undefined)
 
     if (typeof menu.on === 'function') {
       try {
-        offs.push(menu.on('invoke', (event: any) => handler.current(String((event && event.id) || ''))))
-      } catch { /* 宿主未实现 menu.invoke —— declared 仍可能为 true，故业务侧的降级路径不能删 */ }
+        offs.push(menu.on('invoke', (event) => handler.current(event.id)))
+      } catch {
+        /* 宿主未实现 menu.invoke —— declared 仍可能为 true，故业务侧的降级路径不能删 */
+      }
     }
 
     return () => {
       cancelled = true
-      offs.forEach((off) => { try { if (typeof off === 'function') off() } catch { /* 忽略 */ } })
+      offs.forEach((off) => {
+        try {
+          if (typeof off === 'function') off()
+        } catch {
+          /* 忽略 */
+        }
+      })
     }
   }, [])
 
@@ -131,7 +149,9 @@ export function useHostMenu(onInvoke: (id: string) => void): {
     try {
       const result = menu.update({ items })
       if (result && typeof result.catch === 'function') result.catch(() => {})
-    } catch { /* 展示态更新失败不该影响业务 */ }
+    } catch {
+      /* 展示态更新失败不该影响业务 */
+    }
   }, [])
 
   return { declared, update }
@@ -171,26 +191,41 @@ export function useOverlay(onInvoke: (event: { id: string; controlId?: string })
     let cancelled = false
     const offs: Array<() => void> = []
 
-    overlay.getState()
-      .then((state: any) => { if (!cancelled) setRendered(!!(state && state.rendered)) })
+    overlay
+      .getState()
+      .then((state) => {
+        if (!cancelled) setRendered(state.rendered)
+      })
       .catch(() => undefined)
 
     if (typeof overlay.on === 'function') {
       try {
-        offs.push(overlay.on('invoke', (event: any) => handler.current(event || {})))
-      } catch { /* 宿主未实现事件订阅 */ }
+        offs.push(overlay.on('invoke', (event) => handler.current(event)))
+      } catch {
+        /* 宿主未实现事件订阅 */
+      }
       try {
         // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
         // 只判断启动那一刻，自绘控件就会永远缺席或永远多一份。
-        offs.push(overlay.on('changed', (state: any) => {
-          if (!cancelled) setRendered(!!(state && state.rendered))
-        }))
-      } catch { /* 同上 */ }
+        offs.push(
+          overlay.on('changed', (state) => {
+            if (!cancelled) setRendered(state.rendered)
+          }),
+        )
+      } catch {
+        /* 同上 */
+      }
     }
 
     return () => {
       cancelled = true
-      offs.forEach((off) => { try { if (typeof off === 'function') off() } catch { /* 忽略 */ } })
+      offs.forEach((off) => {
+        try {
+          if (typeof off === 'function') off()
+        } catch {
+          /* 忽略 */
+        }
+      })
     }
   }, [])
 
@@ -201,7 +236,9 @@ export function useOverlay(onInvoke: (event: { id: string; controlId?: string })
     try {
       const result = overlay.update({ items })
       if (result && typeof result.catch === 'function') result.catch(() => {})
-    } catch { /* 展示态更新失败不该影响业务 */ }
+    } catch {
+      /* 展示态更新失败不该影响业务 */
+    }
   }, [])
 
   return { rendered, update }

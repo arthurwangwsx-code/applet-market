@@ -16,12 +16,7 @@
     "network": true,
     "storage": true,
     "ai": true,
-    "capabilities": [
-      "browser",
-      "tts",
-      "tools",
-      "open"
-    ],
+    "capabilities": ["browser", "tts", "tools", "open"],
     "networkAllowed": [
       "news.google.com",
       "feedx.net",
@@ -72,10 +67,7 @@
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ],
+    "surfaces": ["page", "fullscreen"],
     "subpages": true
   },
   "actions": [
@@ -104,10 +96,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Keywords to search titles/summaries/sources. Omit for latest headlines.\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Optional topic filter.\"},\"cluster\":{\"type\":\"boolean\",\"description\":\"Group same-event reports into clusters. Default false.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":30,\"description\":\"Max results (1-30). Default 15.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"query\":{\"type\":\"string\"},\"count\":{\"type\":\"integer\"},\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"topic\":{\"type\":\"string\"},\"image\":{\"type\":\"string\"},\"time\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}}}},\"clusters\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "read",
       "readOnly": true,
       "idempotent": true,
@@ -138,10 +127,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The article URL (from a search result).\"},\"id\":{\"type\":\"string\",\"description\":\"The article stable id (alternative to url).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"article\":{\"type\":\"object\"},\"excerpt\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "read",
       "readOnly": true,
       "idempotent": true,
@@ -174,10 +160,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"add\",\"remove\",\"test\"],\"description\":\"list / add / remove / test.\"},\"url\":{\"type\":\"string\",\"description\":\"RSS/Atom URL, or RSSHub route ('/...'). Required for add/test; add or remove key.\"},\"title\":{\"type\":\"string\",\"description\":\"Display name (add), or match key (remove).\"},\"topic\":{\"type\":\"string\",\"enum\":[\"top\",\"world\",\"china\",\"tech\",\"business\",\"science\",\"culture\",\"sports\",\"health\"],\"description\":\"Topic for add.\"},\"kind\":{\"type\":\"string\",\"enum\":[\"rss\",\"atom\",\"rsshub\",\"api\"],\"description\":\"Source kind for add (inferred if omitted).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"feeds\":{\"type\":\"array\"},\"count\":{\"type\":\"integer\"},\"sample\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "destructive": true,
@@ -208,10 +191,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"save\",\"unsave\",\"list\"],\"description\":\"save / unsave / list.\"},\"url\":{\"type\":\"string\",\"description\":\"Article URL (save/unsave).\"},\"id\":{\"type\":\"string\",\"description\":\"Article stable id (save/unsave).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"articles\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "destructive": true,
@@ -227,10 +207,7 @@
       "displayName": "朗读",
       "summary": "Start or stop reading the current news list aloud. Drives the in-app broadcast bar; needs the visible list, so it is a UI action rather than an agent tool.",
       "headless": false,
-      "visibility": [
-        "userInterface",
-        "applet"
-      ],
+      "visibility": ["userInterface", "applet"],
       "effect": "mediaPlayback",
       "readOnly": false
     }

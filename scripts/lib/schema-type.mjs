@@ -24,9 +24,7 @@ export function schemaType(schema) {
     return variants.map((variant) => schemaType(variant)).join(' | ')
   }
   if (Array.isArray(schema?.enum) && schema.enum.length > 0) {
-    return schema.enum
-      .map((value) => (typeof value === 'string' ? JSON.stringify(value) : String(value)))
-      .join(' | ')
+    return schema.enum.map((value) => (typeof value === 'string' ? JSON.stringify(value) : String(value))).join(' | ')
   }
   switch (schema?.type) {
     case 'string':

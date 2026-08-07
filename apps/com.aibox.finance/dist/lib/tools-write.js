@@ -9,7 +9,7 @@ export function createWriteHandlers(deps, helpers) {
     const { store, ledger, quotes, alerts } = deps;
     const { account, resolveInstrument, quoteJSON } = helpers;
     return {
-        async finance_watch(args = {}) {
+        async finance_watch(args) {
             const action = args.action || 'list';
             if (action === 'list') {
                 const symbols = store.items.map((row) => row.instrumentSymbol);
@@ -49,7 +49,7 @@ export function createWriteHandlers(deps, helpers) {
             }
             return { ok: false, error: `Unknown action "${action}".` };
         },
-        async finance_trade(args = {}) {
+        async finance_trade(args) {
             const side = args.action;
             if (side !== 'buy' && side !== 'sell')
                 return { ok: false, error: 'action must be buy or sell.' };
@@ -62,13 +62,17 @@ export function createWriteHandlers(deps, helpers) {
             await quotes.refresh([resolved.canonical], { force: false });
             await quotes.exchangeRates({ force: false });
             const quote = quotes.quote(resolved.canonical);
-            const price = Number(args.price) > 0 ? Number(args.price) : (quote ? quote.price : null);
-            if (!(price > 0))
+            const price = Number(args.price) > 0 ? Number(args.price) : quote ? quote.price : null;
+            if (price === null || !Number.isFinite(price) || price <= 0) {
                 return { ok: false, error: 'No price given and no quote available.' };
+            }
             const instrumentCurrency = quote ? quote.currency : 'CNY';
             const rate = ledger.fxRateFor(instrumentCurrency, resolvedAccount.account.currency, quotes.fx);
             if (!rate) {
-                return { ok: false, error: `No ${instrumentCurrency}→${resolvedAccount.account.currency} exchange rate is available; the trade was not recorded.` };
+                return {
+                    ok: false,
+                    error: `No ${instrumentCurrency}→${resolvedAccount.account.currency} exchange rate is available; the trade was not recorded.`,
+                };
             }
             const payload = {
                 accountID: resolvedAccount.account.id,
@@ -97,7 +101,7 @@ export function createWriteHandlers(deps, helpers) {
                 note: 'Simulated only — no real order was placed.',
             };
         },
-        async finance_account(args = {}) {
+        async finance_account(args) {
             const action = args.action || 'list';
             if (action === 'list') {
                 return {
@@ -105,8 +109,12 @@ export function createWriteHandlers(deps, helpers) {
                     accounts: ledger.accounts
                         .filter((row) => args.include_archived || !row.isArchived)
                         .map((row) => ({
-                        name: row.name, currency: row.currency, cashMinor: row.cashMinor,
-                        initialCashMinor: row.initialCashMinor, isArchived: row.isArchived, isRealCopy: row.isRealCopy,
+                        name: row.name,
+                        currency: row.currency,
+                        cashMinor: row.cashMinor,
+                        initialCashMinor: row.initialCashMinor,
+                        isArchived: row.isArchived,
+                        isRealCopy: row.isRealCopy,
                     })),
                 };
             }
@@ -154,14 +162,18 @@ export function createWriteHandlers(deps, helpers) {
             }
             return { ok: false, error: `Unknown action "${action}".` };
         },
-        async finance_alert(args = {}) {
+        async finance_alert(args) {
             const action = args.action || 'list';
             if (action === 'list') {
                 return {
                     ok: true,
                     alerts: alerts.all().map((row) => ({
-                        symbol: row.instrumentSymbol, name: row.name, condition: row.conditionRaw,
-                        target: row.targetPrice, enabled: row.enabled, note: row.note,
+                        symbol: row.instrumentSymbol,
+                        name: row.name,
+                        condition: row.conditionRaw,
+                        target: row.targetPrice,
+                        enabled: row.enabled,
+                        note: row.note,
                     })),
                     note: 'Alerts fire while quotes refresh with the app open; there is no background monitoring in this container.',
                 };
@@ -178,7 +190,8 @@ export function createWriteHandlers(deps, helpers) {
                     note: args.note,
                 });
             }
-            const rows = alerts.forSymbol(resolved.canonical)
+            const rows = alerts
+                .forSymbol(resolved.canonical)
                 .filter((row) => !args.condition || row.conditionRaw === args.condition);
             if (rows.length === 0)
                 return { ok: false, error: 'No matching alert.' };

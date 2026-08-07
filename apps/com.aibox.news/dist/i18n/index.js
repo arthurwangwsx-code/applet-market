@@ -9,7 +9,7 @@ export function normalizeLocale(locale) {
     return 'en';
 }
 export function currentLocale() {
-    const env = typeof window !== 'undefined' ? window.__aiboxEnvironment : null;
+    const env = (typeof window !== 'undefined' ? window.__aiboxEnvironment : null);
     return normalizeLocale(env && (env.locale || env.language));
 }
 /** 订阅宿主语言变化；返回退订函数。宿主没接事件总线时静默返回空函数。 */
@@ -18,7 +18,8 @@ export function onLocaleChanged(handler) {
     if (!bus || typeof bus.on !== 'function')
         return () => { };
     return bus.on('environment.localeChanged', (payload) => {
-        handler(normalizeLocale(payload && (payload.locale || payload.language)));
+        const row = payload && typeof payload === 'object' ? payload : null;
+        handler(normalizeLocale(row && (row.locale || row.language)));
     });
 }
 /** 取一条文案。缺键时回落 en，再回落键名本身（便于发现漏键，不会渲染成空白）。 */
@@ -26,8 +27,9 @@ export function translate(locale, key) {
     const table = STRINGS[locale] || STRINGS.en;
     if (table[key] !== undefined)
         return table[key];
-    if (STRINGS.en[key] !== undefined)
-        return STRINGS.en[key];
+    const english = STRINGS.en;
+    if (english[key] !== undefined)
+        return english[key];
     return key;
 }
 /** 位置占位符填充：fmt('{0} · {1} 个来源', '3分钟前', 6)。 */

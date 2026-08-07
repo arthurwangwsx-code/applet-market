@@ -13,9 +13,25 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  LIMITS, ROOT, SCHEMA_VERSION, appPaths, collectBundleEntries, compareSemver, fail, info,
-  isBuiltApp, listAppIDs, listReleaseVersions, ok, parseSemver, readBundleFile, readJSON,
-  relativePathError, stripContent, warn, writeJSON,
+  LIMITS,
+  ROOT,
+  SCHEMA_VERSION,
+  appPaths,
+  collectBundleEntries,
+  compareSemver,
+  fail,
+  info,
+  isBuiltApp,
+  listAppIDs,
+  listReleaseVersions,
+  ok,
+  parseSemver,
+  readBundleFile,
+  readJSON,
+  relativePathError,
+  stripContent,
+  warn,
+  writeJSON,
 } from './lib/market.mjs'
 import { rebuild } from './build-registry.mjs'
 
@@ -47,7 +63,10 @@ function parseArgs(argv) {
  */
 function dryRunLatest() {
   const appIds = listAppIDs()
-  if (appIds.length === 0) { warn('apps/ 下没有应用，冒烟跳过'); return }
+  if (appIds.length === 0) {
+    warn('apps/ 下没有应用，冒烟跳过')
+    return
+  }
   for (const appId of appIds) {
     const paths = appPaths(appId)
     if (!fs.existsSync(paths.appJSON)) continue
@@ -68,7 +87,9 @@ function dryRunLatest() {
       throw new Error(`${appId}: 总计 ${totalBytes} 字节超过单版本上限 ${LIMITS.maxVersionBytes}`)
     }
     readJSON(paths.manifest)
-    ok(`${appId} 组包冒烟通过（${built ? '构建型' : '源码型'}，${entries.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB）`)
+    ok(
+      `${appId} 组包冒烟通过（${built ? '构建型' : '源码型'}，${entries.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB）`,
+    )
   }
   ok(`发布脚本冒烟通过：${appIds.length} 个应用`)
 }
@@ -104,7 +125,9 @@ function runBuild(appId) {
 function runValidate(appId) {
   try {
     const output = execFileSync(process.execPath, [path.join(ROOT, 'scripts/validate.mjs'), appId], {
-      cwd: ROOT, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' },
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
     })
     // 没有已发布版本的首发场景会有一条提醒，属预期。
     process.stdout.write(output)
@@ -114,7 +137,6 @@ function runValidate(appId) {
     throw new Error('validate 未通过，已中止发布')
   }
 }
-
 
 /**
  * 撤回 / 撤销撤回一个已发布版本。
@@ -175,13 +197,14 @@ function main() {
   const { positional, flags } = parseArgs(process.argv.slice(2))
   if (flags.dryRunLatest) return dryRunLatest()
   if (positional[0] === 'yank' || positional[0] === 'unyank') {
-    return yank(positional[1], positional[2],
-                { yanked: positional[0] === 'yank', reason: flags.reason })
+    return yank(positional[1], positional[2], { yanked: positional[0] === 'yank', reason: flags.reason })
   }
   const [appId, version] = positional
   if (!appId || !version) {
-    throw new Error('用法：node scripts/release.mjs <appId> <version> [--notes "…"] [--min-host x.y.z] [--force]\n'
-      + '      撤回：node scripts/release.mjs yank <appId> <version> [--reason "…"]')
+    throw new Error(
+      '用法：node scripts/release.mjs <appId> <version> [--notes "…"] [--min-host x.y.z] [--force]\n' +
+        '      撤回：node scripts/release.mjs yank <appId> <version> [--reason "…"]',
+    )
   }
   if (!parseSemver(version)) throw new Error(`版本号必须是 semver：${version}`)
 
@@ -256,7 +279,9 @@ function main() {
   writeJSON(path.join(dir, 'bundle.json'), { ...head, files })
 
   ok(`已发布 ${appId} ${version}`)
-  info(`${built ? '构建型（dist/ + src/manifest.json）' : '源码型（src/）'} · ${files.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB`)
+  info(
+    `${built ? '构建型（dist/ + src/manifest.json）' : '源码型（src/）'} · ${files.length} 个文件，${(totalBytes / 1024).toFixed(1)} KB`,
+  )
   if (flags.force && existing.includes(version)) warn(`--force 覆盖了已存在的 ${version}`)
 
   rebuild({ quiet: true })

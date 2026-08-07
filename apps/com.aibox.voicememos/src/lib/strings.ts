@@ -91,8 +91,9 @@ const TABLE = {
   hostRecording: { zh: '宿主录音进行中', en: 'Host recording in progress' },
   localClipNote: {
     zh: '本机剪辑保存在小应用内：可播放、可分享，但**无法转写** —— 容器没有把 applet 私有音频送进转写的通路。',
-    en: 'On-device clips live inside this app: playable and shareable, but they cannot be transcribed — '
-      + 'the container has no path from applet-private audio into transcription.',
+    en:
+      'On-device clips live inside this app: playable and shareable, but they cannot be transcribed — ' +
+      'the container has no path from applet-private audio into transcription.',
   },
 
   // 详情页
@@ -122,7 +123,10 @@ const TABLE = {
   // 摘要 Tab
   noSummaryTitle: { zh: '暂无摘要', en: 'No summary yet' },
   noSummaryBody: { zh: '选择上方模板以生成摘要。', en: 'Pick a template above to generate one.' },
-  summaryFailed: { zh: '无法生成摘要。请检查 AI 模型后重试。', en: 'Could not generate a summary. Check the AI model and retry.' },
+  summaryFailed: {
+    zh: '无法生成摘要。请检查 AI 模型后重试。',
+    en: 'Could not generate a summary. Check the AI model and retry.',
+  },
   templateGeneral: { zh: '通用', en: 'General' },
   templateMeeting: { zh: '会议纪要', en: 'Meeting' },
   templateInterview: { zh: '面试', en: 'Interview' },
@@ -174,7 +178,10 @@ const TABLE = {
   noActionItems: { zh: '未找到待办事项。', en: 'No action items found.' },
   actionItemsFailed: { zh: '无法找到待办事项。', en: 'Could not extract action items.' },
   askTitle: { zh: '询问这段录音', en: 'Ask this recording' },
-  askHint: { zh: '就这段录音随便问。回答只来自它的转录文本。', en: 'Ask anything. Answers come only from its transcript.' },
+  askHint: {
+    zh: '就这段录音随便问。回答只来自它的转录文本。',
+    en: 'Ask anything. Answers come only from its transcript.',
+  },
   askPlaceholder: { zh: '就这段录音提问…', en: 'Ask about this recording…' },
   askThinking: { zh: '思考中…', en: 'Thinking…' },
   askFailed: { zh: '无法回答这个问题。', en: 'Could not answer that question.' },
@@ -202,13 +209,20 @@ const TABLE = {
   smartLocalClips: { zh: '本机剪辑', en: 'On-device clips' },
   recentlyDeleted: { zh: '最近删除', en: 'Recently Deleted' },
   trashEmptyTitle: { zh: '最近删除为空', en: 'Recently Deleted is empty' },
-  trashEmptyBody: { zh: '已删除的录音会显示在这里，方便恢复。', en: 'Deleted recordings appear here so you can restore them.' },
-  trashFooter: { zh: '录音会保留在这里，直到你恢复或永久删除。', en: 'Recordings stay here until you restore or permanently delete them.' },
+  trashEmptyBody: {
+    zh: '已删除的录音会显示在这里，方便恢复。',
+    en: 'Deleted recordings appear here so you can restore them.',
+  },
+  trashFooter: {
+    zh: '录音会保留在这里，直到你恢复或永久删除。',
+    en: 'Recordings stay here until you restore or permanently delete them.',
+  },
   emptyTrash: { zh: '清空', en: 'Empty' },
   foldersUnavailable: {
     zh: '用户文件夹需要宿主投影 memo_folder_* 工具，当前容器还没有 —— 所以这里只有智能列表。',
-    en: 'User folders need the host to project the memo_folder_* tools, which it does not yet — '
-      + 'so only smart lists are shown here.',
+    en:
+      'User folders need the host to project the memo_folder_* tools, which it does not yet — ' +
+      'so only smart lists are shown here.',
   },
 
   // 设置页
@@ -218,15 +232,19 @@ const TABLE = {
   transcribeLanguage: { zh: '转录语言', en: 'Transcription language' },
   transcribeLanguageHint: {
     zh: '用于转录录音的语言。「自动」跟随 App 语言。如果某条录音转录出来是乱码（例如中文音频被当成英文转录），在此设为实际所说的语言后重新转录。',
-    en: 'The language used to transcribe. "Automatic" follows the app language. If a recording comes out as '
-      + 'gibberish (for example Chinese audio transcribed as English), set the language actually spoken and transcribe again.',
+    en:
+      'The language used to transcribe. "Automatic" follows the app language. If a recording comes out as ' +
+      'gibberish (for example Chinese audio transcribed as English), set the language actually spoken and transcribe again.',
   },
   localeAuto: { zh: '自动', en: 'Automatic' },
   localeZh: { zh: '中文', en: 'Chinese' },
   localeEn: { zh: '英语', en: 'English' },
   autoTranscribe: { zh: '录音后自动转录', en: 'Transcribe after recording' },
   autoSummarize: { zh: '自动生成摘要', en: 'Summarize automatically' },
-  autoSummarizeHint: { zh: '转录后自动生成摘要（只补空，不覆盖已有结果）。', en: 'Summarize after transcription — fills gaps only, never overwrites.' },
+  autoSummarizeHint: {
+    zh: '转录后自动生成摘要（只补空，不覆盖已有结果）。',
+    en: 'Summarize after transcription — fills gaps only, never overwrites.',
+  },
   defaultTemplate: { zh: '默认摘要模板', en: 'Default summary template' },
   quality: { zh: '录音质量', en: 'Recording quality' },
   qualityHigh: { zh: '高', en: 'High' },
@@ -234,15 +252,17 @@ const TABLE = {
   qualityLow: { zh: '低', en: 'Low' },
   qualityHint: {
     zh: '录音统一使用 AAC/M4A，以保证播放与分享的一致性。更高质量会占用更多空间，修改仅影响新录音。',
-    en: 'Recordings always use AAC/M4A for consistent playback and sharing. Higher quality uses more space; '
-      + 'changes affect new recordings only.',
+    en:
+      'Recordings always use AAC/M4A for consistent playback and sharing. Higher quality uses more space; ' +
+      'changes affect new recordings only.',
   },
   clipCount: { zh: '本机剪辑', en: 'On-device clips' },
   clipBytes: { zh: '占用空间', en: 'Space used' },
   hostSettingsNote: {
     zh: '存储位置、音频预算、麦克风选择与完整性扫描属于宿主级设置，留在「设置 ▸ 语音备忘录」里。',
-    en: 'Storage location, audio budget, microphone choice and integrity scans are host-level settings and stay '
-      + 'in Settings ▸ Voice Memos.',
+    en:
+      'Storage location, audio budget, microphone choice and integrity scans are host-level settings and stay ' +
+      'in Settings ▸ Voice Memos.',
   },
   libraryUnavailable: {
     zh: '宿主没有装语音备忘录模块，录音库不可用 —— 只能用本机剪辑。',

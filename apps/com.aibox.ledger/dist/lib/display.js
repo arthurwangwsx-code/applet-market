@@ -34,10 +34,14 @@ export function entryGlyph(store, txn) {
         return { icon: category.systemImage || 'tag', color: category.colorHex || '#68665E' };
     switch (txn.kind) {
         case KIND.transferOut:
-        case KIND.transferIn: return { icon: 'arrow.left.arrow.right', color: '#3A83D0' };
-        case KIND.adjustment: return { icon: 'equal.circle', color: '#3A83D0' };
-        case KIND.income: return { icon: 'arrow.down.left', color: '#2A9D63' };
-        default: return { icon: 'arrow.up.right', color: '#D9534F' };
+        case KIND.transferIn:
+            return { icon: 'arrow.left.arrow.right', color: '#3A83D0' };
+        case KIND.adjustment:
+            return { icon: 'equal.circle', color: '#3A83D0' };
+        case KIND.income:
+            return { icon: 'arrow.down.left', color: '#2A9D63' };
+        default:
+            return { icon: 'arrow.up.right', color: '#D9534F' };
     }
 }
 /** kind 兜底名（没有商家也没有分类时用）。 */
@@ -52,9 +56,12 @@ export function kindFallbackTitle(store, txn, t) {
             const b = other ? other.name : '—';
             return txn.kind === KIND.transferOut ? `${a} → ${b}` : `${b} → ${a}`;
         }
-        case KIND.adjustment: return t('x.balanceAdjustment');
-        case KIND.income: return t('x.income');
-        default: return t('x.expense');
+        case KIND.adjustment:
+            return t('x.balanceAdjustment');
+        case KIND.income:
+            return t('x.income');
+        default:
+            return t('x.expense');
     }
 }
 /** 主标题：商家 → 分类名 → kind 兜底。 */
@@ -100,7 +107,7 @@ export function entryConversion(store, txn, t) {
     if (!store.hasUsableRate(txn.currency))
         return { text: t('tx.rateNeeded'), tone: COLOR_TOKEN.expense };
     const base = store.reportingBaseMinor(txn);
-    const signed = txn.kind === KIND.income ? base : (txn.kind === KIND.expense ? -base : base);
+    const signed = txn.kind === KIND.income ? base : txn.kind === KIND.expense ? -base : base;
     return { text: `≈ ${money(signed, store.baseCode, { signed: txn.kind === KIND.income })}`, tone: COLOR_TOKEN.muted };
 }
 /** 日期表头：今天 / 昨天 / 本地化 `MMMd EEE`。 */

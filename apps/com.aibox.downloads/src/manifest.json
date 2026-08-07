@@ -17,21 +17,11 @@
     "storage": true,
     "ai": false,
     "networkAllowed": [],
-    "capabilities": [
-      "clipboard",
-      "download",
-      "haptics",
-      "open",
-      "share",
-      "ui"
-    ]
+    "capabilities": ["clipboard", "download", "haptics", "open", "share", "ui"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ]
+    "surfaces": ["page", "fullscreen"]
   },
   "actions": [
     {
@@ -55,10 +45,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"urls\"],\"properties\":{\"urls\":{\"type\":\"array\",\"maxItems\":30,\"items\":{\"type\":\"string\"},\"description\":\"One or more absolute http(s) URLs.\"},\"filename\":{\"type\":\"string\",\"description\":\"Saved name for a single URL. Ignored when several urls are given.\"},\"destination\":{\"type\":\"string\",\"enum\":[\"sandbox\",\"iCloud\",\"externalFiles\",\"vault\"],\"description\":\"Where files land. Default sandbox.\"},\"folder\":{\"type\":\"string\",\"description\":\"Relative subfolder inside the destination root.\"},\"priority\":{\"type\":\"string\",\"enum\":[\"low\",\"normal\",\"high\"]}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"count\":{\"type\":\"integer\"},\"tasks\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"taskId\":{\"type\":\"string\"},\"url\":{\"type\":\"string\"},\"filename\":{\"type\":\"string\"},\"artifactRef\":{\"type\":\"string\"}}}},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "idempotent": false,
@@ -86,10 +73,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"state\":{\"type\":\"string\",\"enum\":[\"active\",\"finished\",\"queued\",\"running\",\"paused\",\"completed\",\"failed\",\"cancelled\"]},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"count\":{\"type\":\"integer\"},\"tasks\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "read",
       "readOnly": true,
       "idempotent": true,
@@ -117,10 +101,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"action\"],\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"pause\",\"resume\",\"cancel\",\"remove\",\"clearFinished\"]},\"taskId\":{\"type\":\"string\",\"description\":\"Omit to act on every download of this app.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "destructive": true,
@@ -136,10 +117,7 @@
       "displayName": "全部暂停",
       "summary": "Pause every download of this app from the ⋯ menu. Drives the visible queue, so it is a UI action rather than an agent tool — the agent uses the control action instead.",
       "headless": false,
-      "visibility": [
-        "userInterface",
-        "applet"
-      ],
+      "visibility": ["userInterface", "applet"],
       "effect": "write",
       "readOnly": false
     },
@@ -149,10 +127,7 @@
       "displayName": "全部继续",
       "summary": "Resume every paused download of this app from the ⋯ menu.",
       "headless": false,
-      "visibility": [
-        "userInterface",
-        "applet"
-      ],
+      "visibility": ["userInterface", "applet"],
       "effect": "write",
       "readOnly": false
     },
@@ -162,10 +137,7 @@
       "displayName": "清空已完成",
       "summary": "Remove finished records from the visible list. Downloaded files are not deleted.",
       "headless": false,
-      "visibility": [
-        "userInterface",
-        "applet"
-      ],
+      "visibility": ["userInterface", "applet"],
       "effect": "write",
       "readOnly": false,
       "destructive": true

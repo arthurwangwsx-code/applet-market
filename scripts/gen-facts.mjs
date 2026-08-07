@@ -5,7 +5,7 @@
 //
 //  ## 为什么
 //  `docs/capabilities/applet/sdk-architecture.md` 是一份高质量调研，但它的头部数字**一天就全错了**：
-//    39 个命名空间 → 47 ｜ 185 个方法 → 252 ｜ 7 个应用 → 11 ｜ 4 份 host.js → 8 ｜ 68% unknown → 更高
+//    39 个命名空间 → 47 ｜ 185 个方法 → 252 ｜ 7 个应用 → 11 ｜ 4 份 host 适配层 → 8 ｜ 68% unknown → 更高
 //  这不是作者不认真，是**手写的统计数字没有保鲜机制**：`docs-audit.py` 管链接与索引，不管正文断言。
 //  于是「文档写着 4 份分叉」和「实际 8 份」可以长期共存，而读者（包括 AI）会照着过期数字做判断。
 //
@@ -42,6 +42,14 @@ function countLines(file) {
   return fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').length : 0
 }
 
+function sourceFiles(directory) {
+  if (!fs.existsSync(directory)) return []
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(directory, entry.name)
+    return entry.isDirectory() ? sourceFiles(target) : [target]
+  })
+}
+
 function collect() {
   const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'))
   const methods = snapshot.namespaces.flatMap((ns) => ns.methods)
@@ -60,16 +68,26 @@ function collect() {
   const dtsUnknown = (dts.match(/Promise<unknown>/g) ?? []).length
 
   const appsDir = path.join(ROOT, 'apps')
-  const apps = fs.existsSync(appsDir) ? fs.readdirSync(appsDir).filter((d) => !d.startsWith('.')).sort() : []
+  const apps = fs.existsSync(appsDir)
+    ? fs
+        .readdirSync(appsDir)
+        .filter((d) => !d.startsWith('.'))
+        .sort()
+    : []
   const bundleApps = apps.filter((a) => fs.existsSync(path.join(appsDir, a, 'package.json')))
   const sdkApps = bundleApps.filter((a) => {
     const pkg = JSON.parse(fs.readFileSync(path.join(appsDir, a, 'package.json'), 'utf8'))
     return Boolean({ ...pkg.dependencies, ...pkg.devDependencies }['@aibox/applet-sdk'])
   })
-  const forks = apps
-    .map((a) => ({ app: a, file: path.join(appsDir, a, 'src', 'lib', 'host.js') }))
-    .filter((e) => fs.existsSync(e.file))
-  const forkLines = forks.reduce((sum, e) => sum + countLines(e.file), 0)
+  const hostAdapters = apps.flatMap((app) =>
+    ['host.ts', 'host.js']
+      .map((name) => ({ app, file: path.join(appsDir, app, 'src', 'lib', name) }))
+      .filter((entry) => fs.existsSync(entry.file)),
+  )
+  const hostAdapterLines = hostAdapters.reduce((sum, entry) => sum + countLines(entry.file), 0)
+  const legacyJavaScriptFiles = apps
+    .flatMap((app) => sourceFiles(path.join(appsDir, app, 'src')))
+    .filter((file) => /\.(?:js|jsx)$/.test(file))
 
   const sdkPkgPath = path.join(ROOT, 'packages', 'aibox-sdk', 'package.json')
   const sdkVersion = fs.existsSync(sdkPkgPath) ? JSON.parse(fs.readFileSync(sdkPkgPath, 'utf8')).version : '—'
@@ -94,8 +112,9 @@ function collect() {
     apps: apps.length,
     bundleApps: bundleApps.length,
     sdkApps: sdkApps.length,
-    forks: forks.length,
-    forkLines,
+    hostAdapters: hostAdapters.length,
+    hostAdapterLines,
+    legacyJavaScriptFiles: legacyJavaScriptFiles.length,
     sdkVersion,
     sdkModules: sdkModules.length,
     sdkLines,
@@ -115,7 +134,8 @@ function renderBlock(f) {
     `| 返回类型覆盖（含手写签名命名空间） | ${f.typed}/${f.declarable}（${f.coverage}%）—— 其余那批补了只改文档 | 同上 |`,
     `| 生成的 \`aibox-global.d.ts\` | ${f.dtsLines} 行 / ${f.dtsSignatures} 个签名 / ${f.dtsUnknown} 个 \`Promise<unknown>\` | \`packages/aibox-sdk/src/generated/\` |`,
     `| 市场应用（总数 / bundle 型 / 用 SDK） | ${f.apps} / ${f.bundleApps} / ${f.sdkApps} | \`apps/*/package.json\` |`,
-    `| \`host.js\` 分叉 | ${f.forks} 份、${f.forkLines} 行 | \`apps/*/src/lib/host.js\` |`,
+    `| 应用 host 适配层（TS/JS） | ${f.hostAdapters} 份、${f.hostAdapterLines} 行 | \`apps/*/src/lib/host.{ts,js}\` |`,
+    `| 应用源码中的遗留 JS/JSX | ${f.legacyJavaScriptFiles} 个文件 | \`apps/*/src/**/*.{js,jsx}\` |`,
     `| SDK | v${f.sdkVersion}，${f.sdkModules} 个模块 / ${f.sdkLines} 行 | \`packages/aibox-sdk/\` |`,
     '',
     END,
@@ -138,7 +158,8 @@ const doc = [
   '- **返回类型覆盖**是这条链上最关键的单一指标：未覆盖的方法在 SDK 与 `.aibox/aibox.d.ts` 里都是',
   '  `Promise<unknown>`，应用侧只能自己手写补丁或按文案猜。由 `audit-result-schema.mjs` 棘轮只减不增。',
   '- **工具投影**那部分不计入覆盖率：它们返回统一信封，形状由投影层保证，按类型豁免。',
-  '- **`host.js` 分叉**是「同一件事有几个答案」的直接度量。它每多一份，AI 就多一个可继承的矛盾范例。',
+  '- **应用 host 适配层**只应保留领域语义封装，底层桥接、兼容判断和降级逻辑统一来自宿主内置 `aibox/sdk`。',
+  '- **遗留 JS/JSX**由 TypeScript 策略门禁控制，只允许减少；新应用和新源码必须使用严格 TypeScript。',
   '',
 ].join('\n')
 

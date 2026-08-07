@@ -5,7 +5,10 @@
 // 一次升级所有消费方同时受益。
 import * as innertube from './innertube.js';
 import { capabilities, play as hostPlay, resolve } from './host.js';
-async function search({ query, limit }) {
+import { errorMessage, isRecord } from './types.js';
+async function search(input) {
+    const query = isRecord(input) ? input.query : '';
+    const limit = isRecord(input) ? input.limit : 10;
     const q = String(query || '').trim();
     if (!q)
         return { ok: false, error: 'query is required', text: '需要一个搜索关键词。' };
@@ -15,8 +18,12 @@ async function search({ query, limit }) {
         return {
             ok: true,
             videos: videos.map((v) => ({
-                id: v.id, title: v.title, author: v.author,
-                duration: v.durationLabel, views: v.viewLabel, url: v.url,
+                id: v.id,
+                title: v.title,
+                author: v.author,
+                duration: v.durationLabel,
+                views: v.viewLabel,
+                url: v.url,
             })),
             text: videos.length
                 ? videos.map((v, i) => `${i + 1}. ${v.title} — ${v.author}（${v.id}）`).join('\n')
@@ -24,12 +31,14 @@ async function search({ query, limit }) {
         };
     }
     catch (err) {
-        return { ok: false, error: String(err?.message || err), text: `搜索失败：${err?.message || err}` };
+        const message = errorMessage(err);
+        return { ok: false, error: message, text: `搜索失败：${message}` };
     }
 }
-async function play({ url, videoId }) {
-    const target = String(url || '').trim()
-        || (videoId ? `https://www.youtube.com/watch?v=${String(videoId).trim()}` : '');
+async function play(input) {
+    const url = isRecord(input) ? input.url : '';
+    const videoId = isRecord(input) ? input.videoId : '';
+    const target = String(url || '').trim() || (videoId ? `https://www.youtube.com/watch?v=${String(videoId).trim()}` : '');
     if (!target)
         return { ok: false, error: 'url or videoId is required', text: '需要一个视频链接或 id。' };
     const caps = await capabilities();
@@ -41,25 +50,29 @@ async function play({ url, videoId }) {
     }
     try {
         const media = await resolve(target);
-        const playable = (media.formats || []).filter((f) => f.playable);
-        if (!playable.length) {
+        const playable = (media.formats || []).filter((format) => format.playable !== false);
+        const firstPlayable = playable[0];
+        if (!firstPlayable) {
             return {
                 ok: false,
                 error: 'no playable format',
-                text: caps.dash
-                    ? '这个视频没有可播放的清晰度。'
-                    : '这个视频只有分离流，而当前版本没有编入合流能力。',
+                text: caps.dash ? '这个视频没有可播放的清晰度。' : '这个视频只有分离流，而当前版本没有编入合流能力。',
             };
         }
-        await hostPlay({ sourceURL: target, formatID: playable[0].id });
+        await hostPlay({ sourceURL: target, formatID: firstPlayable.id });
         return {
             ok: true,
-            video: { title: media.title, uploader: media.uploader, quality: playable[0].quality },
-            text: `正在播放《${media.title}》（${playable[0].quality}）。`,
+            video: {
+                title: media.title || '',
+                uploader: media.uploader || '',
+                quality: firstPlayable.quality || '',
+            },
+            text: `正在播放《${media.title || ''}》（${firstPlayable.quality || ''}）。`,
         };
     }
     catch (err) {
-        return { ok: false, error: String(err?.message || err), text: `播放失败：${err?.message || err}` };
+        const message = errorMessage(err);
+        return { ok: false, error: message, text: `播放失败：${message}` };
     }
 }
 export function registerActions() {

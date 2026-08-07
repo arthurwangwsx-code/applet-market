@@ -51,7 +51,9 @@ export function ReviewPage(props: {
       setIndex(0)
       if (fresh.length) await saveAnchor({ terms: fresh.map((item) => item.text), index: 0 })
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -85,7 +87,12 @@ export function ReviewPage(props: {
     store.refresh()
   }
 
-  if (queue === null) return <PushPage palette={palette} title={t('reviewTitle')} onBack={props.onBack}><div /></PushPage>
+  if (queue === null)
+    return (
+      <PushPage palette={palette} title={t('reviewTitle')} onBack={props.onBack}>
+        <div />
+      </PushPage>
+    )
 
   if (finished) {
     return (
@@ -96,7 +103,9 @@ export function ReviewPage(props: {
             {t('reviewDoneCount', { n: reviewed })}
           </div>
           {tomorrow > 0 ? (
-            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6 }}>{t('reviewTomorrow', { n: tomorrow })}</div>
+            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6 }}>
+              {t('reviewTomorrow', { n: tomorrow })}
+            </div>
           ) : null}
           <div style={{ marginTop: SPACE.s5 }}>
             <PrimaryButton palette={palette} title={t('done')} onClick={props.onBack} />
@@ -111,7 +120,9 @@ export function ReviewPage(props: {
       <PushPage palette={palette} title={t('reviewTitle')} onBack={props.onBack}>
         <Centered>
           <Icon name="checkmark.seal" size={40} color={palette.green} />
-          <div style={{ fontSize: 15, fontWeight: 500, color: palette.ink, marginTop: SPACE.s3 }}>{t('reviewEmpty')}</div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: palette.ink, marginTop: SPACE.s3 }}>
+            {t('reviewEmpty')}
+          </div>
         </Centered>
       </PushPage>
     )
@@ -119,26 +130,51 @@ export function ReviewPage(props: {
 
   return (
     <PushPage palette={palette} title={t('reviewTitle')} onBack={props.onBack}>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', padding: `${SPACE.s4}px 0 ${SPACE.s5}px` }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+          padding: `${SPACE.s4}px 0 ${SPACE.s5}px`,
+        }}
+      >
         <div style={{ padding: `0 ${SPACE.s5}px` }}>
           <div style={{ height: 4, borderRadius: 2, background: palette.line, overflow: 'hidden' }}>
             <div style={{ width: `${(index / queue.length) * 100}%`, height: '100%', background: palette.accent }} />
           </div>
-          <div style={{ fontSize: 12, color: palette.muted, marginTop: 6 }}>{index + 1} / {queue.length}</div>
+          <div style={{ fontSize: 12, color: palette.muted, marginTop: 6 }}>
+            {index + 1} / {queue.length}
+          </div>
         </div>
 
         <div style={{ flex: 1 }} />
 
         <div
           style={{
-            margin: `0 ${SPACE.s5}px`, minHeight: 220, background: palette.surface,
-            borderRadius: RADIUS.card, padding: SPACE.s5,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3,
+            margin: `0 ${SPACE.s5}px`,
+            minHeight: 220,
+            background: palette.surface,
+            borderRadius: RADIUS.card,
+            padding: SPACE.s5,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: SPACE.s3,
           }}
         >
           {!flipped ? (
             <>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: palette.accent }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: palette.accent,
+                }}
+              >
                 <Icon name={kindIcon(exercise.kind)} size={12} /> {kindLabel(t, exercise.kind)}
               </div>
               {exercise.kind === 'listening' ? (
@@ -146,7 +182,14 @@ export function ReviewPage(props: {
                   <button
                     type="button"
                     onClick={() => void speak(current.text, 'us')}
-                    style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 52, cursor: 'pointer', lineHeight: 1 }}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: palette.accent,
+                      fontSize: 52,
+                      cursor: 'pointer',
+                      lineHeight: 1,
+                    }}
                     aria-label={t('speakAloud')}
                   >
                     <Icon name="speaker" size={52} />
@@ -154,7 +197,14 @@ export function ReviewPage(props: {
                   <div style={{ fontSize: 14, color: palette.muted, textAlign: 'center' }}>{t('listeningHint')}</div>
                 </>
               ) : (
-                <div style={{ fontSize: exercise.kind === 'cloze' ? 18 : 16, fontWeight: 500, color: palette.ink, textAlign: 'center' }}>
+                <div
+                  style={{
+                    fontSize: exercise.kind === 'cloze' ? 18 : 16,
+                    fontWeight: 500,
+                    color: palette.ink,
+                    textAlign: 'center',
+                  }}
+                >
                   {exercise.prompt ?? t('promptFallback')}
                 </div>
               )}
@@ -172,9 +222,14 @@ export function ReviewPage(props: {
                 spellCheck={false}
                 enterKeyHint="done"
                 style={{
-                  width: '100%', boxSizing: 'border-box', borderRadius: 10,
-                  border: `1px solid ${palette.line}`, padding: '10px 12px', fontSize: 16,
-                  background: palette.bg, color: palette.ink,
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  borderRadius: 10,
+                  border: `1px solid ${palette.line}`,
+                  padding: '10px 12px',
+                  fontSize: 16,
+                  background: palette.bg,
+                  color: palette.ink,
                 }}
               />
             </>
@@ -182,7 +237,8 @@ export function ReviewPage(props: {
             <>
               {verdict !== null ? (
                 <div style={{ fontSize: 13, fontWeight: 500, color: verdict ? palette.green : palette.orange }}>
-                  <Icon name={verdict ? 'check' : 'refresh'} size={13} /> {verdict ? t('answerCorrect') : t('answerKeepPracticing')}
+                  <Icon name={verdict ? 'check' : 'refresh'} size={13} />{' '}
+                  {verdict ? t('answerCorrect') : t('answerKeepPracticing')}
                 </div>
               ) : null}
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2 }}>
@@ -196,20 +252,40 @@ export function ReviewPage(props: {
                   <Icon name="speaker" size={18} />
                 </button>
               </div>
-              {entry?.phoneticUK ? <div style={{ fontSize: 14, color: palette.muted }}>/{entry.phoneticUK}/</div> : null}
+              {entry?.phoneticUK ? (
+                <div style={{ fontSize: 14, color: palette.muted }}>/{entry.phoneticUK}/</div>
+              ) : null}
               <div style={{ height: 1, background: palette.line, width: '100%' }} />
-              {current.brief ? <div style={{ fontSize: 16, color: palette.ink, textAlign: 'center' }}>{current.brief}</div> : null}
+              {current.brief ? (
+                <div style={{ fontSize: 16, color: palette.ink, textAlign: 'center' }}>{current.brief}</div>
+              ) : null}
               {entry?.examTags.length ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
                   {entry.examTags.map((tag) => (
-                    <span key={tag} style={{ fontSize: 12, color: palette.muted, background: palette.line, borderRadius: 999, padding: '4px 9px' }}>
+                    <span
+                      key={tag}
+                      style={{
+                        fontSize: 12,
+                        color: palette.muted,
+                        background: palette.line,
+                        borderRadius: 999,
+                        padding: '4px 9px',
+                      }}
+                    >
                       {tag}
                     </span>
                   ))}
                 </div>
               ) : null}
               {current.note ? (
-                <div style={{ width: '100%', background: alpha(palette.accent, 0.08), borderRadius: RADIUS.field, padding: SPACE.s3 }}>
+                <div
+                  style={{
+                    width: '100%',
+                    background: alpha(palette.accent, 0.08),
+                    borderRadius: RADIUS.field,
+                    padding: SPACE.s3,
+                  }}
+                >
                   <div style={{ fontSize: 11, fontWeight: 500, color: palette.muted }}>{t('savedContext')}</div>
                   <div style={{ fontSize: 14, color: palette.ink, marginTop: 4 }}>{current.note}</div>
                 </div>
@@ -218,7 +294,13 @@ export function ReviewPage(props: {
                 <button
                   type="button"
                   onClick={() => props.onOpenWord(current.text)}
-                  style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 12, cursor: 'pointer' }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: palette.accent,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
                 >
                   {t('viewFullDetail')}
                 </button>
@@ -247,16 +329,38 @@ export function ReviewPage(props: {
                 setVerdict(null)
                 setFlipped(true)
               }}
-              style={{ border: 'none', background: 'transparent', color: palette.muted, fontSize: 14, padding: 8, cursor: 'pointer' }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: palette.muted,
+                fontSize: 14,
+                padding: 8,
+                cursor: 'pointer',
+              }}
             >
               {t('showAnswer')}
             </button>
           </div>
         ) : (
           <div style={{ padding: `0 ${SPACE.s5}px`, display: 'flex', gap: SPACE.s3 }}>
-            <GradeButton palette={palette} label={t('gradeForgot')} tint={palette.red} onClick={() => void grade('forgot')} />
-            <GradeButton palette={palette} label={t('gradeFuzzy')} tint={palette.orange} onClick={() => void grade('fuzzy')} />
-            <GradeButton palette={palette} label={t('gradeKnow')} tint={palette.green} onClick={() => void grade('know')} />
+            <GradeButton
+              palette={palette}
+              label={t('gradeForgot')}
+              tint={palette.red}
+              onClick={() => void grade('forgot')}
+            />
+            <GradeButton
+              palette={palette}
+              label={t('gradeFuzzy')}
+              tint={palette.orange}
+              onClick={() => void grade('fuzzy')}
+            />
+            <GradeButton
+              palette={palette}
+              label={t('gradeKnow')}
+              tint={palette.green}
+              onClick={() => void grade('know')}
+            />
           </div>
         )}
       </div>
@@ -270,8 +374,15 @@ function GradeButton(props: { palette: Palette; label: string; tint: string; onC
       type="button"
       onClick={props.onClick}
       style={{
-        flex: 1, border: 'none', borderRadius: RADIUS.field, padding: '12px 0',
-        fontSize: 14, fontWeight: 500, color: props.tint, background: alpha(props.tint, 0.12), cursor: 'pointer',
+        flex: 1,
+        border: 'none',
+        borderRadius: RADIUS.field,
+        padding: '12px 0',
+        fontSize: 14,
+        fontWeight: 500,
+        color: props.tint,
+        background: alpha(props.tint, 0.12),
+        cursor: 'pointer',
       }}
     >
       {props.label}
@@ -281,7 +392,16 @@ function GradeButton(props: { palette: Palette; label: string; tint: string; onC
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+        textAlign: 'center',
+      }}
+    >
       {children}
     </div>
   )

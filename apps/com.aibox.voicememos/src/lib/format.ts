@@ -158,9 +158,7 @@ export function exportMarkdown(input: ExportInput): string {
 
 /** 纯文本导出：同结构，标题不带 `#`、正文不带 `**`。 */
 export function exportText(input: ExportInput): string {
-  return exportMarkdown(input)
-    .replace(/^#+ /gm, '')
-    .replace(/\*\*/g, '')
+  return exportMarkdown(input).replace(/^#+ /gm, '').replace(/\*\*/g, '')
 }
 
 function transcriptBody(input: ExportInput, markdown: boolean): { heading: string; text: string } {

@@ -14,11 +14,16 @@
  */
 
 /** 桥的顶层类型（= 宿主虚拟 `.aibox/aibox.d.ts` 的 `declare namespace aibox`）。 */
-export type AiboxBridge = typeof aibox;
+export type AiboxBridge = typeof aibox
 
 /** `aibox.*` 下的命名空间名。 */
-export type AiboxNamespace = AiboxDeclarableCapability | AiboxAlwaysAvailableNamespace
-  | 'storage' | 'net' | 'ai' | 'events';
+export type AiboxNamespace =
+  | AiboxDeclarableCapability
+  | AiboxAlwaysAvailableNamespace
+  | 'storage'
+  | 'net'
+  | 'ai'
+  | 'events'
 
 /**
  * 取桥对象。**不在 applet WebView 里时返回 `undefined`**（Node 单测、SSR、被当普通网页打开）。
@@ -26,22 +31,22 @@ export type AiboxNamespace = AiboxDeclarableCapability | AiboxAlwaysAvailableNam
  */
 export function bridge(): AiboxBridge | undefined {
   try {
-    return typeof window !== 'undefined' ? (window as { aibox?: AiboxBridge }).aibox : undefined;
+    return typeof window !== 'undefined' ? (window as { aibox?: AiboxBridge }).aibox : undefined
   } catch {
-    return undefined;
+    return undefined
   }
 }
 
 /** 当前是否运行在 applet 容器里。 */
 export function isApplet(): boolean {
-  return bridge() !== undefined;
+  return bridge() !== undefined
 }
 
 /** 取某个命名空间对象（不存在返回 `undefined`）。 */
 export function namespaceOf<K extends keyof AiboxBridge>(name: K): AiboxBridge[K] | undefined {
-  const host = bridge() as Record<string, unknown> | undefined;
-  const value = host?.[name as string];
-  return (value && typeof value === 'object' ? value : undefined) as AiboxBridge[K] | undefined;
+  const host = bridge() as Record<string, unknown> | undefined
+  const value = host?.[name as string]
+  return (value && typeof value === 'object' ? value : undefined) as AiboxBridge[K] | undefined
 }
 
 /**
@@ -51,11 +56,11 @@ export function namespaceOf<K extends keyof AiboxBridge>(name: K): AiboxBridge[K
  *   if (!available('music')) return null   // 不渲染音乐 Tab，而不是渲染一个点了报错的按钮
  */
 export function available(name: string, method?: string): boolean {
-  const host = bridge() as Record<string, Record<string, unknown>> | undefined;
-  const ns = host?.[name];
-  if (!ns || typeof ns !== 'object') return false;
-  if (!method) return true;
-  return typeof ns[method] === 'function';
+  const host = bridge() as Record<string, Record<string, unknown>> | undefined
+  const ns = host?.[name]
+  if (!ns || typeof ns !== 'object') return false
+  if (!method) return true
+  return typeof ns[method] === 'function'
 }
 
 /**
@@ -63,11 +68,11 @@ export function available(name: string, method?: string): boolean {
  * 但要走一次桥调用形态的同步 API，故只在诊断/设置页用，热路径用 `available()`。
  */
 export function capabilityMap(): Record<string, string[]> {
-  const host = bridge();
-  if (!host || typeof host.capabilities !== 'function') return {};
+  const host = bridge()
+  if (!host || typeof host.capabilities !== 'function') return {}
   try {
-    return host.capabilities() ?? {};
+    return host.capabilities() ?? {}
   } catch {
-    return {};
+    return {}
   }
 }

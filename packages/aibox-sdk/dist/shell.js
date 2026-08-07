@@ -58,7 +58,9 @@ export async function setTabBadge(id, badge) {
     try {
         await host.tabs.update({ items: { [id]: { badge } } });
     }
-    catch { /* 角标是装饰，失败不该影响主流程 */ }
+    catch {
+        /* 角标是装饰，失败不该影响主流程 */
+    }
 }
 /** 读 scene 状态（呈现面、安全区、外观）。 */
 export async function sceneState() {
@@ -80,7 +82,9 @@ export async function setTitle(title) {
     try {
         await host.navigation.setTitle(title);
     }
-    catch { /* 标题是装饰 */ }
+    catch {
+        /* 标题是装饰 */
+    }
 }
 /**
  * 关闭确认。有未保存改动时开、保存后关——**别永久开着**，那会让用户每次退出都被拦一下。
@@ -92,7 +96,9 @@ export async function setCloseConfirmation(enabled, options) {
     try {
         await host.navigation.setCloseConfirmation(enabled ? { enabled: true, ...options } : { enabled: false });
     }
-    catch { /* 确认框是增强 */ }
+    catch {
+        /* 确认框是增强 */
+    }
 }
 /** 触觉反馈。宿主没有 haptics 时静默忽略（这是纯增强，绝不该因为它抛）。 */
 export async function haptic(kind = 'light') {
@@ -110,5 +116,7 @@ export async function haptic(kind = 'light') {
             await ns.notification({ type: kind });
         }
     }
-    catch { /* 增强路径 */ }
+    catch {
+        /* 增强路径 */
+    }
 }

@@ -10,7 +10,7 @@ import { formatMinor, formatPrice } from '../lib/format.js';
 import { grossMinorOf, parseNumberInput, roundHalfAway, toMinor } from '../lib/money.js';
 import { currencyOf, decimalsFor } from '../lib/symbol.js';
 import { accountLabel } from '../i18n/index.js';
-export default function TradePanel({ ctx, route, visible, onClose }) {
+export default function TradePanel({ ctx, route, visible, onClose, }) {
     const { t, ledger, quotes, settings } = ctx;
     const { canonical, symbol, name } = route || {};
     const [side, setSide] = React.useState('buy');
@@ -36,22 +36,19 @@ export default function TradePanel({ ctx, route, visible, onClose }) {
         setPrice(quote ? String(formatPrice(quote.price, decimals)) : '');
         setAccountID((current) => current || (accounts[0] ? accounts[0].id : null));
     }, [visible, canonical]); // eslint-disable-line react-hooks/exhaustive-deps
-    const rate = account
-        ? ledger.fxRateFor(instrumentCurrency, account.currency, quotes.fx)
-        : null;
+    const rate = account ? ledger.fxRateFor(instrumentCurrency, account.currency, quotes.fx) : null;
     const quantity = parseNumberInput(qty);
     const unitPrice = parseNumberInput(price);
     const feeMinor = Math.max(0, toMinor(parseNumberInput(fee) || 0));
     let grossMinor = null;
     let settledMinor = null;
     let cashAfter = null;
-    if (quantity > 0 && unitPrice > 0 && rate) {
+    if (quantity !== null && unitPrice !== null && quantity > 0 && unitPrice > 0 && rate && account) {
         try {
             grossMinor = grossMinorOf(quantity, unitPrice);
             settledMinor = roundHalfAway(grossMinor * rate);
-            cashAfter = side === 'buy'
-                ? account.cashMinor - settledMinor - feeMinor
-                : account.cashMinor + settledMinor - feeMinor;
+            cashAfter =
+                side === 'buy' ? account.cashMinor - settledMinor - feeMinor : account.cashMinor + settledMinor - feeMinor;
         }
         catch (caught) {
             grossMinor = null;
@@ -60,10 +57,16 @@ export default function TradePanel({ ctx, route, visible, onClose }) {
     const position = account
         ? ledger.positions.find((row) => row.accountID === account.id && row.instrumentSymbol === canonical)
         : null;
-    const canSubmit = !!account && !!rate && quantity > 0 && unitPrice > 0 && !busy
-        && (side === 'buy' ? (cashAfter !== null && cashAfter >= 0) : (position && position.quantity >= quantity - 1e-9));
+    const canSubmit = !!account &&
+        !!rate &&
+        quantity !== null &&
+        unitPrice !== null &&
+        quantity > 0 &&
+        unitPrice > 0 &&
+        !busy &&
+        (side === 'buy' ? cashAfter !== null && cashAfter >= 0 : position && position.quantity >= quantity - 1e-9);
     const submit = async () => {
-        if (!canSubmit)
+        if (!canSubmit || !account || !rate || !symbol || !canonical || quantity === null || unitPrice === null)
             return;
         setBusy(true);
         setError(null);
@@ -85,21 +88,37 @@ export default function TradePanel({ ctx, route, visible, onClose }) {
             onClose();
             return;
         }
-        setError(result.error);
+        setError(result.error ?? 'unknown');
     };
-    return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [_jsx(SheetHeader, { title: name || '', onClose: onClose, closeLabel: t('finance.cancel') }), _jsxs("div", { className: "fin-scroll", style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsx(Segmented, { value: side, onChange: (next) => { setSide(next); setError(null); }, items: [
+    return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [_jsx(SheetHeader, { title: name || '', onClose: onClose, closeLabel: t('finance.cancel') }), _jsxs("div", { className: "fin-scroll", style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsx(Segmented, { value: side, onChange: (next) => {
+                            setSide(next);
+                            setError(null);
+                        }, items: [
                             { id: 'buy', label: t('finance.trade.buy') },
                             { id: 'sell', label: t('finance.trade.sell') },
                         ] }), accounts.length > 1 ? (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: SPACE.s2 }, children: accounts.map((row) => (_jsx("button", { type: "button", className: "fin-btn fin-press", onClick: () => setAccountID(row.id), style: {
-                                padding: '5px 10px', borderRadius: RADIUS.pill, fontSize: 12,
-                                color: row.id === account.id ? C.brand : C.muted,
-                                background: row.id === account.id
-                                    ? 'color-mix(in srgb, var(--fin-brand) 12%, transparent)' : C.surface,
-                            }, children: accountLabel(t, row.name) }, row.id))) })) : null, _jsxs("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: `0 ${SPACE.s3}px` }, children: [_jsx(Field, { label: t('finance.trade.qty'), value: qty, onChange: setQty, placeholder: "0", autoFocus: true }), _jsx(Field, { label: t('finance.trade.price'), value: price, onChange: setPrice, placeholder: "0", suffix: instrumentCurrency }), _jsx(Field, { label: t('finance.trade.fee'), value: fee, onChange: setFee, placeholder: "0", suffix: account ? account.currency : '' })] }), account ? (_jsxs("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: SPACE.s3, display: 'flex', flexDirection: 'column', gap: SPACE.s3 }, children: [instrumentCurrency !== account.currency ? (_jsxs("div", { style: { display: 'flex', gap: SPACE.s5, flexWrap: 'wrap' }, children: [_jsx(Stat, { label: t('finance.trade.settleCcy'), value: account.currency }), _jsx(Stat, { label: t('finance.trade.fxRate'), value: rate ? formatPrice(rate, 4) : '—' }), _jsx(Stat, { label: t('finance.trade.settledAmount'), value: settledMinor !== null ? formatMinor(settledMinor, account.currency) : '—' })] })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s5, flexWrap: 'wrap' }, children: [_jsx(Stat, { label: t(side === 'buy' ? 'finance.trade.cost' : 'finance.trade.proceeds'), value: settledMinor !== null
+                                padding: '5px 10px',
+                                borderRadius: RADIUS.pill,
+                                fontSize: 12,
+                                color: row.id === account?.id ? C.brand : C.muted,
+                                background: row.id === account?.id ? 'color-mix(in srgb, var(--fin-brand) 12%, transparent)' : C.surface,
+                            }, children: accountLabel(t, row.name) }, row.id))) })) : null, _jsxs("div", { style: { background: C.surface, borderRadius: RADIUS.card, padding: `0 ${SPACE.s3}px` }, children: [_jsx(Field, { label: t('finance.trade.qty'), value: qty, onChange: setQty, placeholder: "0", autoFocus: true }), _jsx(Field, { label: t('finance.trade.price'), value: price, onChange: setPrice, placeholder: "0", suffix: instrumentCurrency }), _jsx(Field, { label: t('finance.trade.fee'), value: fee, onChange: setFee, placeholder: "0", suffix: account ? account.currency : '' })] }), account ? (_jsxs("div", { style: {
+                            background: C.surface,
+                            borderRadius: RADIUS.card,
+                            padding: SPACE.s3,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: SPACE.s3,
+                        }, children: [instrumentCurrency !== account.currency ? (_jsxs("div", { style: { display: 'flex', gap: SPACE.s5, flexWrap: 'wrap' }, children: [_jsx(Stat, { label: t('finance.trade.settleCcy'), value: account.currency }), _jsx(Stat, { label: t('finance.trade.fxRate'), value: rate ? formatPrice(rate, 4) : '—' }), _jsx(Stat, { label: t('finance.trade.settledAmount'), value: settledMinor !== null ? formatMinor(settledMinor, account.currency) : '—' })] })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s5, flexWrap: 'wrap' }, children: [_jsx(Stat, { label: t(side === 'buy' ? 'finance.trade.cost' : 'finance.trade.proceeds'), value: settledMinor !== null
                                             ? formatMinor(side === 'buy' ? settledMinor + feeMinor : settledMinor - feeMinor, account.currency)
-                                            : '—' }), _jsx(Stat, { label: t('finance.trade.cash'), value: formatMinor(account.cashMinor, account.currency) }), _jsx(Stat, { label: t('finance.trade.cashAfter'), value: cashAfter !== null ? formatMinor(cashAfter, account.currency) : '—', color: cashAfter !== null && cashAfter < 0 ? C.danger : undefined })] }), side === 'sell' && position ? (_jsxs("span", { style: { fontSize: 12, color: C.muted }, children: [t('finance.portfolio.positions'), " ", position.quantity] })) : null] })) : null, !rate ? (_jsx("span", { style: { fontSize: 13, color: C.warning }, children: t('finance.trade.error.invalidRate') })) : null, error ? (_jsx("span", { style: { fontSize: 13, color: C.danger }, children: t(`finance.trade.error.${error}`) })) : null, _jsx("button", { type: "button", className: "fin-btn fin-press", disabled: !canSubmit, onClick: submit, style: {
-                            textAlign: 'center', padding: '13px 0', borderRadius: RADIUS.field, fontSize: 16, fontWeight: 600,
-                            color: C.onAccent, opacity: canSubmit ? 1 : 0.4,
+                                            : '—' }), _jsx(Stat, { label: t('finance.trade.cash'), value: formatMinor(account.cashMinor, account.currency) }), _jsx(Stat, { label: t('finance.trade.cashAfter'), value: cashAfter !== null ? formatMinor(cashAfter, account.currency) : '—', color: cashAfter !== null && cashAfter < 0 ? C.danger : undefined })] }), side === 'sell' && position ? (_jsxs("span", { style: { fontSize: 12, color: C.muted }, children: [t('finance.portfolio.positions'), " ", position.quantity] })) : null] })) : null, !rate ? _jsx("span", { style: { fontSize: 13, color: C.warning }, children: t('finance.trade.error.invalidRate') }) : null, error ? _jsx("span", { style: { fontSize: 13, color: C.danger }, children: t(`finance.trade.error.${error}`) }) : null, _jsx("button", { type: "button", className: "fin-btn fin-press", disabled: !canSubmit, onClick: submit, style: {
+                            textAlign: 'center',
+                            padding: '13px 0',
+                            borderRadius: RADIUS.field,
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: C.onAccent,
+                            opacity: canSubmit ? 1 : 0.4,
                             background: (side === 'buy') === settings.upIsRed ? C.red : C.green,
                         }, children: t('finance.trade.confirm') }), _jsx("span", { style: { fontSize: 12, color: C.muted, textAlign: 'center' }, children: t('finance.settings.disclaimer') })] })] }));
 }

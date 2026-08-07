@@ -1,25 +1,55 @@
 // 宿主桥接口：**共享部分全部转发给 `@aibox/applet-sdk`**（2026-08-05 迁移，理由同 finance）。
 // 语义分歧由 SDK 统一裁定：confirm 不可用回 false（不是 null）、openURL 一律超时封顶。
-import { available, bridge, events, system, intelligence, ui } from '../lib/aibox-sdk.js';
+import { available, bridge, events, intelligence, ui } from 'aibox/sdk';
 export function hasNamespace(name, method) {
     return available(name, method);
 }
 export const capabilities = {
-    get db() { return hasNamespace('db', 'query'); },
-    get tabs() { return hasNamespace('tabs', 'getState'); },
-    get toolbar() { return hasNamespace('toolbar', 'on'); },
-    get menu() { return hasNamespace('menu', 'update'); },
-    get navigation() { return hasNamespace('navigation', 'setTitle'); },
-    get scene() { return hasNamespace('scene', 'getState'); },
-    get ai() { return hasNamespace('ai', 'generate'); },
-    get net() { return hasNamespace('net', 'fetch'); },
-    get ui() { return hasNamespace('ui', 'confirm'); },
-    get picker() { return hasNamespace('picker', 'file'); },
-    get resource() { return hasNamespace('resource', 'readText'); },
-    get shareFile() { return hasNamespace('share', 'file'); },
-    get shareText() { return hasNamespace('share', 'text'); },
-    get haptics() { return hasNamespace('haptics', 'impact'); },
-    get vision() { return hasNamespace('vision', 'recognizeText'); },
+    get db() {
+        return hasNamespace('db', 'query');
+    },
+    get tabs() {
+        return hasNamespace('tabs', 'getState');
+    },
+    get toolbar() {
+        return hasNamespace('toolbar', 'on');
+    },
+    get menu() {
+        return hasNamespace('menu', 'update');
+    },
+    get navigation() {
+        return hasNamespace('navigation', 'setTitle');
+    },
+    get scene() {
+        return hasNamespace('scene', 'getState');
+    },
+    get ai() {
+        return hasNamespace('ai', 'generate');
+    },
+    get net() {
+        return hasNamespace('net', 'fetch');
+    },
+    get ui() {
+        return hasNamespace('ui', 'confirm');
+    },
+    get picker() {
+        return hasNamespace('picker', 'file');
+    },
+    get resource() {
+        return hasNamespace('resource', 'readText');
+    },
+    get shareFile() {
+        return hasNamespace('share', 'file');
+    },
+    get shareText() {
+        return hasNamespace('share', 'text');
+    },
+    get haptics() {
+        return hasNamespace('haptics', 'impact');
+    },
+    get vision() {
+        return hasNamespace('vision', 'recognizeText');
+    },
 };
 // MARK: - storage（轻量偏好；不承载账本主数据）
 const memoryStore = new Map();
@@ -27,7 +57,7 @@ export const storage = {
     async get(key) {
         const api = bridge();
         if (!api || !api.storage)
-            return memoryStore.has(key) ? memoryStore.get(key) : null;
+            return memoryStore.get(key) ?? null;
         try {
             const value = await api.storage.get(key);
             return value === undefined ? null : value;
@@ -58,13 +88,12 @@ export async function httpGetJSON(url, { timeoutMs = 12000 } = {}) {
     if (!api || !api.net || typeof api.net.fetch !== 'function')
         return { ok: false };
     let timer = null;
-    const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve({ __timeout: true }), timeoutMs); });
+    const timeout = new Promise((resolve) => {
+        timer = setTimeout(() => resolve({ __timeout: true }), timeoutMs);
+    });
     try {
-        const response = await Promise.race([
-            api.net.fetch(url, { method: 'GET', responseType: 'json' }),
-            timeout,
-        ]);
-        if (!response || response.__timeout)
+        const response = await Promise.race([api.net.fetch(url, { method: 'GET', responseType: 'json' }), timeout]);
+        if (!response || '__timeout' in response)
             return { ok: false };
         const status = Number(response.status || 0);
         if (status < 200 || status >= 300)
@@ -90,7 +119,18 @@ function safeParse(text) {
 }
 // MARK: - ui（原生对话框；缺席时由调用方走自绘弹层）
 /** 语义已统一：问不出来 = 没确认（false）。破坏性操作的默认答案必须是「不做」。 */
-export const nativeConfirm = ui.confirm;
+export async function nativeConfirm(input) {
+    return ui.confirm({
+        title: input.title,
+        message: input.message,
+        actions: input.confirmTitle
+            ? [
+                { id: 'cancel', title: 'Cancel', role: 'cancel' },
+                { id: 'confirm', title: input.confirmTitle, role: input.destructive ? 'destructive' : 'default' },
+            ]
+            : undefined,
+    });
+}
 export const nativeAlert = ui.alert;
 /** 原生 action sheet（长按菜单）。返回选中的 id；不可用返回 undefined。 */
 export const nativeActionSheet = ui.actionSheet;
@@ -117,13 +157,13 @@ export async function scanImageText() {
         const picked = await api.picker.photo({ limit: 1 });
         if (!picked || picked.cancelled)
             return { ok: false, reason: 'cancelled' };
-        const item = (picked.items ?? picked.resources ?? [])[0];
+        const item = (picked.items ?? [])[0];
         if (!item || !item.handle)
             return { ok: false, reason: 'cancelled' };
         handle = item.handle;
     }
     catch (error) {
-        return { ok: false, reason: String((error && error.message) || error) };
+        return { ok: false, reason: errorMessage(error) };
     }
     try {
         const res = await api.vision.recognizeText({ handle, languages: ['zh-Hans', 'en'] });
@@ -132,7 +172,7 @@ export async function scanImageText() {
         return { ok: true, text, empty: text.trim().length === 0 };
     }
     catch (error) {
-        return { ok: false, reason: String((error && error.message) || error) };
+        return { ok: false, reason: errorMessage(error) };
     }
 }
 /** 弹系统文档选择器读一个文本文件。返回 `{ ok, text, name }`。 */
@@ -153,7 +193,7 @@ export async function pickTextFile(types) {
         return { ok: true, text: String(text ?? ''), name: item.name ?? '' };
     }
     catch (error) {
-        return { ok: false, reason: String((error && error.message) || error) };
+        return { ok: false, reason: errorMessage(error) };
     }
 }
 // MARK: - share（CSV 导出）
@@ -162,13 +202,33 @@ export async function pickTextFile(types) {
  * 宿主还没实现时降级到 `aibox.share.text`（接收方拿到的是一段文字而不是文件，调用方要告知用户）。
  * 返回 `'file' | 'text' | false`。
  */
-export const shareFile = system.shareFile;
+export async function shareFile(input) {
+    const api = bridge();
+    if (!api?.share)
+        return false;
+    try {
+        if (typeof api.share.file === 'function') {
+            await api.share.file(input);
+            return 'file';
+        }
+        if (typeof api.share.text === 'function') {
+            await api.share.text({ text: input.content });
+            return 'text';
+        }
+    }
+    catch (error) {
+        return false;
+    }
+    return false;
+}
 // MARK: - ai
 export const aiAvailability = intelligence.aiAvailability;
 export const aiGenerate = intelligence.aiGenerate;
 // MARK: - 事件总线 / 外壳
 export const onEvent = events.on;
-export const onNamespaceEvent = events.shellOn;
+export function onNamespaceEvent(namespace, event, handler) {
+    return events.shellOn(namespace, event, (payload) => handler(payload));
+}
 export function bridgeAPI() {
     return bridge();
 }
@@ -179,6 +239,11 @@ export function tapFeedback() {
         try {
             api.haptics.impact({ style: 'light' });
         }
-        catch (error) { /* 无所谓 */ }
+        catch (error) {
+            /* 无所谓 */
+        }
     }
+}
+function errorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
 }

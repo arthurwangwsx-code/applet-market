@@ -20,8 +20,9 @@ import { getSession, whenReady } from './lib/session.js';
 import { registerActions } from './lib/actions.js';
 import { useSubpageStack } from 'aibox/ui';
 import { openArticle as performOpen, knowledgeMarkdown } from './lib/reading.js';
-import { capabilities, browserAvailability, aiAvailability, findTool, callTool, onEvent, onNamespaceEvent, } from './lib/host.js';
+import { browserAvailability, aiAvailability, findTool, callTool, onEvent, onNamespaceEvent } from './lib/host.js';
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js';
+import { isAvailable } from 'aibox/sdk';
 // 对外提供的 4 个 AI 工具（news_search / read / source / save）+ ⋯ 菜单的朗读动作。
 // **模块求值期就注册**：无头执行时页面不挂载任何组件，等 React 副作用就来不及了。
 registerActions();
@@ -30,6 +31,7 @@ const TABS = [
     { id: 'subs', titleKey: 'news.tab.subs', icon: 'dot.radiowaves.up.forward' },
     { id: 'saved', titleKey: 'news.tab.saved', icon: 'bookmark', selectedIcon: 'bookmark.fill' },
 ];
+const isTabID = (value) => TABS.some((tab) => tab.id === value);
 function useForceRender() {
     const [, setTick] = React.useState(0);
     return React.useCallback(() => setTick((n) => n + 1), []);
@@ -107,28 +109,32 @@ export default function App() {
                 agg.refresh({ force: false });
         };
         boot();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [store, agg]);
     // —— 能力探测：拿不到就整块不渲染入口，不留「点了没反应」的按钮 ——
     React.useEffect(() => {
         let cancelled = false;
         const probe = async () => {
             const [ai, browser, kb] = await Promise.all([
-                capabilities.ai ? aiAvailability() : Promise.resolve({ available: false }),
+                isAvailable('ai', 'generate') ? aiAvailability() : Promise.resolve({ available: false }),
                 browserAvailability(),
-                capabilities.tools ? findTool('vault_create') : Promise.resolve(false),
+                isAvailable('tools', 'call') ? findTool('vault_create') : Promise.resolve(false),
             ]);
             if (cancelled)
                 return;
             setCaps({
                 hasAI: !!ai.available,
-                hasTTS: capabilities.tts,
+                hasTTS: isAvailable('tts', 'speak'),
                 hasKB: !!kb,
                 browserModes: browser.modes,
             });
         };
         probe();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
     const openAI = React.useCallback((article) => {
         // 没有 AI 权限时整个 ✨ 入口不渲染；这里再兜一层，防宿主事件把面板顶出来。
@@ -160,19 +166,21 @@ export default function App() {
                     const state = await api.tabs.getState();
                     if (!cancelled && state && state.rendered) {
                         setShell((current) => ({ ...current, tabsRendered: true }));
-                        if (state.selected)
+                        if (state.selected && isTabID(state.selected))
                             setTab(state.selected);
                     }
                 }
-                catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
-                offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
-                    if (!state)
+                catch (error) {
+                    /* 宿主没这能力：留给自绘 TabBar */
+                }
+                offs.push(onNamespaceEvent('tabs', 'changed', (payload) => {
+                    if (!payload || typeof payload !== 'object')
                         return;
+                    const state = payload;
                     // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
                     // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
                     const rendered = state.rendered !== false;
-                    setShell((current) => (current.tabsRendered === rendered
-                        ? current : { ...current, tabsRendered: rendered }));
+                    setShell((current) => current.tabsRendered === rendered ? current : { ...current, tabsRendered: rendered });
                     if (state.selected) {
                         setTab(state.selected);
                         resetRef.current();
@@ -190,27 +198,34 @@ export default function App() {
                         }));
                     }
                 }
-                catch (error) { /* 同上 */ }
+                catch (error) {
+                    /* 同上 */
+                }
                 offs.push(onNamespaceEvent('toolbar', 'invoke', (payload) => {
-                    if (payload && payload.id === 'ai')
+                    if (payload && typeof payload === 'object' && 'id' in payload && payload.id === 'ai')
                         openAIRef.current(null);
                 }));
                 offs.push(onNamespaceEvent('toolbar', 'searchChanged', (payload) => {
-                    setQuery(String((payload && payload.query) || ''));
+                    setQuery(String((payload && typeof payload === 'object' && 'query' in payload && payload.query) || ''));
                 }));
             }
             // ⋯ 菜单里的「朗读 / 停止朗读」经 manifest.actions + scene.menu 落到 lib/actions.js 的
             // `toggleBroadcast`（已在模块求值期注册），这里不再重复注册。
-            offs.push(onEvent('lifecycle.background', () => { agg.persistNow(); }));
+            offs.push(onEvent('lifecycle.background', () => {
+                agg.persistNow();
+            }));
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, [agg]);
     // —— 顶栏标题与四态右上角 ——
     const showBroadcast = tab === 'feed' && caps.hasTTS && agg.timeline.length > 0;
     React.useEffect(() => {
         const api = window.aibox;
-        const current = TABS.find((row) => row.id === tab) || TABS[0];
+        const current = TABS.find((row) => row.id === tab) ?? TABS[0];
         const title = stack.length > 0 ? routeTitle(stack[stack.length - 1], t) : t(current.titleKey);
         document.title = title;
         if (api && api.navigation && typeof api.navigation.setTitle === 'function')
@@ -222,14 +237,16 @@ export default function App() {
             api.toolbar.update({ items: { ai: { hidden: !caps.hasAI } } }).catch(() => { });
         }
         if (api && api.menu && typeof api.menu.update === 'function') {
-            api.menu.update({
+            api.menu
+                .update({
                 items: {
                     listen: {
                         hidden: !showBroadcast,
                         title: t(broadcast.active ? 'news.action.stopListening' : 'news.action.listen'),
                     },
                 },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
     }, [tab, stack, caps.hasAI, showBroadcast, broadcast.active, t]);
     const readKeys = React.useMemo(() => store.readKeys, [store, store.version]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -257,7 +274,9 @@ export default function App() {
             navigate,
             back,
             refresh: (force) => agg.refresh({ force }),
-            setVisibleArticles: (list) => { session.visibleArticles = list; },
+            setVisibleArticles: (list) => {
+                session.visibleArticles = list;
+            },
             fetchSource: async (feed) => {
                 const result = await fetchSingleSource(feed, store.settings);
                 return result.articles;
@@ -273,7 +292,7 @@ export default function App() {
             openCluster: (item) => navigate({ name: 'cluster', title: item.lead.title, articles: [item.lead, ...item.related] }),
             toggleSaved: (article) => (store.savedKeys.has(article.id) ? store.unsave(article.id) : store.save(article)),
             unsave: (id) => store.unsave(id),
-            toggleRead: (article) => (store.readKeys.has(article.id) ? store.markUnread(article.id) : store.markRead(article)),
+            toggleRead: (article) => store.readKeys.has(article.id) ? store.markUnread(article.id) : store.markRead(article),
             removeHistory: (key) => store.removeHistory(key),
             analyze: (article) => openAI(article),
             askAI: (seed) => setAISession({ identity: 'news', seed }),
@@ -293,11 +312,30 @@ export default function App() {
             setFeedEnabled: (id, enabled) => store.setFeedEnabled(id, enabled),
             moveFeed: (id, direction) => store.moveFeed(id, direction),
         },
-    }), [t, locale, now, store, agg, broadcast, store.version, agg.timelineRevision, query,
-        shell.searchRendered, caps.hasAI, caps.hasTTS, caps.hasKB, readKeys, savedKeys,
-        navigate, back, openAI, broadcast.active, broadcast.index]); // eslint-disable-line react-hooks/exhaustive-deps
+    }), [
+        t,
+        locale,
+        now,
+        store,
+        agg,
+        broadcast,
+        store.version,
+        agg.timelineRevision,
+        query,
+        shell.searchRendered,
+        caps.hasAI,
+        caps.hasTTS,
+        caps.hasKB,
+        readKeys,
+        savedKeys,
+        navigate,
+        back,
+        openAI,
+        broadcast.active,
+        broadcast.index,
+    ]); // eslint-disable-line react-hooks/exhaustive-deps
     const { route } = subpages;
-    const currentTab = TABS.find((row) => row.id === tab) || TABS[0];
+    const currentTab = TABS.find((row) => row.id === tab) ?? TABS[0];
     const selectTab = (next) => {
         setTab(next);
         subpages.reset();
@@ -305,8 +343,10 @@ export default function App() {
         if (api && api.tabs && typeof api.tabs.select === 'function')
             api.tabs.select(next).catch(() => { });
     };
-    return (_jsxs("div", { className: "news-root", children: [!shell.toolbarRendered ? (_jsx(NavBar, { title: route ? routeTitle(route, t) : t(currentTab.titleKey), onBack: route ? back : undefined, backLabel: t('news.x.back'), trailing: !route && !shell.toolbarRendered ? (_jsxs(_Fragment, { children: [caps.hasAI ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('news.companion.title'), onClick: () => openAI(null) })) : null, showBroadcast ? (_jsx(ToolbarButton, { icon: broadcast.active ? 'stop.circle.fill' : 'speaker.wave.2', label: t(broadcast.active ? 'news.action.stopListening' : 'news.action.listen'), onClick: toggleBroadcast })) : null] })) : null })) : null, !route && !shell.searchRendered && tab === 'feed' ? (_jsx(SearchField, { value: query, onChange: setQuery, placeholder: t('news.search.prompt') })) : null, !ready ? _jsx("div", { className: "news-scroll" }) : (route ? renderRoute(route, ctx) : (_jsxs(_Fragment, { children: [tab === 'feed' ? _jsx(FeedPage, { ctx: ctx }) : null, tab === 'subs' ? _jsx(SourcesPage, { ctx: ctx }) : null, tab === 'saved' ? _jsx(SavedPage, { ctx: ctx }) : null] }))), _jsx(BroadcastNotice, { messageKey: broadcast.noticeKey, t: t, onDismiss: () => broadcast.dismissNotice() }), _jsx(BroadcastBar, { broadcast: broadcast, t: t, onOpenCurrent: () => { if (broadcast.current)
-                    ctx.actions.openArticle(broadcast.current); } }), !shell.tabsRendered ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', background: C.bg, flex: '0 0 auto' } })), _jsx(AIPanel, { ctx: ctx, session: aiSession, onClose: () => setAISession(null) })] }));
+    return (_jsxs("div", { className: "news-root", children: [!shell.toolbarRendered ? (_jsx(NavBar, { title: route ? routeTitle(route, t) : t(currentTab.titleKey), onBack: route ? back : undefined, backLabel: t('news.x.back'), trailing: !route && !shell.toolbarRendered ? (_jsxs(_Fragment, { children: [caps.hasAI ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('news.companion.title'), onClick: () => openAI(null) })) : null, showBroadcast ? (_jsx(ToolbarButton, { icon: broadcast.active ? 'stop.circle.fill' : 'speaker.wave.2', label: t(broadcast.active ? 'news.action.stopListening' : 'news.action.listen'), onClick: toggleBroadcast })) : null] })) : null })) : null, !route && !shell.searchRendered && tab === 'feed' ? (_jsx(SearchField, { value: query, onChange: setQuery, placeholder: t('news.search.prompt') })) : null, !ready ? (_jsx("div", { className: "news-scroll" })) : route ? (renderRoute(route, ctx)) : (_jsxs(_Fragment, { children: [tab === 'feed' ? _jsx(FeedPage, { ctx: ctx }) : null, tab === 'subs' ? _jsx(SourcesPage, { ctx: ctx }) : null, tab === 'saved' ? _jsx(SavedPage, { ctx: ctx }) : null] })), _jsx(BroadcastNotice, { messageKey: broadcast.noticeKey, t: t, onDismiss: () => broadcast.dismissNotice() }), _jsx(BroadcastBar, { broadcast: broadcast, t: t, onOpenCurrent: () => {
+                    if (broadcast.current)
+                        ctx.actions.openArticle(broadcast.current);
+                } }), !shell.tabsRendered ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', background: C.bg, flex: '0 0 auto' } })), _jsx(AIPanel, { ctx: ctx, session: aiSession, onClose: () => setAISession(null) })] }));
 }
 /** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
 function routePath(route) {
@@ -320,21 +360,33 @@ function routeTitle(route, t) {
     if (!route)
         return '';
     switch (route.name) {
-        case 'settings': return t('news.settings.title');
-        case 'addSource': return t('news.add.nav');
-        case 'diagnostics': return t('news.diagnostics.title');
-        case 'cluster': return t('news.cluster.title');
-        case 'source': return route.feed.title;
-        default: return '';
+        case 'settings':
+            return t('news.settings.title');
+        case 'addSource':
+            return t('news.add.nav');
+        case 'diagnostics':
+            return t('news.diagnostics.title');
+        case 'cluster':
+            return t('news.cluster.title');
+        case 'source':
+            return route.feed.title;
+        default:
+            return '';
     }
 }
 function renderRoute(route, ctx) {
     switch (route.name) {
-        case 'settings': return _jsx(SettingsPage, { ctx: ctx });
-        case 'addSource': return _jsx(AddSourcePage, { ctx: ctx });
-        case 'diagnostics': return _jsx(DiagnosticsPage, { ctx: ctx });
-        case 'cluster': return _jsx(ClusterDetail, { ctx: ctx, cluster: route });
-        case 'source': return _jsx(FeedPage, { ctx: ctx, sourceFeed: route.feed });
-        default: return null;
+        case 'settings':
+            return _jsx(SettingsPage, { ctx: ctx });
+        case 'addSource':
+            return _jsx(AddSourcePage, { ctx: ctx });
+        case 'diagnostics':
+            return _jsx(DiagnosticsPage, { ctx: ctx });
+        case 'cluster':
+            return _jsx(ClusterDetail, { ctx: ctx, cluster: route });
+        case 'source':
+            return _jsx(FeedPage, { ctx: ctx, sourceFeed: route.feed });
+        default:
+            return null;
     }
 }

@@ -1,8 +1,9 @@
 // 打开文章：标已读（＝写入阅读历史）→ 备好正文 → 交给宿主浏览器。
 // 正文四级回退：正文缓存 → feed 自带 contentHTML（长度 > summary.length + 40 才采用）→
 // 抓页抽取 → 回落 feed summary。
-import { openArticle as hostOpenArticle, openURL, httpGet, PAGE_MAX_BYTES } from './host.js';
+import { openArticle as hostOpenArticle, httpGet, PAGE_MAX_BYTES } from './host.js';
 import { extract } from './extractor.js';
+import { system } from 'aibox/sdk';
 /** 四级回退取正文；命中网络时顺手写缓存。 */
 export async function resolveContent(article, store, { allowNetwork = true } = {}) {
     if (article.url) {
@@ -41,7 +42,7 @@ export async function openArticle(article, { store, settings }) {
         return false;
     await store.markRead(article);
     if (settings.openMode === 'web') {
-        return openURL(article.url, 'inApp');
+        return system.openInBrowser(article.url, { mode: 'inApp' });
     }
     // 打开路径上只用「已有的」正文，不为了开一篇文章先去抓一次全页（那会让点击等上几秒）。
     const content = await resolveContent(article, store, { allowNetwork: false });

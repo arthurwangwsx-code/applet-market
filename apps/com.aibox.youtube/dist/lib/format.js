@@ -14,7 +14,7 @@ export function formatDuration(seconds) {
     const h = Math.floor(total / 3600);
     const m = Math.floor((total % 3600) / 60);
     const s = total % 60;
-    const pad = (n) => String(n).padStart(2, '0');
+    const pad = (part) => String(part).padStart(2, '0');
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 /**
@@ -31,13 +31,21 @@ export function qualityLabel(width, height, fallback) {
     if (!w || !h)
         return fallback || '';
     const basis = w >= h ? w : h; // 横屏看宽，竖屏看高
-    const tier = basis >= 3840 ? '4K'
-        : basis >= 2560 ? '1440p'
-            : basis >= 1920 ? '1080p'
-                : basis >= 1280 ? '720p'
-                    : basis >= 854 ? '480p'
-                        : basis >= 640 ? '360p'
-                            : basis >= 426 ? '240p' : '144p';
+    const tier = basis >= 3840
+        ? '4K'
+        : basis >= 2560
+            ? '1440p'
+            : basis >= 1920
+                ? '1080p'
+                : basis >= 1280
+                    ? '720p'
+                    : basis >= 854
+                        ? '480p'
+                        : basis >= 640
+                            ? '360p'
+                            : basis >= 426
+                                ? '240p'
+                                : '144p';
     return tier;
 }
 /** 发布时间：今天显示时刻，今年显示月日，跨年显示年月日。 */

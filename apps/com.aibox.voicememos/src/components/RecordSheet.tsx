@@ -5,7 +5,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { clockCentis } from '../lib/format.js'
-import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop, type StoppedClip } from '../lib/memos.js'
+import {
+  haptic,
+  recordCancel,
+  recordPause,
+  recordResume,
+  recordStatus,
+  recordStop,
+  type StoppedClip,
+} from '../lib/memos.js'
 import type { T } from '../lib/strings.js'
 import { SPACE, type Palette } from '../lib/theme.js'
 import { Icon, Sheet } from './primitives.js'
@@ -67,7 +75,9 @@ export function RecordSheet(props: {
       palette={palette}
       open={props.open}
       // 录音中不能误滑关掉：点遮罩只在已停止时才关（原生是 interactiveDismissDisabled）。
-      onClose={() => { if (!recording) props.onCancel() }}
+      onClose={() => {
+        if (!recording) props.onCancel()
+      }}
     >
       <div style={{ padding: `${SPACE.s5}px ${SPACE.s5}px ${SPACE.s3}px` }}>
         <input
@@ -75,27 +85,49 @@ export function RecordSheet(props: {
           onChange={(event) => props.onTitleChange(event.target.value)}
           placeholder={t('recordTitlePlaceholder')}
           style={{
-            width: '100%', boxSizing: 'border-box', border: 'none', background: 'transparent',
-            textAlign: 'center', fontSize: 17, fontWeight: 600, color: palette.ink, outline: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
+            border: 'none',
+            background: 'transparent',
+            textAlign: 'center',
+            fontSize: 17,
+            fontWeight: 600,
+            color: palette.ink,
+            outline: 'none',
           }}
         />
       </div>
 
-      <div style={{ display: 'flex', gap: SPACE.s3, padding: `0 ${SPACE.s5}px ${SPACE.s2}px`, fontSize: 12, color: palette.muted }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: SPACE.s3,
+          padding: `0 ${SPACE.s5}px ${SPACE.s2}px`,
+          fontSize: 12,
+          color: palette.muted,
+        }}
+      >
         <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           <Icon name="waveform.and.mic" size={11} /> {t('localeAuto')}
         </span>
         {/* 后台录音可用的标记。这里曾是「💾 ✓」——一个软盘 emoji 加一个字面对勾，既看不出是什么意思，
             也和外壳那套单色符号完全不是一套东西。 */}
-        {props.backgroundSupported ? <span><Icon name="checkmark.circle" size={11} /></span> : null}
+        {props.backgroundSupported ? (
+          <span>
+            <Icon name="checkmark.circle" size={11} />
+          </span>
+        ) : null}
       </div>
 
       <LiveWaveform palette={palette} levels={levels} active={recording && !paused} />
 
       <div
         style={{
-          padding: `${SPACE.s4}px 0`, textAlign: 'center',
-          fontSize: 44, fontWeight: 200, fontVariantNumeric: 'tabular-nums',
+          padding: `${SPACE.s4}px 0`,
+          textAlign: 'center',
+          fontSize: 44,
+          fontWeight: 200,
+          fontVariantNumeric: 'tabular-nums',
           fontFamily: 'ui-monospace, Menlo, monospace',
           color: recording && !paused ? palette.accent : palette.muted,
         }}
@@ -109,7 +141,15 @@ export function RecordSheet(props: {
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: SPACE.s6, paddingBottom: SPACE.s6 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: SPACE.s6,
+          paddingBottom: SPACE.s6,
+        }}
+      >
         <button
           type="button"
           onClick={async () => {
@@ -118,9 +158,17 @@ export function RecordSheet(props: {
           }}
           aria-label={paused ? t('resume') : t('pause')}
           style={{
-            width: 56, height: 56, borderRadius: 28, background: palette.surface,
-            border: `1px solid ${palette.line}`, color: palette.ink, fontSize: 20, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            background: palette.surface,
+            border: `1px solid ${palette.line}`,
+            color: palette.ink,
+            fontSize: 20,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {/* 继续录音用红点而不是麦克风 —— 与原生「暂停 ↔ 录制」那对图标同语。 */}
@@ -131,9 +179,17 @@ export function RecordSheet(props: {
           onClick={stop}
           aria-label={t('stop')}
           style={{
-            width: 72, height: 72, borderRadius: 36, background: palette.red, border: 'none',
-            color: '#FFFFFF', fontSize: 22, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            background: palette.red,
+            border: 'none',
+            color: '#FFFFFF',
+            fontSize: 22,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <Icon name="stop" size={22} color="#FFFFFF" />
@@ -146,9 +202,17 @@ export function RecordSheet(props: {
           }}
           aria-label={t('cancel')}
           style={{
-            width: 56, height: 56, borderRadius: 28, background: 'transparent',
-            border: `1px solid ${palette.line}`, color: palette.muted, fontSize: 15, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            background: 'transparent',
+            border: `1px solid ${palette.line}`,
+            color: palette.muted,
+            fontSize: 15,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <Icon name="xmark" size={18} />

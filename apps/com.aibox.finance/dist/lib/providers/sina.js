@@ -100,25 +100,39 @@ function parseUS(parts, symbol) {
 }
 /** 批量实时行情（fallback 用）。拿不到的代码直接缺席。 */
 export async function fetchQuotes(symbols) {
-    const usable = symbols.map((symbol) => ({ symbol, code: sinaQuoteCode(symbol) })).filter((row) => row.code);
+    const usable = symbols
+        .map((symbol) => ({ symbol, code: sinaQuoteCode(symbol) }))
+        .filter((row) => typeof row.code === 'string' && row.code.length > 0);
     if (usable.length === 0)
         return {};
     const url = `https://hq.sinajs.cn/list=${usable.map((row) => row.code).join(',')}`;
     const result = await getGBK(url, { headers: REFERER });
     if (!result.ok)
         return {};
-    const lines = String(result.body).split('\n').filter((line) => line.includes('="'));
+    const lines = String(result.body)
+        .split('\n')
+        .filter((line) => line.includes('="'));
     const out = {};
     // 按顺序 zip：新浪不回代码，位置就是身份。
     for (let i = 0; i < usable.length && i < lines.length; i += 1) {
-        const match = /="([^"]*)"/.exec(lines[i]);
+        const line = lines[i];
+        if (line === undefined)
+            continue;
+        const match = /="([^"]*)"/.exec(line);
         if (!match || !match[1])
             continue;
         const parts = match[1].split(',');
-        const { symbol } = usable[i];
-        const quote = symbol.market === 'ashare' ? parseAShare(parts, symbol)
-            : symbol.market === 'hk' ? parseHK(parts, symbol)
-                : symbol.market === 'us' ? parseUS(parts, symbol) : null;
+        const row = usable[i];
+        if (!row)
+            continue;
+        const { symbol } = row;
+        const quote = symbol.market === 'ashare'
+            ? parseAShare(parts, symbol)
+            : symbol.market === 'hk'
+                ? parseHK(parts, symbol)
+                : symbol.market === 'us'
+                    ? parseUS(parts, symbol)
+                    : null;
         if (quote) {
             quote.currency = currencyOf(symbol);
             out[quote.symbol] = quote;
@@ -141,10 +155,14 @@ export async function fetchFX() {
         const bodyMatch = /="([^"]*)"/.exec(line);
         if (!keyMatch || !bodyMatch)
             continue;
-        const foreign = keyMatch[1].slice(0, 3).toUpperCase();
+        const pair = keyMatch[1];
+        const body = bodyMatch[1];
+        if (!pair || body === undefined)
+            continue;
+        const foreign = pair.slice(0, 3).toUpperCase();
         // 值 = 主体里第一个 > 0 的数值当中间价。
         let mid = null;
-        for (const part of bodyMatch[1].split(',')) {
+        for (const part of body.split(',')) {
             const value = Number(part);
             if (Number.isFinite(value) && value > 0) {
                 mid = value;
@@ -157,20 +175,24 @@ export async function fetchFX() {
     }
     return Object.keys(out).length > 0 ? out : null;
 }
-/** 7×24 快讯（无需 Referer）。 */
 export async function fetchNewsFeed(limit = 20) {
     const url = `https://zhibo.sina.com.cn/api/zhibo/feed?page=1&page_size=${Math.max(1, Math.min(25, limit))}&zhibo_id=152&tag_id=0&type=0&_=0`;
     const { getJSON } = await import('../http.js');
     const result = await getJSON(url);
     if (!result.ok)
         return [];
-    const list = result.body && result.body.result && result.body.result.data
-        && result.body.result.data.feed && result.body.result.data.feed.list;
+    const list = result.body &&
+        result.body.result &&
+        result.body.result.data &&
+        result.body.result.data.feed &&
+        result.body.result.data.feed.list;
     if (!Array.isArray(list))
         return [];
-    return list.map((row) => ({
+    return list
+        .map((row) => ({
         id: String(row.id || ''),
         time: String(row.create_time || '').slice(0, 16),
         text: String(row.rich_text || '').trim(),
-    })).filter((row) => row.text);
+    }))
+        .filter((row) => row.text);
 }

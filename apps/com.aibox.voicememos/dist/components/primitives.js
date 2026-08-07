@@ -70,7 +70,9 @@ function useSymbolSupport() {
                 image.src = url;
             }
         }
-        return () => { symbolProbeWaiters.delete(setSupported); };
+        return () => {
+            symbolProbeWaiters.delete(setSupported);
+        };
     }, []);
     return supported;
 }
@@ -207,9 +209,7 @@ export function InfoChip(props) {
         background: props.filled ? alpha(tint, 0.14) : props.palette.line,
     };
     const content = (_jsxs(_Fragment, { children: [props.icon ? _jsx(Icon, { name: props.icon, size: 11 }) : null, _jsx("span", { children: props.label })] }));
-    return props.onClick
-        ? _jsx("button", { type: "button", style: style, onClick: props.onClick, children: content })
-        : _jsx("span", { style: style, children: content });
+    return props.onClick ? (_jsx("button", { type: "button", style: style, onClick: props.onClick, children: content })) : (_jsx("span", { style: style, children: content }));
 }
 /** `ChipsFlow` = FlowLayout(spacing 6, lineSpacing 6)。 */
 export function ChipsFlow({ children }) {
@@ -229,15 +229,30 @@ export function CopyButton(props) {
         return () => clearTimeout(timer);
     }, [done]);
     return (_jsxs("button", { type: "button", style: {
-            display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', background: 'transparent',
-            padding: 0, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: 'pointer',
             color: done ? props.palette.green : props.palette.accent,
-        }, onClick: async () => { if (await props.onCopy())
-            setDone(true); }, children: [_jsx(Icon, { name: done ? 'check' : 'clipboard', size: 12 }), done ? props.copiedLabel : props.label] }));
+        }, onClick: async () => {
+            if (await props.onCopy())
+                setDone(true);
+        }, children: [_jsx(Icon, { name: done ? 'check' : 'clipboard', size: 12 }), done ? props.copiedLabel : props.label] }));
 }
 /** 区头：12pt medium muted 大写。 */
 export function SectionHeader(props) {
-    return (_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.s2 }, children: [_jsx("div", { style: { fontSize: 12, fontWeight: 500, color: props.palette.muted, textTransform: 'uppercase', letterSpacing: 0.4 }, children: props.title }), props.trailing] }));
+    return (_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.s2 }, children: [_jsx("div", { style: {
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: props.palette.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                }, children: props.title }), props.trailing] }));
 }
 /** 主按钮（borderedProminent 等价物）。 */
 export function PrimaryButton(props) {
@@ -257,7 +272,9 @@ export function PrimaryButton(props) {
 /** 次按钮（.bordered 等价物）。 */
 export function SecondaryButton(props) {
     return (_jsxs("button", { type: "button", disabled: props.disabled, onClick: props.onClick, style: {
-            display: 'inline-flex', alignItems: 'center', gap: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
             border: `1px solid ${props.palette.line}`,
             borderRadius: RADIUS.field,
             padding: '8px 14px',
@@ -297,11 +314,26 @@ export function Row(props) {
             event.preventDefault();
             props.onLongPress();
         }, style: {
-            display: 'flex', alignItems: 'center', gap: SPACE.s3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s3,
             padding: '10px 16px',
             cursor: props.onClick ? 'pointer' : 'default',
             borderBottom: `1px solid ${props.palette.line}`,
-        }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 500, color: props.palette.ink, overflow: 'hidden', textOverflow: 'ellipsis' }, children: props.title }), props.subtitle ? (_jsx("div", { style: { fontSize: 12, color: props.palette.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: props.subtitle })) : null] }), props.trailing] }));
+        }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: {
+                            fontSize: 15,
+                            fontWeight: 500,
+                            color: props.palette.ink,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }, children: props.title }), props.subtitle ? (_jsx("div", { style: {
+                            fontSize: 12,
+                            color: props.palette.muted,
+                            marginTop: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }, children: props.subtitle })) : null] }), props.trailing] }));
 }
 /** 朗读按钮（生词本行 / 复习卡 / 音标 chip 共用）。 */
 export function SpeakButton(props) {
@@ -309,8 +341,12 @@ export function SpeakButton(props) {
             event.stopPropagation();
             props.onClick();
         }, style: {
-            border: 'none', background: 'transparent', color: props.palette.accent,
-            padding: 6, cursor: 'pointer', lineHeight: 1,
+            border: 'none',
+            background: 'transparent',
+            color: props.palette.accent,
+            padding: 6,
+            cursor: 'pointer',
+            lineHeight: 1,
         }, "aria-label": "Speak", children: _jsx(Icon, { name: "speaker", size: props.size ?? 16 }) }));
 }
 /** 半浮层（sheet）。原生是 `presentationDetents([.medium])`，这里用底部抽屉近似。 */
@@ -318,12 +354,19 @@ export function Sheet(props) {
     if (!props.open)
         return null;
     return (_jsx("div", { style: {
-            position: 'fixed', inset: 0, zIndex: 40, display: 'flex', alignItems: 'flex-end',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 40,
+            display: 'flex',
+            alignItems: 'flex-end',
             background: 'rgba(0,0,0,0.35)',
         }, onClick: props.onClose, children: _jsxs("div", { onClick: (event) => event.stopPropagation(), style: {
-                width: '100%', maxHeight: '86dvh', overflowY: 'auto',
+                width: '100%',
+                maxHeight: '86dvh',
+                overflowY: 'auto',
                 background: props.palette.bg,
-                borderTopLeftRadius: 20, borderTopRightRadius: 20,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
                 paddingBottom: 'env(safe-area-inset-bottom)',
             }, children: [_jsx("div", { style: { display: 'flex', justifyContent: 'center', padding: '8px 0 2px' }, children: _jsx("div", { style: { width: 36, height: 5, borderRadius: 3, background: props.palette.line } }) }), props.children] }) }));
 }
@@ -331,10 +374,33 @@ export function Sheet(props) {
 export function PushPage(props) {
     const chrome = props.chrome !== false;
     return (_jsxs("div", { style: {
-            position: 'absolute', inset: 0, zIndex: 20, background: props.palette.bg,
-            display: 'flex', flexDirection: 'column',
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            background: props.palette.bg,
+            display: 'flex',
+            flexDirection: 'column',
         }, children: [chrome ? (_jsxs("div", { style: {
-                    display: 'flex', alignItems: 'center', gap: SPACE.s2, padding: '10px 12px',
-                    borderBottom: `1px solid ${props.palette.line}`, background: props.palette.bg,
-                }, children: [_jsx("button", { type: "button", onClick: props.onBack, style: { border: 'none', background: 'transparent', color: props.palette.accent, fontSize: 17, cursor: 'pointer', padding: '4px 8px' }, "aria-label": "Back", children: "\u2039" }), _jsx("div", { style: { flex: 1, fontSize: 16, fontWeight: 600, color: props.palette.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, children: props.title }), props.trailing] })) : null, !chrome && props.trailing ? (_jsx("div", { style: { display: 'flex', justifyContent: 'flex-end', padding: '6px 12px 0' }, children: props.trailing })) : null, _jsx("div", { style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, children: props.children }), props.footer] }));
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s2,
+                    padding: '10px 12px',
+                    borderBottom: `1px solid ${props.palette.line}`,
+                    background: props.palette.bg,
+                }, children: [_jsx("button", { type: "button", onClick: props.onBack, style: {
+                            border: 'none',
+                            background: 'transparent',
+                            color: props.palette.accent,
+                            fontSize: 17,
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                        }, "aria-label": "Back", children: "\u2039" }), _jsx("div", { style: {
+                            flex: 1,
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: props.palette.ink,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }, children: props.title }), props.trailing] })) : null, !chrome && props.trailing ? (_jsx("div", { style: { display: 'flex', justifyContent: 'flex-end', padding: '6px 12px 0' }, children: props.trailing })) : null, _jsx("div", { style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, children: props.children }), props.footer] }));
 }

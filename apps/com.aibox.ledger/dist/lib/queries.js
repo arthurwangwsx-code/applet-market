@@ -30,16 +30,19 @@ export function filterTransactions(store, filter = {}) {
             if (txn.categoryID !== filter.categoryID && root !== filter.categoryID)
                 return false;
         }
-        if (tag && !(txn.tags ?? []).some((row) => String(row).toLowerCase() === tag))
+        if (tag && !txn.tags.some((row) => row.toLowerCase() === tag))
             return false;
-        if (filter.reimbursable !== undefined && filter.reimbursable !== null
-            && !!txn.reimbursable !== !!filter.reimbursable)
+        if (filter.reimbursable !== undefined &&
+            filter.reimbursable !== null &&
+            !!txn.reimbursable !== !!filter.reimbursable)
             return false;
-        if (filter.minAmountMinor !== undefined && filter.minAmountMinor !== null
-            && txn.amountMinor < filter.minAmountMinor)
+        if (filter.minAmountMinor !== undefined &&
+            filter.minAmountMinor !== null &&
+            txn.amountMinor < filter.minAmountMinor)
             return false;
-        if (filter.maxAmountMinor !== undefined && filter.maxAmountMinor !== null
-            && txn.amountMinor > filter.maxAmountMinor)
+        if (filter.maxAmountMinor !== undefined &&
+            filter.maxAmountMinor !== null &&
+            txn.amountMinor > filter.maxAmountMinor)
             return false;
         if (filter.keyword) {
             const needle = String(filter.keyword).trim().toLowerCase();
@@ -57,7 +60,9 @@ export function filterTransactions(store, filter = {}) {
  * 覆盖 note / merchant / 任一 tag / **账户名** / **分类展示路径** / **项目名**。
  */
 export function matchesSearch(store, txn, query) {
-    const needle = String(query ?? '').trim().toLowerCase();
+    const needle = String(query ?? '')
+        .trim()
+        .toLowerCase();
     if (needle.length === 0)
         return true;
     const account = store.account(txn.accountID);
@@ -83,7 +88,7 @@ export const NO_PROJECT_KEY = '__noproject__';
  */
 export function buckets(store, transactions, dimension, metric, locale = 'en', labels = {}) {
     const map = new Map();
-    const push = (key, label, amount, colorHex) => {
+    const push = (key, label, amount, colorHex = null) => {
         let bucket = map.get(key);
         if (!bucket) {
             bucket = { key, label, amountMinor: 0, count: 0, colorHex: colorHex ?? null };
@@ -153,26 +158,32 @@ export function buckets(store, transactions, dimension, metric, locale = 'en', l
         rows.sort((a, b) => Math.abs(b.amountMinor) - Math.abs(a.amountMinor));
     return rows;
 }
-/** 期间语义（AI 工具的 `period`）。返回 `{from, to}`（含当天，ms）。 */
 export function periodRange(period, now = Date.now()) {
     const today = dayStart(now);
     const date = new Date(today);
     switch (period) {
-        case 'today': return { from: today, to: today };
+        case 'today':
+            return { from: today, to: today };
         case 'this_week': {
             const weekday = (date.getDay() + 6) % 7; // 周一为一周之始
             return { from: today - weekday * DAY_MS, to: today };
         }
-        case 'last_7_days': return { from: today - 6 * DAY_MS, to: today };
-        case 'last_30_days': return { from: today - 29 * DAY_MS, to: today };
-        case 'this_month': return { from: new Date(date.getFullYear(), date.getMonth(), 1).getTime(), to: today };
+        case 'last_7_days':
+            return { from: today - 6 * DAY_MS, to: today };
+        case 'last_30_days':
+            return { from: today - 29 * DAY_MS, to: today };
+        case 'this_month':
+            return { from: new Date(date.getFullYear(), date.getMonth(), 1).getTime(), to: today };
         case 'last_month': {
             const start = new Date(date.getFullYear(), date.getMonth() - 1, 1).getTime();
             const end = new Date(date.getFullYear(), date.getMonth(), 1).getTime() - DAY_MS;
             return { from: start, to: end };
         }
-        case 'this_year': return { from: new Date(date.getFullYear(), 0, 1).getTime(), to: today };
-        case 'all': return { from: null, to: null };
-        default: return { from: null, to: null };
+        case 'this_year':
+            return { from: new Date(date.getFullYear(), 0, 1).getTime(), to: today };
+        case 'all':
+            return { from: null, to: null };
+        default:
+            return { from: null, to: null };
     }
 }

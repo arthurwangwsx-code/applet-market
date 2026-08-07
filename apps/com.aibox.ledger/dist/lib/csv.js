@@ -8,10 +8,27 @@ import { isoDay, isoTimestamp, parseISODay, parseTimestamp } from './dates.js';
 import { majorNumberToMinor, plainMajor } from './money.js';
 import { createAccount, createCategory, createProject } from './entities.js';
 export const CSV_COLUMNS = [
-    'transaction_id', 'kind', 'amount_minor', 'currency', 'base_amount_minor_at_posting',
-    'base_currency_at_posting', 'fx_rate_to_base_at_posting', 'occurred_on', 'created_at',
-    'account_name', 'account_kind', 'category_path', 'project_name', 'merchant', 'note', 'tags',
-    'reimbursable', 'refund_of_id', 'source', 'transfer_peer_id', 'calculation_expression',
+    'transaction_id',
+    'kind',
+    'amount_minor',
+    'currency',
+    'base_amount_minor_at_posting',
+    'base_currency_at_posting',
+    'fx_rate_to_base_at_posting',
+    'occurred_on',
+    'created_at',
+    'account_name',
+    'account_kind',
+    'category_path',
+    'project_name',
+    'merchant',
+    'note',
+    'tags',
+    'reimbursable',
+    'refund_of_id',
+    'source',
+    'transfer_peer_id',
+    'calculation_expression',
     'source_fingerprint',
 ];
 // 旧版 20 列（无 merchant、无 refund_of_id）仍接受导入，保证旧备份可恢复。
@@ -144,7 +161,7 @@ export function parseImport(text, store) {
     const table = parseCSV(text);
     if (table.length === 0)
         return { rows: [], problems: [{ row: 0, message: CSV_ERRORS.empty }] };
-    const header = table[0].map((name) => String(name ?? '').trim());
+    const header = (table[0] ?? []).map((name) => String(name ?? '').trim());
     let columns = null;
     if (header.length === CSV_COLUMNS.length)
         columns = CSV_COLUMNS;
@@ -155,12 +172,15 @@ export function parseImport(text, store) {
     const index = Object.fromEntries(columns.map((name, position) => [name, position]));
     const rows = [];
     for (let line = 1; line < table.length; line += 1) {
-        const cells = table[line];
+        const cells = table[line] ?? [];
         if (cells.length !== columns.length) {
             problems.push({ row: line + 1, message: CSV_ERRORS.rowColumns(columns.length, cells.length) });
             continue;
         }
-        const get = (name) => (index[name] === undefined ? '' : String(cells[index[name]] ?? '').trim());
+        const get = (name) => {
+            const position = index[name];
+            return position === undefined ? '' : String(cells[position] ?? '').trim();
+        };
         const amountMinor = Number.parseInt(get('amount_minor'), 10);
         const kind = get('kind');
         const occurredOn = parseTimestamp(get('occurred_on'), null);
@@ -171,16 +191,16 @@ export function parseImport(text, store) {
         rows.push({
             line: line + 1,
             originalID: get('transaction_id'),
-            kind,
+            kind: kind,
             amountMinor: Math.abs(amountMinor),
             currency: (get('currency') || store.baseCode).toUpperCase(),
             baseAmountMinorAtPosting: get('base_amount_minor_at_posting') === '' ? null : Number.parseInt(get('base_amount_minor_at_posting'), 10),
             baseCurrencyAtPosting: get('base_currency_at_posting') || null,
             fxRateToBaseAtPosting: get('fx_rate_to_base_at_posting') === '' ? null : Number(get('fx_rate_to_base_at_posting')),
             occurredOn,
-            createdAt: parseTimestamp(get('created_at'), occurredOn),
+            createdAt: parseTimestamp(get('created_at'), occurredOn) ?? occurredOn,
             accountName: get('account_name'),
-            accountKind: get('account_kind') || 'cash',
+            accountKind: normalizeAccountKind(get('account_kind')),
             categoryPath: get('category_path'),
             projectName: get('project_name'),
             merchant: get('merchant') || null,
@@ -195,12 +215,14 @@ export function parseImport(text, store) {
     }
     return { rows, problems, columns };
 }
-// MARK: - 落库
 function findCategoryByPath(store, path) {
     const trimmed = String(path ?? '').trim();
     if (trimmed.length === 0)
         return { ok: true, id: null };
-    const parts = trimmed.split('/').map((piece) => piece.trim()).filter((piece) => piece.length > 0);
+    const parts = trimmed
+        .split('/')
+        .map((piece) => piece.trim())
+        .filter((piece) => piece.length > 0);
     const rootName = parts[0];
     const childName = parts.length > 1 ? parts[1] : null;
     const roots = store.categories.filter((row) => !row.parentID && row.name === rootName);
@@ -214,7 +236,7 @@ function findCategoryByPath(store, path) {
     const children = store.childCategories(root.id).filter((row) => row.name === childName);
     if (children.length > 1)
         return { ok: false };
-    if (children.length === 1)
+    if (children.length === 1 && children[0])
         return { ok: true, id: children[0].id };
     return { ok: true, id: null, parentID: root.id, missingChild: childName };
 }
@@ -224,7 +246,10 @@ function findCategoryByPath(store, path) {
  */
 export async function performImport(store, rows) {
     const batchID = newID();
-    const existingKeys = new Set(store.allTransactions().map((row) => row.idempotencyKey).filter(Boolean));
+    const existingKeys = new Set(store
+        .allTransactions()
+        .map((row) => row.idempotencyKey)
+        .filter((key) => !!key));
     let skipped = 0;
     let failed = 0;
     const staged = [];
@@ -236,15 +261,16 @@ export async function performImport(store, rows) {
             skipped += 1;
             continue;
         }
-        let account = store.accounts.find((entry) => entry.name === row.accountName
-            && entry.currency === row.currency) ?? null;
+        let account = store.accounts.find((entry) => entry.name === row.accountName && entry.currency === row.currency) ?? null;
         if (!account)
             account = store.accounts.find((entry) => entry.name === row.accountName) ?? null;
         if (!account && row.accountName) {
             const created = await createAccount(store, {
-                name: row.accountName, kind: row.accountKind, currency: row.currency,
+                name: row.accountName,
+                kind: row.accountKind,
+                currency: row.currency,
             });
-            if (!created.ok) {
+            if (!created.ok || !created.account) {
                 failed += 1;
                 continue;
             }
@@ -261,14 +287,14 @@ export async function performImport(store, rows) {
             failed += 1;
             continue;
         }
-        let categoryID = resolved.id;
+        let categoryID = resolved.id ?? null;
         if (categoryID === null && (resolved.missingRoot || resolved.missingChild)) {
             const built = await ensureCategoryPath(store, row.categoryPath, row.kind === KIND.income ? 'income' : 'expense');
             if (!built.ok) {
                 failed += 1;
                 continue;
             }
-            categoryID = built.id;
+            categoryID = built.id ?? null;
         }
         let projectID = null;
         if (row.projectName) {
@@ -277,7 +303,7 @@ export async function performImport(store, rows) {
                 projectID = project.id;
             else {
                 const created = await createProject(store, { name: row.projectName });
-                if (!created.ok) {
+                if (!created.ok || !created.project) {
                     failed += 1;
                     continue;
                 }
@@ -319,36 +345,49 @@ export async function performImport(store, rows) {
         if (row.transferPeerID)
             txn.transferPeerID = idMap.get(row.transferPeerID) ?? null;
         if (row.refundOfID) {
-            txn.refundOfID = idMap.get(row.refundOfID)
-                ?? (store.allTransactions().find((entry) => entry.idempotencyKey === `csv:${row.refundOfID}`)?.id ?? null);
+            txn.refundOfID =
+                idMap.get(row.refundOfID) ??
+                    store.allTransactions().find((entry) => entry.idempotencyKey === `csv:${row.refundOfID}`)?.id ??
+                    null;
         }
     }
-    const ok = await store.mutate((draft) => { for (const { txn } of staged)
-        draft.putTx(txn); });
+    const ok = await store.mutate((draft) => {
+        for (const { txn } of staged)
+            draft.putTx(txn);
+    });
     if (!ok)
         return { imported: 0, skipped, failed: failed + staged.length };
     return { imported: staged.length, skipped, failed };
 }
 async function ensureCategoryPath(store, path, kind) {
-    const parts = String(path ?? '').split('/').map((piece) => piece.trim()).filter((piece) => piece.length > 0);
+    const parts = String(path ?? '')
+        .split('/')
+        .map((piece) => piece.trim())
+        .filter((piece) => piece.length > 0);
     if (parts.length === 0)
         return { ok: true, id: null };
     let root = store.categories.find((row) => !row.parentID && row.name === parts[0] && row.kind === kind) ?? null;
     if (!root) {
-        const created = await createCategory(store, { name: parts[0], kind });
-        if (!created.ok)
+        const created = await createCategory(store, { name: parts[0] ?? '', kind });
+        if (!created.ok || !created.category)
             return { ok: false };
         root = created.category;
     }
+    if (!root)
+        return { ok: false };
     if (parts.length === 1)
         return { ok: true, id: root.id };
     let child = store.categories.find((row) => row.parentID === root.id && row.name === parts[1]) ?? null;
     if (!child) {
-        const created = await createCategory(store, { name: parts[1], kind, parentID: root.id });
-        if (!created.ok)
+        const created = await createCategory(store, { name: parts[1] ?? '', kind, parentID: root.id });
+        if (!created.ok || !created.category)
             return { ok: false };
         child = created.category;
     }
-    return { ok: true, id: child.id };
+    return child ? { ok: true, id: child.id } : { ok: false };
 }
 export { parseISODay, majorNumberToMinor, plainMajor };
+const ACCOUNT_KINDS = new Set(['cash', 'debit', 'credit', 'ewallet', 'prepaid', 'investment']);
+function normalizeAccountKind(value) {
+    return ACCOUNT_KINDS.has(value) ? value : 'cash';
+}

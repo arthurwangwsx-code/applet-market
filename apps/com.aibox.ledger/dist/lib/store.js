@@ -8,11 +8,19 @@
 // 成功才把 Draft 换进内存并 revision += 1；失败则内存**原样不动**（天然回滚）、切只读、记录问题。
 import { commit as dbCommit, databaseAvailable, loadAll, txDocID } from './db.js';
 import { monthKeyOf, dayStart } from './dates.js';
-import { ACCOUNT_SEEDS, EXPENSE_SEEDS, INCOME_SEEDS, seedName, } from './seeds.js';
-import { applyPostingSnapshot, baseCode, currencyRow, reportingBaseMinor, toBaseMinor, convertMinor, hasUsableRate } from './fx.js';
+import { ACCOUNT_SEEDS, EXPENSE_SEEDS, INCOME_SEEDS, seedName } from './seeds.js';
+import { applyPostingSnapshot, baseCode, currencyRow, reportingBaseMinor, toBaseMinor, convertMinor, hasUsableRate, } from './fx.js';
 import { currencyDecimals, currencySymbol } from './currencies.js';
 export const TABLE_NAMES = [
-    'accounts', 'categories', 'currencies', 'budgets', 'projects', 'members', 'settlements', 'snapshots', 'meta',
+    'accounts',
+    'categories',
+    'currencies',
+    'budgets',
+    'projects',
+    'members',
+    'settlements',
+    'snapshots',
+    'meta',
 ];
 export const KIND = {
     expense: 'expense',
@@ -35,15 +43,25 @@ export function countsInFlow(txn) {
 export function signedAmountMinor(txn) {
     switch (txn.kind) {
         case KIND.expense:
-        case KIND.transferOut: return -txn.amountMinor;
+        case KIND.transferOut:
+            return -txn.amountMinor;
         case KIND.income:
-        case KIND.transferIn: return txn.amountMinor;
-        case KIND.adjustment: return txn.signedAdjustment ?? 0;
-        default: return 0;
+        case KIND.transferIn:
+            return txn.amountMinor;
+        case KIND.adjustment:
+            return txn.signedAdjustment ?? 0;
+        default:
+            return 0;
     }
 }
 // MARK: - Draft（写事务的暂存层）
-class Draft {
+export class Draft {
+    store;
+    tables;
+    months;
+    txMonth;
+    dirtyTables;
+    dirtyMonths;
     constructor(store) {
         this.store = store;
         this.tables = {};
@@ -55,25 +73,25 @@ class Draft {
     /** 可写取表（首次访问时浅拷贝并标脏）。 */
     table(name) {
         if (!(name in this.tables)) {
-            this.tables[name] = (this.store.tables[name] ?? []).slice();
+            this.tables[name] = this.store.tables[name].slice();
             this.dirtyTables.add(name);
         }
         return this.tables[name];
     }
     /** 只读取表（不标脏）。 */
     read(name) {
-        return name in this.tables ? this.tables[name] : (this.store.tables[name] ?? []);
+        return (name in this.tables ? this.tables[name] : this.store.tables[name]);
     }
     month(key) {
         if (!(key in this.months)) {
             this.months[key] = (this.store.months[key] ?? []).slice();
             this.dirtyMonths.add(key);
         }
-        return this.months[key];
+        return this.months[key] ?? [];
     }
     monthOf(id) {
         if (this.txMonth.has(id))
-            return this.txMonth.get(id);
+            return this.txMonth.get(id) ?? null;
         return this.store.txMonth.get(id) ?? null;
     }
     /** 读一笔流水（Draft 覆盖优先）。 */
@@ -81,7 +99,7 @@ class Draft {
         const key = this.monthOf(id);
         if (key === null || key === undefined)
             return null;
-        const rows = key in this.months ? this.months[key] : (this.store.months[key] ?? []);
+        const rows = key in this.months ? (this.months[key] ?? []) : (this.store.months[key] ?? []);
         return rows.find((row) => row.id === id) ?? null;
     }
     /** 整条 put（自动处理跨月搬家）。 */
@@ -118,10 +136,12 @@ class Draft {
     operations() {
         const ops = [];
         for (const name of this.dirtyTables) {
-            ops.push({ c: 'tables', id: name, rows: this.tables[name] });
+            const rows = this.tables[name];
+            if (rows)
+                ops.push({ c: 'tables', id: name, rows });
         }
         for (const key of this.dirtyMonths) {
-            const rows = this.months[key];
+            const rows = this.months[key] ?? [];
             if (rows.length === 0)
                 ops.push({ c: 'tx', id: txDocID(key), del: true });
             else
@@ -132,6 +152,18 @@ class Draft {
 }
 // MARK: - Store
 export class LedgerStore {
+    state;
+    stateReason;
+    lastMutationSucceeded;
+    problems;
+    revision;
+    locale;
+    tables;
+    months;
+    txMonth;
+    listeners;
+    _allCache;
+    _allCacheRevision;
     constructor() {
         this.state = 'unopened';
         this.stateReason = '';
@@ -155,7 +187,9 @@ export class LedgerStore {
         for (const listener of this.listeners)
             listener();
     }
-    get canMutate() { return this.state === 'ready'; }
+    get canMutate() {
+        return this.state === 'ready';
+    }
     recordProblem(reason) {
         this.problems = [...this.problems.slice(-9), { reason: String(reason), at: Date.now() }];
     }
@@ -172,7 +206,7 @@ export class LedgerStore {
         try {
             const { tables, tx } = await loadAll();
             for (const name of TABLE_NAMES)
-                this.tables[name] = Array.isArray(tables[name]) ? tables[name] : [];
+                replaceTable(this.tables, name, tables[name]);
             this.months = {};
             this.txMonth = new Map();
             for (const [key, rows] of Object.entries(tx)) {
@@ -187,7 +221,7 @@ export class LedgerStore {
         }
         catch (error) {
             this.state = 'degradedMemory';
-            this.stateReason = String((error && error.message) || error);
+            this.stateReason = errorMessage(error);
             this.recordProblem(this.stateReason);
         }
         this.emit();
@@ -210,7 +244,7 @@ export class LedgerStore {
             outcome = fn(draft);
         }
         catch (error) {
-            this.recordProblem(`写入前校验失败：${String((error && error.message) || error)}`);
+            this.recordProblem(`写入前校验失败：${errorMessage(error)}`);
             this.emit();
             return false;
         }
@@ -229,16 +263,19 @@ export class LedgerStore {
         catch (error) {
             // 落盘失败：内存原样不动（Draft 直接丢弃 = 回滚），切只读并显式告知。
             this.state = 'readOnly';
-            this.stateReason = String((error && error.message) || error);
+            this.stateReason = errorMessage(error);
             this.recordProblem(this.stateReason);
             this.lastMutationSucceeded = false;
             this.emit();
             return false;
         }
-        for (const name of draft.dirtyTables)
-            this.tables[name] = draft.tables[name];
+        for (const name of draft.dirtyTables) {
+            const rows = draft.tables[name];
+            if (rows)
+                replaceTable(this.tables, name, rows);
+        }
         for (const key of draft.dirtyMonths) {
-            const rows = draft.months[key];
+            const rows = draft.months[key] ?? [];
             if (rows.length === 0)
                 delete this.months[key];
             else
@@ -267,9 +304,15 @@ export class LedgerStore {
         await this.mutate((draft) => {
             if (needCurrencies) {
                 draft.table('currencies').push({
-                    code: 'CNY', symbol: currencySymbol('CNY'), decimals: currencyDecimals('CNY'),
-                    rateToBase: 1, isBase: true, manualRate: false, rateConfigured: true,
-                    sortOrder: 0, updatedAt: Date.now(),
+                    code: 'CNY',
+                    symbol: currencySymbol('CNY'),
+                    decimals: currencyDecimals('CNY'),
+                    rateToBase: 1,
+                    isBase: true,
+                    manualRate: false,
+                    rateConfigured: true,
+                    sortOrder: 0,
+                    updatedAt: Date.now(),
                 });
             }
             if (needCategories) {
@@ -278,15 +321,29 @@ export class LedgerStore {
                 for (const seed of EXPENSE_SEEDS) {
                     const parentID = newID();
                     rows.push({
-                        id: parentID, name: seedName(seed, locale), systemImage: seed.icon, kind: 'expense',
-                        parentID: null, colorHex: seed.color, sortOrder: order, isArchived: false, isSeed: true,
+                        id: parentID,
+                        name: seedName(seed, locale),
+                        systemImage: seed.icon,
+                        kind: 'expense',
+                        parentID: null,
+                        colorHex: seed.color,
+                        sortOrder: order,
+                        isArchived: false,
+                        isSeed: true,
                     });
                     order += 1;
                     let childOrder = 0;
                     for (const child of seed.children ?? []) {
                         rows.push({
-                            id: newID(), name: seedName(child, locale), systemImage: child.icon, kind: 'expense',
-                            parentID, colorHex: seed.color, sortOrder: childOrder, isArchived: false, isSeed: true,
+                            id: newID(),
+                            name: seedName(child, locale),
+                            systemImage: child.icon,
+                            kind: 'expense',
+                            parentID,
+                            colorHex: seed.color,
+                            sortOrder: childOrder,
+                            isArchived: false,
+                            isSeed: true,
                         });
                         childOrder += 1;
                     }
@@ -294,8 +351,15 @@ export class LedgerStore {
                 let incomeOrder = 0;
                 for (const seed of INCOME_SEEDS) {
                     rows.push({
-                        id: newID(), name: seedName(seed, locale), systemImage: seed.icon, kind: 'income',
-                        parentID: null, colorHex: seed.color, sortOrder: incomeOrder, isArchived: false, isSeed: true,
+                        id: newID(),
+                        name: seedName(seed, locale),
+                        systemImage: seed.icon,
+                        kind: 'income',
+                        parentID: null,
+                        colorHex: seed.color,
+                        sortOrder: incomeOrder,
+                        isArchived: false,
+                        isSeed: true,
                     });
                     incomeOrder += 1;
                 }
@@ -305,40 +369,66 @@ export class LedgerStore {
                 let order = 0;
                 for (const seed of ACCOUNT_SEEDS) {
                     rows.push({
-                        id: newID(), name: seedName(seed, locale), kind: seed.kind, currency: 'CNY',
-                        initialBalanceMinor: 0, includeInNetWorth: true, creditLimitMinor: 0,
-                        iconName: seed.icon, colorHex: seed.color, sortOrder: order,
-                        isArchived: false, createdAt: Date.now(),
+                        id: newID(),
+                        name: seedName(seed, locale),
+                        kind: seed.kind,
+                        currency: 'CNY',
+                        initialBalanceMinor: 0,
+                        includeInNetWorth: true,
+                        creditLimitMinor: 0,
+                        iconName: seed.icon,
+                        colorHex: seed.color,
+                        sortOrder: order,
+                        isArchived: false,
+                        createdAt: Date.now(),
                     });
                     order += 1;
                 }
             }
             draft.table('meta');
             const meta = draft.tables.meta;
+            if (!meta)
+                return false;
             if (meta.length === 0)
                 meta.push({ id: 'schema', version: SCHEMA_VERSION, seededAt: Date.now(), seedLocale: locale });
         });
     }
     // MARK: 读
-    get accounts() { return this.tables.accounts; }
-    get categories() { return this.tables.categories; }
-    get currencies() { return this.tables.currencies; }
-    get budgets() { return this.tables.budgets; }
-    get projects() { return this.tables.projects; }
-    get members() { return this.tables.members; }
-    get settlements() { return this.tables.settlements; }
-    get snapshots() { return this.tables.snapshots; }
+    get accounts() {
+        return this.tables.accounts;
+    }
+    get categories() {
+        return this.tables.categories;
+    }
+    get currencies() {
+        return this.tables.currencies;
+    }
+    get budgets() {
+        return this.tables.budgets;
+    }
+    get projects() {
+        return this.tables.projects;
+    }
+    get members() {
+        return this.tables.members;
+    }
+    get settlements() {
+        return this.tables.settlements;
+    }
+    get snapshots() {
+        return this.tables.snapshots;
+    }
     /** 全部未软删流水，按 occurredOn 倒序 + createdAt 倒序（= 原生 allTransactions 的顺序）。 */
     allTransactions() {
         if (this._allCache && this._allCacheRevision === this.revision)
             return this._allCache;
         const rows = [];
-        for (const key of Object.keys(this.months)) {
-            for (const row of this.months[key])
+        for (const key of Object.keys(this.months).map(Number)) {
+            for (const row of this.months[key] ?? [])
                 if (!row.deletedAt)
                     rows.push(row);
         }
-        rows.sort((a, b) => (b.occurredOn - a.occurredOn) || (b.createdAt - a.createdAt));
+        rows.sort((a, b) => b.occurredOn - a.occurredOn || b.createdAt - a.createdAt);
         this._allCache = rows;
         this._allCacheRevision = this.revision;
         return rows;
@@ -346,8 +436,8 @@ export class LedgerStore {
     /** 含软删的全量（最近删除页用）。 */
     allTransactionsIncludingDeleted() {
         const rows = [];
-        for (const key of Object.keys(this.months))
-            rows.push(...this.months[key]);
+        for (const key of Object.keys(this.months).map(Number))
+            rows.push(...(this.months[key] ?? []));
         return rows;
     }
     /** 指定月份的流水（未软删）。 */
@@ -364,10 +454,18 @@ export class LedgerStore {
             return null;
         return (this.months[key] ?? []).find((row) => row.id === id) ?? null;
     }
-    account(id) { return this.accounts.find((row) => row.id === id) ?? null; }
-    category(id) { return this.categories.find((row) => row.id === id) ?? null; }
-    project(id) { return this.projects.find((row) => row.id === id) ?? null; }
-    member(id) { return this.members.find((row) => row.id === id) ?? null; }
+    account(id) {
+        return this.accounts.find((row) => row.id === id) ?? null;
+    }
+    category(id) {
+        return this.categories.find((row) => row.id === id) ?? null;
+    }
+    project(id) {
+        return this.projects.find((row) => row.id === id) ?? null;
+    }
+    member(id) {
+        return this.members.find((row) => row.id === id) ?? null;
+    }
     activeAccounts() {
         return this.accounts.filter((row) => !row.isArchived).sort((a, b) => a.sortOrder - b.sortOrder);
     }
@@ -416,13 +514,27 @@ export class LedgerStore {
         return row.parentID ?? row.id;
     }
     // MARK: 币种面（委托 fx.js）
-    get baseCode() { return baseCode(this.currencies); }
-    currencyRow(code) { return currencyRow(this.currencies, code); }
-    hasUsableRate(code) { return hasUsableRate(this.currencies, code); }
-    toBaseMinor(minor, code) { return toBaseMinor(this.currencies, minor, code); }
-    convertMinor(minor, from, to) { return convertMinor(this.currencies, minor, from, to); }
-    reportingBaseMinor(txn) { return reportingBaseMinor(this.currencies, txn); }
-    applyPostingSnapshot(txn) { return applyPostingSnapshot(this.currencies, txn); }
+    get baseCode() {
+        return baseCode(this.currencies);
+    }
+    currencyRow(code) {
+        return currencyRow(this.currencies, code);
+    }
+    hasUsableRate(code) {
+        return hasUsableRate(this.currencies, code);
+    }
+    toBaseMinor(minor, code) {
+        return toBaseMinor(this.currencies, minor, code);
+    }
+    convertMinor(minor, from, to) {
+        return convertMinor(this.currencies, minor, from, to);
+    }
+    reportingBaseMinor(txn) {
+        return reportingBaseMinor(this.currencies, txn);
+    }
+    applyPostingSnapshot(txn) {
+        return applyPostingSnapshot(this.currencies, txn);
+    }
     /** 新建一条空白流水骨架。 */
     makeTransaction(input) {
         const now = Date.now();
@@ -470,4 +582,10 @@ export function normalizeTags(value) {
             out.push(text);
     }
     return out;
+}
+function errorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
+}
+function replaceTable(tables, name, rows) {
+    tables[name] = rows;
 }

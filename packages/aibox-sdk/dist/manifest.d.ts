@@ -4,7 +4,7 @@
  * manifest 是**声明**而不是代码，发布时仍然从 `src/manifest.json` 原样取（`release.mjs`）。
  * 这里给的类型有两个用途：
  *  ① 想用 TS 写 manifest 的应用可以 `defineManifest({...})` 然后由构建脚本 emit 成 JSON；
- *  ② `@aibox/applet-vite` 的 manifest 插件读它做 action 类型生成时共用同一份形状。
+ *  ② `@aibox/applet-tsbuild` 的 manifest 检查与 action 类型生成共用同一份形状。
  *
  * 字段是宿主 `AppletManifest` 的**市场包子集**——本机身份（id/createdAt/updatedAt）与市场归属
  * （marketSourceID/marketAppID/marketVersion）由宿主安装时写，包里写了也会被丢弃，故这里不给。
@@ -15,7 +15,7 @@
  * · `source`（默认，老行为）：源码原样落盘，`index.html` 用 es-module-shims + Sucrase
  *   在浏览器里即时转译 `.jsx/.tsx/.ts`。AI 直接写代码的路径走这条。
  * · `bundle`：已构建产物，`index.html` 用原生 `<script type="module">` + 原生 import map
- *   直接加载，**不经过任何转译**。Vite + TS 工程走这条。
+ *   直接加载，**不经过任何转译**。`aibox-tsbuild` 预编译的 TS 工程走这条。
  *
  * 两者共用同一套 import map 与同一批运行时资产（react / antd-mobile / chart.js / aibox/ui
  * 恒为 external 裸 import），差别只在「要不要过转译钩子」。

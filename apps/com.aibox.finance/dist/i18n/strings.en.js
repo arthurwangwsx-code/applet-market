@@ -280,7 +280,7 @@ export const EN = {
     'finance.ai.data.failed': 'Refresh failed; cached values may remain',
     'finance.ai.unavailable': 'This host does not provide AI capabilities.',
     'finance.companion.title': 'AI Investing Assistant',
-    'finance.ai.chip.market': "How are the markets today?",
+    'finance.ai.chip.market': 'How are the markets today?',
     'finance.ai.chip.market.seed': 'Use finance_quote to check the major indices (SSE, SZSE, Hang Seng, Nasdaq) and summarize how the market did today.',
     'finance.ai.chip.review': 'Review my holdings',
     'finance.ai.chip.review.seed': 'Use finance_portfolio to review my paper holdings and summarize gains, losses and the reasons behind them.',

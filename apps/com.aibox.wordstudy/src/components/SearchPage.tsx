@@ -68,7 +68,9 @@ export function SearchPage(props: {
       await saveDaily(value)
       setDaily(value)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [props.aiAvailable, props.surface])
 
   const suggestions = useMemo(
@@ -87,15 +89,17 @@ export function SearchPage(props: {
             subtitle={item.brief || undefined}
             // 点联想行永远走查词，不做句子判定。
             onClick={() => props.onOpenWord(item.term)}
-            trailing={item.isCached ? <InfoChip palette={palette} label={t('cached')} tint={palette.green} filled /> : undefined}
+            trailing={
+              item.isCached ? <InfoChip palette={palette} label={t('cached')} tint={palette.green} filled /> : undefined
+            }
           />
         ))}
         <Row
           palette={palette}
           title={
             <span>
-              <Icon name="sparkles" size={13} color={palette.accent} />{' '}
-              {t('lookupAction')} <span style={{ fontWeight: 600 }}>“{trimmed}”</span>
+              <Icon name="sparkles" size={13} color={palette.accent} /> {t('lookupAction')}{' '}
+              <span style={{ fontWeight: 600 }}>“{trimmed}”</span>
             </span>
           }
           onClick={() => {
@@ -133,7 +137,15 @@ export function SearchPage(props: {
       {daily && daily.en ? (
         <div style={{ padding: `${SPACE.s4}px ${SPACE.s4}px 4px` }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s2 }}>
-            <div style={{ fontSize: 11, fontWeight: 500, color: palette.accent, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: palette.accent,
+                textTransform: 'uppercase',
+                letterSpacing: 0.6,
+              }}
+            >
               {t('dailyHeader')}
             </div>
             <div style={{ fontSize: 15, fontWeight: 500, color: palette.ink }}>{daily.en}</div>
@@ -141,8 +153,18 @@ export function SearchPage(props: {
               <div style={{ fontSize: 13, color: palette.muted }}>{`“${daily.zh}” — ${daily.author}`}</div>
             ) : null}
             <div style={{ display: 'flex', gap: SPACE.s2, marginTop: 2 }}>
-              <InfoChip palette={palette} icon="speaker" label={t('speakNormal')} onClick={() => void speak(daily.en, 'us', 'normal')} />
-              <InfoChip palette={palette} icon="tortoise" label={t('speakSlow')} onClick={() => void speak(daily.en, 'us', 'slow')} />
+              <InfoChip
+                palette={palette}
+                icon="speaker"
+                label={t('speakNormal')}
+                onClick={() => void speak(daily.en, 'us', 'normal')}
+              />
+              <InfoChip
+                palette={palette}
+                icon="tortoise"
+                label={t('speakSlow')}
+                onClick={() => void speak(daily.en, 'us', 'slow')}
+              />
             </div>
           </div>
         </div>
@@ -159,7 +181,13 @@ export function SearchPage(props: {
               trailing={
                 <button
                   type="button"
-                  style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 11, cursor: 'pointer' }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: palette.accent,
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
                   onClick={async () => {
                     const ok = await confirm({
                       title: t('clearHistoryTitle'),
@@ -203,12 +231,9 @@ export function SearchPage(props: {
             />
           ))}
           {store.history.length > 5 ? (
-            <button
-              type="button"
-              onClick={() => setExpandHistory((value) => !value)}
-              style={expandStyle(palette)}
-            >
-              {expandHistory ? t('collapse') : t('expandAll')} <Icon name={expandHistory ? 'chevron.up' : 'chevron.down'} size={11} />
+            <button type="button" onClick={() => setExpandHistory((value) => !value)} style={expandStyle(palette)}>
+              {expandHistory ? t('collapse') : t('expandAll')}{' '}
+              <Icon name={expandHistory ? 'chevron.up' : 'chevron.down'} size={11} />
             </button>
           ) : null}
         </section>
@@ -223,7 +248,13 @@ export function SearchPage(props: {
               trailing={
                 <button
                   type="button"
-                  style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 11, cursor: 'pointer' }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: palette.accent,
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
                   onClick={async () => {
                     const ok = await confirm({
                       title: t('clearTranslationsTitle'),
@@ -252,11 +283,7 @@ export function SearchPage(props: {
             />
           ))}
           {store.translations.length > 5 ? (
-            <button
-              type="button"
-              onClick={() => setExpandTranslations((value) => !value)}
-              style={expandStyle(palette)}
-            >
+            <button type="button" onClick={() => setExpandTranslations((value) => !value)} style={expandStyle(palette)}>
               {expandTranslations ? t('collapse') : t('expandAll')}{' '}
               <Icon name={expandTranslations ? 'chevron.up' : 'chevron.down'} size={11} />
             </button>
@@ -271,9 +298,15 @@ export function SearchPage(props: {
 
 function expandStyle(palette: Palette) {
   return {
-    display: 'block', width: '100%', textAlign: 'left' as const, border: 'none',
-    background: 'transparent', color: palette.accent, fontSize: 13,
-    padding: `10px ${SPACE.s4}px`, cursor: 'pointer',
+    display: 'block',
+    width: '100%',
+    textAlign: 'left' as const,
+    border: 'none',
+    background: 'transparent',
+    color: palette.accent,
+    fontSize: 13,
+    padding: `10px ${SPACE.s4}px`,
+    cursor: 'pointer',
     borderBottom: `1px solid ${alpha(palette.line, 1)}`,
   }
 }

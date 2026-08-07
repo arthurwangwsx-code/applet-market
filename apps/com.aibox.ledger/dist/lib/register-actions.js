@@ -29,7 +29,7 @@ export function registerLedgerActions(context) {
     for (const [name, handler] of Object.entries(ACTION_HANDLERS)) {
         api.action.register(name, async (input) => {
             const { store, locale, labels } = context();
-            const args = input && typeof input === 'object' ? input : {};
+            const args = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
             // 库还没打开（冷启动 headless 调用）→ 先打开再执行。
             if (store.state === 'unopened')
                 await store.open(locale);
@@ -37,9 +37,12 @@ export function registerLedgerActions(context) {
                 return await handler(store, args, locale, labels);
             }
             catch (error) {
-                return { ok: false, text: `The ledger action failed and nothing was saved: ${String((error && error.message) || error)}` };
+                return { ok: false, text: `The ledger action failed and nothing was saved: ${errorMessage(error)}` };
             }
         });
     }
     return () => { };
+}
+function errorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
 }

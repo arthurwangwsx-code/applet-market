@@ -6,17 +6,27 @@
 //
 // 保留这一层薄转发而不是让各处直接 import SDK：调用点一个都不用改，迁移的 diff 只有本文件，
 // 出问题时回滚面也只有本文件。等真机验过一轮之后，再把调用点逐步指向 SDK 并删掉本文件。
-import { available, bridge, events, system, intelligence } from '../lib/aibox-sdk.js';
+import { available, bridge, events, system, intelligence } from 'aibox/sdk';
 export { parseJobLines } from './jobs.js';
 export function hasNamespace(name, method) {
     return available(name, method);
 }
 export const capabilities = {
-    get tools() { return available('tools', 'call'); },
-    get download() { return available('download', 'list'); },
-    get clipboard() { return available('clipboard', 'read'); },
-    get share() { return available('share', 'file'); },
-    get haptics() { return available('haptics', 'impact'); },
+    get tools() {
+        return available('tools', 'call');
+    },
+    get download() {
+        return available('download', 'list');
+    },
+    get clipboard() {
+        return available('clipboard', 'read');
+    },
+    get share() {
+        return available('share', 'file');
+    },
+    get haptics() {
+        return available('haptics', 'impact');
+    },
 };
 export const toolAllowed = intelligence.toolAllowed;
 /**
@@ -58,7 +68,11 @@ export async function toolBlockReason(name) {
             // AppletCapabilitiesView 的宿主工具段（该段的显示条件是 capabilities 含 'tools' 且
             // manifest 声明了 toolRequirements，本应用两条都满足）。
             // **不要**写成「设置 ▸ 能力中心」——那是助手自己的能力页，没有 per-applet 工具授权。
-            return { ok: false, reason: 'not-granted', hint: '还没有把视频解析工具授权给这个小应用。点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开就能用了。' };
+            return {
+                ok: false,
+                reason: 'not-granted',
+                hint: '还没有把视频解析工具授权给这个小应用。点右上角「⋯」→「应用详情」→「能力」，在宿主工具那一段把 viddl 系列打开就能用了。',
+            };
         }
         if (failed.includes('declared') || failed.includes('requirement')) {
             return { ok: false, reason: 'not-declared', hint: '这个版本的小应用没有声明要用视频解析工具，请更新到新版本。' };
@@ -66,14 +80,18 @@ export async function toolBlockReason(name) {
         if (failed.includes('bridgeable') || failed.includes('hostPolicy')) {
             return { ok: false, reason: 'blocked', hint: '当前宿主策略不允许小应用调用视频解析工具。' };
         }
-        return { ok: false, reason: 'unknown', hint: (verdict && verdict.remedies && verdict.remedies[0]) || '视频解析工具当前不可用。' };
+        return {
+            ok: false,
+            reason: 'unknown',
+            hint: (verdict && verdict.remedies && verdict.remedies[0]) || '视频解析工具当前不可用。',
+        };
     }
     catch (error) {
         return { ok: false, reason: 'unknown', hint: '视频解析工具当前不可用。' };
     }
 }
 /** 调一个宿主工具。回 `{ok, text, details?}`——形状与迁移前一致，调用点零改。 */
-export async function callTool(name, args) {
+export async function callTool(name, args = {}) {
     const result = await intelligence.callTool(name, args || {});
     return result.ok ? result : { ok: false, error: result.text, text: result.text };
 }
@@ -81,7 +99,7 @@ export const queue = {
     /** 视频轨道与 HLS 离线包都在这里。 */
     async list() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!capabilities.download || !api?.download)
             return [];
         try {
             const items = await api.download.list({});
@@ -93,7 +111,7 @@ export const queue = {
     },
     async subscribe() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!capabilities.download || !api?.download)
             return false;
         try {
             await api.download.subscribe({});
@@ -105,7 +123,7 @@ export const queue = {
     },
     async unsubscribe() {
         const api = bridge();
-        if (!capabilities.download)
+        if (!capabilities.download || !api?.download)
             return false;
         try {
             await api.download.unsubscribe({});
@@ -120,12 +138,14 @@ export const onEvent = events.on;
 /** 外壳命名空间自带的回调（tabs/toolbar），与 `aibox.events` 是两套机制，别混。 */
 export const onNamespaceEvent = events.shellOn;
 export const readClipboard = system.readClipboard;
-export function tap(style) {
+export function tap(style = 'light') {
     const api = bridge();
-    if (!capabilities.haptics)
+    if (!capabilities.haptics || !api?.haptics)
         return;
     try {
         api.haptics.impact({ style: style || 'light' });
     }
-    catch { /* 触感失败无所谓 */ }
+    catch {
+        /* 触感失败无所谓 */
+    }
 }

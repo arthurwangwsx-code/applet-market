@@ -21,7 +21,7 @@ export function isUpwardCondition(condition) {
 export function shouldFire(alert, quote, now) {
     if (!alert || !alert.enabled || !quote)
         return false;
-    if (alert.lastFiredAt && (now - alert.lastFiredAt) < COOLDOWN_MS)
+    if (alert.lastFiredAt && now - alert.lastFiredAt < COOLDOWN_MS)
         return false;
     const target = Number(alert.targetPrice);
     if (!Number.isFinite(target))
@@ -32,6 +32,7 @@ export function shouldFire(alert, quote, now) {
     return isUpwardCondition(alert.conditionRaw) ? value >= target : value <= target;
 }
 export class AlertStore {
+    store;
     constructor(store) {
         this.store = store;
     }
@@ -51,19 +52,27 @@ export class AlertStore {
      * 去重规则（§9.3）：同 symbol + 同 condition 已存在 → 改阈值/备注 + 重新启用 +
      * **清空 `lastFiredAt`**（让新阈值能再次触发），不新建。
      */
-    async set({ symbol, name, condition, targetPrice, note }) {
-        if (!CONDITIONS.includes(condition))
+    async set({ symbol, name, condition, targetPrice, note, }) {
+        if (!isAlertCondition(condition))
             return { ok: false, error: 'invalidCondition' };
         if (!Number.isFinite(targetPrice))
             return { ok: false, error: 'invalidTarget' };
         const existing = this.store.alerts.find((row) => row.instrumentSymbol === symbol && row.conditionRaw === condition);
         if (existing) {
-            this.store.alerts = this.store.alerts.map((row) => (row === existing ? {
-                ...row, targetPrice, note: note || '', enabled: true, lastFiredAt: null,
-            } : row));
+            this.store.alerts = this.store.alerts.map((row) => row === existing
+                ? {
+                    ...row,
+                    targetPrice,
+                    note: note || '',
+                    enabled: true,
+                    lastFiredAt: null,
+                }
+                : row);
         }
         else {
-            this.store.alerts = [...this.store.alerts, {
+            this.store.alerts = [
+                ...this.store.alerts,
+                {
                     id: newID('al'),
                     instrumentSymbol: symbol,
                     name: name || symbol,
@@ -73,7 +82,8 @@ export class AlertStore {
                     note: note || '',
                     createdAt: Date.now(),
                     lastFiredAt: null,
-                }];
+                },
+            ];
         }
         const ok = await this.persist();
         return ok ? { ok: true } : { ok: false, error: 'storageUnavailable' };
@@ -97,7 +107,7 @@ export class AlertStore {
         let changed = false;
         this.store.alerts = this.store.alerts.map((row) => {
             const quote = quotes ? quotes[row.instrumentSymbol] : null;
-            if (!shouldFire(row, quote, now))
+            if (!quote || !shouldFire(row, quote, now))
                 return row;
             fired.push({ alert: row, quote });
             changed = true;
@@ -107,4 +117,7 @@ export class AlertStore {
             await this.persist();
         return fired;
     }
+}
+function isAlertCondition(value) {
+    return CONDITIONS.some((condition) => condition === value);
 }

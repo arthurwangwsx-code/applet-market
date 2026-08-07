@@ -68,13 +68,16 @@ export default function App() {
     if (value) setRoute({ kind: 'word', word: value })
   }, [])
 
-  const goTranslate = useCallback((text: string) => {
-    setPendingTranslate(text)
-    setRoute({ kind: 'root' })
-    setTab('translate')
-    if (tabs.rendered) void tabs.select('translate')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabs.rendered])
+  const goTranslate = useCallback(
+    (text: string) => {
+      setPendingTranslate(text)
+      setRoute({ kind: 'root' })
+      setTab('translate')
+      if (tabs.rendered) void tabs.select('translate')
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [tabs.rendered],
+  )
 
   const aiAvailable = capabilities.ai
   const companionAvailable = aiAvailable
@@ -112,15 +115,26 @@ export default function App() {
               else openWord(value)
             }}
             style={{
-              flex: 1, borderRadius: 10, border: 'none', padding: '9px 12px', fontSize: 16,
-              background: palette.surface, color: palette.ink,
+              flex: 1,
+              borderRadius: 10,
+              border: 'none',
+              padding: '9px 12px',
+              fontSize: 16,
+              background: palette.surface,
+              color: palette.ink,
             }}
           />
           {tab === 'search' && capabilities.picker && capabilities.ocr ? (
             <button
               type="button"
               onClick={() => setPhotoOpen(true)}
-              style={{ border: 'none', background: 'transparent', color: palette.accent, cursor: 'pointer', padding: 8 }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: palette.accent,
+                cursor: 'pointer',
+                padding: 8,
+              }}
               aria-label={t('photoLookup')}
             >
               <Icon name="viewfinder" size={18} />
@@ -172,7 +186,9 @@ export default function App() {
       {!tabs.rendered ? (
         <nav
           style={{
-            display: 'flex', borderTop: `1px solid ${palette.line}`, background: palette.surface,
+            display: 'flex',
+            borderTop: `1px solid ${palette.line}`,
+            background: palette.surface,
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
@@ -182,8 +198,12 @@ export default function App() {
               type="button"
               onClick={() => setTab(id)}
               style={{
-                flex: 1, border: 'none', background: 'transparent', padding: '10px 0 12px',
-                fontSize: 11, cursor: 'pointer',
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                padding: '10px 0 12px',
+                fontSize: 11,
+                cursor: 'pointer',
                 color: tab === id ? palette.accent : palette.muted,
               }}
             >
@@ -210,10 +230,22 @@ export default function App() {
         />
       ) : null}
       {route.kind === 'translation' ? (
-        <TranslationDetail palette={palette} t={t} store={store} recordID={route.id} onBack={() => setRoute({ kind: 'root' })} />
+        <TranslationDetail
+          palette={palette}
+          t={t}
+          store={store}
+          recordID={route.id}
+          onBack={() => setRoute({ kind: 'root' })}
+        />
       ) : null}
       {route.kind === 'review' ? (
-        <ReviewPage palette={palette} t={t} store={store} onBack={() => setRoute({ kind: 'root' })} onOpenWord={openWord} />
+        <ReviewPage
+          palette={palette}
+          t={t}
+          store={store}
+          onBack={() => setRoute({ kind: 'root' })}
+          onOpenWord={openWord}
+        />
       ) : null}
 
       <PracticeSheet

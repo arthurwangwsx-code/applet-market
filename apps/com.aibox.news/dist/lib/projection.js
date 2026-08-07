@@ -3,7 +3,9 @@
 import { TOPICS } from './catalog.js';
 /** 过滤（主题 / 已读 / 搜索）+ 按发布时间倒序。 */
 export function filteredSorted(articles, { topic, query, hideRead, readKeys }) {
-    const normalizedQuery = String(query || '').trim().toLowerCase();
+    const normalizedQuery = String(query || '')
+        .trim()
+        .toLowerCase();
     const filtered = articles.filter((article) => {
         if (topic && article.topic !== topic)
             return false;
@@ -11,10 +13,10 @@ export function filteredSorted(articles, { topic, query, hideRead, readKeys }) {
             return false;
         if (!normalizedQuery)
             return true;
-        return (article.title || '').toLowerCase().includes(normalizedQuery)
-            || (article.summary || '').toLowerCase().includes(normalizedQuery)
-            || (article.sourceName || '').toLowerCase().includes(normalizedQuery)
-            || (article.author || '').toLowerCase().includes(normalizedQuery);
+        return ((article.title || '').toLowerCase().includes(normalizedQuery) ||
+            (article.summary || '').toLowerCase().includes(normalizedQuery) ||
+            (article.sourceName || '').toLowerCase().includes(normalizedQuery) ||
+            (article.author || '').toLowerCase().includes(normalizedQuery));
     });
     filtered.sort((a, b) => b.publishedAt - a.publishedAt);
     return filtered;
@@ -35,11 +37,14 @@ export function collapse(sorted, collapseClusters) {
             members.set(key, []);
             order.push(key);
         }
-        members.get(key).push(article);
+        members.get(key)?.push(article);
     }
     return order.map((key) => {
-        const group = members.get(key);
-        return { id: group[0].id, lead: group[0], related: group.slice(1) };
+        const group = members.get(key) ?? [];
+        const lead = group[0];
+        if (!lead)
+            throw new Error(`Missing cluster lead for ${key}`);
+        return { id: lead.id, lead, related: group.slice(1) };
     });
 }
 export function project(articles, options) {
@@ -55,7 +60,7 @@ export function buckets(articles, options) {
     for (const article of base) {
         if (!byTopic.has(article.topic))
             byTopic.set(article.topic, []);
-        byTopic.get(article.topic).push(article);
+        byTopic.get(article.topic)?.push(article);
     }
     const result = { all: collapse(base, options.collapseClusters) };
     for (const topic of TOPICS) {

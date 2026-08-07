@@ -8,6 +8,9 @@ const EM_REFERER = { Referer: 'https://fundf10.eastmoney.com' };
  * 实时估值（JSONP `jsonpgz({...});`）。
  * `price = gsz(有则) 否则 dwjz`；`prevClose = dwjz`；`isEstimate = gsz 非空`。
  */
+function isRecord(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 export async function fetchEstimate(code) {
     const url = `https://fundgz.1234567.com.cn/js/${code}.js`;
     const result = await getText(url, { headers: { Referer: 'https://fund.eastmoney.com/' } });
@@ -16,16 +19,22 @@ export async function fetchEstimate(code) {
     const match = /jsonpgz\(([\s\S]*)\)\s*;?/.exec(String(result.body));
     if (!match)
         return null;
+    const body = match[1];
+    if (body === undefined)
+        return null;
     let row;
     try {
-        row = JSON.parse(match[1]);
+        const parsed = JSON.parse(body);
+        if (!isRecord(parsed))
+            return null;
+        row = parsed;
     }
     catch (error) {
         return null;
     }
     const nav = Number(row.dwjz);
     const estimate = row.gsz === undefined || row.gsz === null || row.gsz === '' ? null : Number(row.gsz);
-    const price = Number.isFinite(estimate) && estimate > 0 ? estimate : nav;
+    const price = estimate !== null && Number.isFinite(estimate) && estimate > 0 ? estimate : nav;
     if (!Number.isFinite(price) || price <= 0)
         return null;
     return {
@@ -59,7 +68,6 @@ export async function fetchEstimates(codes) {
             out[row.symbol] = row;
     return out;
 }
-// —— 全量目录（搜索用）——
 let catalog = null;
 let catalogTruncated = false;
 let catalogPromise = null;
@@ -95,9 +103,18 @@ export async function loadCatalog() {
         }
         try {
             const rows = JSON.parse(text.slice(start, end + 1));
+            if (!Array.isArray(rows)) {
+                catalogPromise = null;
+                return [];
+            }
             catalog = rows
                 .filter((row) => Array.isArray(row) && row.length >= 3)
-                .map((row) => ({ code: String(row[0]), pinyin: String(row[1] || ''), name: String(row[2] || ''), kind: String(row[3] || '') }));
+                .map((row) => ({
+                code: String(row[0]),
+                pinyin: String(row[1] || ''),
+                name: String(row[2] || ''),
+                kind: String(row[3] || ''),
+            }));
             return catalog;
         }
         catch (error) {
@@ -124,7 +141,6 @@ export async function search(query, limit = 20) {
     }
     return out;
 }
-/** 历史净值。**返回是新→旧，要 reverse 成旧→新**；映射时 open=close=high=low=净值。 */
 export async function fetchNavHistory(code, count = 160) {
     const size = Math.max(1, Math.min(365, count));
     const url = `https://api.fund.eastmoney.com/f10/lsjz?fundCode=${code}&pageIndex=1&pageSize=${size}`;

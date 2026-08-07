@@ -20,7 +20,11 @@
 import assert from 'node:assert/strict'
 import React from 'react'
 import {
-  createDragGesture, createLongPress, createSwipePager, useDragGesture, useSwipePager,
+  createDragGesture,
+  createLongPress,
+  createSwipePager,
+  useDragGesture,
+  useSwipePager,
 } from '../dist/react/gestures.js'
 
 let passed = 0
@@ -73,13 +77,17 @@ function mount(handlers, { cancelGoesTo = 'onTouchCancel' } = {}) {
 function makeClock() {
   let queue = []
   return {
-    schedule: (run) => { queue.push(run) },
+    schedule: (run) => {
+      queue.push(run)
+    },
     flush() {
       const due = queue
       queue = []
       for (const run of due) run()
     },
-    get pending() { return queue.length },
+    get pending() {
+      return queue.length
+    },
   }
 }
 
@@ -93,8 +101,13 @@ function makePager(options = {}) {
     count: () => options.count ?? 3,
     index: () => index,
     width: () => options.width ?? 390,
-    commit: (next) => { committed.push(next); index = next },
-    render: (view) => { views.push({ ...view }) },
+    commit: (next) => {
+      committed.push(next)
+      index = next
+    },
+    render: (view) => {
+      views.push({ ...view })
+    },
     schedule: clock.schedule,
     ...(options.threshold === undefined ? {} : { threshold: options.threshold }),
   })
@@ -103,8 +116,12 @@ function makePager(options = {}) {
     clock,
     committed,
     views,
-    get index() { return index },
-    get last() { return views[views.length - 1] },
+    get index() {
+      return index
+    },
+    get last() {
+      return views[views.length - 1]
+    },
   }
 }
 
@@ -246,7 +263,10 @@ test('多指落下不重置手势起点', () => {
   const dispatch = mount(p.core)
   dispatch('touchstart', [[200, 300]])
   dispatch('touchmove', [[180, 300]])
-  dispatch('touchstart', [[200, 300], [260, 300]]) // 第二根手指
+  dispatch('touchstart', [
+    [200, 300],
+    [260, 300],
+  ]) // 第二根手指
   dispatch('touchmove', [[100, 300]])
   assert.equal(p.last.offset, -100, '起点若被第二根手指重置，这里会跳变')
 })
@@ -354,12 +374,29 @@ function makeSwipeRow() {
   let offset = 0
   const core = createDragGesture({
     axis: 'x',
-    onStart: () => { base = offset },
-    onDrag: ({ dx }) => { offset = Math.max(-WIDTH, Math.min(0, base + dx)); log.push(['drag', offset]) },
-    onEnd: () => { offset = offset < -WIDTH / 2 ? -WIDTH : 0; log.push(['end', offset]) },
-    onCancel: () => { offset = 0; log.push(['cancel', offset]) },
+    onStart: () => {
+      base = offset
+    },
+    onDrag: ({ dx }) => {
+      offset = Math.max(-WIDTH, Math.min(0, base + dx))
+      log.push(['drag', offset])
+    },
+    onEnd: () => {
+      offset = offset < -WIDTH / 2 ? -WIDTH : 0
+      log.push(['end', offset])
+    },
+    onCancel: () => {
+      offset = 0
+      log.push(['cancel', offset])
+    },
   })
-  return { core, log, get offset() { return offset } }
+  return {
+    core,
+    log,
+    get offset() {
+      return offset
+    },
+  }
 }
 
 test('SwipeRow：正常抬手过半 → 停在展开位', () => {
@@ -396,11 +433,26 @@ function makePullRefresh() {
     axis: 'y',
     lock: 'none',
     preventDefaultWhenLocked: false,
-    onDrag: ({ dy }) => { pull = dy <= 0 ? 0 : Math.min(96, dy * 0.5) },
-    onEnd: () => { if (pull >= THRESHOLD) refreshed += 1; pull = 0 },
-    onCancel: () => { pull = 0 },
+    onDrag: ({ dy }) => {
+      pull = dy <= 0 ? 0 : Math.min(96, dy * 0.5)
+    },
+    onEnd: () => {
+      if (pull >= THRESHOLD) refreshed += 1
+      pull = 0
+    },
+    onCancel: () => {
+      pull = 0
+    },
   })
-  return { core, get pull() { return pull }, get refreshed() { return refreshed } }
+  return {
+    core,
+    get pull() {
+      return pull
+    },
+    get refreshed() {
+      return refreshed
+    },
+  }
 }
 
 test('PullRefresh：拉过阈值抬手 → 刷新一次', () => {
@@ -428,7 +480,14 @@ test('PullRefresh：touchcancel 绝不触发刷新', () => {
 test('canStart 为假时整串手势不启动（下拉刷新的 scrollTop 守卫）', () => {
   let allowed = false
   let drags = 0
-  const core = createDragGesture({ axis: 'y', lock: 'none', canStart: () => allowed, onDrag: () => { drags += 1 } })
+  const core = createDragGesture({
+    axis: 'y',
+    lock: 'none',
+    canStart: () => allowed,
+    onDrag: () => {
+      drags += 1
+    },
+  })
   const dispatch = mount(core)
   dispatch('touchstart', [[200, 100]])
   dispatch('touchmove', [[200, 200]])
@@ -448,11 +507,27 @@ function makeLongPress() {
     onLongPress: () => log.push('long'),
     onTap: () => log.push('tap'),
     timers: {
-      set: (run) => { queued = run; return 1 },
-      clear: () => { queued = null },
+      set: (run) => {
+        queued = run
+        return 1
+      },
+      clear: () => {
+        queued = null
+      },
     },
   })
-  return { core, log, fire: () => { const run = queued; queued = null; if (run) run() }, get armed() { return queued !== null } }
+  return {
+    core,
+    log,
+    fire: () => {
+      const run = queued
+      queued = null
+      if (run) run()
+    },
+    get armed() {
+      return queued !== null
+    },
+  }
 }
 
 test('轻点：没走远、没到时长 → tap', () => {
@@ -543,12 +618,15 @@ function mountHook(run) {
       const i = cursor++
       if (slots[i] === undefined) slots[i] = { value: typeof initial === 'function' ? initial() : initial }
       const slot = slots[i]
-      return [slot.value, (next) => {
-        const value = typeof next === 'function' ? next(slot.value) : next
-        if (Object.is(value, slot.value)) return
-        slot.value = value
-        render()
-      }]
+      return [
+        slot.value,
+        (next) => {
+          const value = typeof next === 'function' ? next(slot.value) : next
+          if (Object.is(value, slot.value)) return
+          slot.value = value
+          render()
+        },
+      ]
     },
     useRef(initial) {
       const i = cursor++
@@ -560,7 +638,9 @@ function mountHook(run) {
       if (slots[i] === undefined || !sameDeps(slots[i].deps, deps)) slots[i] = { value: factory(), deps }
       return slots[i].value
     },
-    useCallback(fn, deps) { return dispatcher.useMemo(() => fn, deps) },
+    useCallback(fn, deps) {
+      return dispatcher.useMemo(() => fn, deps)
+    },
     useEffect(fn, deps) {
       const i = cursor++
       if (slots[i] === undefined || !sameDeps(slots[i].deps, deps)) {
@@ -576,17 +656,35 @@ function mountHook(run) {
     cursor = 0
     const previous = internals.ReactCurrentDispatcher.current
     internals.ReactCurrentDispatcher.current = dispatcher
-    try { result = run() } finally { internals.ReactCurrentDispatcher.current = previous }
-    while (pending.length) { const e = pending.shift(); e.cleanup = e.run() || null }
+    try {
+      result = run()
+    } finally {
+      internals.ReactCurrentDispatcher.current = previous
+    }
+    while (pending.length) {
+      const e = pending.shift()
+      e.cleanup = e.run() || null
+    }
     return result
   }
 
   render()
-  return { get current() { return result }, render, get renders() { return renders } }
+  return {
+    get current() {
+      return result
+    },
+    render,
+    get renders() {
+      return renders
+    },
+  }
 }
 
 /** 等一次切页动画落地（hook 用真 setTimeout，测试里把时长压到 10ms）。 */
-const settled = () => new Promise((resolve) => { setTimeout(resolve, 40) })
+const settled = () =>
+  new Promise((resolve) => {
+    setTimeout(resolve, 40)
+  })
 
 /** 把 hook 的 containerProps 挂到真 EventTarget 上，并塞一个有宽度的假节点。 */
 function attach(hook, width = 390) {
@@ -595,13 +693,24 @@ function attach(hook, width = 390) {
 }
 
 const asyncTests = []
-function asyncTest(name, run) { asyncTests.push([name, run]) }
+function asyncTest(name, run) {
+  asyncTests.push([name, run])
+}
 
 asyncTest('受控：翻页经 onIndexChange 回写，页码真值在调用方', async () => {
   const changes = []
   let index = 0
   const hook = mountHook(() =>
-    useSwipePager({ count: 3, index, onIndexChange: (next) => { changes.push(next); index = next }, durationMs: 10 }))
+    useSwipePager({
+      count: 3,
+      index,
+      onIndexChange: (next) => {
+        changes.push(next)
+        index = next
+      },
+      durationMs: 10,
+    }),
+  )
   const dispatch = attach(hook)
 
   swipeTo(dispatch, -120)
@@ -617,7 +726,8 @@ asyncTest('受控：翻页经 onIndexChange 回写，页码真值在调用方', 
 asyncTest('非受控：hook 自己持有页码，不给 index 也能翻', async () => {
   const changes = []
   const hook = mountHook(() =>
-    useSwipePager({ count: 3, defaultIndex: 0, onIndexChange: (n) => changes.push(n), durationMs: 10 }))
+    useSwipePager({ count: 3, defaultIndex: 0, onIndexChange: (n) => changes.push(n), durationMs: 10 }),
+  )
   const dispatch = attach(hook)
 
   swipeTo(dispatch, -120)
@@ -630,7 +740,8 @@ asyncTest('非受控：hook 自己持有页码，不给 index 也能翻', async 
 asyncTest('⭐ 端到端：hook 上派发 touchcancel → 既不回调也不改页码', async () => {
   const changes = []
   const hook = mountHook(() =>
-    useSwipePager({ count: 3, defaultIndex: 0, onIndexChange: (n) => changes.push(n), durationMs: 10 }))
+    useSwipePager({ count: 3, defaultIndex: 0, onIndexChange: (n) => changes.push(n), durationMs: 10 }),
+  )
   const dispatch = attach(hook)
 
   swipeTo(dispatch, -200) // 远超阈值 85.8

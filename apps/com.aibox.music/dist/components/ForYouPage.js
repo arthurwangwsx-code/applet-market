@@ -67,7 +67,9 @@ export default function ForYouPage({ ctx }) {
             return { loading: false, groups: result.groups, failure: null };
         });
     }, []);
-    React.useEffect(() => { run(false); }, [run]);
+    React.useEffect(() => {
+        run(false);
+    }, [run]);
     const onRefresh = async () => {
         setRefreshing(true);
         await run(true);
@@ -79,24 +81,40 @@ export default function ForYouPage({ ctx }) {
             actions.notice(t('forYou.stationUnsupported'));
             return;
         }
-        setExpanding(item.musicItemId);
+        setExpanding(item.musicItemId ?? null);
         await actions.openCollection(item);
         setExpanding(null);
     };
     const groups = state.groups;
-    const sections = groups ? [
-        { id: 'recent', title: t('forYou.recentlyPlayed'), size: 132, shelves: groups.recent },
-        { id: 'forYou', title: t('forYou.forYou'), size: 164, shelves: groups.forYou },
-        { id: 'charts', title: t('forYou.charts'), size: 132, shelves: groups.charts },
-    ].filter((section) => section.shelves && section.shelves.length > 0) : [];
-    return (_jsxs(PullToRefresh, { onRefresh: onRefresh, refreshing: refreshing, children: [state.loading && !groups ? (_jsx("div", { style: { padding: 60, display: 'flex', justifyContent: 'center' }, children: _jsx(Spinner, { color: C.muted }) })) : null, sections.length === 0 && !state.loading ? (_jsx(EmptyState, { icon: state.failure === 'denied' ? 'lock' : 'sparkles', title: state.failure === 'denied' ? t('search.notAuthorized') : t('forYou.empty'), hint: state.failure === 'denied' ? t('search.notAuthorizedHint') : t('forYou.emptyHint'), top: 80 })) : null, sections.map((section) => (_jsxs("div", { style: { paddingBottom: SPACE.s5 }, children: [_jsx(SectionHeader, { children: section.title }), section.shelves.map((shelf) => (_jsx("div", { className: "mu-hrow", style: { display: 'flex', gap: 12, padding: `0 ${SPACE.s4}px 4px` }, children: shelf.items.map((item) => (_jsx(Card, { item: item, size: section.size, busy: expanding === item.musicItemId, onClick: () => { store.rememberArtwork(item); openItem(item); }, onLongPress: () => actions.collectionMenu(item) }, `${item.musicItemId}-${item.type}`))) }, `${section.id}-${shelf.kind}`)))] }, section.id))), _jsx("div", { style: { height: 24 } })] }));
+    const sections = groups
+        ? [
+            { id: 'recent', title: t('forYou.recentlyPlayed'), size: 132, shelves: groups.recent },
+            { id: 'forYou', title: t('forYou.forYou'), size: 164, shelves: groups.forYou },
+            { id: 'charts', title: t('forYou.charts'), size: 132, shelves: groups.charts },
+        ].filter((section) => section.shelves && section.shelves.length > 0)
+        : [];
+    return (_jsxs(PullToRefresh, { onRefresh: onRefresh, refreshing: refreshing, children: [state.loading && !groups ? (_jsx("div", { style: { padding: 60, display: 'flex', justifyContent: 'center' }, children: _jsx(Spinner, { color: C.muted }) })) : null, sections.length === 0 && !state.loading ? (_jsx(EmptyState, { icon: state.failure === 'denied' ? 'lock' : 'sparkles', title: state.failure === 'denied' ? t('search.notAuthorized') : t('forYou.empty'), hint: state.failure === 'denied' ? t('search.notAuthorizedHint') : t('forYou.emptyHint'), top: 80 })) : null, sections.map((section) => (_jsxs("div", { style: { paddingBottom: SPACE.s5 }, children: [_jsx(SectionHeader, { children: section.title }), section.shelves.map((shelf) => (_jsx("div", { className: "mu-hrow", style: { display: 'flex', gap: 12, padding: `0 ${SPACE.s4}px 4px` }, children: shelf.items.map((item) => (_jsx(Card, { item: item, size: section.size, busy: expanding === item.musicItemId, onClick: () => {
+                                store.rememberArtwork(item);
+                                openItem(item);
+                            }, onLongPress: () => actions.collectionMenu(item) }, `${item.musicItemId}-${item.type}`))) }, `${section.id}-${shelf.kind}`)))] }, section.id))), _jsx("div", { style: { height: 24 } })] }));
 }
-function Card({ item, size, busy, onClick, onLongPress }) {
+function Card({ item, size, busy, onClick, onLongPress, }) {
     const timer = React.useRef(null);
-    return (_jsxs("button", { type: "button", className: "mu-btn mu-press", onClick: onClick, onPointerDown: () => { timer.current = setTimeout(onLongPress, 500); }, onPointerUp: () => { if (timer.current)
-            clearTimeout(timer.current); }, onPointerCancel: () => { if (timer.current)
-            clearTimeout(timer.current); }, style: { width: size, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 6 }, children: [_jsxs("div", { style: { position: 'relative' }, children: [_jsx(Artwork, { url: item.artworkUrl, size: size, radius: 12, iconSize: 28, shadow: "0 3px 6px rgba(0,0,0,0.18)" }), busy ? (_jsx("div", { style: {
-                            position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(0,0,0,0.35)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+    return (_jsxs("button", { type: "button", className: "mu-btn mu-press", onClick: onClick, onPointerDown: () => {
+            timer.current = setTimeout(onLongPress, 500);
+        }, onPointerUp: () => {
+            if (timer.current)
+                clearTimeout(timer.current);
+        }, onPointerCancel: () => {
+            if (timer.current)
+                clearTimeout(timer.current);
+        }, style: { width: size, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 6 }, children: [_jsxs("div", { style: { position: 'relative' }, children: [_jsx(Artwork, { url: item.artworkUrl, size: size, radius: 12, iconSize: 28, shadow: "0 3px 6px rgba(0,0,0,0.18)" }), busy ? (_jsx("div", { style: {
+                            position: 'absolute',
+                            inset: 0,
+                            borderRadius: 12,
+                            background: 'rgba(0,0,0,0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                         }, children: _jsx(Spinner, { size: 22, color: "#fff" }) })) : null] }), _jsx("span", { className: "mu-clamp-1", style: { fontSize: 13, fontWeight: 500, color: C.ink, width: size, textAlign: 'left' }, children: item.title || item.name }), item.artist ? (_jsx("span", { className: "mu-clamp-1", style: { fontSize: 11, color: C.muted, width: size, textAlign: 'left' }, children: item.artist })) : null] }));
 }

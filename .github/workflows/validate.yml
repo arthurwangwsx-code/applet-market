@@ -1,7 +1,5 @@
-name: validate
+name: verify
 
-# 市场是静态文件仓库，没有服务端逻辑——所以「索引和包是否自洽」必须在推送时就钉死，
-# 否则坏数据会直接被 iOS 端拉下去。这个闸门跑的就是本地发布前跑的同一个脚本。
 on:
   push:
     branches: [main]
@@ -9,113 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: 校验全部应用
-        run: node scripts/validate.mjs
-
-      - name: 索引必须与磁盘真值一致
-        # build-registry 是幂等的：如果重建后有 diff，说明有人手改了索引或忘了跑发布脚本。
-        run: |
-          node scripts/build-registry.mjs
-          # 用 status --porcelain 而不是 diff --quiet：diff 看不见「本该提交却漏了」的新文件。
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::registry.json / releases.json 与 apps/ 下的真值不一致。"
-            echo "请在本地跑 node scripts/build-registry.mjs 后重新提交。"
-            git status --porcelain
-            exit 1
-          fi
-
-  api-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: API 文档不得与 descriptor 漂移
-        # docs/api/ 全部由宿主的 AppletCapabilityDescriptor 生成（descriptor 是唯一真值）。
-        # CI 里没有宿主 Swift 源码，所以这一跑只校验 capabilities.snapshot.json -> Markdown 这一段：
-        # 能抓住「有人手改了生成内容」和「漏提交 snapshot」。
-        # 「宿主改了能力却没重新生成」由**宿主仓库**的两道闸门守：
-        #   · pre-commit 第 20 条（改了 AppletPluginKit 就跑完整链路的 --check）
-        #   · AppletPluginKitTests/AppletCapabilitySnapshotGateTests（descriptor 集合 + 返回 schema 指纹）
-        run: node scripts/gen-api-docs.mjs --check
-
-      - name: 返回类型覆盖率棘轮（新增桥方法必须带 resultSchemaJSON）
-        # 返回侧没有机器可读 schema，应用侧就会长出各自的替代品——手写 aibox-extra.d.ts、
-        # 按英文文案子串反推枚举，两者都真实发生过。棘轮只减不增。
-        run: node scripts/audit-result-schema.mjs
-
-      - name: host.js 分叉棘轮（新应用不得再抄一份桥胶水）
-        # 同一件事有多个答案，是 AI 继承劣化实现的结构性原因。实测一天内从 4 份涨到 8 份。
-        run: node scripts/audit-host-forks.mjs
-
-      - name: 手写源不得再手搓触摸手势
-        # 补了 SDK 原语只是一半：没有闸门的共享基建，下一个人照样手搓一份
-        #（本仓已数出八个「基建在、没人用」，其中一个正是「手搓基建检测器自己没挂闸门」）。
-        run: node scripts/audit-hand-rolled-touch.mjs
-
-      - name: 文档事实基线不得过期
-        # 手写文档里的统计数字一天就会错（39→47 命名空间、4→8 份分叉）。数字改成生成的，并在这里守住。
-        run: node scripts/gen-facts.mjs --check
-
-  build-tooling:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          cache: npm
 
       - name: 安装 workspace 依赖
         run: npm ci
 
-      - name: SDK 必须能编译并产出类型
-        run: npm run build --workspace @aibox/applet-sdk
-
-      - name: 手势原语自测（touchcancel = 放弃）
-        # `touchcancel` 只有原生手势抢走触摸时才发，浏览器里测不出来——两个应用各自手搓、
-        # 各自写错（一个当 end 提交、一个根本不接）就是这么来的。这里往真 EventTarget 上
-        # 派发合成 touchcancel，断言 abort 分支跑到且没有翻页；另有一条反例证明断言吃劲。
-        run: npm test --workspace @aibox/applet-sdk
-
-      - name: 构建型应用必须能 typecheck + 构建
-        # 逐个跑，而不是 `npm run build --workspaces`：后者会静默跳过没有该脚本的包，
-        # 于是「构建脚本坏了」和「这个包本来就没有构建」在输出里长得一模一样。
-        run: |
-          set -e
-          for dir in apps/*/; do
-            [ -f "$dir/package.json" ] || continue
-            echo "== $dir =="
-            npm run typecheck --prefix "$dir" --if-present
-            npm run build --prefix "$dir"
-          done
-
-      - name: 发布脚本冒烟
-        # 现有两个 job 验的都是**产物**；没有任何一条会执行 release.mjs，于是
-        # 「发布脚本坏了但最近没人发版」可以一路绿着躺在 main 上，直到下一个人发版才炸
-        # （2026-08-03 真实发生过一次：切换打包路径时漏改一处调用，无参运行看起来正常）。
-        # 这里拿已发布应用做一次 --dry-run：跑完整条构建 → 校验 → 组包，但不写盘。
-        run: node scripts/release.mjs --dry-run-latest
-
-      - name: 构建产物必须与仓库里的一致
-        # dist/ 是签入仓库的（发布包的真值）。重新构建后有 diff = 有人改了源码没重新构建，
-        # 或者构建不可复现。两种都必须当场拦下。
-        run: |
-          if [ -n "$(git status --porcelain apps)" ]; then
-            echo "::error::重新构建后 apps/ 有 diff —— 源码与 dist/ 不同步，或构建不可复现。"
-            git status --porcelain apps
-            git diff --stat apps
-            exit 1
-          fi
+      - name: 统一工程验证
+        # 与本地提交前入口完全相同。--ci 额外断言所有生成器运行后工作树仍干净，
+        # 同时覆盖漏提交 dist、registry、SDK 产物与不可复现构建。
+        run: npm run verify -- --ci

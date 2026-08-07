@@ -3,7 +3,7 @@ import { newID } from './store.js';
 import { ACCOUNT_KIND_COLOR, ACCOUNT_KIND_ICON, MEMBER_COLORS } from './seeds.js';
 import { currencyDecimals, currencySymbol } from './currencies.js';
 import { dayStart } from './dates.js';
-const nextOrder = (rows) => rows.reduce((max, row) => Math.max(max, row.sortOrder ?? 0), -1) + 1;
+const nextOrder = (rows) => rows.reduce((max, row) => Math.max(max, row.sortOrder), -1) + 1;
 // MARK: - 账户
 export async function createAccount(store, input) {
     const name = String(input.name ?? '').trim();
@@ -43,7 +43,10 @@ export async function updateAccount(store, id, patch) {
         const index = rows.findIndex((row) => row.id === id);
         if (index < 0)
             return false;
-        const next = { ...rows[index] };
+        const current = rows[index];
+        if (!current)
+            return false;
+        const next = { ...current };
         if (patch.name !== undefined)
             next.name = String(patch.name).trim();
         if (patch.kind !== undefined)
@@ -83,7 +86,9 @@ export async function createCategory(store, input) {
         isArchived: false,
         isSeed: false,
     };
-    const ok = await store.mutate((draft) => { draft.table('categories').push(category); });
+    const ok = await store.mutate((draft) => {
+        draft.table('categories').push(category);
+    });
     return ok ? { ok: true, category } : { ok: false, reason: 'persistence' };
 }
 export async function updateCategory(store, id, patch) {
@@ -92,7 +97,10 @@ export async function updateCategory(store, id, patch) {
         const index = rows.findIndex((row) => row.id === id);
         if (index < 0)
             return false;
-        const next = { ...rows[index] };
+        const current = rows[index];
+        if (!current)
+            return false;
+        const next = { ...current };
         if (patch.name !== undefined)
             next.name = String(patch.name).trim();
         if (patch.isArchived !== undefined)
@@ -138,7 +146,9 @@ export async function addCurrency(store, code, rate) {
         return { ok: false, reason: 'invalidCode' };
     if (store.currencyRow(upper))
         return { ok: true, duplicate: true };
-    const ok = await store.mutate((draft) => { ensureCurrency(draft, upper, rate); });
+    const ok = await store.mutate((draft) => {
+        ensureCurrency(draft, upper, rate);
+    });
     return ok ? { ok: true } : { ok: false, reason: 'persistence' };
 }
 /** 手动设定汇率 → 标 manual（在线刷新不再覆盖）。 */
@@ -151,7 +161,10 @@ export async function setRate(store, code, rate) {
         const index = rows.findIndex((row) => row.code === String(code).toUpperCase());
         if (index < 0)
             return false;
-        rows[index] = { ...rows[index], rateToBase: value, manualRate: true, rateConfigured: true, updatedAt: Date.now() };
+        const current = rows[index];
+        if (!current)
+            return false;
+        rows[index] = { ...current, rateToBase: value, manualRate: true, rateConfigured: true, updatedAt: Date.now() };
         return true;
     });
     return ok ? { ok: true } : { ok: false, reason: 'persistence' };
@@ -174,6 +187,8 @@ export async function setBaseCurrency(store, code) {
         const rows = draft.table('currencies');
         for (let i = 0; i < rows.length; i += 1) {
             const row = rows[i];
+            if (!row)
+                continue;
             rows[i] = {
                 ...row,
                 rateToBase: row.code === upper ? 1 : Number(row.rateToBase) / divisor,
@@ -213,7 +228,10 @@ export async function applyFetchedRates(store, rates) {
             const index = rows.findIndex((row) => row.code === update.code);
             if (index < 0)
                 continue;
-            rows[index] = { ...rows[index], rateToBase: update.rateToBase, rateConfigured: true, updatedAt: Date.now() };
+            const current = rows[index];
+            if (!current)
+                continue;
+            rows[index] = { ...current, rateToBase: update.rateToBase, rateConfigured: true, updatedAt: Date.now() };
         }
         return true;
     });
@@ -231,7 +249,7 @@ export async function upsertBudget(store, monthKey, categoryID, limitMinor, carr
             return true;
         }
         const next = {
-            id: index >= 0 ? rows[index].id : newID(),
+            id: index >= 0 ? (rows[index]?.id ?? newID()) : newID(),
             monthKey,
             categoryID: categoryID ?? null,
             limitMinor: limit,
@@ -267,9 +285,11 @@ export async function createProject(store, input) {
     const ok = await store.mutate((draft) => {
         const rows = draft.table('projects');
         if (project.isActive) {
-            for (let i = 0; i < rows.length; i += 1)
-                if (rows[i].isActive)
-                    rows[i] = { ...rows[i], isActive: false };
+            for (let i = 0; i < rows.length; i += 1) {
+                const row = rows[i];
+                if (row?.isActive)
+                    rows[i] = { ...row, isActive: false };
+            }
         }
         rows.push(project);
     });
@@ -281,7 +301,10 @@ export async function updateProject(store, id, patch) {
         const index = rows.findIndex((row) => row.id === id);
         if (index < 0)
             return false;
-        const next = { ...rows[index] };
+        const current = rows[index];
+        if (!current)
+            return false;
+        const next = { ...current };
         if (patch.name !== undefined)
             next.name = String(patch.name).trim();
         if (patch.note !== undefined)
@@ -303,8 +326,9 @@ export async function updateProject(store, id, patch) {
             // 至多一个 true。
             if (next.isActive) {
                 for (let i = 0; i < rows.length; i += 1) {
-                    if (rows[i].id !== id && rows[i].isActive)
-                        rows[i] = { ...rows[i], isActive: false };
+                    const row = rows[i];
+                    if (row && row.id !== id && row.isActive)
+                        rows[i] = { ...row, isActive: false };
                 }
             }
         }
@@ -320,9 +344,12 @@ export async function activateProject(store, id) {
     const ok = await store.mutate((draft) => {
         const rows = draft.table('projects');
         for (let i = 0; i < rows.length; i += 1) {
-            const shouldBeActive = id !== null && rows[i].id === id;
-            if (rows[i].isActive !== shouldBeActive)
-                rows[i] = { ...rows[i], isActive: shouldBeActive };
+            const row = rows[i];
+            if (!row)
+                continue;
+            const shouldBeActive = id !== null && row.id === id;
+            if (row.isActive !== shouldBeActive)
+                rows[i] = { ...row, isActive: shouldBeActive };
         }
         return true;
     });
@@ -339,7 +366,7 @@ export async function addMember(store, projectID, input) {
         projectID,
         name,
         isMe: !!input.isMe,
-        colorHex: input.colorHex ?? MEMBER_COLORS[existing.length % MEMBER_COLORS.length],
+        colorHex: input.colorHex ?? MEMBER_COLORS[existing.length % MEMBER_COLORS.length] ?? '#3A83D0',
         sortOrder: nextOrder(existing),
         createdAt: Date.now(),
     };
@@ -348,8 +375,9 @@ export async function addMember(store, projectID, input) {
         // 每项目至多一个 isMe。
         if (member.isMe) {
             for (let i = 0; i < rows.length; i += 1) {
-                if (rows[i].projectID === projectID && rows[i].isMe)
-                    rows[i] = { ...rows[i], isMe: false };
+                const row = rows[i];
+                if (row && row.projectID === projectID && row.isMe)
+                    rows[i] = { ...row, isMe: false };
             }
         }
         rows.push(member);
@@ -362,7 +390,10 @@ export async function updateMember(store, id, patch) {
         const index = rows.findIndex((row) => row.id === id);
         if (index < 0)
             return false;
-        const next = { ...rows[index] };
+        const current = rows[index];
+        if (!current)
+            return false;
+        const next = { ...current };
         if (patch.name !== undefined)
             next.name = String(patch.name).trim();
         if (patch.colorHex !== undefined)
@@ -371,8 +402,9 @@ export async function updateMember(store, id, patch) {
             next.isMe = !!patch.isMe;
             if (next.isMe) {
                 for (let i = 0; i < rows.length; i += 1) {
-                    if (rows[i].id !== id && rows[i].projectID === next.projectID && rows[i].isMe) {
-                        rows[i] = { ...rows[i], isMe: false };
+                    const row = rows[i];
+                    if (row && row.id !== id && row.projectID === next.projectID && row.isMe) {
+                        rows[i] = { ...row, isMe: false };
                     }
                 }
             }
@@ -390,8 +422,10 @@ export async function removeMember(store, id) {
     const member = store.member(id);
     if (!member)
         return { ok: false, reason: 'notFound' };
-    const affected = store.allTransactions().filter((row) => (row.projectID === member.projectID
-        && (row.payerMemberID === id || (row.split && (row.split.shares ?? []).some((s) => s.memberID === id)))));
+    const affected = store
+        .allTransactions()
+        .filter((row) => row.projectID === member.projectID &&
+        (row.payerMemberID === id || (row.split && row.split.shares.some((share) => share.memberID === id))));
     const doomed = store.settlements.filter((row) => row.fromMemberID === id || row.toMemberID === id);
     const ok = await store.mutate((draft) => {
         for (const txn of affected) {
@@ -399,7 +433,7 @@ export async function removeMember(store, id) {
             if (next.payerMemberID === id)
                 next.payerMemberID = null;
             if (next.split) {
-                const shares = (next.split.shares ?? []).filter((s) => s.memberID !== id);
+                const shares = next.split.shares.filter((share) => share.memberID !== id);
                 next.split = shares.length > 0 ? { ...next.split, shares } : null;
             }
             draft.putTx(next);

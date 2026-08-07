@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "policy": "应用源码只允许严格 TypeScript；JS/JSX 基线为空，任何回流都失败。",
+  "files": [],
+  "diagnostics": {}
+}

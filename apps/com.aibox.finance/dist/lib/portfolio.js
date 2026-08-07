@@ -6,13 +6,21 @@
 //  2. **总盈亏要扣掉净外部资金流**（入金/出金），否则追加本金会被误算成投资收益；
 //  3. **缺行情或缺汇率一律按 0 计并打标**，绝不用汇率 1 兜底、绝不伪造数值。
 import { MoneyError, addMinor, clampMinor, grossMinorOf, isFiniteNumber, roundHalfAway, scaleMinor, subMinor, } from './money.js';
-export const CASH_FLOW_KINDS = ['deposit', 'withdrawal', 'dividend', 'interest', 'tax', 'fee', 'adjustment'];
+export const CASH_FLOW_KINDS = [
+    'deposit',
+    'withdrawal',
+    'dividend',
+    'interest',
+    'tax',
+    'fee',
+    'adjustment',
+];
 export function isExternalFlow(kind) {
     return kind === 'deposit' || kind === 'withdrawal';
 }
 /** withdrawal / tax / fee 为 −1，其余 +1。 */
 export function defaultSign(kind) {
-    return (kind === 'withdrawal' || kind === 'tax' || kind === 'fee') ? -1 : 1;
+    return kind === 'withdrawal' || kind === 'tax' || kind === 'fee' ? -1 : 1;
 }
 // —— §10.3 汇率 ——
 export const FX_CURRENCIES = ['USD', 'HKD', 'EUR', 'GBP', 'JPY', 'CNY'];
@@ -46,12 +54,7 @@ export function fxRate(from, to, fxMap) {
     const rate = fxMap ? fxMap[from] : undefined;
     return isFiniteNumber(rate) && rate > 0 ? rate : null;
 }
-// —— §10.1 买入 ——
-/**
- * 返回 `{ account, position, order }` 的**新对象**（不改入参）。校验不过一律抛 MoneyError，
- * 调用方据此整体回滚——余额与流水必须同生共死。
- */
-export function applyBuy({ account, position, symbol, name, market, currency, quantity, price, fxRate: rate, feeMinor = 0, tradedAt, note, source }) {
+export function applyBuy({ account, position, symbol, name, market, currency, quantity, price, fxRate: rate, feeMinor = 0, tradedAt, note, source, }) {
     if (!account)
         throw new MoneyError('accountNotFound');
     if (account.isArchived)
@@ -101,8 +104,7 @@ export function applyBuy({ account, position, symbol, name, market, currency, qu
         debitMinor: debit,
     };
 }
-// —— §10.2 卖出 ——
-export function applySell({ account, position, quantity, price, fxRate: rate, feeMinor = 0, tradedAt, note, source }) {
+export function applySell({ account, position, quantity, price, fxRate: rate, feeMinor = 0, tradedAt, note, source, }) {
     if (!account)
         throw new MoneyError('accountNotFound');
     if (account.isArchived)
@@ -150,7 +152,6 @@ export function applySell({ account, position, quantity, price, fxRate: rate, fe
         realizedDeltaMinor: realizedDelta,
     };
 }
-// —— §10.6 现金流水 ——
 export function applyCashFlow({ account, kind, amountMinor, occurredAt, note, source }) {
     if (!account)
         throw new MoneyError('accountNotFound');
@@ -202,7 +203,7 @@ export function valuePosition(position, quote, rate) {
  * `quotes` = canonical → quote；`fxToCNY` = 币种 → 人民币中间价；`cashFlows` = 该账户全部流水。
  * `positions` 要传**全部行（含 quantity=0 的历史行）**——已实现盈亏靠它们累加。
  */
-export function valueAccount({ account, positions, quotes, fxToCNY, cashFlows }) {
+export function valueAccount({ account, positions, quotes, fxToCNY, cashFlows, }) {
     const fxMap = fxMapFor(account.currency, fxToCNY);
     const open = positions.filter((row) => row.quantity > 0);
     const rows = open.map((position) => {
@@ -220,9 +221,7 @@ export function valueAccount({ account, positions, quotes, fxToCNY, cashFlows })
         .reduce((sum, flow) => sum + flow.amountMinor, 0);
     // 追加入金不算收益：总盈亏必须扣掉净外部资金流。
     const totalPnlMinor = totalMinor - account.initialCashMinor - externalCashFlowMinor;
-    const returnRate = account.initialCashMinor !== 0
-        ? (totalPnlMinor / Math.abs(account.initialCashMinor)) * 100
-        : 0;
+    const returnRate = account.initialCashMinor !== 0 ? (totalPnlMinor / Math.abs(account.initialCashMinor)) * 100 : 0;
     const missingQuotes = rows.filter((row) => row.missingQuote).map((row) => row.position.instrumentSymbol);
     const missingFX = [...new Set(rows.filter((row) => row.missingFX).map((row) => row.position.currency))];
     return {
@@ -270,7 +269,7 @@ export function winRateOf(orders) {
 }
 const RISK_FREE = 0.02;
 /** 快照 ≥ 2 才算回撤/波动/夏普，否则全 0 且 `hasEnoughData=false`。 */
-export function performance({ orders, snapshots }) {
+export function performance({ orders, snapshots, }) {
     const wins = winRateOf(orders || []);
     const sorted = [...(snapshots || [])].sort((a, b) => a.date - b.date);
     const base = {
@@ -285,11 +284,13 @@ export function performance({ orders, snapshots }) {
     if (sorted.length < 2)
         return base;
     const values = sorted.map((row) => row.totalValueMinor / 100);
-    const first = values[0];
-    const last = values[values.length - 1];
+    const first = values[0] ?? 0;
+    const last = values.at(-1) ?? 0;
     const totalReturn = first !== 0 ? ((last - first) / first) * 100 : 0;
-    const days = Math.max(1, Math.round((sorted[sorted.length - 1].date - sorted[0].date) / 86400000));
-    const annualized = (first > 0 && last > 0) ? ((last / first) ** (365 / days) - 1) : 0;
+    const firstDate = sorted[0]?.date ?? 0;
+    const lastDate = sorted.at(-1)?.date ?? firstDate;
+    const days = Math.max(1, Math.round((lastDate - firstDate) / 86400000));
+    const annualized = first > 0 && last > 0 ? (last / first) ** (365 / days) - 1 : 0;
     let peak = -Infinity;
     let drawdown = 0;
     for (const value of values) {
@@ -300,15 +301,15 @@ export function performance({ orders, snapshots }) {
     }
     const returns = [];
     for (let i = 1; i < values.length; i += 1) {
-        if (values[i - 1] === 0)
+        const previous = values[i - 1];
+        const current = values[i];
+        if (previous === undefined || current === undefined || previous === 0)
             continue;
-        returns.push(values[i] / values[i - 1] - 1);
+        returns.push(current / previous - 1);
     }
     // 总体标准差（除以 n）——与回测那边的样本口径刻意不同。
     const mean = returns.length ? returns.reduce((sum, value) => sum + value, 0) / returns.length : 0;
-    const variance = returns.length
-        ? returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / returns.length
-        : 0;
+    const variance = returns.length ? returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / returns.length : 0;
     const volatility = Math.sqrt(variance) * Math.sqrt(252) * 100;
     // 夏普用**年化收益**（不是日均年化），无风险 2%。
     const sharpe = volatility !== 0 ? (annualized - RISK_FREE) / (volatility / 100) : 0;
@@ -346,7 +347,7 @@ const FLAG_PENALTY = {
     bigDrawdown: 15,
     deepLoser: 15,
 };
-export function diagnose({ valuation, perf }) {
+export function diagnose({ valuation, perf, }) {
     const rows = valuation.rows;
     const holdingsMinor = Math.max(valuation.marketValueMinor, 0);
     const totalMinor = Math.max(valuation.totalMinor, 1);
@@ -363,14 +364,10 @@ export function diagnose({ valuation, perf }) {
         }
     }
     const alloc = allocation(rows);
-    const topMarket = alloc.length > 0 ? alloc[0] : null;
+    const topMarket = alloc[0] ?? null;
     const positive = rows.filter((row) => row.marketValueMinor > 0);
-    const contributor = positive
-        .filter((row) => row.unrealizedPct > 0)
-        .sort((a, b) => b.unrealizedPct - a.unrealizedPct)[0] || null;
-    const detractor = positive
-        .filter((row) => row.unrealizedPct < 0)
-        .sort((a, b) => a.unrealizedPct - b.unrealizedPct)[0] || null;
+    const contributor = positive.filter((row) => row.unrealizedPct > 0).sort((a, b) => b.unrealizedPct - a.unrealizedPct)[0] || null;
+    const detractor = positive.filter((row) => row.unrealizedPct < 0).sort((a, b) => a.unrealizedPct - b.unrealizedPct)[0] || null;
     const flags = [];
     if (topWeight * 100 > 40)
         flags.push('highConcentration');

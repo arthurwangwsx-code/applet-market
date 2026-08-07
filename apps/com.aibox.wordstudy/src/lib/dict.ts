@@ -14,8 +14,8 @@ const YOUDAO_MAX_BYTES = 2_000_000
 const LOOKUP_TIMEOUT_MS = 8_000
 
 const MOBILE_UA =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
-  + '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 
 function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -196,9 +196,8 @@ function optionalString(value: unknown): string | null {
 
 /** 把 AI 的宽容 JSON 归一成 payload。缺字段一律走默认值，不因为一处缺失整条失败。 */
 export function payloadFromAI(raw: Record<string, unknown>, fallbackWord: string): WordLookupPayload {
-  const frequency = typeof raw.frequency === 'number' && Number.isFinite(raw.frequency)
-    ? Math.round(raw.frequency)
-    : null
+  const frequency =
+    typeof raw.frequency === 'number' && Number.isFinite(raw.frequency) ? Math.round(raw.frequency) : null
   return {
     word: optionalString(raw.word) ?? fallbackWord,
     corrected: optionalString(raw.corrected),
@@ -266,8 +265,10 @@ export async function lookupWord(word: string): Promise<WordLookupPayload> {
 const LANG_NAME: Record<LangCode, string> = { en: 'English', zh: 'Chinese' }
 
 function translatePrompt(text: string, from: LangCode, to: LangCode): string {
-  return `Translate the text below from ${LANG_NAME[from]} to ${LANG_NAME[to]}. `
-    + `Output ONLY the translation — no explanation, no quotes, no markdown.\n\nText: ${text}`
+  return (
+    `Translate the text below from ${LANG_NAME[from]} to ${LANG_NAME[to]}. ` +
+    `Output ONLY the translation — no explanation, no quotes, no markdown.\n\nText: ${text}`
+  )
 }
 
 /**
@@ -308,7 +309,12 @@ export async function translateStream(input: {
 export async function translateText(text: string, from: LangCode, to: LangCode): Promise<string> {
   const api = ai()
   if (!api) throw new LookupError('No AI provider is configured for the selected model.')
-  return api.generate({ prompt: translatePrompt(text, from, to), maxTokens: 2000, temperature: 0.2, intent: 'balanced' })
+  return api.generate({
+    prompt: translatePrompt(text, from, to),
+    maxTokens: 2000,
+    temperature: 0.2,
+    intent: 'balanced',
+  })
 }
 
 // —— 每日一句 ——

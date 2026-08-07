@@ -11,11 +11,15 @@ import { Segmented, Spinner, EmptyState } from './primitives.js';
 import { C, SPACE } from './theme.js';
 import * as api from '../lib/api.js';
 import { copyText, haptic, openInBrowser, share, toast } from '../lib/host.js';
+import { errorMessage } from '../lib/types.js';
 const SOURCES = [
     { id: 'recommend', label: '推荐' },
     { id: 'popular', label: '热门' },
     { id: 'ranking', label: '排行榜' },
 ];
+function isSourceID(value) {
+    return SOURCES.some((item) => item.id === value);
+}
 /** 长按菜单。身份是静态的，可用性按行覆盖——这条纪律与宿主 `aibox.menu` 一致。 */
 const ROW_ACTIONS = [
     { id: 'share', title: '分享', icon: 'square.and.arrow.up' },
@@ -25,7 +29,7 @@ const ROW_ACTIONS = [
 export default function FeedPage({ onOpen }) {
     const [source, setSource] = React.useState('recommend');
     const [items, setItems] = React.useState([]);
-    const [state, setState] = React.useState('loading'); // loading | ready | error
+    const [state, setState] = React.useState('loading');
     const [error, setError] = React.useState('');
     // 权限没开与网络挂了是两种错：前者「重试」按钮点一万次也没用，得让用户去能力中心。
     const [needsPermission, setNeedsPermission] = React.useState(false);
@@ -61,12 +65,14 @@ export default function FeedPage({ onOpen }) {
                 toast('没有更多了');
                 return;
             }
-            setNeedsPermission(!!err?.permission);
-            setError(String(err?.message || err));
+            setNeedsPermission(err instanceof Error && !!err.permission);
+            setError(errorMessage(err));
             setState('error');
         }
     }, []);
-    React.useEffect(() => { load(source); }, [source, load]);
+    React.useEffect(() => {
+        load(source);
+    }, [source, load]);
     const handleAction = React.useCallback(async ({ rowId, actionId }) => {
         const video = items.find((v) => v.bvid === rowId);
         if (!video)
@@ -88,10 +94,15 @@ export default function FeedPage({ onOpen }) {
         contextMenu: ROW_ACTIONS,
         onAction: handleAction,
     });
-    const header = (_jsx(Segmented, { items: SOURCES, value: source, onChange: setSource }));
+    const header = (_jsx(Segmented, { items: SOURCES, value: source, onChange: (value) => {
+            if (isSourceID(value))
+                setSource(value);
+        } }));
     if (state === 'error') {
         return (_jsxs("div", { style: { height: '100%', background: C.bg }, children: [header, _jsx(EmptyState, { title: needsPermission ? '还没有联网权限' : '加载失败', detail: error, actionLabel: needsPermission ? '我已开启，重新加载' : '重试', onAction: () => load(source) })] }));
     }
-    return (_jsx(VirtualList, { className: "bl-scroll", style: { height: '100%', background: C.bg }, regionId: "feed", items: items, keyExtractor: (v) => v.bvid, estimatedRowHeight: CARD_HEIGHT, restoreKey: `feed:${source}`, header: header, empty: state === 'loading' ? _jsx(Spinner, {}) : _jsx(EmptyState, { title: "\u8FD9\u91CC\u8FD8\u6CA1\u6709\u5185\u5BB9" }), footer: _jsx("div", { style: { height: SPACE.s6 } }), onVisibleRowsChange: gestures.onVisibleRowsChange, onEndReached: () => { if (source === 'recommend' && state === 'ready')
-            load('recommend', true); }, renderRow: (video) => _jsx(VideoCard, { video: video, onOpen: onOpen }) }));
+    return (_jsx(VirtualList, { className: "bl-scroll", style: { height: '100%', background: C.bg }, regionId: "feed", items: items, keyExtractor: (v) => v.bvid, estimatedRowHeight: CARD_HEIGHT, restoreKey: `feed:${source}`, header: header, empty: state === 'loading' ? _jsx(Spinner, {}) : _jsx(EmptyState, { title: "\u8FD9\u91CC\u8FD8\u6CA1\u6709\u5185\u5BB9" }), footer: _jsx("div", { style: { height: SPACE.s6 } }), onVisibleRowsChange: gestures.onVisibleRowsChange, onEndReached: () => {
+            if (source === 'recommend' && state === 'ready')
+                load('recommend', true);
+        }, renderRow: (video) => _jsx(VideoCard, { video: video, onOpen: onOpen }) }));
 }

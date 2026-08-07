@@ -13,11 +13,5 @@
   "category": "media",
   "author": "AiBox",
   "minHostVersion": "1.0.0",
-  "tags": [
-    "music",
-    "player",
-    "apple-music",
-    "lyrics",
-    "queue"
-  ]
+  "tags": ["music", "player", "apple-music", "lyrics", "queue"]
 }

@@ -20,7 +20,7 @@ import BudgetPage from './components/BudgetPage.js';
 import ProjectsPage from './components/ProjectsPage.js';
 import ProjectDetail from './components/ProjectDetail.js';
 import { KIND, LedgerStore } from './lib/store.js';
-import { deleteEntry, purgeEntry, recordEntry, recordTransfer, restoreEntry, updateEntry, } from './lib/entries.js';
+import { deleteEntry, purgeEntry, recordEntry, recordTransfer, restoreEntry, updateEntry } from './lib/entries.js';
 import { activateProject, addCurrency, addMember, applyFetchedRates, archiveAccount, removeMember, setBaseCurrency, updateProject, } from './lib/entities.js';
 import { recordSettlement } from './lib/split.js';
 import { fetchRates } from './lib/fx.js';
@@ -77,9 +77,7 @@ export default function App() {
     // 子页标题在 push 那一刻要用最新的翻译函数，而 push 回调是稳定的 —— 经 ref 取值。
     const tRef = React.useRef(t);
     tRef.current = t;
-    const storeRef = React.useRef(null);
-    if (storeRef.current === null)
-        storeRef.current = new LedgerStore();
+    const storeRef = React.useRef(new LedgerStore());
     const store = storeRef.current;
     const [ready, setReady] = React.useState(false);
     const [tab, setTab] = React.useState('transactions');
@@ -99,7 +97,12 @@ export default function App() {
     const [shell, setShell] = React.useState({ tabs: false, toolbar: false, search: false });
     const [caps, setCaps] = React.useState({ ai: false, picker: false, share: false });
     const submitRef = React.useRef(() => ({ valid: false }));
-    React.useEffect(() => store.subscribe(rerender), [store, rerender]);
+    React.useEffect(() => {
+        const unsubscribe = store.subscribe(rerender);
+        return () => {
+            unsubscribe();
+        };
+    }, [store, rerender]);
     React.useEffect(() => onLocaleChanged(setLocale), []);
     // 启动：**先拿到 locale 再开库** —— 首启种子分类/账户名按当时的 App 内语言物化，之后永不回灌。
     React.useEffect(() => {
@@ -110,7 +113,9 @@ export default function App() {
                 setReady(true);
         };
         boot();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [store]);
     // 能力探测：拿不到就整块不渲染入口。
     React.useEffect(() => {
@@ -126,13 +131,17 @@ export default function App() {
             });
         };
         probe();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
     const labels = React.useMemo(() => ({
-        uncategorized: t('x.uncategorized'), noTag: t('x.noTag'), noProject: t('x.noProject'),
+        uncategorized: t('x.uncategorized'),
+        noTag: t('x.noTag'),
+        noProject: t('x.noProject'),
     }), [t]);
     // 8 个 AI 工具（延迟工具，headless 可用）。
-    const contextRef = React.useRef(null);
+    const contextRef = React.useRef({ store, locale, labels });
     contextRef.current = { store, locale, labels };
     React.useEffect(() => registerLedgerActions(() => contextRef.current), []);
     // —— 写操作：**每一步都看 lastMutationSucceeded** ——
@@ -171,11 +180,13 @@ export default function App() {
                     const state = await api.tabs.getState();
                     if (!cancelled && state && state.rendered) {
                         setShell((current) => ({ ...current, tabs: true }));
-                        if (state.selected)
+                        if (isTabID(state.selected))
                             setTab(state.selected);
                     }
                 }
-                catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
+                catch (error) {
+                    /* 宿主没这能力：留给自绘 TabBar */
+                }
                 offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
                     if (!state)
                         return;
@@ -183,7 +194,7 @@ export default function App() {
                     // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
                     const rendered = state.rendered !== false;
                     setShell((current) => (current.tabs === rendered ? current : { ...current, tabs: rendered }));
-                    if (state.selected) {
+                    if (isTabID(state.selected)) {
                         setTab(state.selected);
                         resetRef.current();
                     }
@@ -200,24 +211,41 @@ export default function App() {
                         }));
                     }
                 }
-                catch (error) { /* 同上 */ }
+                catch (error) {
+                    /* 同上 */
+                }
                 offs.push(onNamespaceEvent('toolbar', 'searchChanged', (payload) => {
                     setQuery(String((payload && payload.query) || ''));
                 }));
             }
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, []);
     // ⋯ 菜单里的四项经 manifest.actions + scene.menu 落到这些回调（每轮重注册，闭包总是最新的）。
     React.useEffect(() => {
         const api = window.aibox;
         if (!api || !api.action || typeof api.action.register !== 'function')
             return;
-        api.action.register('openAI', () => { setSheet({ kind: 'ai' }); return null; });
-        api.action.register('exportCSV', () => { doExport(); return null; });
-        api.action.register('importCSV', () => { doImport(); return null; });
-        api.action.register('openRecentlyDeleted', () => { setSheet({ kind: 'recentlyDeleted' }); return null; });
+        api.action.register('openAI', () => {
+            setSheet({ kind: 'ai' });
+            return null;
+        });
+        api.action.register('exportCSV', () => {
+            doExport();
+            return null;
+        });
+        api.action.register('importCSV', () => {
+            doImport();
+            return null;
+        });
+        api.action.register('openRecentlyDeleted', () => {
+            setSheet({ kind: 'recentlyDeleted' });
+            return null;
+        });
     });
     // 顶栏标题 + ⋯ 菜单项的显示状态。
     React.useEffect(() => {
@@ -228,13 +256,15 @@ export default function App() {
         if (api && api.navigation && typeof api.navigation.setTitle === 'function')
             api.navigation.setTitle(title);
         if (api && api.menu && typeof api.menu.update === 'function') {
-            api.menu.update({
+            api.menu
+                .update({
                 items: {
                     openAI: { hidden: !caps.ai },
                     exportCSV: { hidden: !caps.share },
                     importCSV: { hidden: !caps.picker, enabled: store.canMutate },
                 },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
     }, [tab, route, caps, store, store.revision, t]); // eslint-disable-line react-hooks/exhaustive-deps
     const actions = React.useMemo(() => ({
@@ -252,7 +282,10 @@ export default function App() {
             // ⚠️ 撤销条**没有自动消失定时器** —— 只有点「撤销」才收起，照抄原生。
             setUndo({ id: txn.id });
         },
-        restoreEntry: async (txn) => { await restoreEntry(store, txn.id); await failIfNeeded(); },
+        restoreEntry: async (txn) => {
+            await restoreEntry(store, txn.id);
+            await failIfNeeded();
+        },
         purgeEntry: async (txn) => {
             const confirmed = await nativeConfirm({
                 title: t('del.permanentlyQ'),
@@ -265,8 +298,14 @@ export default function App() {
             await purgeEntry(store, txn.id);
             await failIfNeeded();
         },
-        clearCurrentProject: async () => { await activateProject(store, null); await failIfNeeded(); },
-        activateProject: async (project) => { await activateProject(store, project.id); await failIfNeeded(); },
+        clearCurrentProject: async () => {
+            await activateProject(store, null);
+            await failIfNeeded();
+        },
+        activateProject: async (project) => {
+            await activateProject(store, project.id);
+            await failIfNeeded();
+        },
         archiveProject: async (project, archived) => {
             await updateProject(store, project.id, { isArchived: archived });
             await failIfNeeded();
@@ -280,7 +319,10 @@ export default function App() {
         },
         openAccount: (account) => setRoute({ name: 'account', id: account.id }),
         editAccount: (account) => setSheet({ kind: 'account', editing: account }),
-        archiveAccount: async (account) => { await archiveAccount(store, account.id, true); await failIfNeeded(); },
+        archiveAccount: async (account) => {
+            await archiveAccount(store, account.id, true);
+            await failIfNeeded();
+        },
         reconcileAccount: (account) => setSheet({ kind: 'reconcile', account }),
         openCurrencies: () => setSheet({ kind: 'currencies' }),
         openAddCurrency: () => setSheet({ kind: 'addCurrency' }),
@@ -295,7 +337,10 @@ export default function App() {
             setSheet({ kind: 'currencies' });
         },
         editRate: (code) => setSheet({ kind: 'rate', code }),
-        setBaseCurrency: async (code) => { await setBaseCurrency(store, code); await failIfNeeded(); },
+        setBaseCurrency: async (code) => {
+            await setBaseCurrency(store, code);
+            await failIfNeeded();
+        },
         refreshRates: async () => {
             const rates = await fetchRates(store.baseCode, httpGetJSON);
             if (!rates)
@@ -314,7 +359,10 @@ export default function App() {
             setSheet({ kind: 'member', projectID: project.id, editing: null });
         },
         editMember: (member) => setSheet({ kind: 'member', projectID: member.projectID, editing: member }),
-        removeMember: async (member) => { await removeMember(store, member.id); await failIfNeeded(); },
+        removeMember: async (member) => {
+            await removeMember(store, member.id);
+            await failIfNeeded();
+        },
         settleUp: async (project, row) => {
             const from = store.member(row.fromMemberID);
             const to = store.member(row.toMemberID);
@@ -352,10 +400,15 @@ export default function App() {
                 }
                 return true;
             }
+            if (payload.type === 'transfer' && !payload.toAccountID) {
+                await nativeAlert({ title: t('ent.saveFailedTitle'), message: t('ent.saveFailedBody') });
+                return false;
+            }
+            const transferDestinationID = payload.toAccountID ?? '';
             const result = payload.type === 'transfer'
                 ? await recordTransfer(store, {
                     fromAccountID: payload.accountID,
-                    toAccountID: payload.toAccountID,
+                    toAccountID: transferDestinationID,
                     amountMinor: payload.amountMinor,
                     occurredOn: payload.occurredOn,
                     note: payload.note,
@@ -393,7 +446,15 @@ export default function App() {
     }), [store, t, failIfNeeded]);
     const canMutate = store.canMutate;
     const ctx = React.useMemo(() => ({
-        store, t, locale, query, monthKey, canMutate, actions, labels, storeRevision: store.revision,
+        store,
+        t,
+        locale,
+        query,
+        monthKey,
+        canMutate,
+        actions,
+        labels,
+        storeRevision: store.revision,
     }), [store, store.revision, t, locale, query, monthKey, canMutate, actions, labels]); // eslint-disable-line react-hooks/exhaustive-deps
     const currentTab = TABS.find((row) => row.id === tab) ?? TABS[0];
     // FAB 隐藏条件：只读，或「在项目 Tab 且已 push 进项目详情页」（详情页底部有自己的主按钮）。
@@ -415,9 +476,10 @@ export default function App() {
         if (api && api.tabs && typeof api.tabs.select === 'function')
             api.tabs.select(next).catch(() => { });
     };
-    return (_jsxs("div", { className: "lg-root", children: [!shell.toolbar ? (_jsx(NavBar, { title: route ? routeTitle(route, store, t) : t(currentTab.titleKey), onBack: route ? subpages.back : undefined, backLabel: t('x.close'), trailing: !route && !shell.toolbar ? (_jsxs(_Fragment, { children: [caps.ai ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('menu.ai'), onClick: () => setSheet({ kind: 'ai' }) })) : null, _jsx(ToolbarButton, { icon: "ellipsis", label: t('x.moreActions'), tint: C.ink, onClick: () => setMenuItems(overflowItems({ t, caps, canMutate, setSheet, doExport, doImport })) })] })) : null })) : null, !canMutate && ready ? _jsx(ReadOnlyBanner, { title: t('readonly.title'), body: t('readonly.body') }) : null, !route && !shell.search && tab === 'transactions' ? (_jsx(SearchField, { value: query, onChange: setQuery, placeholder: t('tx.search') })) : null, !ready ? _jsx("div", { className: "lg-scroll" }) : (route ? (route.name === 'account'
-                ? _jsx(AccountDetail, { ctx: ctx, accountID: route.id })
-                : _jsx(ProjectDetail, { ctx: ctx, projectID: route.id })) : (_jsxs(_Fragment, { children: [tab === 'transactions' ? _jsx(TransactionsPage, { ctx: ctx }) : null, tab === 'reports' ? _jsx(ReportsPage, { ctx: ctx }) : null, tab === 'accounts' ? _jsx(AccountsPage, { ctx: ctx }) : null, tab === 'budget' ? _jsx(BudgetPage, { ctx: ctx }) : null, tab === 'projects' ? _jsx(ProjectsPage, { ctx: ctx }) : null] }))), undo ? (_jsx(UndoBar, { message: t('tx.deleted'), actionLabel: t('tx.undo'), bottomOffset: shell.tabs ? 8 : 68, onUndo: async () => { await restoreEntry(store, undo.id); setUndo(null); } })) : null, showFAB ? _jsx(FAB, { label: t(FAB_LABEL[tab]), onClick: onFAB }) : null, !shell.tabs ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', background: C.bg, flex: '0 0 auto' } })), _jsx(Menu, { open: !!menuItems, onClose: () => setMenuItems(null), items: menuItems ?? [] }), _jsx(Sheets, { sheet: sheet, setSheet: setSheet, ctx: ctx, submitRef: submitRef, failIfNeeded: failIfNeeded })] }));
+    return (_jsxs("div", { className: "lg-root", children: [!shell.toolbar ? (_jsx(NavBar, { title: route ? routeTitle(route, store, t) : t(currentTab.titleKey), onBack: route ? subpages.back : undefined, backLabel: t('x.close'), trailing: !route && !shell.toolbar ? (_jsxs(_Fragment, { children: [caps.ai ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('menu.ai'), onClick: () => setSheet({ kind: 'ai' }) })) : null, _jsx(ToolbarButton, { icon: "ellipsis", label: t('x.moreActions'), tint: C.ink, onClick: () => setMenuItems(overflowItems({ t, caps, canMutate, setSheet, doExport, doImport })) })] })) : null })) : null, !canMutate && ready ? _jsx(ReadOnlyBanner, { title: t('readonly.title'), body: t('readonly.body') }) : null, !route && !shell.search && tab === 'transactions' ? (_jsx(SearchField, { value: query, onChange: setQuery, placeholder: t('tx.search') })) : null, !ready ? (_jsx("div", { className: "lg-scroll" })) : route ? (route.name === 'account' ? (_jsx(AccountDetail, { ctx: ctx, accountID: route.id })) : (_jsx(ProjectDetail, { ctx: ctx, projectID: route.id }))) : (_jsxs(_Fragment, { children: [tab === 'transactions' ? _jsx(TransactionsPage, { ctx: ctx }) : null, tab === 'reports' ? _jsx(ReportsPage, { ctx: ctx }) : null, tab === 'accounts' ? _jsx(AccountsPage, { ctx: ctx }) : null, tab === 'budget' ? _jsx(BudgetPage, { ctx: ctx }) : null, tab === 'projects' ? _jsx(ProjectsPage, { ctx: ctx }) : null] })), undo ? (_jsx(UndoBar, { message: t('tx.deleted'), actionLabel: t('tx.undo'), bottomOffset: shell.tabs ? 8 : 68, onUndo: async () => {
+                    await restoreEntry(store, undo.id);
+                    setUndo(null);
+                } })) : null, showFAB ? _jsx(FAB, { label: t(FAB_LABEL[tab]), onClick: onFAB }) : null, !shell.tabs ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', background: C.bg, flex: '0 0 auto' } })), _jsx(Menu, { open: !!menuItems, onClose: () => setMenuItems(null), items: menuItems ?? [] }), _jsx(Sheets, { sheet: sheet, setSheet: setSheet, ctx: ctx, submitRef: submitRef, failIfNeeded: failIfNeeded })] }));
 }
 /** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
 function routePath(route) {
@@ -431,4 +493,11 @@ function routeTitle(route, store, t) {
     if (route.name === 'account')
         return store.account(route.id)?.name ?? t('tab.accounts');
     return store.project(route.id)?.name ?? t('tab.projects');
+}
+function isTabID(value) {
+    return (value === 'transactions' ||
+        value === 'reports' ||
+        value === 'accounts' ||
+        value === 'budget' ||
+        value === 'projects');
 }

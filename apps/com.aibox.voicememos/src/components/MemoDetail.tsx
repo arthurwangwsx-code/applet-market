@@ -11,264 +11,48 @@
 //  · 转写来自 `aibox.audio.transcribe`，**带时间戳分段** → 原文 Tab 可以点句跳转、章节可以定位；
 //  · 播放是页面自己的 `<audio>` → 有真 scrubber、有已播时间、进度与波形逐帧同步。
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { correct, summarize, translate, speakerDisplayName, TRANSLATION_LANGS, LANG_NAME, type TranslationLang } from '../lib/ai.js'
-import { clockFlat, clockString, hashText } from '../lib/format.js'
-import { chapters as generateChapters } from '../lib/ai.js'
+import { useMemo, useState } from 'react'
 import {
-  listClips, loadArtifacts, localeTag, saveArtifacts, saveClip, transcribeClip,
-} from '../lib/memos.js'
+  correct,
+  summarize,
+  translate,
+  speakerDisplayName,
+  TRANSLATION_LANGS,
+  LANG_NAME,
+  type TranslationLang,
+} from '../lib/ai.js'
+import { clockString, hashText } from '../lib/format.js'
+import { saveArtifacts } from '../lib/memos.js'
 import type { T } from '../lib/strings.js'
 import { RADIUS, SPACE, alpha, speakerPalette, type Palette } from '../lib/theme.js'
 import type {
-  ActionItem, Chapter, Memo, MemoArtifacts, MemoTranscript, Settings, SpeakerMode, SummaryTemplate,
-  TranscriptSegment,
+  ActionItem,
+  Chapter,
+  MemoArtifacts,
+  MemoTranscript,
+  Settings,
+  SpeakerMode,
+  SummaryTemplate,
 } from '../lib/types.js'
-import { EmptyState, Icon, PrimaryButton, PushPage, SecondaryButton, Sheet } from './primitives.js'
-
-type DetailTab = 'summary' | 'original' | 'corrected' | 'translation'
+import { EmptyState, Icon, SecondaryButton, Sheet } from './primitives.js'
+import type { DetailContext, DetailTab } from './MemoDetailTypes.js'
 
 const TEMPLATES: SummaryTemplate[] = ['general', 'meeting', 'interview', 'oneOnOne', 'lecture', 'podcast']
 
-export function MemoDetail(props: {
-  palette: Palette
-  t: T
-  dark: boolean
-  memo: Memo
-  settings: Settings
-  onBack: () => void
-  /** 自绘 ⋯ 的入口。宿主有系统菜单时不再渲染那颗按钮，本回调也就不会被调到。 */
-  onMenu: (context: DetailContext) => void
-  /**
-   * 持续上报当前详情上下文。系统 ⋯ 菜单由宿主绘制，弹出那一刻不经过页面 ——
-   * 哪几项该可见必须**提前**配好，不能等用户点了才算。
-   */
-  onContext?: (context: DetailContext | null) => void
-  /** 宿主有系统 ⋯ 菜单。true = 不画页内那颗 ⋯（否则真机上是「系统 ⋯ 旁边挂个假 ⋯」）。 */
-  hostMenu?: boolean
-  onRefresh: () => void
-  /** 把「播放器指令入口」交给根视图（宿主侧的控件点击经它落到真 `<audio>`）。 */
-  registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
-  /** 宿主画了导航栏（返回键 + 标题）就不自绘。 */
-  chrome?: boolean
-}) {
-  const { palette, t, memo } = props
-  const [transcript, setTranscript] = useState<MemoTranscript | null>(null)
-  const [artifacts, setArtifacts] = useState<MemoArtifacts | null>(null)
-  const [tab, setTab] = useState<DetailTab | null>(null)
-  const [chaptersBusy, setChaptersBusy] = useState(false)
-  const [transcribing, setTranscribing] = useState(false)
-  const [segments, setSegments] = useState<TranscriptSegment[]>([])
-  const [error, setError] = useState('')
-  /** 播放器的 seek 出口。章节 / 分段点击都经它跳转——1.x 这条线在宿主播放器上根本不存在。 */
-  const seekRef = useRef<((seconds: number) => void) | null>(null)
-
-  // 载入转写 + applet 侧衍生产物。转写现在长在剪辑记录上，不再有第二个数据源。
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const clip = (await listClips()).find((item) => item.id === memo.id)
-      if (cancelled) return
-      const next: MemoTranscript | null = clip?.transcriptText
-        ? {
-            status: clip.transcriptStatus ?? 'completed',
-            fullText: clip.transcriptText,
-            locale: clip.transcriptLocale ?? '',
-            isEdited: false,
-            segmentCount: clip.transcriptSegments?.length ?? 0,
-          }
-        : clip
-          ? { status: clip.transcriptStatus ?? 'none', fullText: '', locale: '', isEdited: false, segmentCount: 0 }
-          : null
-      setTranscript(next)
-      setSegments(clip?.transcriptSegments ?? [])
-      const loaded = await loadArtifacts(memo.id, next?.fullText ?? '')
-      if (cancelled) return
-      setArtifacts(loaded)
-      // 首次进入默认 Tab：只判一次，不打断用户后续手动切换。
-      setTab((current) => current ?? (loaded.summaryText ? 'summary' : 'original'))
-    })()
-    return () => { cancelled = true }
-  }, [memo.id])
-
-  const text = transcript?.fullText ?? ''
-  const context: DetailContext = {
-    memo, transcript, artifacts, setArtifacts, text, segments,
-    seek: (seconds) => seekRef.current?.(seconds),
-  }
-
-  // 上报给根视图配系统 ⋯ 菜单。**按签名而不是按 context 触发**：context 每帧重建，
-  // 直接进依赖数组就是每帧过一次桥。签名里只放真正影响菜单可见性的几件事。
-  const contextRef = useRef(context)
-  contextRef.current = context
-  const onContextRef = useRef(props.onContext)
-  onContextRef.current = props.onContext
-  const menuSignature = `${memo.id}|${text.trim() ? 1 : 0}|${artifacts?.summaryText ? 1 : 0}`
-  useEffect(() => {
-    onContextRef.current?.(contextRef.current)
-  }, [menuSignature])
-  // 离开详情页把菜单项收回去 —— 留着的话在列表页点 ⋯ 会看到一整排「对哪条录音操作？」的孤儿项。
-  useEffect(() => () => { onContextRef.current?.(null) }, [])
-
-  /** 转写这一条录音。同步等待到出结果——宿主侧每个 applet 同时只允许一条，排队没有意义。 */
-  const runTranscription = async () => {
-    const clip = (await listClips()).find((item) => item.id === memo.id)
-    if (!clip?.handle || transcribing) return
-    setTranscribing(true)
-    setError('')
-    const outcome = await transcribeClip(clip.handle, localeTag(props.settings.transcribeLocale))
-    setTranscribing(false)
-    if (!outcome.ok) {
-      setTranscript({ status: 'failed', fullText: '', locale: '', isEdited: false, segmentCount: 0 })
-      setError(outcome.error)
-      const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip
-      await saveClip({ ...latest, transcriptStatus: 'failed' })
-      return
-    }
-    const latest = (await listClips()).find((item) => item.id === memo.id) ?? clip
-    await saveClip({
-      ...latest,
-      transcriptText: outcome.text,
-      transcriptLocale: outcome.locale,
-      transcriptSegments: outcome.segments,
-      transcriptStatus: 'completed',
-    })
-    setTranscript({
-      status: 'completed', fullText: outcome.text, locale: outcome.locale,
-      isEdited: false, segmentCount: outcome.segments.length,
-    })
-    setSegments(outcome.segments)
-    props.onRefresh()
-  }
-
-  // 详情页自动跑（规格 §13.7）：**只补空、不重复、不覆盖**用户已生成/已改的结果。
-  useEffect(() => {
-    if (!artifacts || !text.trim()) return
-    if (!props.settings.autoSummarize) return
-    if (artifacts.summaryStatus !== 'none') return
-    void runSummary(context, props.settings.defaultTemplate, setError)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artifacts?.memoID, text, props.settings.autoSummarize])
-
-  const status = transcribing ? 'inProgress' : (transcript?.status ?? 'none')
-
-  return (
-    <PushPage
-      palette={palette}
-      title={memo.title}
-      onBack={props.onBack}
-      chrome={props.chrome}
-      trailing={props.hostMenu ? undefined : <MoreButton palette={palette} onClick={() => props.onMenu(context)} />}
-      footer={
-        <ClipPlayer
-          palette={palette}
-          t={t}
-          memo={memo}
-          onSeekReady={(seek) => { seekRef.current = seek }}
-          registerPlayerCommand={props.registerPlayerCommand}
-        />
-      }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-        {!memo.hasAudio ? (
-          <div style={{ background: alpha(palette.orange, 0.1), padding: `${SPACE.s3}px ${SPACE.s4}px` }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: palette.orange }}>
-              <Icon name="waveform.slash" size={13} /> {t('audioRemovedTitle')}
-            </div>
-            <div style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>{t('audioRemovedBody')}</div>
-          </div>
-        ) : null}
-
-        {status === 'completed' ? (
-          <>
-            <TabStrip palette={palette} t={t} tab={tab ?? 'original'} artifacts={artifacts} onChange={setTab} />
-            <div style={{ flex: 1, padding: `${SPACE.s3}px ${SPACE.s5}px ${SPACE.s6}px` }}>
-              {(tab ?? 'original') === 'summary' ? (
-                <SummaryTab palette={palette} t={t} context={context} settings={props.settings} onError={setError} />
-              ) : null}
-              {(tab ?? 'original') === 'original' ? (
-                <OriginalTab
-                  palette={palette}
-                  t={t}
-                  transcript={transcript}
-                  chapters={artifacts?.chapters ?? []}
-                  chaptersBusy={chaptersBusy}
-                  hasAudio={memo.hasAudio}
-                  onSeek={(seconds) => seekRef.current?.(seconds)}
-                  onGenerateChapters={async () => {
-                    if (!artifacts) return
-                    setChaptersBusy(true)
-                    // 秒数用真实分段回查校准，不信模型编的时间戳（见 lib/ai.ts chapters 注释）。
-                    const next = await generateChapters(text, segments).catch(() => [] as Chapter[])
-                    setChaptersBusy(false)
-                    const merged = { ...artifacts, chapters: next, sourceHash: hashText(text) }
-                    setArtifacts(merged)
-                    await saveArtifacts(merged)
-                  }}
-                />
-              ) : null}
-              {(tab ?? 'original') === 'corrected' ? (
-                <CorrectedTab palette={palette} t={t} dark={props.dark} context={context} onError={setError} />
-              ) : null}
-              {(tab ?? 'original') === 'translation' ? (
-                <TranslationTab palette={palette} t={t} context={context} onError={setError} />
-              ) : null}
-              {error ? <div style={{ fontSize: 13, color: palette.red, marginTop: SPACE.s3 }}>{error}</div> : null}
-            </div>
-          </>
-        ) : null}
-
-        {status === 'pending' || status === 'inProgress' ? (
-          <Centered>
-            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink }}>{t('transcribingTitle')}</div>
-            <div style={{ fontSize: 14, color: palette.muted, marginTop: 6 }}>{t('transcribingBody')}</div>
-          </Centered>
-        ) : null}
-
-        {status === 'none' || status === 'failed' ? (
-          <Centered>
-            <Icon name={status === 'failed' ? 'warning' : 'bubble'} size={46} color={palette.accent} />
-            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>
-              {status === 'failed' ? t('transcribeFailedTitle') : t('noTranscriptTitle')}
-            </div>
-            <div style={{ fontSize: 14, color: palette.muted, marginTop: 6, maxWidth: 300 }}>
-              {status === 'failed' ? t('transcribeFailedBody') : t('noTranscriptBody')}
-            </div>
-            {memo.hasAudio ? (
-              <div style={{ marginTop: SPACE.s5 }}>
-                <PrimaryButton
-                  palette={palette}
-                  title={status === 'failed' ? t('retry') : t('transcribeAction')}
-                  onClick={() => void runTranscription()}
-                />
-              </div>
-            ) : null}
-          </Centered>
-        ) : null}
-
-      </div>
-    </PushPage>
-  )
-}
-
-export interface DetailContext {
-  memo: Memo
-  transcript: MemoTranscript | null
-  artifacts: MemoArtifacts | null
-  setArtifacts: (value: MemoArtifacts) => void
-  text: string
-  /** 带时间戳的转写分段。2.0.0 才有——1.x 的宿主工具只回 `segmentCount`。 */
-  segments: TranscriptSegment[]
-  /** 跳到某一秒。接的是页面自己的 `<audio>`，所以是真的精确跳转。 */
-  seek: (seconds: number) => void
-}
-
-function MoreButton(props: { palette: Palette; onClick: () => void }) {
+export function MoreButton(props: { palette: Palette; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={props.onClick}
-      style={{ border: 'none', background: 'transparent', color: props.palette.accent, fontSize: 17, cursor: 'pointer', width: 44, height: 44 }}
+      style={{
+        border: 'none',
+        background: 'transparent',
+        color: props.palette.accent,
+        fontSize: 17,
+        cursor: 'pointer',
+        width: 44,
+        height: 44,
+      }}
       aria-label="More"
     >
       <Icon name="ellipsis" size={17} />
@@ -276,16 +60,26 @@ function MoreButton(props: { palette: Palette; onClick: () => void }) {
   )
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
+export function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        textAlign: 'center',
+      }}
+    >
       {children}
     </div>
   )
 }
 
 /** 4 个 Tab 的胶囊栏。进度点长在标签上；**原文 Tab 永不显示进度点**。 */
-function TabStrip(props: {
+export function TabStrip(props: {
   palette: Palette
   t: T
   tab: DetailTab
@@ -310,12 +104,21 @@ function TabStrip(props: {
               type="button"
               onClick={() => props.onChange(item.id)}
               style={{
-                flex: 1, border: 'none', borderRadius: 999, padding: '7px 4px', cursor: 'pointer',
-                fontSize: 13, fontWeight: active ? 600 : 400,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                flex: 1,
+                border: 'none',
+                borderRadius: 999,
+                padding: '7px 4px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: active ? 600 : 400,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
                 color: active ? palette.onAccent : palette.muted,
                 background: active ? palette.accent : 'transparent',
-                whiteSpace: 'nowrap', overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
               }}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
@@ -330,7 +133,11 @@ function TabStrip(props: {
 
 // —— 摘要 Tab（§4.8） ——
 
-async function runSummary(context: DetailContext, template: SummaryTemplate, onError: (message: string) => void): Promise<void> {
+export async function runSummary(
+  context: DetailContext,
+  template: SummaryTemplate,
+  onError: (message: string) => void,
+): Promise<void> {
   const base = context.artifacts
   if (!base || !context.text.trim()) return
   context.setArtifacts({ ...base, summaryStatus: 'generating', summaryTemplate: template })
@@ -352,7 +159,13 @@ async function runSummary(context: DetailContext, template: SummaryTemplate, onE
   }
 }
 
-function SummaryTab(props: { palette: Palette; t: T; context: DetailContext; settings: Settings; onError: (message: string) => void }) {
+export function SummaryTab(props: {
+  palette: Palette
+  t: T
+  context: DetailContext
+  settings: Settings
+  onError: (message: string) => void
+}) {
   const { palette, t, context } = props
   const [picking, setPicking] = useState(false)
   const artifacts = context.artifacts
@@ -367,9 +180,18 @@ function SummaryTab(props: { palette: Palette; t: T; context: DetailContext; set
           disabled={busy}
           onClick={() => setPicking(true)}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 999,
-            padding: '7px 11px', fontSize: 12, fontWeight: 500, cursor: busy ? 'default' : 'pointer',
-            color: palette.accent, background: alpha(palette.accent, 0.1), opacity: busy ? 0.5 : 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            border: 'none',
+            borderRadius: 999,
+            padding: '7px 11px',
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: busy ? 'default' : 'pointer',
+            color: palette.accent,
+            background: alpha(palette.accent, 0.1),
+            opacity: busy ? 0.5 : 1,
           }}
         >
           <Icon name="sparkles" size={12} /> {templateLabel(t, artifacts.summaryTemplate)}
@@ -389,7 +211,9 @@ function SummaryTab(props: { palette: Palette; t: T; context: DetailContext; set
           {artifacts.summaryPoints.length ? (
             <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {artifacts.summaryPoints.map((point, index) => (
-                <li key={index} style={{ fontSize: 15, color: palette.ink }}>{point}</li>
+                <li key={index} style={{ fontSize: 15, color: palette.ink }}>
+                  {point}
+                </li>
               ))}
             </ul>
           ) : null}
@@ -405,7 +229,9 @@ function SummaryTab(props: { palette: Palette; t: T; context: DetailContext; set
         ) : (
           <Centered>
             <Icon name="sparkles" size={40} color={palette.accent} />
-            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>{t('noSummaryTitle')}</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>
+              {t('noSummaryTitle')}
+            </div>
             <div style={{ fontSize: 14, color: palette.muted, marginTop: 6 }}>{t('noSummaryBody')}</div>
           </Centered>
         )
@@ -422,8 +248,15 @@ function SummaryTab(props: { palette: Palette; t: T; context: DetailContext; set
               void runSummary(context, template, props.onError)
             }}
             style={{
-              display: 'flex', width: '100%', alignItems: 'center', border: 'none', background: 'transparent',
-              padding: `12px ${SPACE.s4}px`, fontSize: 15, color: palette.ink, cursor: 'pointer',
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              border: 'none',
+              background: 'transparent',
+              padding: `12px ${SPACE.s4}px`,
+              fontSize: 15,
+              color: palette.ink,
+              cursor: 'pointer',
               borderBottom: `1px solid ${palette.line}`,
             }}
           >
@@ -450,7 +283,7 @@ function templateLabel(t: T, template: SummaryTemplate): string {
 
 // —— 原文 Tab（§4.3 的可实现子集） ——
 
-function OriginalTab(props: {
+export function OriginalTab(props: {
   palette: Palette
   t: T
   transcript: MemoTranscript | null
@@ -462,18 +295,32 @@ function OriginalTab(props: {
 }) {
   const { palette, t } = props
   const paragraphs = useMemo(
-    () => (props.transcript?.fullText ?? '').split(/\n+/).map((line) => line.trim()).filter(Boolean),
+    () =>
+      (props.transcript?.fullText ?? '')
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean),
     [props.transcript?.fullText],
   )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s4 }}>
       {props.transcript?.isEdited ? (
-        <div style={{ fontSize: 12, color: palette.muted }}><Icon name="pencil" size={11} /> {t('edited')}</div>
+        <div style={{ fontSize: 12, color: palette.muted }}>
+          <Icon name="pencil" size={11} /> {t('edited')}
+        </div>
       ) : null}
 
       {props.chaptersBusy ? (
-        <div style={{ background: palette.surface, borderRadius: RADIUS.field, padding: SPACE.s4, fontSize: 14, color: palette.muted }}>
+        <div
+          style={{
+            background: palette.surface,
+            borderRadius: RADIUS.field,
+            padding: SPACE.s4,
+            fontSize: 14,
+            color: palette.muted,
+          }}
+        >
           {t('findingChapters')}
         </div>
       ) : props.chapters.length ? (
@@ -488,8 +335,14 @@ function OriginalTab(props: {
               disabled={!props.hasAudio}
               onClick={() => props.onSeek(chapter.start)}
               style={{
-                display: 'flex', width: '100%', alignItems: 'center', gap: SPACE.s3, border: 'none',
-                background: 'transparent', padding: '7px 0', cursor: props.hasAudio ? 'pointer' : 'default',
+                display: 'flex',
+                width: '100%',
+                alignItems: 'center',
+                gap: SPACE.s3,
+                border: 'none',
+                background: 'transparent',
+                padding: '7px 0',
+                cursor: props.hasAudio ? 'pointer' : 'default',
               }}
             >
               <span style={{ flex: 1, textAlign: 'left', fontSize: 15, color: palette.ink }}>{chapter.title}</span>
@@ -520,7 +373,13 @@ function OriginalTab(props: {
 
 // —— 校正后 Tab（§4.9） ——
 
-function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: DetailContext; onError: (message: string) => void }) {
+export function CorrectedTab(props: {
+  palette: Palette
+  t: T
+  dark: boolean
+  context: DetailContext
+  onError: (message: string) => void
+}) {
   const { palette, t, context } = props
   const artifacts = context.artifacts
   const [mode, setMode] = useState<SpeakerMode>(artifacts?.correctionMode ?? 'auto')
@@ -565,7 +424,14 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
         <select
           value={mode}
           onChange={(event) => setMode(event.target.value as SpeakerMode)}
-          style={{ border: `1px solid ${palette.line}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, background: palette.surface, color: palette.ink }}
+          style={{
+            border: `1px solid ${palette.line}`,
+            borderRadius: 8,
+            padding: '6px 8px',
+            fontSize: 13,
+            background: palette.surface,
+            color: palette.ink,
+          }}
         >
           <option value="none">{t('speakerModeNone')}</option>
           <option value="auto">{t('speakerModeAuto')}</option>
@@ -586,7 +452,15 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
                 return next.slice(0, value)
               })
             }}
-            style={{ width: 56, border: `1px solid ${palette.line}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, background: palette.surface, color: palette.ink }}
+            style={{
+              width: 56,
+              border: `1px solid ${palette.line}`,
+              borderRadius: 8,
+              padding: '6px 8px',
+              fontSize: 13,
+              background: palette.surface,
+              color: palette.ink,
+            }}
           />
         ) : null}
         <div style={{ flex: 1 }} />
@@ -595,8 +469,14 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
           disabled={!context.text.trim()}
           onClick={run}
           style={{
-            border: 'none', borderRadius: 999, padding: '8px 14px', fontSize: 13, fontWeight: 500,
-            color: palette.onAccent, background: palette.accent, cursor: 'pointer',
+            border: 'none',
+            borderRadius: 999,
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 500,
+            color: palette.onAccent,
+            background: palette.accent,
+            cursor: 'pointer',
             opacity: busy ? 0.5 : context.text.trim() ? 1 : 0.4,
           }}
         >
@@ -608,17 +488,36 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
       {mode === 'named' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {new Array(count).fill(0).map((_, index) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2, background: palette.surface, borderRadius: 8, padding: '6px 10px' }}>
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.s2,
+                background: palette.surface,
+                borderRadius: 8,
+                padding: '6px 10px',
+              }}
+            >
               <span style={{ width: 8, height: 8, borderRadius: 4, background: colors[index % colors.length] }} />
               <input
                 value={names[index] ?? ''}
-                onChange={(event) => setNames((current) => {
-                  const next = [...current]
-                  next[index] = event.target.value
-                  return next
-                })}
+                onChange={(event) =>
+                  setNames((current) => {
+                    const next = [...current]
+                    next[index] = event.target.value
+                    return next
+                  })
+                }
                 placeholder={t('speakerName', { n: index + 1 })}
-                style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 14, color: palette.ink, outline: 'none' }}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: 14,
+                  color: palette.ink,
+                  outline: 'none',
+                }}
               />
             </div>
           ))}
@@ -630,7 +529,9 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
       {!busy && artifacts.correctionTurns.length ? (
         <>
           {artifacts.correctionStatus === 'stale' ? (
-            <div style={{ fontSize: 12, color: palette.muted }}><Icon name="warning" size={11} /> {t('staleTranscriptChanged')}</div>
+            <div style={{ fontSize: 12, color: palette.muted }}>
+              <Icon name="warning" size={11} /> {t('staleTranscriptChanged')}
+            </div>
           ) : null}
           <div style={{ fontSize: 11, color: palette.muted }}>{t('correctionNoTimestamps')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s3 }}>
@@ -649,7 +550,9 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
                       </span>
                     </div>
                   ) : null}
-                  <div style={{ fontSize: 17, lineHeight: 1.5, color: palette.ink, userSelect: 'text' }}>{turn.text}</div>
+                  <div style={{ fontSize: 17, lineHeight: 1.5, color: palette.ink, userSelect: 'text' }}>
+                    {turn.text}
+                  </div>
                 </div>
               )
             })}
@@ -666,7 +569,9 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
         ) : (
           <Centered>
             <Icon name="wand" size={40} color={palette.accent} />
-            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>{t('noCorrectionTitle')}</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>
+              {t('noCorrectionTitle')}
+            </div>
             <div style={{ fontSize: 14, color: palette.muted, marginTop: 6 }}>{t('noCorrectionBody')}</div>
           </Centered>
         )
@@ -677,7 +582,12 @@ function CorrectedTab(props: { palette: Palette; t: T; dark: boolean; context: D
 
 // —— 翻译 Tab（§4.10） ——
 
-function TranslationTab(props: { palette: Palette; t: T; context: DetailContext; onError: (message: string) => void }) {
+export function TranslationTab(props: {
+  palette: Palette
+  t: T
+  context: DetailContext
+  onError: (message: string) => void
+}) {
   const { palette, t, context } = props
   const artifacts = context.artifacts
   const [lang, setLang] = useState<TranslationLang>((artifacts?.translationLang as TranslationLang) ?? 'en')
@@ -692,7 +602,12 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
   const run = async () => {
     const base = context.artifacts
     if (!base) return
-    context.setArtifacts({ ...base, translationStatus: 'generating', translationLang: lang, translationBilingual: bilingual })
+    context.setArtifacts({
+      ...base,
+      translationStatus: 'generating',
+      translationLang: lang,
+      translationBilingual: bilingual,
+    })
     try {
       const text = await translate({ text: source, lang, bilingual })
       const next: MemoArtifacts = {
@@ -718,9 +633,20 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
         <select
           value={lang}
           onChange={(event) => setLang(event.target.value as TranslationLang)}
-          style={{ border: `1px solid ${palette.line}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, background: palette.surface, color: palette.ink }}
+          style={{
+            border: `1px solid ${palette.line}`,
+            borderRadius: 8,
+            padding: '6px 8px',
+            fontSize: 13,
+            background: palette.surface,
+            color: palette.ink,
+          }}
         >
-          {TRANSLATION_LANGS.map((code) => <option key={code} value={code}>{LANG_NAME[code]}</option>)}
+          {TRANSLATION_LANGS.map((code) => (
+            <option key={code} value={code}>
+              {LANG_NAME[code]}
+            </option>
+          ))}
         </select>
         <div style={{ flex: 1 }} />
         <button
@@ -728,8 +654,14 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
           disabled={!source.trim()}
           onClick={run}
           style={{
-            border: 'none', borderRadius: 999, padding: '8px 14px', fontSize: 13, fontWeight: 500,
-            color: palette.onAccent, background: palette.accent, cursor: 'pointer',
+            border: 'none',
+            borderRadius: 999,
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 500,
+            color: palette.onAccent,
+            background: palette.accent,
+            cursor: 'pointer',
             opacity: busy ? 0.5 : source.trim() ? 1 : 0.4,
           }}
         >
@@ -745,7 +677,12 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
             type="button"
             onClick={() => setBilingual(value)}
             style={{
-              flex: 1, border: 'none', borderRadius: 999, padding: '6px 0', fontSize: 13, cursor: 'pointer',
+              flex: 1,
+              border: 'none',
+              borderRadius: 999,
+              padding: '6px 0',
+              fontSize: 13,
+              cursor: 'pointer',
               color: bilingual === value ? palette.onAccent : palette.muted,
               background: bilingual === value ? palette.accent : 'transparent',
             }}
@@ -760,14 +697,22 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
       {!busy && artifacts.translationText ? (
         <>
           {artifacts.translationStatus === 'stale' ? (
-            <div style={{ fontSize: 12, color: palette.muted }}><Icon name="warning" size={11} /> {t('staleTranscriptChanged')}</div>
+            <div style={{ fontSize: 12, color: palette.muted }}>
+              <Icon name="warning" size={11} /> {t('staleTranscriptChanged')}
+            </div>
           ) : null}
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.s3 }}>
-            {artifacts.translationText.split(/\n+/).filter(Boolean).map((paragraph, index) => (
-              <p key={index} style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: palette.ink, userSelect: 'text' }}>
-                {paragraph}
-              </p>
-            ))}
+            {artifacts.translationText
+              .split(/\n+/)
+              .filter(Boolean)
+              .map((paragraph, index) => (
+                <p
+                  key={index}
+                  style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: palette.ink, userSelect: 'text' }}
+                >
+                  {paragraph}
+                </p>
+              ))}
           </div>
         </>
       ) : null}
@@ -775,279 +720,14 @@ function TranslationTab(props: { palette: Palette; t: T; context: DetailContext;
       {!busy && !artifacts.translationText ? (
         <Centered>
           <Icon name="globe" size={40} color={palette.accent} />
-          <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>{t('noTranslationTitle')}</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>
+            {t('noTranslationTitle')}
+          </div>
           <div style={{ fontSize: 14, color: palette.muted, marginTop: 6 }}>{t('noTranslationBody')}</div>
         </Centered>
       ) : null}
     </div>
   )
-}
-
-// —— transport 条（§4.5） ——
-
-function iconButton(palette: Palette): React.CSSProperties {
-  return {
-    width: 36, height: 36, borderRadius: 18, border: 'none', background: 'transparent',
-    color: palette.ink, cursor: 'pointer',
-  }
-}
-
-// —— 播放器（静态波形 + 精确 scrubber + 15s 跳转） ——
-//
-// 2.0.0 起这是**唯一**的播放器。1.x 还有一条遥控宿主播放器的分支，它读不到当前位置
-//（`memo_play/stop/seek` 只有这三下），所以那条线上既没有 scrubber 也没有已播时间，
-// 章节和分段点击更是无从跳起。现在音频字节就在手上，这些全部是真的。
-
-/**
- * 详情页播放器。**钉在页底**（`PushPage` 的 `footer`，滚动区之外），所以文稿多长它都在。
- *
- * 它曾经住在滚动内容的末尾 + 靠宿主悬浮条补救「看不到」：结果是长文稿要滚到底才够得着，而悬浮条
- * 又要等第一次交互才起来 —— 两条路一起失灵，播放区只剩一条光进度条。钉死是根治：不依赖另一层就位。
- */
-function ClipPlayer(props: {
-  palette: Palette
-  t: T
-  memo: Memo
-  /** 把 seek 出口交给页面（章节 / 分段点击经它跳转）。 */
-  onSeekReady: (seek: (seconds: number) => void) => void
-  registerPlayerCommand?: (handler: ((command: string) => void) | null) => void
-}) {
-  const { palette, t, memo } = props
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [position, setPosition] = useState(0)
-  const [duration, setDuration] = useState(memo.duration)
-  const [playing, setPlaying] = useState(false)
-  const [peaks, setPeaks] = useState<number[]>([])
-
-  // 静态波形：有音频字节就能 1:1 移植原生那套 peak + 自身最大值归一化。
-  useEffect(() => {
-    if (!memo.url) return
-    let cancelled = false
-    void (async () => {
-      const samples = await decodePeaks(memo.url as string, 240)
-      if (!cancelled) setPeaks(samples)
-    })()
-    return () => { cancelled = true }
-  }, [memo.url])
-
-  // seek 出口只在挂载时交一次；`currentTime` 的写入是即时的，不需要 state 中转。
-  useEffect(() => {
-    props.onSeekReady((seconds) => {
-      const audio = audioRef.current
-      if (!audio) return
-      const value = Math.max(0, seconds)
-      audio.currentTime = value
-      setPosition(value)
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const toggle = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (playing) { audio.pause(); setPlaying(false) } else { void audio.play(); setPlaying(true) }
-  }
-  const skip = (delta: number) => {
-    const audio = audioRef.current
-    if (!audio) return
-    const value = Math.max(0, Math.min(duration || audio.duration || 0, position + delta))
-    audio.currentTime = value
-    setPosition(value)
-  }
-  // overlay 上的控件点击落到这里。处理器每轮重挂（要闭包到最新的 playing / position）。
-  useEffect(() => {
-    if (!props.registerPlayerCommand) return undefined
-    props.registerPlayerCommand((command) => {
-      if (command === 'toggle') toggle()
-      else if (command === 'back15') skip(-15)
-      else if (command === 'forward15') skip(15)
-    })
-    return () => props.registerPlayerCommand?.(null)
-  })
-
-  // 钉在页底的一条，底下是滚动内容 —— 背景**必须不透明**（原来是 `alpha(surface, 0.9)`，
-  // 那是它还长在内容流末尾时的写法，钉住之后半透明会让文稿从波形底下透出来）。
-  // 上沿一条发丝线，与原生贴底工具条同款。
-  // ⚠️ `paddingBottom` 写在 `padding` 简写**之后** —— 反过来会被简写整个覆盖掉，安全区就白留了。
-  const dock = (top: number): React.CSSProperties => ({
-    background: palette.surface,
-    borderTop: `1px solid ${palette.line}`,
-    padding: `${top}px ${SPACE.s5}px ${SPACE.s3}px`,
-    paddingBottom: `calc(${SPACE.s3}px + env(safe-area-inset-bottom))`,
-  })
-
-  if (!memo.hasAudio) {
-    return (
-      <div style={{ ...dock(SPACE.s3), textAlign: 'center' }}>
-        <Icon name="waveform.slash" size={20} color={palette.muted} />
-        <div style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>{t('audioRemovedTitle')}</div>
-        <div style={{ fontSize: 12, color: palette.muted }}>{t('audioRemovedBody')}</div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ ...dock(SPACE.s4), display: 'flex', flexDirection: 'column', gap: SPACE.s3 }}>
-      <StaticWaveform palette={palette} peaks={peaks} progress={duration > 0 ? position / duration : 0} />
-
-      <audio
-        ref={audioRef}
-        src={memo.url}
-        preload="metadata"
-        onTimeUpdate={(event) => setPosition(event.currentTarget.currentTime)}
-        onLoadedMetadata={(event) => {
-          const value = event.currentTarget.duration
-          if (Number.isFinite(value) && value > 0) setDuration(value)
-        }}
-        onEnded={() => setPlaying(false)}
-        style={{ display: 'none' }}
-      />
-
-      <input
-        type="range"
-        min={0}
-        max={Math.max(duration, 0.1)}
-        step={0.1}
-        value={position}
-        onChange={(event) => {
-          const value = Number(event.target.value)
-          setPosition(value)
-          if (audioRef.current) audioRef.current.currentTime = value
-        }}
-        style={{ width: '100%', accentColor: palette.accent }}
-      />
-
-      {/* 走带键**常驻**。
-          这里曾经是「宿主画了悬浮播放条就把页内走带键整排 display:none」，理由是「两排播放键是控件重复」。
-          真机上的结果却是：进详情页只剩一条光秃秃的进度条，**没有任何播放/暂停可点**——悬浮条要等
-          第一次交互才起来（2026-08-04 反馈「音频播放板块没有暂停控制，只有在滑动进度条时才会出现播放控制」）。
-          判据因此改了：播放区是这一页的**主体控件**，它不能依赖另一层是否就位。悬浮条是「滚走了/离开页面
-          仍能控」的补充，不是它的替身；两者同时在场是原生播放页的常态（详情页走带 + 锁屏/迷你条）。 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.s3 }}>
-        <span style={{ fontSize: 12, color: palette.muted, minWidth: 38, fontFamily: 'ui-monospace, monospace' }}>
-          {clockFlat(position)}
-        </span>
-        {/* 三颗键一律走 `skip` / `toggle` —— 与悬浮条上的控件**同一份实现**。各写一遍的代价是
-            「页内点暂停停了、悬浮条上的图标还是播放中」这类两处状态对不上的毛病。 */}
-        <button
-          type="button"
-          onClick={() => skip(-15)}
-          style={iconButton(palette)}
-          aria-label="-15s"
-        >
-          <Icon name="gobackward" size={21} />
-        </button>
-        <button
-          type="button"
-          onClick={toggle}
-          style={{
-            width: 50, height: 50, borderRadius: 25, border: 'none', background: palette.accent,
-            color: palette.onAccent, fontSize: 20, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          }}
-          aria-label={playing ? t('pause') : t('play')}
-        >
-          <Icon name={playing ? 'pause' : 'play'} size={20} color={palette.onAccent} />
-        </button>
-        <button
-          type="button"
-          onClick={() => skip(15)}
-          style={iconButton(palette)}
-          aria-label="+15s"
-        >
-          <Icon name="goforward" size={21} />
-        </button>
-        <span style={{ fontSize: 12, color: palette.muted, minWidth: 38, textAlign: 'right', fontFamily: 'ui-monospace, monospace' }}>
-          -{clockFlat(Math.max(0, duration - position))}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-/**
- * 静态波形（规格 §11.3）：中心锚定、圆角 = barWidth/2、**已播/未播分色**、samples 为空时画一条基线
- * （行绝不塌陷）。
- */
-function StaticWaveform(props: { palette: Palette; peaks: number[]; progress: number }) {
-  const ref = useRef<HTMLCanvasElement | null>(null)
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
-    const dpr = window.devicePixelRatio || 1
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
-    if (width === 0 || height === 0) return
-    canvas.width = Math.floor(width * dpr)
-    canvas.height = Math.floor(height * dpr)
-    const context = canvas.getContext('2d')
-    if (!context) return
-    context.setTransform(dpr, 0, 0, dpr, 0, 0)
-    context.clearRect(0, 0, width, height)
-
-    // 未播放段的颜色**必须来自 palette**。这里曾经硬编码 `rgba(255,255,255,0.18)`（只在深色底上成立），
-    // 浅色模式下整条未播放波形是白底白条 = 看不见：屏幕上只剩已播的那一小截蓝色，看着像「波形只画了 1/5」
-    // （2026-08-04 真机截图的形状）。基线同理。
-    const idle = alpha(props.palette.muted, 0.32)
-
-    if (props.peaks.length === 0) {
-      context.fillStyle = idle
-      context.fillRect(0, height / 2 - 0.75, width, 1.5)
-      return
-    }
-    const barWidth = 3
-    const gap = Math.max(1, barWidth * 0.5)
-    const stride = barWidth + gap
-    const barCount = Math.max(1, Math.min(props.peaks.length, Math.floor(width / stride)))
-    const played = props.progress * width
-    const mid = height / 2
-    for (let index = 0; index < barCount; index += 1) {
-      const value = props.peaks[Math.floor((index / barCount) * props.peaks.length)] ?? 0
-      const barHeight = Math.max(height * 0.06, value * height)
-      const x = index * stride
-      context.fillStyle = x + barWidth / 2 <= played ? props.palette.accent : idle
-      // `roundRect` 在 iOS 17 的 WKWebView 上存在，但保留矩形兜底：少一个圆角好过整条波形不画。
-      const round = (context as CanvasRenderingContext2D & { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect
-      if (typeof round === 'function') {
-        context.beginPath()
-        round.call(context, x, mid - barHeight / 2, barWidth, barHeight, barWidth / 2)
-        context.fill()
-      } else {
-        context.fillRect(x, mid - barHeight / 2, barWidth, barHeight)
-      }
-    }
-  }, [props.peaks, props.progress, props.palette])
-  return <canvas ref={ref} style={{ width: '100%', height: 72, display: 'block' }} />
-}
-
-/** peak + **自身最大值归一化**（与原生 `MemoWaveformExtractor` 同一套算法）。 */
-async function decodePeaks(url: string, buckets: number): Promise<number[]> {
-  try {
-    const response = await fetch(url)
-    const bytes = await response.arrayBuffer()
-    const Ctor = (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
-    if (!Ctor) return []
-    const context = new Ctor()
-    const buffer = await context.decodeAudioData(bytes)
-    const channel = buffer.getChannelData(0)
-    const size = Math.max(1, Math.floor(channel.length / buckets))
-    const peaks: number[] = []
-    for (let index = 0; index < buckets; index += 1) {
-      let peak = 0
-      const start = index * size
-      for (let offset = 0; offset < size && start + offset < channel.length; offset += 1) {
-        // `?? 0`：内层条件已保证 `start + offset < channel.length`，`?? 0` 只是把它写给类型系统看。
-        const value = Math.abs(channel[start + offset] ?? 0)
-        if (value > peak) peak = value
-      }
-      peaks.push(peak)
-    }
-    void context.close()
-    const max = Math.max(...peaks, 0.0001)
-    return peaks.map((value) => value / max)
-  } catch {
-    return []
-  }
 }
 
 /** 极简 Markdown 渲染（`##` 段标题 + `-` 列表 + 段落）—— 模板摘要产出的就是这三种形态。 */
@@ -1066,7 +746,11 @@ function Markdown(props: { palette: Palette; text: string }) {
           )
         }
         if (trimmed.startsWith('# ')) {
-          return <div key={index} style={{ fontSize: 17, fontWeight: 700, color: props.palette.ink }}>{trimmed.slice(2)}</div>
+          return (
+            <div key={index} style={{ fontSize: 17, fontWeight: 700, color: props.palette.ink }}>
+              {trimmed.slice(2)}
+            </div>
+          )
         }
         if (trimmed.startsWith('- ')) {
           return (
@@ -1076,7 +760,11 @@ function Markdown(props: { palette: Palette; text: string }) {
             </div>
           )
         }
-        return <p key={index} style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: props.palette.ink }}>{stripBold(trimmed)}</p>
+        return (
+          <p key={index} style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: props.palette.ink }}>
+            {stripBold(trimmed)}
+          </p>
+        )
       })}
     </div>
   )

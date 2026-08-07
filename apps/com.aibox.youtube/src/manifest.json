@@ -23,21 +23,11 @@
       "i.ytimg.com",
       "ytimg.com"
     ],
-    "capabilities": [
-      "video",
-      "browser",
-      "share",
-      "clipboard",
-      "haptics",
-      "toast"
-    ]
+    "capabilities": ["video", "browser", "share", "clipboard", "haptics", "toast"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ],
+    "surfaces": ["page", "fullscreen"],
     "subpages": true
   },
   "actions": [
@@ -46,20 +36,11 @@
       "name": "search",
       "displayName": "搜索 YouTube",
       "summary": "Search YouTube for videos by keyword. Returns each match with its video id, title, channel, duration and view count. Pass a video id or url to the play action to watch one.",
-      "keywords": [
-        "youtube",
-        "油管",
-        "搜索youtube",
-        "找视频",
-        "search youtube"
-      ],
+      "keywords": ["youtube", "油管", "搜索youtube", "找视频", "search youtube"],
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"query\"],\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"What to search for.\"},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20,\"description\":\"How many results to return (default 10).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"videos\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "externalNetwork",
       "readOnly": true
     },
@@ -68,18 +49,11 @@
       "name": "play",
       "displayName": "播放 YouTube 视频",
       "summary": "Play a YouTube video on the native full-screen player, with lock-screen controls and picture-in-picture. Accepts a full watch url or a bare video id. The host resolves the stream and picks the best quality this build can actually play.",
-      "keywords": [
-        "播放youtube",
-        "看油管",
-        "play youtube"
-      ],
+      "keywords": ["播放youtube", "看油管", "play youtube"],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"A youtube.com/watch?v=... url.\"},\"videoId\":{\"type\":\"string\",\"description\":\"Bare video id, if you do not have the full url.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "mediaPlayback"
     }
   ],

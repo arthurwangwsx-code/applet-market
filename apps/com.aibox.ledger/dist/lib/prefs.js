@@ -22,12 +22,16 @@ function write(key, value) {
         if (typeof localStorage !== 'undefined')
             localStorage.setItem(key, value);
     }
-    catch (error) { /* 隐私模式等场景静默降级 */ }
+    catch (error) {
+        /* 隐私模式等场景静默降级 */
+    }
 }
 /** 按收支方向记住上次账户；账户被归档则回落默认账户。 */
 export function lastAccountID(store, direction) {
-    const key = direction === 'income' ? PREF_KEYS.lastIncomeAccountID
-        : direction === 'transfer' ? PREF_KEYS.lastTransferAccountID
+    const key = direction === 'income'
+        ? PREF_KEYS.lastIncomeAccountID
+        : direction === 'transfer'
+            ? PREF_KEYS.lastTransferAccountID
             : PREF_KEYS.lastExpenseAccountID;
     const stored = read(key);
     if (stored) {
@@ -41,8 +45,10 @@ export function lastAccountID(store, direction) {
 export function rememberAccount(direction, accountID) {
     if (!accountID)
         return;
-    const key = direction === 'income' ? PREF_KEYS.lastIncomeAccountID
-        : direction === 'transfer' ? PREF_KEYS.lastTransferAccountID
+    const key = direction === 'income'
+        ? PREF_KEYS.lastIncomeAccountID
+        : direction === 'transfer'
+            ? PREF_KEYS.lastTransferAccountID
             : PREF_KEYS.lastExpenseAccountID;
     write(key, accountID);
 }
@@ -52,7 +58,10 @@ export function recentCategories(kind) {
     const raw = read(key);
     if (!raw)
         return [];
-    return raw.split(',').map((piece) => piece.trim()).filter((piece) => piece.length > 0);
+    return raw
+        .split(',')
+        .map((piece) => piece.trim())
+        .filter((piece) => piece.length > 0);
 }
 export function rememberCategory(kind, categoryID) {
     if (!categoryID)
@@ -68,7 +77,7 @@ export function rememberCategory(kind, categoryID) {
 export function sortRootCategoriesByRecency(store, roots, kind) {
     const recents = recentCategories(kind);
     if (recents.length === 0)
-        return roots;
+        return [...roots];
     const score = new Map();
     recents.forEach((id, index) => {
         const rootID = store.rootCategoryID(id);
@@ -78,8 +87,8 @@ export function sortRootCategoriesByRecency(store, roots, kind) {
             score.set(rootID, index);
     });
     return [...roots].sort((a, b) => {
-        const left = score.has(a.id) ? score.get(a.id) : Number.MAX_SAFE_INTEGER;
-        const right = score.has(b.id) ? score.get(b.id) : Number.MAX_SAFE_INTEGER;
+        const left = score.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const right = score.get(b.id) ?? Number.MAX_SAFE_INTEGER;
         if (left !== right)
             return left - right;
         return a.sortOrder - b.sortOrder;

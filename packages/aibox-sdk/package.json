@@ -1,6 +1,6 @@
 {
   "name": "@aibox/applet-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AiBox 小应用前端 SDK：aibox.* 全量类型、能力探测与降级、错误规范化、net 便利封装、类型化 action、React hooks。",
   "license": "UNLICENSED",
   "type": "module",
@@ -30,7 +30,7 @@
     "build": "tsc -p tsconfig.build.json && node scripts-postbuild.mjs",
     "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node tests/gestures.test.mjs",
+    "test": "node tests/gestures.test.mjs && node tests/runtime.test.mjs",
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
+    "esbuild": "^0.25.0",
     "typescript": "^5.9.3"
   }
 }

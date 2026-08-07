@@ -2,7 +2,7 @@
   "name": "@aibox-app/viddl",
   "private": true,
   "version": "1.0.0",
-  "description": "视频下载 —— AiBox 小应用（源码型：JSX 开发、保结构 JS 产物）。",
+  "description": "视频下载 —— AiBox 小应用（严格 TS 开发、保结构 ESM 产物）。",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -11,7 +11,7 @@
     "check:build": "aibox-tsbuild --check"
   },
   "dependencies": {
-    "@aibox/applet-sdk": "^1.0.0"
+    "@aibox/applet-sdk": "^1.1.0"
   },
   "devDependencies": {
     "@aibox/applet-tsbuild": "^1.0.0",

@@ -40,6 +40,9 @@ const TABS = [
     { id: 'search', label: '搜索' },
     { id: 'mine', label: '我的' },
 ];
+function isTabID(value) {
+    return TABS.some((item) => item.id === value);
+}
 /**
  * 底部 Tab。身份在 manifest 里声明（宿主渲染真原生 TabBar），这里只接选中事件。
  * 宿主没渲染出来时回落自绘条——**永远不能只有原生一条路**，否则在不支持的表面上没法切页。
@@ -56,7 +59,7 @@ function useTabs(initial) {
             try {
                 const state = await api.tabs.getState?.();
                 setNative(!!state?.rendered);
-                if (state?.selected)
+                if (state?.selected && isTabID(state.selected))
                     setTab(state.selected);
             }
             catch {
@@ -65,35 +68,52 @@ function useTabs(initial) {
             try {
                 // 事件名是 'changed'，回调收的是整个 State（不是 {id}）。
                 off = api.tabs.on?.('changed', (state) => {
-                    if (state?.selected)
+                    if (state?.selected && isTabID(state.selected))
                         setTab(state.selected);
                     setNative(!!state?.rendered);
                 });
             }
-            catch { /* 没有事件面就只靠自绘条 */ }
+            catch {
+                /* 没有事件面就只靠自绘条 */
+            }
         })();
-        return () => { try {
-            off?.();
-        }
-        catch { /* 已卸载 */ } };
+        return () => {
+            try {
+                off?.();
+            }
+            catch {
+                /* 已卸载 */
+            }
+        };
     }, [initial]);
     const select = React.useCallback((id) => {
         setTab(id);
         // 桥方法回的是 Promise，同步 try/catch 抓不住 rejection。
         try {
-            bridge()?.tabs?.select?.(id)?.catch?.(() => { });
+            bridge()
+                ?.tabs?.select?.(id)
+                ?.catch?.(() => { });
         }
-        catch { /* 连命名空间都没有 */ }
+        catch {
+            /* 连命名空间都没有 */
+        }
     }, []);
     return { tab, native, select };
 }
 function FallbackTabBar({ value, onChange }) {
     return (_jsx("div", { style: {
-            display: 'flex', borderTop: `1px solid ${C.line}`, background: C.bg,
-            paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0,
+            display: 'flex',
+            borderTop: `1px solid ${C.line}`,
+            background: C.bg,
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            flexShrink: 0,
         }, children: TABS.map((item) => (_jsx("button", { type: "button", onClick: () => onChange(item.id), style: {
-                flex: 1, border: 'none', background: 'transparent', padding: '10px 0',
-                fontSize: 12, color: value === item.id ? C.brand : C.faint,
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                padding: '10px 0',
+                fontSize: 12,
+                color: value === item.id ? C.brand : C.faint,
                 fontWeight: value === item.id ? 600 : 400,
             }, children: item.label }, item.id))) }));
 }
@@ -109,11 +129,11 @@ export default function App() {
         stack.push({ video });
     }, [stack]);
     return (_jsxs("div", { style: {
-            height: '100vh', display: 'flex', flexDirection: 'column',
-            background: C.bg, color: C.text, overflow: 'hidden',
-        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: stack.route
-                    ? _jsx(PlayerPage, { video: stack.route.video, onOpen: open })
-                    : tabs.tab === 'mine'
-                        ? _jsx(MinePage, { onOpen: open })
-                        : _jsx(SearchPage, { onOpen: open }) }), !tabs.native && !stack.route ? (_jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select })) : null] }));
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: C.bg,
+            color: C.text,
+            overflow: 'hidden',
+        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: stack.route ? (_jsx(PlayerPage, { video: stack.route.video, onOpen: open })) : tabs.tab === 'mine' ? (_jsx(MinePage, { onOpen: open })) : (_jsx(SearchPage, { onOpen: open })) }), !tabs.native && !stack.route ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
 }

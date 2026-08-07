@@ -1,19 +1,18 @@
 #!/usr/bin/env node
 //
 //  migrate-to-ts.mjs
-//  把一个源码型（JSX）应用机械迁移成 TypeScript + Vite 工程。
+//  把一个遗留 JS/JSX 应用机械迁移成 TypeScript + aibox-tsbuild 工程。
 //
 //    node scripts/migrate-to-ts.mjs com.aibox.news --dry-run          # 只出报告，不写盘
 //    node scripts/migrate-to-ts.mjs com.aibox.news --out apps/com.aibox.news.ts   # 迁到副本
 //    node scripts/migrate-to-ts.mjs com.aibox.news --in-place         # 就地改（需要 --force 确认）
 //
 //  ## 它做什么
-//   ① 生成工程文件：package.json / tsconfig.json / vite.config.ts / index.html
-//   ② `.jsx -> .tsx`、`.js -> .ts`，并把相对 import 的扩展名同步改掉
-//   ③ 入口 `app.jsx -> src/App.tsx` + 新建 `src/main.tsx`（自挂载 + default 导出）
-//   ④ **裸 `aibox.*` 调用改写成 SDK 调用** —— 这是迁移的主要价值，也是「可校验」的来源
-//   ⑤ manifest 补 `runtimeKind: "bundle"`
-//   ⑥ 跑一次 `tsc --noEmit`，把类型错误**如实列出来**
+//   ① 生成/刷新 package.json 与 tsconfig.json（唯一构建器是 aibox-tsbuild）
+//   ② `.jsx -> .tsx`、`.js -> .ts`，相对 import 一律保留产物扩展名 `.js`
+//   ③ **裸 `aibox.*` 调用改写成 SDK 调用** —— 这是迁移的主要价值，也是「可校验」的来源
+//   ④ manifest 补 `runtimeKind: "bundle"`
+//   ⑤ 跑一次严格 `tsc --noEmit`，把类型错误**如实列出来**
 //
 //  ## 它不做什么（刻意）
 //  改写规则只覆盖**有把握的**形态。拿不准的一律插 `// TODO(migrate): …` 并计入报告，
@@ -24,6 +23,7 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { APPS_DIR, ROOT, appPaths, fail, info, listSourceFiles, ok, readJSON, warn } from './lib/market.mjs'
 
 // ---------------------------------------------------------------------------
@@ -46,23 +46,35 @@ const REWRITES = [
     match: /\baibox\.net\.fetch\(/g,
     replace: 'fetchWithMeta(',
     imports: ['fetchWithMeta'],
-    note: 'fetchWithMeta 与裸桥语义一致（不做断言）。能确定是文本/JSON 的调用点建议手工改成 fetchText / fetchJSON，'
-      + '那两个会替你处理编码、truncated 与非 2xx',
+    note:
+      'fetchWithMeta 与裸桥语义一致（不做断言）。能确定是文本/JSON 的调用点建议手工改成 fetchText / fetchJSON，' +
+      '那两个会替你处理编码、truncated 与非 2xx',
   },
   // —— storage ——
-  { id: 'storage.get', match: /\baibox\.storage\.get\(/g, replace: 'storage.get(', imports: ['storage'],
-    note: 'SDK 的 storage.get(key, fallback) **要求第二个参数**（默认值），比裸桥的 `?? 默认值` 少一次判空' },
+  {
+    id: 'storage.get',
+    match: /\baibox\.storage\.get\(/g,
+    replace: 'storage.get(',
+    imports: ['storage'],
+    note: 'SDK 的 storage.get(key, fallback) **要求第二个参数**（默认值），比裸桥的 `?? 默认值` 少一次判空',
+  },
   { id: 'storage.set', match: /\baibox\.storage\.set\(/g, replace: 'storage.set(', imports: ['storage'] },
   { id: 'storage.remove', match: /\baibox\.storage\.remove\(/g, replace: 'storage.remove(', imports: ['storage'] },
   { id: 'storage.list', match: /\baibox\.storage\.list\(/g, replace: 'storage.list(', imports: ['storage'] },
   // —— action ——
-  { id: 'action.register', match: /\baibox\.action\.register\(/g, replace: 'registerAction(', imports: ['registerAction'],
-    note: '注册点改完后，建议整体换成一次 registerActions({...})：那样「漏注册 manifest 声明的 action」也会变成编译错误' },
+  {
+    id: 'action.register',
+    match: /\baibox\.action\.register\(/g,
+    replace: 'registerAction(',
+    imports: ['registerAction'],
+    note: '注册点改完后，建议整体换成一次 registerActions({...})：那样「漏注册 manifest 声明的 action」也会变成编译错误',
+  },
   { id: 'action.result', match: /\baibox\.action\.result\(/g, replace: 'actionResult(', imports: ['actionResult'] },
   // —— 能力探测：把「不可用就别渲染入口」变成一次调用 ——
   {
     id: 'capability-probe',
-    match: /\b(?:window\.)?aibox(?:\?)?\.([a-zA-Z]+)\s*&&\s*typeof\s+(?:window\.)?aibox\.\1\.([a-zA-Z]+)\s*===\s*['"]function['"]/g,
+    match:
+      /\b(?:window\.)?aibox(?:\?)?\.([a-zA-Z]+)\s*&&\s*typeof\s+(?:window\.)?aibox\.\1\.([a-zA-Z]+)\s*===\s*['"]function['"]/g,
     replace: (_m, ns, method) => `isAvailable('${ns}', '${method}')`,
     imports: ['isAvailable'],
   },
@@ -93,14 +105,17 @@ const RESIDUAL_RE = /\b(?:window\.)?aibox\.([a-zA-Z]+)\.([a-zA-Z]+)\(/g
 // 没有对应物的导出（应用自己的业务胶水，如 openArticle / classifyMusicError）保持原样：
 // 它们本来就该留在应用里。
 const HOST_WRAPPER_EXPORTS = new Map([
-  ['hasNamespace', { sdk: 'isAvailable', note: "签名一致：isAvailable(ns, method?)" }],
+  ['hasNamespace', { sdk: 'isAvailable', note: '签名一致：isAvailable(ns, method?)' }],
   ['storage', { sdk: 'storage', note: 'SDK 的 storage.get(key, fallback) 要求默认值；封装里的 `?? null` 可以删' }],
   ['registerAction', { sdk: 'registerAction', note: '建议整体换成 registerActions({...})，漏注册会变成编译错误' }],
   ['shareFile', { sdk: null, note: '直接用 aibox.share.file（SDK 全局类型已覆盖，返回是结构化信封）' }],
   ['openURL', { sdk: null, note: '直接用 aibox.open.url' }],
   ['aiAvailability', { sdk: null, note: '直接用 aibox.ai.availability（SDK 全局类型已覆盖）' }],
   ['aiGenerate', { sdk: null, note: '直接用 aibox.ai.generate' }],
-  ['onEvent', { sdk: null, note: 'React 组件里用 SDK 的 hooks（useTabs / useToolbarSearch / useLocale），它们自动退订' }],
+  [
+    'onEvent',
+    { sdk: null, note: 'React 组件里用 SDK 的 hooks（useTabs / useToolbarSearch / useLocale），它们自动退订' },
+  ],
   ['onNamespaceEvent', { sdk: null, note: '同上；非组件场景直接用 aibox.<ns>.on()' }],
   ['capabilities', { sdk: 'isAvailable', note: 'capabilities.xxx 的 getter 逐条换成 isAvailable(ns, method)' }],
   ['httpGet', { sdk: 'fetchText', note: 'fetchText 已处理编码 / truncated / 非 2xx —— 封装里那三段可以整块删' }],
@@ -121,7 +136,10 @@ function rewriteHostWrapperImports(source, report, relative) {
   const sdkSymbols = new Set()
   HOST_IMPORT_RE.lastIndex = 0
   out = out.replace(HOST_IMPORT_RE, (whole, names, _quote, specifier) => {
-    const imported = names.split(',').map((s) => s.trim()).filter(Boolean)
+    const imported = names
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
     const kept = []
     const moved = []
     for (const raw of imported) {
@@ -150,9 +168,15 @@ function rewriteHostWrapperImports(source, report, relative) {
 
 // React hooks 可以替换的手写实现（只标记，不自动改——这些通常缠着组件状态）。
 const HOOK_HINTS = [
-  { re: /visualViewport/, hint: "手写的键盘高度推算可以换成 useKeyboardInset()（宿主事件优先，比 visualViewport 准）" },
-  { re: /__aiboxEnvironment|navigator\.language/, hint: '语言判定可以换成 useLocale()（首帧就有值，且跟随 App 内语言切换）' },
-  { re: /aibox\.tabs\.on\(|aibox\.tabs\.getState\(/, hint: 'tabs 订阅可以换成 useTabs()（自动退订，且直接给出 rendered）' },
+  { re: /visualViewport/, hint: '手写的键盘高度推算可以换成 useKeyboardInset()（宿主事件优先，比 visualViewport 准）' },
+  {
+    re: /__aiboxEnvironment|navigator\.language/,
+    hint: '语言判定可以换成 useLocale()（首帧就有值，且跟随 App 内语言切换）',
+  },
+  {
+    re: /aibox\.tabs\.on\(|aibox\.tabs\.getState\(/,
+    hint: 'tabs 订阅可以换成 useTabs()（自动退订，且直接给出 rendered）',
+  },
   { re: /aibox\.toolbar\.on\(\s*['"]searchChanged/, hint: '搜索订阅可以换成 useToolbarSearch()' },
 ]
 
@@ -167,10 +191,12 @@ function targetName(relative) {
   return TS_EXT[ext] ? relative.slice(0, -ext.length) + TS_EXT[ext] : relative
 }
 
-/** 相对 import 的扩展名跟着改：`./x.jsx` -> `./x`（bundler 解析，不写扩展名最省事）。 */
-function rewriteRelativeImports(source) {
-  return source.replace(/(from\s*['"]|import\s*\(\s*['"])(\.[^'"]*?)(\.jsx|\.js|\.mjs)(['"])/g,
-    (_m, head, spec, _ext, tail) => `${head}${spec}${tail}`)
+/** 相对 import 指向最终产物：`./x.jsx` / `./x.ts` 都改成 `./x.js`。 */
+export function rewriteRelativeImports(source) {
+  return source.replace(
+    /(from\s*['"]|import\s*\(\s*['"])(\.[^'"]*?)(\.(?:jsx?|tsx?|mjs))(['"])/g,
+    (_m, head, spec, _ext, tail) => `${head}${spec}.js${tail}`,
+  )
 }
 
 function rewriteBridgeCalls(source, report, relative) {
@@ -202,7 +228,15 @@ function ensureSDKImport(source, symbols) {
   const names = [...symbols].sort()
   const existing = /import\s*\{([^}]*)\}\s*from\s*['"]@aibox\/applet-sdk['"];?/.exec(source)
   if (existing) {
-    const merged = [...new Set([...existing[1].split(',').map((s) => s.trim()).filter(Boolean), ...names])].sort()
+    const merged = [
+      ...new Set([
+        ...existing[1]
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        ...names,
+      ]),
+    ].sort()
     return source.replace(existing[0], `import { ${merged.join(', ')} } from '@aibox/applet-sdk';`)
   }
   const line = `import { ${names.join(', ')} } from '@aibox/applet-sdk';\n`
@@ -219,111 +253,39 @@ function ensureSDKImport(source, symbols) {
 // 3. 工程文件模板
 // ---------------------------------------------------------------------------
 
-const PACKAGE_JSON = (appId, summary) => `${JSON.stringify({
-  name: `@aibox-app/${appId.split('.').pop()}`,
-  private: true,
-  version: '1.0.0',
-  description: summary || '',
-  type: 'module',
-  scripts: { typecheck: 'tsc --noEmit', build: 'vite build' },
-  dependencies: { '@aibox/applet-sdk': '^1.0.0' },
-  devDependencies: {
-    '@aibox/applet-vite': '^1.0.0',
-    '@types/react': '^18.3.12',
-    '@types/react-dom': '^18.3.1',
-    'antd-mobile': '^5.38.1',
-    react: '^18.3.1',
-    'react-dom': '^18.3.1',
-    typescript: '^5.9.3',
-    vite: '^6.3.5',
-  },
-}, null, 2)}\n`
+export const PACKAGE_JSON = (appId, summary) =>
+  `${JSON.stringify(
+    {
+      name: `@aibox-app/${appId.split('.').pop()}`,
+      private: true,
+      version: '1.0.0',
+      description: summary || '',
+      type: 'module',
+      scripts: {
+        typecheck: 'tsc --noEmit -p tsconfig.json',
+        build: 'aibox-tsbuild',
+        'build:ci': 'aibox-tsbuild',
+        'check:build': 'aibox-tsbuild --check',
+      },
+      dependencies: { '@aibox/applet-sdk': '^1.1.0' },
+      devDependencies: {
+        '@aibox/applet-tsbuild': '^1.0.0',
+        '@types/react': '^18.3.12',
+        '@types/react-dom': '^18.3.1',
+        'antd-mobile': '^5.38.1',
+        react: '^18.3.1',
+        'react-dom': '^18.3.1',
+        typescript: '^5.9.3',
+      },
+    },
+    null,
+    2,
+  )}\n`
 
-const TSCONFIG = `{
-  "extends": "@aibox/applet-vite/tsconfig.base.json",
-  "include": ["src", "vite.config.ts"],
-  "compilerOptions": {
-    // 迁移期放宽：先让工程编起来，再逐个文件收紧。这两条打开时会淹没在存量告警里，
-    // 迁移完成后**删掉这段**，回到 tsconfig.base.json 的严格档。
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
-  }
+export const TSCONFIG = `{
+  "extends": "@aibox/applet-tsbuild/tsconfig.base.json",
+  "include": ["src"]
 }
-`
-
-const VITE_CONFIG = `import { defineAppletConfig } from '@aibox/applet-vite';
-
-export default defineAppletConfig();
-`
-
-const INDEX_HTML = (title) => `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>${title}</title>
-  <!--
-    预构建外壳（runtimeKind: bundle）：原生 importmap + 原生 module 脚本，不加载
-    es-module-shims、不加载 Sucrase。注释里不要写字面的 script 起始标签，Vite 的 HTML
-    解析会把它当真标签处理。
-  -->
-  <script type="importmap">
-  {
-    "imports": {
-      "react": "applet://localhost/runtime/react.mjs",
-      "react-dom": "applet://localhost/runtime/react.mjs",
-      "react-dom/client": "applet://localhost/runtime/react.mjs",
-      "react/jsx-runtime": "applet://localhost/runtime/react.mjs",
-      "chart.js": "applet://localhost/runtime/chart.mjs",
-      "antd-mobile": "applet://localhost/runtime/antd-mobile.mjs",
-      "aibox/ui": "applet://localhost/runtime/aibox-ui.mjs"
-    }
-  }
-  </script>
-  <link rel="stylesheet" href="applet://localhost/runtime/aibox-ui.css" />
-  <style>
-    :root { color-scheme: light dark; }
-    body { margin: 0; }
-    #__err { position: fixed; left: 0; right: 0; bottom: 0; max-height: 55%; overflow: auto; margin: 0;
-      padding: 12px 14px; background: #b00020; color: #fff;
-      font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; z-index: 2147483647; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <pre id="__err" style="display:none"></pre>
-  <script>
-    function __showErr(m) {
-      var e = document.getElementById('__err');
-      if (e) { e.style.display = 'block'; e.textContent = String(m); }
-      try { console.error(String(m)); } catch (_) {}
-    }
-    window.addEventListener('error', function (ev) {
-      if (ev && ev.target && (ev.target.src || ev.target.href)) { __showErr('Failed to load: ' + (ev.target.src || ev.target.href)); return; }
-      __showErr((ev && ev.error && ev.error.stack) || (ev && ev.message) || 'Error');
-    }, true);
-    window.addEventListener('unhandledrejection', function (ev) {
-      var r = ev && ev.reason;
-      __showErr('Unhandled rejection: ' + ((r && r.stack) || (r && r.message) || r));
-    });
-  </script>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-</html>
-`
-
-const MAIN_TSX = `import { createElement, StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App';
-
-// 自挂载 + default 导出两样都留着：前者是 bundle 形态需要的，后者让同一份代码
-// 也能被源码型系统外壳挂载。少任何一个都会在对应形态下白屏。
-const root = document.getElementById('root');
-if (root && root.children.length === 0) {
-  createRoot(root).render(createElement(StrictMode, null, createElement(App)));
-}
-
-export default App;
 `
 
 // ---------------------------------------------------------------------------
@@ -340,9 +302,17 @@ function migrate(appId, options) {
   const meta = fs.existsSync(source.appJSON) ? readJSON(source.appJSON) : {}
   const outDir = options.outDir ?? source.dir
   const report = {
-    appId, outDir: path.relative(ROOT, outDir), dryRun: options.dryRun,
-    renamed: [], rewrites: [], residual: [], hints: [], generated: [], typeErrors: [],
-    todo: [], wrapperFiles: new Set(),
+    appId,
+    outDir: path.relative(ROOT, outDir),
+    dryRun: options.dryRun,
+    renamed: [],
+    rewrites: [],
+    residual: [],
+    hints: [],
+    generated: [],
+    typeErrors: [],
+    todo: [],
+    wrapperFiles: new Set(),
   }
 
   const relatives = listSourceFiles(source.srcDir)
@@ -369,22 +339,19 @@ function migrate(appId, options) {
     const { code: rewritten, used } = rewriteBridgeCalls(wrapper.code, report, relative)
     code = ensureSDKImport(rewritten, new Set([...wrapper.sdkSymbols, ...used]))
 
-    // 入口 app.jsx -> App.tsx，并新建 main.tsx。
+    // 入口保持 `app.tsx`：aibox-tsbuild 的外壳固定加载编译后的 `app.js`。
     const isEntry = relative === 'app.jsx' || relative === 'app.tsx'
-    const to = isEntry ? 'App.tsx' : targetName(relative)
+    const to = isEntry ? 'app.tsx' : targetName(relative)
     if (to !== relative) report.renamed.push(`${relative} -> ${to}`)
     writes.push({ to: path.join(outDir, 'src', to), content: code })
   }
 
-  writes.push({ to: path.join(outDir, 'src', 'main.tsx'), content: MAIN_TSX })
   writes.push({ to: path.join(outDir, 'package.json'), content: PACKAGE_JSON(appId, meta.summary) })
   writes.push({ to: path.join(outDir, 'tsconfig.json'), content: TSCONFIG })
-  writes.push({ to: path.join(outDir, 'vite.config.ts'), content: VITE_CONFIG })
-  writes.push({ to: path.join(outDir, 'index.html'), content: INDEX_HTML(manifest.name ?? appId) })
   if (outDir !== source.dir && fs.existsSync(source.appJSON)) {
     writes.push({ to: path.join(outDir, 'app.json'), copyFrom: source.appJSON })
   }
-  report.generated.push('src/main.tsx', 'package.json', 'tsconfig.json', 'vite.config.ts', 'index.html')
+  report.generated.push('package.json', 'tsconfig.json')
 
   if (options.dryRun) return report
 
@@ -455,8 +422,10 @@ function printReport(report) {
   }
   if (report.wrapperFiles.size > 0) {
     console.log('')
-    warn(`手写桥封装 ${[...report.wrapperFiles].join(', ')} 的职责已部分由 SDK 承担；`
-      + '把剩余导出（应用自有业务胶水）留下、其余删掉，是这次迁移最主要的收益')
+    warn(
+      `手写桥封装 ${[...report.wrapperFiles].join(', ')} 的职责已部分由 SDK 承担；` +
+        '把剩余导出（应用自有业务胶水）留下、其余删掉，是这次迁移最主要的收益',
+    )
   }
 
   console.log('\n【④b 其它建议】')
@@ -501,9 +470,11 @@ function main() {
   printReport(migrate(appId, options))
 }
 
-try {
-  main()
-} catch (error) {
-  fail(String(error.message ?? error))
-  process.exit(1)
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  try {
+    main()
+  } catch (error) {
+    fail(String(error.message ?? error))
+    process.exit(1)
+  }
 }

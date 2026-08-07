@@ -9,13 +9,7 @@
   "iconTintHex": "3A83D0",
   "category": "tools",
   "author": "AiBox",
-  "tags": [
-    "download",
-    "downloader",
-    "queue",
-    "resume",
-    "files"
-  ],
+  "tags": ["download", "downloader", "queue", "resume", "files"],
   "localizedSummaries": {
     "en": "Any link, queued, resumable — the host engine keeps downloading in the background"
   },

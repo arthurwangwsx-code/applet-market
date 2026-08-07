@@ -2,7 +2,7 @@
   "name": "@aibox-app/finance",
   "private": true,
   "version": "1.0.0",
-  "description": "理财 —— AiBox 小应用（源码型：TS 开发、保结构 JS 产物）。",
+  "description": "理财 —— AiBox 小应用（严格 TS 开发、保结构 ESM 产物）。",
   "type": "module",
   "scripts": {
     "build": "aibox-tsbuild",
@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@aibox/applet-sdk": "^1.0.0"
+    "@aibox/applet-sdk": "^1.1.0"
   },
   "devDependencies": {
     "@aibox/applet-tsbuild": "^1.0.0",

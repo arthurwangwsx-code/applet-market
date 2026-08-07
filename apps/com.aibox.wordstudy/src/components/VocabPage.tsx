@@ -127,7 +127,9 @@ export function VocabPage(props: {
           {groups.map((group) => (
             <section key={group.key}>
               {group.key ? (
-                <div style={{ padding: `${SPACE.s3}px ${SPACE.s4}px 4px`, fontSize: 12, color: palette.muted }}>{group.key}</div>
+                <div style={{ padding: `${SPACE.s3}px ${SPACE.s4}px 4px`, fontSize: 12, color: palette.muted }}>
+                  {group.key}
+                </div>
               ) : null}
               {group.items.map((item) => (
                 <Row
@@ -168,18 +170,26 @@ export function VocabPage(props: {
 
 function matchesFilter(item: VocabItem, filter: Filter): boolean {
   switch (filter) {
-    case 'word': return item.kind === 'word'
-    case 'sentence': return item.kind === 'sentence'
-    case 'mastered': return item.masteredAt !== null
-    case 'unmastered': return item.masteredAt === null
-    default: return true
+    case 'word':
+      return item.kind === 'word'
+    case 'sentence':
+      return item.kind === 'sentence'
+    case 'mastered':
+      return item.masteredAt !== null
+    case 'unmastered':
+      return item.masteredAt === null
+    default:
+      return true
   }
 }
 
 function filterLabel(t: T, filter: Filter): string {
   const map: Record<Filter, Parameters<T>[0]> = {
-    all: 'filterAll', word: 'filterWord', sentence: 'filterSentence',
-    mastered: 'filterMastered', unmastered: 'filterUnmastered',
+    all: 'filterAll',
+    word: 'filterWord',
+    sentence: 'filterSentence',
+    mastered: 'filterMastered',
+    unmastered: 'filterUnmastered',
   }
   return t(map[filter])
 }
@@ -191,11 +201,15 @@ function sortLabel(t: T, sort: Sort): string {
 
 function buildGroups(items: VocabItem[], sort: Sort): { key: string; items: VocabItem[] }[] {
   if (sort === 'alpha') {
-    return [{ key: '', items: [...items].sort((a, b) => a.text.localeCompare(b.text, undefined, { sensitivity: 'base' })) }]
+    return [
+      { key: '', items: [...items].sort((a, b) => a.text.localeCompare(b.text, undefined, { sensitivity: 'base' })) },
+    ]
   }
   if (sort === 'urgency') {
     // 从未复习过（null）视为最紧急排最前。
-    return [{ key: '', items: [...items].sort((a, b) => (a.nextReviewAt ?? -Infinity) - (b.nextReviewAt ?? -Infinity)) }]
+    return [
+      { key: '', items: [...items].sort((a, b) => (a.nextReviewAt ?? -Infinity) - (b.nextReviewAt ?? -Infinity)) },
+    ]
   }
   const buckets = new Map<string, VocabItem[]>()
   for (const item of [...items].sort((a, b) => b.addedAt - a.addedAt)) {
@@ -205,7 +219,5 @@ function buildGroups(items: VocabItem[], sort: Sort): { key: string; items: Voca
     if (bucket) bucket.push(item)
     else buckets.set(key, [item])
   }
-  return [...buckets.entries()]
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([key, group]) => ({ key, items: group }))
+  return [...buckets.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([key, group]) => ({ key, items: group }))
 }

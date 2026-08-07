@@ -5,7 +5,9 @@
 // 对模拟账户足够，但**必须显式钳制**——溢出静默变成不精确整数比报错更危险。
 export const MAX_MINOR = Number.MAX_SAFE_INTEGER;
 export class MoneyError extends Error {
-    constructor(code, detail) {
+    code;
+    detail;
+    constructor(code, detail = null) {
         super(code);
         this.code = code;
         this.detail = detail || null;

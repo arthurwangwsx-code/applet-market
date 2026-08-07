@@ -72,16 +72,37 @@ export function TranslatePage(props) {
             setBusy(false);
         }
     };
-    return (_jsxs("div", { style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, fontSize: 13, fontWeight: 500, color: palette.accent }, children: [_jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection('zhToEn'), children: NATIVE_NAME[preview.from] }), _jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection(preview.from === 'zh' ? 'enToZh' : 'zhToEn'), "aria-label": "Swap", children: _jsx(Icon, { name: "swap", size: 13 }) }), _jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection('enToZh'), children: NATIVE_NAME[preview.to] }), _jsx("div", { style: { flex: 1 } }), direction !== 'auto' ? (_jsx("button", { type: "button", style: { ...plain(palette), fontSize: 11, color: palette.muted }, onClick: () => setDirection('auto'), children: t('autoDetect') })) : null] }), _jsx("textarea", { value: input, onChange: (event) => setInput(event.target.value), placeholder: t('translateInputPlaceholder'), rows: 4, style: {
-                    width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 96, maxHeight: 260,
-                    borderRadius: RADIUS.field, border: `1px solid ${palette.line}`, padding: SPACE.s3,
-                    fontSize: 15, color: palette.ink, background: palette.surface, fontFamily: 'inherit',
+    return (_jsxs("div", { style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsxs("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.s2,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: palette.accent,
+                }, children: [_jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection('zhToEn'), children: NATIVE_NAME[preview.from] }), _jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection(preview.from === 'zh' ? 'enToZh' : 'zhToEn'), "aria-label": "Swap", children: _jsx(Icon, { name: "swap", size: 13 }) }), _jsx("button", { type: "button", style: plain(palette), onClick: () => setDirection('enToZh'), children: NATIVE_NAME[preview.to] }), _jsx("div", { style: { flex: 1 } }), direction !== 'auto' ? (_jsx("button", { type: "button", style: { ...plain(palette), fontSize: 11, color: palette.muted }, onClick: () => setDirection('auto'), children: t('autoDetect') })) : null] }), _jsx("textarea", { value: input, onChange: (event) => setInput(event.target.value), placeholder: t('translateInputPlaceholder'), rows: 4, style: {
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    resize: 'vertical',
+                    minHeight: 96,
+                    maxHeight: 260,
+                    borderRadius: RADIUS.field,
+                    border: `1px solid ${palette.line}`,
+                    padding: SPACE.s3,
+                    fontSize: 15,
+                    color: palette.ink,
+                    background: palette.surface,
+                    fontFamily: 'inherit',
                 } }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s3 }, children: [_jsxs("span", { style: { fontSize: 11, color: overLimit ? palette.red : palette.muted }, children: [input.length, " / ", MAX_CHARS] }), _jsx("div", { style: { flex: 1 } }), _jsx(PrimaryButton, { palette: palette, title: t('translateAction'), busy: busy, disabled: !input.trim() || overLimit || !props.aiAvailable, onClick: run })] }), error ? _jsx("div", { style: { fontSize: 13, color: palette.red }, children: error }) : null, output ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s3 }, children: [_jsx("div", { style: { fontSize: 16, color: palette.ink, whiteSpace: 'pre-wrap' }, children: output }), _jsxs("div", { style: { display: 'flex', gap: SPACE.s4 }, children: [_jsx("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void copyText(output), children: t('copy') }), _jsxs("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void speak(output, 'us'), children: [_jsx(Icon, { name: "speaker", size: 12 }), " ", t('speakAloud')] })] })] })) : null] }));
 }
 function plain(palette) {
     return {
-        border: 'none', background: 'transparent', color: palette.accent,
-        padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+        border: 'none',
+        background: 'transparent',
+        color: palette.accent,
+        padding: 0,
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 500,
     };
 }
 export function TranslationDetail(props) {
@@ -101,7 +122,9 @@ export function TranslationDetail(props) {
             else
                 setRecord(found);
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [props.recordID]);
     const toggleStar = async () => {
         if (!record)
@@ -153,10 +176,17 @@ export function TranslationDetail(props) {
         return (_jsx(PushPage, { palette: palette, title: "", onBack: props.onBack, children: _jsx(EmptyState, { palette: palette, icon: "clock", text: t('noTranslationRecord') }) }));
     }
     if (!record)
-        return _jsx(PushPage, { palette: palette, title: "", onBack: props.onBack, children: _jsx("div", {}) });
+        return (_jsx(PushPage, { palette: palette, title: "", onBack: props.onBack, children: _jsx("div", {}) }));
     // **朗读永远读英文那一侧**：源语言是 en 就读原文，否则读当前译文（读中文会跑偏）。
     const speakText = record.srcLang === 'en' ? record.source : record.target;
-    return (_jsx(PushPage, { palette: palette, title: record.source, onBack: props.onBack, trailing: _jsx("button", { type: "button", onClick: toggleStar, style: { border: 'none', background: 'transparent', color: palette.accent, fontSize: 17, cursor: 'pointer', padding: 8 }, "aria-label": record.starred ? t('unfavourite') : t('favourite'), children: _jsx(Icon, { name: record.starred ? 'star.fill' : 'star', size: 17 }) }), children: _jsxs("div", { style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s5 }, children: [_jsxs("div", { children: [_jsx("div", { style: { fontSize: 11, fontWeight: 500, color: palette.muted, textTransform: 'uppercase' }, children: NATIVE_NAME[record.srcLang] }), _jsx("div", { style: { fontSize: 16, fontWeight: 500, color: palette.ink, marginTop: 6, userSelect: 'text' }, children: record.source })] }), _jsx("div", { style: { height: 1, background: palette.line } }), _jsxs("div", { children: [_jsxs("div", { style: { fontSize: 11, fontWeight: 500, color: palette.accent, textTransform: 'uppercase' }, children: [NATIVE_NAME[record.dstLang], busy ? ' …' : ''] }), _jsx("div", { style: { fontSize: 16, color: palette.ink, marginTop: 6, whiteSpace: 'pre-wrap', userSelect: 'text' }, children: record.target })] }), error ? _jsx("div", { style: { fontSize: 13, color: palette.red }, children: error }) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s4, alignItems: 'center' }, children: [_jsx("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void copyText(record.target), children: t('copy') }), _jsxs("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void speak(speakText, 'us'), children: [_jsx(Icon, { name: "speaker", size: 12 }), " ", t('speakAloud')] }), _jsx(SecondaryButton, { palette: palette, title: t('retranslate'), icon: "refresh", disabled: busy, onClick: retranslate }), _jsx("div", { style: { flex: 1 } }), _jsx("button", { type: "button", style: { ...plain(palette), fontSize: 12, color: palette.red }, onClick: async () => {
+    return (_jsx(PushPage, { palette: palette, title: record.source, onBack: props.onBack, trailing: _jsx("button", { type: "button", onClick: toggleStar, style: {
+                border: 'none',
+                background: 'transparent',
+                color: palette.accent,
+                fontSize: 17,
+                cursor: 'pointer',
+                padding: 8,
+            }, "aria-label": record.starred ? t('unfavourite') : t('favourite'), children: _jsx(Icon, { name: record.starred ? 'star.fill' : 'star', size: 17 }) }), children: _jsxs("div", { style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s5 }, children: [_jsxs("div", { children: [_jsx("div", { style: { fontSize: 11, fontWeight: 500, color: palette.muted, textTransform: 'uppercase' }, children: NATIVE_NAME[record.srcLang] }), _jsx("div", { style: { fontSize: 16, fontWeight: 500, color: palette.ink, marginTop: 6, userSelect: 'text' }, children: record.source })] }), _jsx("div", { style: { height: 1, background: palette.line } }), _jsxs("div", { children: [_jsxs("div", { style: { fontSize: 11, fontWeight: 500, color: palette.accent, textTransform: 'uppercase' }, children: [NATIVE_NAME[record.dstLang], busy ? ' …' : ''] }), _jsx("div", { style: { fontSize: 16, color: palette.ink, marginTop: 6, whiteSpace: 'pre-wrap', userSelect: 'text' }, children: record.target })] }), error ? _jsx("div", { style: { fontSize: 13, color: palette.red }, children: error }) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s4, alignItems: 'center' }, children: [_jsx("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void copyText(record.target), children: t('copy') }), _jsxs("button", { type: "button", style: { ...plain(palette), fontSize: 12 }, onClick: () => void speak(speakText, 'us'), children: [_jsx(Icon, { name: "speaker", size: 12 }), " ", t('speakAloud')] }), _jsx(SecondaryButton, { palette: palette, title: t('retranslate'), icon: "refresh", disabled: busy, onClick: retranslate }), _jsx("div", { style: { flex: 1 } }), _jsx("button", { type: "button", style: { ...plain(palette), fontSize: 12, color: palette.red }, onClick: async () => {
                                 await removeTranslation(record.id);
                                 store.refresh();
                                 props.onBack();

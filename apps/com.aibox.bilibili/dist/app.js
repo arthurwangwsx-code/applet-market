@@ -47,6 +47,9 @@ const TABS = [
     { id: 'search', label: '搜索' },
     { id: 'mine', label: '我的' },
 ];
+function isTabID(value) {
+    return TABS.some((item) => item.id === value);
+}
 /**
  * 底部 Tab。身份在 manifest 里声明（宿主渲染真原生 TabBar），这里只接选中事件。
  *
@@ -65,7 +68,7 @@ function useTabs(initial) {
             try {
                 const state = await api.tabs.getState?.();
                 setNative(!!state?.rendered);
-                if (state?.selected)
+                if (state?.selected && isTabID(state.selected))
                     setTab(state.selected);
             }
             catch {
@@ -75,17 +78,23 @@ function useTabs(initial) {
                 // 事件名是 'changed'，回调收的是整个 State（不是 {id}）——
                 // `rendered` 也在里面，所以呈现表面变化（page → sheet）时自绘条能跟着切回来。
                 off = api.tabs.on?.('changed', (state) => {
-                    if (state?.selected)
+                    if (state?.selected && isTabID(state.selected))
                         setTab(state.selected);
                     setNative(!!state?.rendered);
                 });
             }
-            catch { /* 没有事件面就只靠自绘条 */ }
+            catch {
+                /* 没有事件面就只靠自绘条 */
+            }
         })();
-        return () => { try {
-            off?.();
-        }
-        catch { /* 已卸载 */ } };
+        return () => {
+            try {
+                off?.();
+            }
+            catch {
+                /* 已卸载 */
+            }
+        };
     }, [initial]);
     const select = React.useCallback((id) => {
         setTab(id);
@@ -93,20 +102,31 @@ function useTabs(initial) {
         // 「Unhandled promise rejection」污染 console。桥在能力不可用时是 reject 而不是 throw
         // （无头运行、sheet/card 表面上 tabs 都会拒），所以 `.catch` 是必需的，不是防御性冗余。
         try {
-            bridge()?.tabs?.select?.(id)?.catch?.(() => { });
+            bridge()
+                ?.tabs?.select?.(id)
+                ?.catch?.(() => { });
         }
-        catch { /* 连命名空间都没有 */ }
+        catch {
+            /* 连命名空间都没有 */
+        }
     }, []);
     return { tab, native, select };
 }
 /** 自绘底部条 —— 只在宿主没渲染原生 TabBar 时出现。 */
 function FallbackTabBar({ value, onChange }) {
     return (_jsx("div", { style: {
-            display: 'flex', borderTop: `1px solid ${C.line}`, background: C.bg,
-            paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0,
+            display: 'flex',
+            borderTop: `1px solid ${C.line}`,
+            background: C.bg,
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            flexShrink: 0,
         }, children: TABS.map((item) => (_jsx("button", { type: "button", onClick: () => onChange(item.id), style: {
-                flex: 1, border: 'none', background: 'transparent', padding: '10px 0',
-                fontSize: 12, color: value === item.id ? C.brand : C.faint,
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                padding: '10px 0',
+                fontSize: 12,
+                color: value === item.id ? C.brand : C.faint,
                 fontWeight: value === item.id ? 600 : 400,
             }, children: item.label }, item.id))) }));
 }
@@ -135,7 +155,11 @@ export default function App() {
         body = _jsx(FeedPage, { onOpen: openVideo });
     }
     return (_jsxs("div", { style: {
-            height: '100vh', display: 'flex', flexDirection: 'column',
-            background: C.bg, color: C.text, overflow: 'hidden',
-        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: body }), !tabs.native && !stack.route ? (_jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select })) : null] }));
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: C.bg,
+            color: C.text,
+            overflow: 'hidden',
+        }, children: [_jsx("div", { style: { flex: 1, minHeight: 0 }, children: body }), !tabs.native && !stack.route ? _jsx(FallbackTabBar, { value: tabs.tab, onChange: tabs.select }) : null] }));
 }

@@ -11,7 +11,7 @@ import { Spinner } from './primitives.js';
 import { WHITE } from './theme.js';
 import { currentLineIndex, sweepRatio } from '../lib/lyrics.js';
 const SCROLL_IDLE_MS = 1800;
-export default function Lyrics({ payload, displayTime, onSeek, onUserScroll, t }) {
+export default function Lyrics({ payload, displayTime, onSeek, onUserScroll, t, }) {
     const ref = React.useRef(null);
     const lineRefs = React.useRef([]);
     const idleTimer = React.useRef(null);
@@ -42,15 +42,24 @@ export default function Lyrics({ payload, displayTime, onSeek, onUserScroll, t }
             onUserScroll(false);
         }, SCROLL_IDLE_MS);
     };
-    React.useEffect(() => () => { if (idleTimer.current)
-        clearTimeout(idleTimer.current); }, []);
+    React.useEffect(() => () => {
+        if (idleTimer.current)
+            clearTimeout(idleTimer.current);
+    }, []);
     if (payload.state === 'loading') {
         return (_jsx("div", { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }, children: _jsx(Spinner, { size: 26, color: WHITE.primary }) }));
     }
     if (payload.state !== 'ok' || lines.length === 0) {
         return (_jsxs("div", { style: {
-                flex: '1 1 auto', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: 10, padding: 24, textAlign: 'center', color: WHITE.primary,
+                flex: '1 1 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                padding: 24,
+                textAlign: 'center',
+                color: WHITE.primary,
             }, children: [_jsx(Icon, { name: "quote.bubble", size: 30, color: WHITE.primary }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: t('np.lyricsUnavailable') }), _jsx("span", { style: { fontSize: 12, lineHeight: 1.45, color: 'rgba(255,255,255,0.65)' }, children: t('np.lyricsUnavailableHint') })] }));
     }
     return (_jsx("div", { ref: ref, className: "mu-scroll", onScroll: handleScroll, style: {
@@ -59,17 +68,26 @@ export default function Lyrics({ payload, displayTime, onSeek, onUserScroll, t }
             // 上下边缘淡出遮罩：透明 @0 / 不透明 @12% / 不透明 @84% / 透明 @100%
             WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 84%, transparent 100%)',
             maskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 84%, transparent 100%)',
-        }, children: lines.map((line, i) => (_jsx(LyricLine, { ref: (node) => { lineRefs.current[i] = node; }, line: line, active: synced && i === index, synced: synced, sweep: synced && i === index ? sweepRatio(lines, i, displayTime) : 0, onClick: synced && line.time !== null ? () => onSeek(line.time) : undefined }, `${i}-${line.time === null ? 'p' : line.time}`))) }));
+        }, children: lines.map((line, i) => (_jsx(LyricLine, { ref: (node) => {
+                lineRefs.current[i] = node;
+            }, line: line, active: synced && i === index, synced: synced, sweep: synced && i === index ? sweepRatio(lines, i, displayTime) : 0, onClick: synced && line.time !== null
+                ? () => {
+                    if (line.time !== null)
+                        onSeek(line.time);
+                }
+                : undefined }, `${i}-${line.time === null ? 'p' : line.time}`))) }));
 }
 const LyricLine = React.forwardRef(({ line, active, synced, sweep, onClick }, ref) => {
     const text = line.text && line.text.length > 0 ? line.text : ' ';
     // 卡拉OK扫光：仅当前行、仅同步歌词。渐变 stops = [白 @0, 白 @sweep, 白45% @sweep+0.03, 白45% @1]
-    const sweepStyle = active ? {
-        backgroundImage: `linear-gradient(to right, ${WHITE.primary} 0%, ${WHITE.primary} ${sweep * 100}%, rgba(255,255,255,0.45) ${Math.min(1, sweep + 0.03) * 100}%, rgba(255,255,255,0.45) 100%)`,
-        WebkitBackgroundClip: 'text',
-        backgroundClip: 'text',
-        color: 'transparent',
-    } : {};
+    const sweepStyle = active
+        ? {
+            backgroundImage: `linear-gradient(to right, ${WHITE.primary} 0%, ${WHITE.primary} ${sweep * 100}%, rgba(255,255,255,0.45) ${Math.min(1, sweep + 0.03) * 100}%, rgba(255,255,255,0.45) 100%)`,
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent',
+        }
+        : {};
     return (_jsxs("div", { ref: ref, onClick: onClick, role: onClick ? 'button' : undefined, style: {
             padding: '8px 0',
             marginBottom: 6,
@@ -86,7 +104,9 @@ const LyricLine = React.forwardRef(({ line, active, synced, sweep, onClick }, re
                     textAlign: synced ? 'left' : 'center',
                     ...sweepStyle,
                 }, children: text }), line.translation ? (_jsx("div", { style: {
-                    fontSize: 17, fontWeight: 500, marginTop: 4,
+                    fontSize: 17,
+                    fontWeight: 500,
+                    marginTop: 4,
                     color: active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.45)',
                     textAlign: synced ? 'left' : 'center',
                 }, children: line.translation })) : null] }));

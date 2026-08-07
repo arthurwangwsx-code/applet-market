@@ -21,7 +21,7 @@ export async function get(key, fallback) {
         return fallback;
     try {
         const value = await host.storage.get(key);
-        return (value === null || value === undefined) ? fallback : value;
+        return value === null || value === undefined ? fallback : value;
     }
     catch {
         return fallback;
@@ -97,9 +97,7 @@ export function defineKey(key, fallback, codec = {}) {
     const encode = (value) => (codec.serialize ? codec.serialize(value) : value);
     return {
         key,
-        read: () => (codec.parse
-            ? getParsed(key, codec.parse, fallback, codec.onInvalid)
-            : get(key, fallback)),
+        read: () => codec.parse ? getParsed(key, codec.parse, fallback, codec.onInvalid) : get(key, fallback),
         write: (value) => set(key, encode(value)),
         clear: () => remove(key),
     };

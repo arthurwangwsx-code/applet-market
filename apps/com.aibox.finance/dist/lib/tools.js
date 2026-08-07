@@ -6,7 +6,7 @@
 // 解析纪律（做错会让 AI 记错账户 / 查错标的）：
 //  · 账户名对不上 → **返回候选清单**，绝不静默落主账户；
 //  · 标的多条命中 → 返回前 8 个候选 `"名字 [代码]"` 让模型挑；名称类输入必须先 strict 判空再走搜索。
-import { formatPercent, formatPrice, isoDate } from './format.js';
+import { formatPrice, isoDate } from './format.js';
 import { boll, kdj, macd, sma } from './indicators.js';
 import { rebalance as proposeRebalance, backtest, dcaPlan } from './strategy.js';
 import { fxMapFor } from './portfolio.js';
@@ -40,10 +40,6 @@ async function searchAll(query, market) {
     }
     return out;
 }
-/**
- * 标的解析。写路径用 `strict: true`：多条命中时返回候选让模型挑，绝不猜。
- * `"Tesla"` 这种全字母名称先被 parseStrict 判空 → 走搜索，不会造出假代码 usTESLA。
- */
 async function resolveInstrument(input, { strict = false } = {}) {
     const text = String(input || '').trim();
     if (!text)
@@ -53,13 +49,25 @@ async function resolveInstrument(input, { strict = false } = {}) {
         return { ok: true, symbol: exact, canonical: canonicalOf(exact) };
     const hits = await searchAll(text);
     const byCode = hits.filter((row) => row.symbol.toLowerCase() === text.toLowerCase() || row.code === text);
-    if (byCode.length === 1)
-        return { ok: true, symbol: resolveSymbol(byCode[0].symbol), canonical: byCode[0].symbol, name: byCode[0].name };
+    const codeHit = byCode.length === 1 ? byCode[0] : undefined;
+    if (codeHit) {
+        const symbol = resolveSymbol(codeHit.symbol);
+        if (symbol)
+            return { ok: true, symbol, canonical: codeHit.symbol, name: codeHit.name };
+    }
     const byName = hits.filter((row) => row.name === text);
-    if (byName.length === 1)
-        return { ok: true, symbol: resolveSymbol(byName[0].symbol), canonical: byName[0].symbol, name: byName[0].name };
-    if (hits.length === 1)
-        return { ok: true, symbol: resolveSymbol(hits[0].symbol), canonical: hits[0].symbol, name: hits[0].name };
+    const nameHit = byName.length === 1 ? byName[0] : undefined;
+    if (nameHit) {
+        const symbol = resolveSymbol(nameHit.symbol);
+        if (symbol)
+            return { ok: true, symbol, canonical: nameHit.symbol, name: nameHit.name };
+    }
+    const onlyHit = hits.length === 1 ? hits[0] : undefined;
+    if (onlyHit) {
+        const symbol = resolveSymbol(onlyHit.symbol);
+        if (symbol)
+            return { ok: true, symbol, canonical: onlyHit.symbol, name: onlyHit.name };
+    }
     if (hits.length === 0) {
         const loose = parseSymbol(text);
         if (loose)
@@ -67,7 +75,10 @@ async function resolveInstrument(input, { strict = false } = {}) {
         return { ok: false, error: `No instrument matched "${text}".` };
     }
     if (!strict) {
-        return { ok: true, symbol: resolveSymbol(hits[0].symbol), canonical: hits[0].symbol, name: hits[0].name };
+        const firstHit = hits[0];
+        const symbol = firstHit ? resolveSymbol(firstHit.symbol) : null;
+        if (firstHit && symbol)
+            return { ok: true, symbol, canonical: firstHit.symbol, name: firstHit.name };
     }
     return {
         ok: false,
@@ -75,7 +86,7 @@ async function resolveInstrument(input, { strict = false } = {}) {
         candidates: hits.slice(0, 8).map((row) => `${row.name} [${row.symbol}]`),
     };
 }
-function quoteJSON(quote, canonical) {
+export function quoteJSON(quote, canonical) {
     if (!quote)
         return { symbol: canonical, available: false, note: 'No quote available; nothing is guessed.' };
     const decimals = decimalsFor(quote.market);
@@ -103,20 +114,19 @@ function quoteJSON(quote, canonical) {
         source: quote.source,
     };
 }
-/**
- * 创建全部 handler。`deps` = { store, ledger, quotes, alerts, refreshAll }。
- * 每个 handler 返回 JSON 可序列化对象；失败返回 `{ ok:false, error }` 而不是抛。
- */
 export function createToolHandlers(deps) {
     const { store, ledger, quotes, alerts } = deps;
     /** 账户解析：对不上返回候选清单。 */
     const account = (name) => {
         const result = ledger.resolveAccount(name);
+        if (result.ok && result.account)
+            return { ok: true, account: result.account };
         if (result.ok)
-            return result;
+            return { ok: false, error: 'No paper account exists yet.', accounts: [] };
         return {
             ok: false,
-            error: result.error === 'noAccount' ? 'No paper account exists yet.'
+            error: result.error === 'noAccount'
+                ? 'No paper account exists yet.'
                 : `Account "${name}" did not match. Ask the user which account, then call again.`,
             accounts: result.candidates,
         };
@@ -130,10 +140,8 @@ export function createToolHandlers(deps) {
         return ledger.valuation(accountID, quotes.quoteMap(), quotes.fx);
     };
     const readHandlers = {
-        async finance_quote(args = {}) {
-            const inputs = Array.isArray(args.symbols) && args.symbols.length > 0
-                ? args.symbols
-                : (args.symbol ? [args.symbol] : []);
+        async finance_quote(args) {
+            const inputs = Array.isArray(args.symbols) && args.symbols.length > 0 ? args.symbols : args.symbol ? [args.symbol] : [];
             if (inputs.length === 0)
                 return { ok: false, error: 'Provide symbols[] or symbol.' };
             const resolved = [];
@@ -157,7 +165,7 @@ export function createToolHandlers(deps) {
                 refreshFailed: result.failed,
             };
         },
-        async finance_search(args = {}) {
+        async finance_search(args) {
             const query = String(args.query || '').trim();
             if (!query)
                 return { ok: false, error: 'query is required.' };
@@ -172,11 +180,13 @@ export function createToolHandlers(deps) {
                 notes.push('The fund catalog response was truncated, so fund results may be incomplete.');
             return {
                 ok: true,
-                results: hits.slice(0, limit).map((row) => ({ symbol: row.symbol, name: row.name, market: row.market, code: row.code })),
+                results: hits
+                    .slice(0, limit)
+                    .map((row) => ({ symbol: row.symbol, name: row.name, market: row.market, code: row.code })),
                 note: notes.length > 0 ? notes.join(' ') : undefined,
             };
         },
-        async finance_chart(args = {}) {
+        async finance_chart(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -187,8 +197,10 @@ export function createToolHandlers(deps) {
             if (rows.length === 0)
                 return { ok: false, error: 'No candles available for this symbol/period.' };
             const closes = rows.map((row) => row.close);
-            const last = rows[rows.length - 1];
+            const last = rows.at(-1);
             const first = rows[0];
+            if (!first || !last)
+                return { ok: false, error: 'No candles available for this symbol/period.' };
             const summary = {
                 symbol: resolved.canonical,
                 period,
@@ -197,7 +209,14 @@ export function createToolHandlers(deps) {
                 from: first.date,
                 to: last.date,
                 windowChangePct: first.close > 0 ? ((last.close - first.close) / first.close) * 100 : 0,
-                latest: { date: last.date, open: last.open, high: last.high, low: last.low, close: last.close, volume: last.volume },
+                latest: {
+                    date: last.date,
+                    open: last.open,
+                    high: last.high,
+                    low: last.low,
+                    close: last.close,
+                    volume: last.volume,
+                },
                 ma5: sma(closes, 5).pop(),
                 ma10: sma(closes, 10).pop(),
                 ma20: sma(closes, 20).pop(),
@@ -206,19 +225,27 @@ export function createToolHandlers(deps) {
             const indicators = {};
             if (wanted.includes('macd')) {
                 const result = macd(closes);
-                indicators.macd = { dif: result.dif[result.dif.length - 1], dea: result.dea[result.dea.length - 1], hist: result.hist[result.hist.length - 1] };
+                indicators.macd = {
+                    dif: result.dif.at(-1) ?? null,
+                    dea: result.dea.at(-1) ?? null,
+                    hist: result.hist.at(-1) ?? null,
+                };
             }
             if (wanted.includes('kdj')) {
                 const result = kdj(rows);
-                indicators.kdj = { k: result.k[result.k.length - 1], d: result.d[result.d.length - 1], j: result.j[result.j.length - 1] };
+                indicators.kdj = { k: result.k.at(-1) ?? null, d: result.d.at(-1) ?? null, j: result.j.at(-1) ?? null };
             }
             if (wanted.includes('boll')) {
                 const result = boll(closes, 20, 2);
-                indicators.boll = { mid: result.mid[result.mid.length - 1], upper: result.upper[result.upper.length - 1], lower: result.lower[result.lower.length - 1] };
+                indicators.boll = {
+                    mid: result.mid.at(-1) ?? null,
+                    upper: result.upper.at(-1) ?? null,
+                    lower: result.lower.at(-1) ?? null,
+                };
             }
             return { ok: true, summary, indicators, series: rows.slice(-60) };
         },
-        async finance_portfolio(args = {}) {
+        async finance_portfolio(args) {
             const resolved = account(args.account);
             if (!resolved.ok)
                 return resolved;
@@ -228,9 +255,15 @@ export function createToolHandlers(deps) {
                     ok: true,
                     account: resolved.account.name,
                     trades: ledger.ordersOf(resolved.account.id, limit).map((row) => ({
-                        side: row.sideRaw, symbol: row.instrumentSymbol, name: row.name,
-                        quantity: row.quantity, price: row.price, currency: row.currency,
-                        feeMinor: row.feeMinor, fxRate: row.fxRate, tradedAt: isoDate(row.tradedAt),
+                        side: row.sideRaw,
+                        symbol: row.instrumentSymbol,
+                        name: row.name,
+                        quantity: row.quantity,
+                        price: row.price,
+                        currency: row.currency,
+                        feeMinor: row.feeMinor,
+                        fxRate: row.fxRate,
+                        tradedAt: isoDate(row.tradedAt),
                     })),
                 };
             }
@@ -268,7 +301,7 @@ export function createToolHandlers(deps) {
                 })),
             };
         },
-        async finance_financials(args = {}) {
+        async finance_financials(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -276,11 +309,20 @@ export function createToolHandlers(deps) {
             await quotes.refresh([resolved.canonical], { force: false });
             const quote = quotes.quote(resolved.canonical);
             if (rows.length === 0) {
-                return { ok: false, error: 'No financial report is available for this instrument (banks and insurers often have none).' };
+                return {
+                    ok: false,
+                    error: 'No financial report is available for this instrument (banks and insurers often have none).',
+                };
             }
-            return { ok: true, symbol: resolved.canonical, periods: rows, pe: quote ? quote.pe : null, pb: quote ? quote.pb : null };
+            return {
+                ok: true,
+                symbol: resolved.canonical,
+                periods: rows,
+                pe: quote ? quote.pe : null,
+                pb: quote ? quote.pb : null,
+            };
         },
-        async finance_dividend(args = {}) {
+        async finance_dividend(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -289,7 +331,7 @@ export function createToolHandlers(deps) {
             const rows = await eastmoney.fetchDividends(resolved.symbol);
             return { ok: true, symbol: resolved.canonical, dividends: rows };
         },
-        async finance_fundflow(args = {}) {
+        async finance_fundflow(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -301,20 +343,24 @@ export function createToolHandlers(deps) {
                 return { ok: false, error: 'No fund-flow data; this endpoint needs a mainland-China network connection.' };
             return { ok: true, symbol: resolved.canonical, days: rows.slice(-days) };
         },
-        async finance_perf(args = {}) {
+        async finance_perf(args) {
             const resolved = account(args.account);
             if (!resolved.ok)
                 return resolved;
             const valuation = await valuationFor(resolved.account.id, { force: true });
+            if (!valuation)
+                return { ok: false, error: 'Account not found.' };
             await ledger.writeSnapshot(valuation);
             const perf = ledger.performance(resolved.account.id);
             return { ok: true, account: resolved.account.name, isComplete: valuation.isComplete, ...perf };
         },
-        async finance_diagnose(args = {}) {
+        async finance_diagnose(args) {
             const resolved = account(args.account);
             if (!resolved.ok)
                 return resolved;
             const valuation = await valuationFor(resolved.account.id);
+            if (!valuation)
+                return { ok: false, error: 'Account not found.' };
             if (!valuation.isComplete) {
                 return {
                     ok: false,
@@ -337,7 +383,7 @@ export function createToolHandlers(deps) {
                 topDetractor: diagnosis.detractor ? diagnosis.detractor.position.name : null,
             };
         },
-        async finance_sector(args = {}) {
+        async finance_sector(args) {
             const limit = clamp(args.limit, 1, 40, 12);
             if (args.action === 'constituents') {
                 if (!args.code)
@@ -349,19 +395,24 @@ export function createToolHandlers(deps) {
             const rows = await push2.fetchSectors({ kind, sort: args.sort === 'moneyflow' ? 'moneyflow' : 'change', limit });
             return rows.length > 0 ? { ok: true, kind, sectors: rows } : { ok: false, error: CHINA_NETWORK };
         },
-        async finance_moneyrank(args = {}) {
-            const rows = await push2.fetchMoneyRank({ inflow: args.direction !== 'outflow', limit: clamp(args.limit, 1, 30, 12) });
+        async finance_moneyrank(args) {
+            const rows = await push2.fetchMoneyRank({
+                inflow: args.direction !== 'outflow',
+                limit: clamp(args.limit, 1, 30, 12),
+            });
             return rows.length > 0 ? { ok: true, rows } : { ok: false, error: CHINA_NETWORK };
         },
-        async finance_dragon(args = {}) {
+        async finance_dragon(args) {
             const rows = await eastmoney.fetchDragonBoard(clamp(args.limit, 1, 30, 12));
-            return rows.length > 0 ? { ok: true, tradeDate: rows[0].tradeDate, rows } : { ok: false, error: 'No Dragon-Tiger data available.' };
+            return rows.length > 0
+                ? { ok: true, tradeDate: rows[0]?.tradeDate, rows }
+                : { ok: false, error: 'No Dragon-Tiger data available.' };
         },
         async finance_sentiment() {
             const breadth = await push2.fetchBreadth(Date.now());
             return breadth ? { ok: true, ...breadth } : { ok: false, error: CHINA_NETWORK };
         },
-        async finance_screener(args = {}) {
+        async finance_screener(args) {
             const universe = await push2.fetchScreenerUniverse(400);
             if (universe.length === 0)
                 return { ok: false, error: CHINA_NETWORK };
@@ -380,12 +431,18 @@ export function createToolHandlers(deps) {
                 rows = rows.filter((row) => row.marketCapYi >= Number(args.mktcapMinYi));
             if (args.industry)
                 rows = rows.filter((row) => row.industry.includes(String(args.industry)));
-            const field = { change: 'changePct', moneyflow: 'mainNet', turnover: 'turnover', pe: 'pe', marketcap: 'marketCapYi' }[args.sortBy || 'change'];
-            const ascending = args.order ? args.order === 'asc' : (args.sortBy === 'pe');
+            const field = {
+                change: 'changePct',
+                moneyflow: 'mainNet',
+                turnover: 'turnover',
+                pe: 'pe',
+                marketcap: 'marketCapYi',
+            }[args.sortBy || 'change'];
+            const ascending = args.order ? args.order === 'asc' : args.sortBy === 'pe';
             rows = rows.slice().sort((a, b) => (ascending ? a[field] - b[field] : b[field] - a[field]));
             return { ok: true, rows: rows.slice(0, clamp(args.limit, 1, 25, 12)) };
         },
-        async finance_backtest(args = {}) {
+        async finance_backtest(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -395,9 +452,14 @@ export function createToolHandlers(deps) {
             if (!result)
                 return { ok: false, error: 'Not enough history to backtest (need at least 20 candles).' };
             const { curve, ...metrics } = result;
-            return { ok: true, symbol: resolved.canonical, ...metrics, disclaimer: 'Historical simulation; not indicative of future results.' };
+            return {
+                ok: true,
+                symbol: resolved.canonical,
+                ...metrics,
+                disclaimer: 'Historical simulation; not indicative of future results.',
+            };
         },
-        async finance_plan(args = {}) {
+        async finance_plan(args) {
             const resolved = await resolveInstrument(args.symbol);
             if (!resolved.ok)
                 return resolved;
@@ -410,25 +472,34 @@ export function createToolHandlers(deps) {
             if (!result)
                 return { ok: false, error: 'Not enough history to simulate a plan.' };
             const { curve, ...metrics } = result;
-            return { ok: true, symbol: resolved.canonical, ...metrics, disclaimer: 'Historical simulation; not indicative of future results.' };
+            return {
+                ok: true,
+                symbol: resolved.canonical,
+                ...metrics,
+                disclaimer: 'Historical simulation; not indicative of future results.',
+            };
         },
-        async finance_news(args = {}) {
+        async finance_news(args) {
             const limit = clamp(args.limit, 1, 25, 10);
             if (args.action === 'stock') {
                 const resolved = await resolveInstrument(args.symbol);
                 if (!resolved.ok)
                     return resolved;
                 const rows = await eastmoney.fetchAnnouncements(resolved.symbol, limit);
-                return rows.length > 0 ? { ok: true, announcements: rows } : { ok: false, error: 'No announcements (A-shares only).' };
+                return rows.length > 0
+                    ? { ok: true, announcements: rows }
+                    : { ok: false, error: 'No announcements (A-shares only).' };
             }
             if (args.action === 'forecast') {
                 const rows = await eastmoney.fetchForecasts(limit);
-                return rows.length > 0 ? { ok: true, forecasts: rows } : { ok: false, error: 'No earnings pre-announcements available.' };
+                return rows.length > 0
+                    ? { ok: true, forecasts: rows }
+                    : { ok: false, error: 'No earnings pre-announcements available.' };
             }
             const rows = await sina.fetchNewsFeed(limit);
             return rows.length > 0 ? { ok: true, newsflash: rows } : { ok: false, error: 'Newsflash feed unavailable.' };
         },
-        async finance_compare(args = {}) {
+        async finance_compare(args) {
             const items = Array.isArray(args.items) ? args.items : [];
             if (items.length === 0)
                 return { ok: false, error: 'items[] is required.' };
@@ -439,6 +510,8 @@ export function createToolHandlers(deps) {
                     if (!resolved.ok)
                         return resolved;
                     const valuation = await valuationFor(resolved.account.id);
+                    if (!valuation)
+                        return { ok: false, error: 'Account not found.' };
                     out.push({
                         account: resolved.account.name,
                         currency: resolved.account.currency,
@@ -460,7 +533,7 @@ export function createToolHandlers(deps) {
             await quotes.refresh(resolved.map((row) => row.canonical), { force: false });
             return { ok: true, instruments: resolved.map((row) => quoteJSON(quotes.quote(row.canonical), row.canonical)) };
         },
-        async finance_rebalance(args = {}) {
+        async finance_rebalance(args) {
             const resolved = account(args.account);
             if (!resolved.ok)
                 return resolved;
@@ -475,6 +548,8 @@ export function createToolHandlers(deps) {
                 normalized.push({ symbol: row.canonical, weight: Number(target.weight) });
             }
             const valuation = await valuationFor(resolved.account.id);
+            if (!valuation)
+                return { ok: false, error: 'Account not found.' };
             const proposals = proposeRebalance({
                 valuation,
                 targets: normalized,
@@ -503,11 +578,11 @@ export function registerTools(deps) {
             continue;
         const ok = registerAction(def.name, async (args) => {
             try {
-                return await handler(args || {});
+                return (await handler(args || {}));
             }
             catch (error) {
                 // action 永不抛到桥：抛出去模型只会看到一句无信息的失败。
-                return { ok: false, error: String((error && error.message) || error) };
+                return { ok: false, error: String(error instanceof Error ? error.message : error) };
             }
         });
         if (ok)

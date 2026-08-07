@@ -17,7 +17,7 @@ export function balanceMinor(store, account, asOf = Date.now()) {
         const rows = store.snapshots
             .filter((row) => row.accountID === account.id && row.date < cutoff)
             .sort((a, b) => b.date - a.date);
-        return rows.length > 0 ? rows[0].balanceMinor : account.initialBalanceMinor;
+        return rows[0]?.balanceMinor ?? account.initialBalanceMinor;
     }
     let total = account.initialBalanceMinor;
     for (const txn of store.allTransactions()) {
@@ -39,9 +39,11 @@ export function balancesByAccount(store, asOf = Date.now()) {
     for (const txn of store.allTransactions()) {
         if (txn.occurredOn >= cutoff)
             continue;
+        if (!txn.accountID)
+            continue;
         if (out[txn.accountID] === undefined || out[txn.accountID] === null)
             continue;
-        out[txn.accountID] += signedAmountMinor(txn);
+        out[txn.accountID] = (out[txn.accountID] ?? 0) + signedAmountMinor(txn);
     }
     for (const account of store.accounts) {
         if (out[account.id] !== null)
@@ -79,10 +81,15 @@ export function netWorth(store, balances) {
 export async function setBalance(store, account, targetMinor, now = Date.now()) {
     if (!derivesBalanceFromFlow(account)) {
         const snapshot = {
-            id: newID(), accountID: account.id, date: dayStart(now),
-            balanceMinor: Math.round(targetMinor), source: 'manual',
+            id: newID(),
+            accountID: account.id,
+            date: dayStart(now),
+            balanceMinor: Math.round(targetMinor),
+            source: 'manual',
         };
-        const ok = await store.mutate((draft) => { draft.table('snapshots').push(snapshot); });
+        const ok = await store.mutate((draft) => {
+            draft.table('snapshots').push(snapshot);
+        });
         return ok ? { ok: true, delta: 0 } : { ok: false, reason: 'persistence' };
     }
     const current = balanceMinor(store, account, now);
@@ -100,8 +107,11 @@ export async function setBalance(store, account, targetMinor, now = Date.now()) 
     });
     store.applyPostingSnapshot(txn);
     const snapshot = {
-        id: newID(), accountID: account.id, date: dayStart(now),
-        balanceMinor: Math.round(targetMinor), source: 'calibration',
+        id: newID(),
+        accountID: account.id,
+        date: dayStart(now),
+        balanceMinor: Math.round(targetMinor),
+        source: 'calibration',
     };
     const ok = await store.mutate((draft) => {
         draft.putTx(txn);

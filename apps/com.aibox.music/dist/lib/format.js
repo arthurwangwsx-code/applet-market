@@ -45,7 +45,7 @@ export function gainLabel(db) {
 /** 音质标签：仅 flac / alac 显示大写徽标；其它编码（含 Apple Music）一律不标。 */
 export function losslessBadge(codec) {
     const value = String(codec || '').toLowerCase();
-    return (value === 'flac' || value === 'alac') ? value.toUpperCase() : null;
+    return value === 'flac' || value === 'alac' ? value.toUpperCase() : null;
 }
 /** 曲目的稳定键：Apple Music `am:<id>`，本地/URL `url:<绝对地址>`。收藏与播放历史共用。 */
 export function stableKey(track) {

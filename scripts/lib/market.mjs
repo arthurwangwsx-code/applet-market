@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { EXTERNAL_MODULES, FORBIDDEN_MODULES } from './runtime-modules.mjs'
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 export const APPS_DIR = path.join(ROOT, 'apps')
@@ -27,29 +28,22 @@ export const LIMITS = {
 // 宿主 react 外壳的 import map。这份表必须与它**逐条相等**：
 //  · 多一条 → validate 放过一个宿主解析不了的说明符 → 装上就白屏（且转译期零报错，极难归因）
 //  · 少一条 → 误拒合法应用
-export const BARE_IMPORT_ALLOWLIST = new Set([
-  'react',
-  'react-dom',
-  'react-dom/client',
-  'react/jsx-runtime',
-  'antd-mobile',
-  'chart.js',
-  // 框架级 UI 原语（VirtualList / useKeyboardInset / useListGestures / imageURL）——
-  // 随运行时资产内置，不是 npm 包。见 docs/capabilities/applet/framework-capabilities.md §3.2/§3.3。
-  'aibox/ui',
-])
+export const BARE_IMPORT_ALLOWLIST = new Set(EXTERNAL_MODULES)
 
 // 曾经在白名单里、但宿主**其实没有**的说明符。单列出来是为了给一条能自愈的错误，
 // 而不是笼统的「未知模块」。（2026-08-03 修：`react/jsx-dev-runtime` 与 `chart.js/auto`
 // 在市场白名单里但不在 Swift bareToFile、也不在 import map —— 放过去就是 404 白屏。）
-export const KNOWN_MISSING_IMPORTS = new Map([
-  ['react/jsx-dev-runtime', 'jsx-dev-runtime 只存在于开发模式，宿主 import map 没有它。用 production 构建。'],
-  ['chart.js/auto', "宿主只提供整包 'chart.js'。改成 import { Chart, registerables } from 'chart.js' 再 Chart.register(...registerables)。"],
-  ['antd', "手机端要用 'antd-mobile'，桌面版 antd 没有随运行时提供。"],
-])
+export const KNOWN_MISSING_IMPORTS = new Map(Object.entries(FORBIDDEN_MODULES))
 
 export const CATEGORIES = new Set([
-  'information', 'productivity', 'tools', 'media', 'developer', 'lifestyle', 'game', 'other',
+  'information',
+  'productivity',
+  'tools',
+  'media',
+  'developer',
+  'lifestyle',
+  'game',
+  'other',
 ])
 
 // 宿主已知的 aibox.* 扩展能力命名空间（manifest.permissions.capabilities 的取值域）。
@@ -61,22 +55,75 @@ export const CATEGORIES = new Set([
 // 注意 `video` 与 `media` 是两条：`media` 只播 applet 自己资源里的**音频**，
 // `video` 是遥控宿主 AVPlayer 播任意 http(s) 视频（全屏 / 画中画 / 锁屏卡片都在那一侧）。
 export const KNOWN_CAPABILITIES = new Set([
-  'audio', 'browser', 'calendar', 'clipboard', 'contacts', 'device', 'download', 'files', 'haptics',
-  'health', 'location', 'media', 'music', 'notifications', 'open', 'photos', 'picker', 'reminders',
-  'secrets', 'share', 'shortcuts', 'speech', 'toast', 'tools', 'tts', 'ui', 'video', 'vision', 'voiceMemos',
+  'audio',
+  'browser',
+  'calendar',
+  'clipboard',
+  'contacts',
+  'device',
+  'download',
+  'files',
+  'haptics',
+  'health',
+  'location',
+  'media',
+  'music',
+  'notifications',
+  'open',
+  'photos',
+  'picker',
+  'reminders',
+  'secrets',
+  'share',
+  'shortcuts',
+  'speech',
+  'toast',
+  'tools',
+  'tts',
+  'ui',
+  'video',
+  'vision',
+  'voiceMemos',
 ])
 
 // 容器协议自身的命名空间：恒可用，**不需要**也不应该写进 permissions.capabilities。
 // 写进去不算错（宿主忽略），但会让用户以为这个应用要了更多权限，所以 validate 给一条提醒。
 export const CONTAINER_NAMESPACES = new Set([
-  'access', 'action', 'apps', 'chat', 'db', 'jobs', 'lifecycle', 'list', 'menu', 'navigation',
-  'resource', 'scene', 'tabs', 'toolbar',
+  'access',
+  'action',
+  'apps',
+  'chat',
+  'db',
+  'jobs',
+  'lifecycle',
+  'list',
+  'menu',
+  'navigation',
+  'resource',
+  'scene',
+  'tabs',
+  'toolbar',
 ])
 
 // 二进制扩展名 → base64；其余按 utf8 存。
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.icns', '.pdf',
-  '.woff', '.woff2', '.ttf', '.otf', '.mp3', '.mp4', '.wav', '.m4a', '.zip',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.ico',
+  '.icns',
+  '.pdf',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  '.mp3',
+  '.mp4',
+  '.wav',
+  '.m4a',
+  '.zip',
 ])
 
 // 永不进包的开发副产物。
@@ -179,7 +226,8 @@ export function stripContent(file) {
 
 export function listAppIDs() {
   if (!fs.existsSync(APPS_DIR)) return []
-  return fs.readdirSync(APPS_DIR, { withFileTypes: true })
+  return fs
+    .readdirSync(APPS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
     .map((entry) => entry.name)
     .sort()
@@ -204,7 +252,7 @@ export function appPaths(appId) {
 // —— 两种工程形态 ——
 //
 // 市场同时承载两条链路（宿主 `AppletRuntimeKind` 的两个取值）：
-//  · **构建型**（有 `package.json`）：TS + Vite 工程，进包的是 `dist/**` + `src/manifest.json`。
+//  · **构建型**（有 `package.json`）：TS + aibox-tsbuild 工程，进包的是 `dist/**` + `src/manifest.json`。
 //  · **源码型**（无 `package.json`）：AI 直写的 `.jsx`，进包的是 `src/**`（历史行为，逐字不变）。
 // 判据只有一个——**根目录有没有 `package.json`**。不用 manifest 的 runtimeKind 做判据：
 // 那是给宿主看的运行时声明，而这里要回答的是「本地怎么打包」，两者不该互相依赖
@@ -251,7 +299,8 @@ export function collectBundleEntries(appId) {
 export function listReleaseVersions(appId) {
   const { releasesDir } = appPaths(appId)
   if (!fs.existsSync(releasesDir)) return []
-  return fs.readdirSync(releasesDir, { withFileTypes: true })
+  return fs
+    .readdirSync(releasesDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && parseSemver(entry.name))
     .map((entry) => entry.name)
     .sort((a, b) => compareSemver(b, a))

@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, NavBar, Space } from 'antd-mobile';
-import { haptic, isAvailable } from '@aibox/applet-sdk';
-import { useKeyboardInset, useLocale, useScene } from '@aibox/applet-sdk/react';
-import { Dial } from './components/Dial.js';
-import { HistoryList } from './components/HistoryList.js';
-import { registerAppletActions } from './lib/actions.js';
-import type { RunningTimer, Session } from './lib/timer.js';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button, NavBar, Space } from 'antd-mobile'
+import { haptic, isAvailable } from '@aibox/applet-sdk'
+import { useKeyboardInset, useLocale, useScene } from '@aibox/applet-sdk/react'
+import { Dial } from './components/Dial.js'
+import { HistoryList } from './components/HistoryList.js'
+import { registerAppletActions } from './lib/actions.js'
+import type { RunningTimer, Session } from './lib/timer.js'
 import {
-  DEFAULT_SECONDS, appendHistory, loadHistory, loadRunning,
-  newSessionID, remainingSeconds, saveRunning,
-} from './lib/timer.js';
+  DEFAULT_SECONDS,
+  appendHistory,
+  loadHistory,
+  loadRunning,
+  newSessionID,
+  remainingSeconds,
+  saveRunning,
+} from './lib/timer.js'
 
 /**
  * 计时器 —— TypeScript 标准工程的完整范例（AI fork 的起点）。
@@ -27,43 +32,45 @@ import {
  *    全屏页 / 半屏 sheet 里都对。
  */
 
-const POLL_MS = 500;
+const POLL_MS = 500
 
 export default function App() {
-  const { locale } = useLocale();
-  const scene = useScene();
-  const keyboard = useKeyboardInset();
+  const { locale } = useLocale()
+  const scene = useScene()
+  const keyboard = useKeyboardInset()
 
-  const [running, setRunning] = useState<RunningTimer | null>(null);
-  const [remaining, setRemaining] = useState(DEFAULT_SECONDS);
-  const [history, setHistory] = useState<Session[]>([]);
-  const [ready, setReady] = useState(false);
+  const [running, setRunning] = useState<RunningTimer | null>(null)
+  const [remaining, setRemaining] = useState(DEFAULT_SECONDS)
+  const [history, setHistory] = useState<Session[]>([])
+  const [ready, setReady] = useState(false)
   // 到点时只结算一次：轮询每 500ms 醒一次，没有这个闸门会连写多条历史。
-  const settling = useRef(false);
+  const settling = useRef(false)
 
   const refresh = useCallback(async () => {
-    const [next, sessions] = await Promise.all([loadRunning(), loadHistory()]);
-    setRunning(next);
-    setHistory(sessions);
-    setRemaining(next ? remainingSeconds(next) : DEFAULT_SECONDS);
-  }, []);
+    const [next, sessions] = await Promise.all([loadRunning(), loadHistory()])
+    setRunning(next)
+    setHistory(sessions)
+    setRemaining(next ? remainingSeconds(next) : DEFAULT_SECONDS)
+  }, [])
 
   useEffect(() => {
-    void refresh().finally(() => setReady(true));
+    void refresh().finally(() => setReady(true))
     // action 可能在页面没打开时改了状态，注册时带一个回调把 UI 拉回来。
-    registerAppletActions(() => { void refresh(); });
-  }, [refresh]);
+    registerAppletActions(() => {
+      void refresh()
+    })
+  }, [refresh])
 
   // 倒计时：**按墙钟差值算**而不是每秒 -1。后台/锁屏时 setInterval 会被节流，
   // 递减法回到前台就少了一截；差值法永远准。
   useEffect(() => {
-    if (!running) return undefined;
+    if (!running) return undefined
     const tick = async () => {
-      const left = remainingSeconds(running);
-      setRemaining(left);
-      if (left > 0 || settling.current) return;
-      settling.current = true;
-      await saveRunning(null);
+      const left = remainingSeconds(running)
+      setRemaining(left)
+      if (left > 0 || settling.current) return
+      settling.current = true
+      await saveRunning(null)
       const sessions = await appendHistory({
         id: newSessionID(),
         label: running.label,
@@ -71,29 +78,31 @@ export default function App() {
         actualSeconds: running.plannedSeconds,
         finishedAt: Date.now(),
         completed: true,
-      });
-      setHistory(sessions);
-      setRunning(null);
-      void haptic('success');
-      settling.current = false;
-    };
-    void tick();
-    const id = window.setInterval(() => { void tick(); }, POLL_MS);
-    return () => window.clearInterval(id);
-  }, [running]);
+      })
+      setHistory(sessions)
+      setRunning(null)
+      void haptic('success')
+      settling.current = false
+    }
+    void tick()
+    const id = window.setInterval(() => {
+      void tick()
+    }, POLL_MS)
+    return () => window.clearInterval(id)
+  }, [running])
 
   const start = useCallback(async (seconds: number) => {
-    const next: RunningTimer = { label: '专注', plannedSeconds: seconds, startedAt: Date.now() };
-    await saveRunning(next);
-    setRunning(next);
-    setRemaining(seconds);
-    void haptic('light');
-  }, []);
+    const next: RunningTimer = { label: '专注', plannedSeconds: seconds, startedAt: Date.now() }
+    await saveRunning(next)
+    setRunning(next)
+    setRemaining(seconds)
+    void haptic('light')
+  }, [])
 
   const stop = useCallback(async () => {
-    if (!running) return;
-    const left = remainingSeconds(running);
-    await saveRunning(null);
+    if (!running) return
+    const left = remainingSeconds(running)
+    await saveRunning(null)
     const sessions = await appendHistory({
       id: newSessionID(),
       label: running.label,
@@ -101,20 +110,29 @@ export default function App() {
       actualSeconds: running.plannedSeconds - left,
       finishedAt: Date.now(),
       completed: false,
-    });
-    setHistory(sessions);
-    setRunning(null);
-    setRemaining(DEFAULT_SECONDS);
-    void haptic('warning');
-  }, [running]);
+    })
+    setHistory(sessions)
+    setRunning(null)
+    setRemaining(DEFAULT_SECONDS)
+    void haptic('warning')
+  }, [running])
 
-  const safeBottom = scene?.safeArea.bottom ?? 0;
+  const safeBottom = scene?.safeArea.bottom ?? 0
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <NavBar back={null}>计时器</NavBar>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '32px 16px 0' }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 24,
+          padding: '32px 16px 0',
+        }}
+      >
         <Dial
           remaining={remaining}
           planned={running?.plannedSeconds ?? DEFAULT_SECONDS}
@@ -123,7 +141,14 @@ export default function App() {
         />
 
         {running ? (
-          <Button color="danger" fill="outline" size="large" onClick={() => { void stop(); }}>
+          <Button
+            color="danger"
+            fill="outline"
+            size="large"
+            onClick={() => {
+              void stop()
+            }}
+          >
             停止
           </Button>
         ) : (
@@ -133,7 +158,9 @@ export default function App() {
                 key={minutes}
                 color={minutes === 25 ? 'primary' : 'default'}
                 size="large"
-                onClick={() => { void start(minutes * 60); }}
+                onClick={() => {
+                  void start(minutes * 60)
+                }}
               >
                 {minutes} 分钟
               </Button>
@@ -152,5 +179,5 @@ export default function App() {
         {ready && <HistoryList sessions={history} locale={locale} />}
       </div>
     </div>
-  );
+  )
 }

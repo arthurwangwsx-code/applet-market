@@ -272,8 +272,7 @@
         "timer",
         "pomodoro",
         "stopwatch",
-        "typescript",
-        "vite"
+        "typescript"
       ],
       "minHostVersion": "1.0.0"
     },

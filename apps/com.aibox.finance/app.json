@@ -13,11 +13,5 @@
   "category": "information",
   "author": "AiBox",
   "minHostVersion": "1.0.0",
-  "tags": [
-    "stocks",
-    "quotes",
-    "watchlist",
-    "portfolio",
-    "fund"
-  ]
+  "tags": ["stocks", "quotes", "watchlist", "portfolio", "fund"]
 }

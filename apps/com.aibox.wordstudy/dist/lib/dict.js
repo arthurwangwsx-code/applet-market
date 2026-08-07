@@ -3,14 +3,14 @@
 //   ② 有道词典移动版网页抓取
 //   ③ AI 单发生成 JSON
 // ②③ 之间静默切换、用户无感知；抓取环节的任何失败都不抛给上层，直接进 AI 兜底。
-import { fetchText, normalizeError } from '../lib/aibox-sdk.js';
+import { fetchText, normalizeError } from 'aibox/sdk';
 import { emptyPayload } from './logic.js';
 /** 有道结果页很容易超过桥的 200KB 默认截断 —— **必须显式传 maxBytes**，否则例句区解析不出来且不报错。 */
 const YOUDAO_MAX_BYTES = 2_000_000;
 /** 容器固定 30s 超时，原生是 8s。查词卡 30 秒体验很差 → 页面侧自己套一个 8s 的竞速。 */
 const LOOKUP_TIMEOUT_MS = 8_000;
-const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
-    + '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ' +
+    '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 function timeout(promise, ms) {
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('aibox/timeout: lookup timed out')), ms);
@@ -186,9 +186,7 @@ function optionalString(value) {
 }
 /** 把 AI 的宽容 JSON 归一成 payload。缺字段一律走默认值，不因为一处缺失整条失败。 */
 export function payloadFromAI(raw, fallbackWord) {
-    const frequency = typeof raw.frequency === 'number' && Number.isFinite(raw.frequency)
-        ? Math.round(raw.frequency)
-        : null;
+    const frequency = typeof raw.frequency === 'number' && Number.isFinite(raw.frequency) ? Math.round(raw.frequency) : null;
     return {
         word: optionalString(raw.word) ?? fallbackWord,
         corrected: optionalString(raw.corrected),
@@ -257,8 +255,8 @@ export async function lookupWord(word) {
 // —— 翻译 ——
 const LANG_NAME = { en: 'English', zh: 'Chinese' };
 function translatePrompt(text, from, to) {
-    return `Translate the text below from ${LANG_NAME[from]} to ${LANG_NAME[to]}. `
-        + `Output ONLY the translation — no explanation, no quotes, no markdown.\n\nText: ${text}`;
+    return (`Translate the text below from ${LANG_NAME[from]} to ${LANG_NAME[to]}. ` +
+        `Output ONLY the translation — no explanation, no quotes, no markdown.\n\nText: ${text}`);
 }
 /**
  * 流式翻译。**system 提示是空串。**
@@ -294,7 +292,12 @@ export async function translateText(text, from, to) {
     const api = ai();
     if (!api)
         throw new LookupError('No AI provider is configured for the selected model.');
-    return api.generate({ prompt: translatePrompt(text, from, to), maxTokens: 2000, temperature: 0.2, intent: 'balanced' });
+    return api.generate({
+        prompt: translatePrompt(text, from, to),
+        maxTokens: 2000,
+        temperature: 0.2,
+        intent: 'balanced',
+    });
 }
 // —— 每日一句 ——
 function dailyPrompt(dateKey) {

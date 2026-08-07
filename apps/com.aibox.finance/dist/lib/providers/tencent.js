@@ -41,7 +41,7 @@ export function parseQuoteLine(body, symbol) {
         change = price - prevClose;
     const amountRaw = pick(parts, 37);
     // A 股成交额单位是**万元**，港/美是元。
-    const amount = amountRaw === null ? null : (market === 'ashare' ? amountRaw * 10000 : amountRaw);
+    const amount = amountRaw === null ? null : market === 'ashare' ? amountRaw * 10000 : amountRaw;
     return {
         symbol: canonicalOf(symbol),
         market,
@@ -55,11 +55,11 @@ export function parseQuoteLine(body, symbol) {
         changePct: pick(parts, 32) || 0,
         volume: pick(parts, 6) || 0,
         amount,
-        turnover: (market === 'ashare' || market === 'hk') ? pick(parts, 38) : null,
+        turnover: market === 'ashare' || market === 'hk' ? pick(parts, 38) : null,
         pe: pick(parts, 39),
         pb: market === 'ashare' ? pick(parts, 48) : null,
-        marketCap: (market === 'ashare' || market === 'hk') ? pick(parts, 46) : null,
-        amplitude: (market === 'ashare' || market === 'hk') ? pick(parts, 44) : null,
+        marketCap: market === 'ashare' || market === 'hk' ? pick(parts, 46) : null,
+        amplitude: market === 'ashare' || market === 'hk' ? pick(parts, 44) : null,
         bids: market === 'ashare' ? levels(parts, 9) : [],
         asks: market === 'ashare' ? levels(parts, 19) : [],
         time: parts[30] || '',
@@ -73,7 +73,9 @@ export function parseQuoteLine(body, symbol) {
  * 网络/解析失败一律返回空字典，不抛。
  */
 export async function fetchQuotes(symbols) {
-    const usable = symbols.map((symbol) => ({ symbol, code: tencentQuoteCode(symbol) })).filter((row) => row.code);
+    const usable = symbols
+        .map((symbol) => ({ symbol, code: tencentQuoteCode(symbol) }))
+        .filter((row) => typeof row.code === 'string' && row.code.length > 0);
     if (usable.length === 0)
         return {};
     const codes = usable.map((row) => row.code).join(',');
@@ -87,10 +89,14 @@ export async function fetchQuotes(symbols) {
         const match = /v_([^=]+)="([^"]*)"/.exec(line);
         if (!match)
             continue;
-        const symbol = byCode.get(match[1].trim().toLowerCase());
+        const responseCode = match[1];
+        const responseBody = match[2];
+        if (!responseCode || responseBody === undefined)
+            continue;
+        const symbol = byCode.get(responseCode.trim().toLowerCase());
         if (!symbol)
             continue;
-        const quote = parseQuoteLine(match[2], symbol);
+        const quote = parseQuoteLine(responseBody, symbol);
         if (quote)
             out[quote.symbol] = quote;
     }
@@ -100,7 +106,9 @@ const PERIOD_TOKEN = { '5m': 'm5', '15m': 'm15', '30m': 'm30', '60m': 'm60' };
 /** 每行 `[date, open, close, high, low, volume]`——**close 在第 3 位、high 在第 4 位**。 */
 function parseCandleRows(rows) {
     const out = [];
-    for (const row of rows || []) {
+    if (!Array.isArray(rows))
+        return out;
+    for (const row of rows) {
         if (!Array.isArray(row) || row.length < 6)
             continue;
         const open = Number(row[1]);
@@ -114,7 +122,6 @@ function parseCandleRows(rows) {
     }
     return out;
 }
-/** 日/周/月 K 线（港股换 hkfqkline host 路径）。`n` 钳到 1..800。 */
 export async function fetchDailyCandles(symbol, period, adjust, count) {
     const code = tencentKlineCode(symbol);
     if (!code)
@@ -164,13 +171,16 @@ export async function search(query) {
     if (!match)
         return [];
     const out = [];
-    for (const entry of match[1].split('^')) {
+    const matchedBody = match[1];
+    if (matchedBody === undefined)
+        return out;
+    for (const entry of matchedBody.split('^')) {
         const parts = entry.split('~');
         if (parts.length < 3)
             continue;
-        const exchange = parts[0].trim().toLowerCase();
-        const code = parts[1].trim();
-        const name = unescapeUnicode(parts[2].trim());
+        const exchange = (parts[0] ?? '').trim().toLowerCase();
+        const code = (parts[1] ?? '').trim();
+        const name = unescapeUnicode((parts[2] ?? '').trim());
         if (!code || !name)
             continue;
         if (exchange === 'sh' || exchange === 'sz' || exchange === 'bj') {

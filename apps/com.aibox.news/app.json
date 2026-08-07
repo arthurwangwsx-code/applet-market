@@ -13,11 +13,5 @@
   "category": "information",
   "author": "AiBox",
   "minHostVersion": "1.0.0",
-  "tags": [
-    "rss",
-    "atom",
-    "rsshub",
-    "reader",
-    "news"
-  ]
+  "tags": ["rss", "atom", "rsshub", "reader", "news"]
 }

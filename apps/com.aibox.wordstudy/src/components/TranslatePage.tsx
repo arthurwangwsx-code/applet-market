@@ -85,8 +85,19 @@ export function TranslatePage(props: {
 
   return (
     <div style={{ padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.s2, fontSize: 13, fontWeight: 500, color: palette.accent }}>
-        <button type="button" style={plain(palette)} onClick={() => setDirection('zhToEn')}>{NATIVE_NAME[preview.from]}</button>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: SPACE.s2,
+          fontSize: 13,
+          fontWeight: 500,
+          color: palette.accent,
+        }}
+      >
+        <button type="button" style={plain(palette)} onClick={() => setDirection('zhToEn')}>
+          {NATIVE_NAME[preview.from]}
+        </button>
         <button
           type="button"
           style={plain(palette)}
@@ -95,10 +106,16 @@ export function TranslatePage(props: {
         >
           <Icon name="swap" size={13} />
         </button>
-        <button type="button" style={plain(palette)} onClick={() => setDirection('enToZh')}>{NATIVE_NAME[preview.to]}</button>
+        <button type="button" style={plain(palette)} onClick={() => setDirection('enToZh')}>
+          {NATIVE_NAME[preview.to]}
+        </button>
         <div style={{ flex: 1 }} />
         {direction !== 'auto' ? (
-          <button type="button" style={{ ...plain(palette), fontSize: 11, color: palette.muted }} onClick={() => setDirection('auto')}>
+          <button
+            type="button"
+            style={{ ...plain(palette), fontSize: 11, color: palette.muted }}
+            onClick={() => setDirection('auto')}
+          >
             {t('autoDetect')}
           </button>
         ) : null}
@@ -110,9 +127,18 @@ export function TranslatePage(props: {
         placeholder={t('translateInputPlaceholder')}
         rows={4}
         style={{
-          width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 96, maxHeight: 260,
-          borderRadius: RADIUS.field, border: `1px solid ${palette.line}`, padding: SPACE.s3,
-          fontSize: 15, color: palette.ink, background: palette.surface, fontFamily: 'inherit',
+          width: '100%',
+          boxSizing: 'border-box',
+          resize: 'vertical',
+          minHeight: 96,
+          maxHeight: 260,
+          borderRadius: RADIUS.field,
+          border: `1px solid ${palette.line}`,
+          padding: SPACE.s3,
+          fontSize: 15,
+          color: palette.ink,
+          background: palette.surface,
+          fontFamily: 'inherit',
         }}
       />
 
@@ -151,8 +177,13 @@ export function TranslatePage(props: {
 
 function plain(palette: Palette) {
   return {
-    border: 'none', background: 'transparent', color: palette.accent,
-    padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 500 as const,
+    border: 'none',
+    background: 'transparent',
+    color: palette.accent,
+    padding: 0,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500 as const,
   }
 }
 
@@ -177,7 +208,9 @@ export function TranslationDetail(props: {
       if (!found) setMissing(true)
       else setRecord(found)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [props.recordID])
 
   const toggleStar = async () => {
@@ -230,7 +263,12 @@ export function TranslationDetail(props: {
       </PushPage>
     )
   }
-  if (!record) return <PushPage palette={palette} title="" onBack={props.onBack}><div /></PushPage>
+  if (!record)
+    return (
+      <PushPage palette={palette} title="" onBack={props.onBack}>
+        <div />
+      </PushPage>
+    )
 
   // **朗读永远读英文那一侧**：源语言是 en 就读原文，否则读当前译文（读中文会跑偏）。
   const speakText = record.srcLang === 'en' ? record.source : record.target
@@ -244,7 +282,14 @@ export function TranslationDetail(props: {
         <button
           type="button"
           onClick={toggleStar}
-          style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 17, cursor: 'pointer', padding: 8 }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: palette.accent,
+            fontSize: 17,
+            cursor: 'pointer',
+            padding: 8,
+          }}
           aria-label={record.starred ? t('unfavourite') : t('favourite')}
         >
           <Icon name={record.starred ? 'star.fill' : 'star'} size={17} />
@@ -263,7 +308,8 @@ export function TranslationDetail(props: {
         <div style={{ height: 1, background: palette.line }} />
         <div>
           <div style={{ fontSize: 11, fontWeight: 500, color: palette.accent, textTransform: 'uppercase' }}>
-            {NATIVE_NAME[record.dstLang]}{busy ? ' …' : ''}
+            {NATIVE_NAME[record.dstLang]}
+            {busy ? ' …' : ''}
           </div>
           <div style={{ fontSize: 16, color: palette.ink, marginTop: 6, whiteSpace: 'pre-wrap', userSelect: 'text' }}>
             {record.target}
@@ -271,13 +317,23 @@ export function TranslationDetail(props: {
         </div>
         {error ? <div style={{ fontSize: 13, color: palette.red }}>{error}</div> : null}
         <div style={{ display: 'flex', gap: SPACE.s4, alignItems: 'center' }}>
-          <button type="button" style={{ ...plain(palette), fontSize: 12 }} onClick={() => void copyText(record.target)}>
+          <button
+            type="button"
+            style={{ ...plain(palette), fontSize: 12 }}
+            onClick={() => void copyText(record.target)}
+          >
             {t('copy')}
           </button>
           <button type="button" style={{ ...plain(palette), fontSize: 12 }} onClick={() => void speak(speakText, 'us')}>
             <Icon name="speaker" size={12} /> {t('speakAloud')}
           </button>
-          <SecondaryButton palette={palette} title={t('retranslate')} icon="refresh" disabled={busy} onClick={retranslate} />
+          <SecondaryButton
+            palette={palette}
+            title={t('retranslate')}
+            icon="refresh"
+            disabled={busy}
+            onClick={retranslate}
+          />
           <div style={{ flex: 1 }} />
           <button
             type="button"

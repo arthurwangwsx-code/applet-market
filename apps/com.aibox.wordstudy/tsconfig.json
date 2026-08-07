@@ -1,6 +1,4 @@
 {
   "extends": "@aibox/applet-tsbuild/tsconfig.base.json",
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

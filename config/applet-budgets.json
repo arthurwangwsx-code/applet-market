@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "limits": {
+    "maxPackageBytes": 786432,
+    "maxJavaScriptBytes": 716800,
+    "maxFileCount": 180,
+    "maxLargestModuleBytes": 131072,
+    "maxNewSourceLines": 800
+  },
+  "tolerance": {
+    "packageBytes": 16384,
+    "javascriptBytes": 16384,
+    "fileCount": 4,
+    "largestModuleBytes": 8192
+  },
+  "baselines": {
+    "com.aibox.bilibili": {
+      "packageBytes": 110457,
+      "javascriptBytes": 97432,
+      "fileCount": 18,
+      "largestModuleBytes": 16526,
+      "sourceFileCount": 15,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.downloads": {
+      "packageBytes": 74899,
+      "javascriptBytes": 55768,
+      "fileCount": 12,
+      "largestModuleBytes": 16188,
+      "sourceFileCount": 9,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 3,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.finance": {
+      "packageBytes": 449759,
+      "javascriptBytes": 413110,
+      "fileCount": 46,
+      "largestModuleBytes": 27960,
+      "sourceFileCount": 43,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 2,
+        "rafCalls": 0,
+        "infiniteAnimations": 1,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.ledger": {
+      "packageBytes": 494127,
+      "javascriptBytes": 463843,
+      "fileCount": 49,
+      "largestModuleBytes": 28306,
+      "sourceFileCount": 46,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 0,
+        "rafCalls": 0,
+        "infiniteAnimations": 1,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.music": {
+      "packageBytes": 302248,
+      "javascriptBytes": 282233,
+      "fileCount": 36,
+      "largestModuleBytes": 31418,
+      "sourceFileCount": 33,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 1,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.news": {
+      "packageBytes": 281734,
+      "javascriptBytes": 261400,
+      "fileCount": 41,
+      "largestModuleBytes": 21375,
+      "sourceFileCount": 38,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 2,
+        "rafCalls": 0,
+        "infiniteAnimations": 1,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.timer": {
+      "packageBytes": 25626,
+      "javascriptBytes": 15674,
+      "fileCount": 8,
+      "largestModuleBytes": 6341,
+      "sourceFileCount": 5,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.viddl": {
+      "packageBytes": 72121,
+      "javascriptBytes": 58614,
+      "fileCount": 12,
+      "largestModuleBytes": 21439,
+      "sourceFileCount": 9,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.voicememos": {
+      "packageBytes": 252360,
+      "javascriptBytes": 231261,
+      "fileCount": 23,
+      "largestModuleBytes": 31178,
+      "sourceFileCount": 20,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.wordstudy": {
+      "packageBytes": 190454,
+      "javascriptBytes": 175982,
+      "fileCount": 21,
+      "largestModuleBytes": 18072,
+      "sourceFileCount": 18,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 1,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    },
+    "com.aibox.youtube": {
+      "packageBytes": 73759,
+      "javascriptBytes": 63311,
+      "fileCount": 16,
+      "largestModuleBytes": 13661,
+      "sourceFileCount": 13,
+      "sourcemaps": 0,
+      "risks": {
+        "intervalCalls": 0,
+        "rafCalls": 0,
+        "infiniteAnimations": 0,
+        "dynamicClasses": 0
+      },
+      "oversizeSourceFiles": {}
+    }
+  }
+}

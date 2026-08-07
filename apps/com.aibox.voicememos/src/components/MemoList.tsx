@@ -29,7 +29,10 @@ export function MemoList(props: {
   regionId?: string
 }) {
   const { palette, t } = props
-  const rows = useMemo(() => applyFilter(props.memos, props.filter, props.query), [props.memos, props.filter, props.query])
+  const rows = useMemo(
+    () => applyFilter(props.memos, props.filter, props.query),
+    [props.memos, props.filter, props.query],
+  )
 
   // —— 原生行手势（`aibox.list.*`）——
   //
@@ -56,7 +59,10 @@ export function MemoList(props: {
       return {
         transcribe: { hidden: memo.hasTranscript },
         copy: { hidden: !memo.hasTranscript },
-        fav: { title: memo.isFavourite ? t('unfavourite') : t('favourite'), icon: memo.isFavourite ? 'star.slash' : 'star' },
+        fav: {
+          title: memo.isFavourite ? t('unfavourite') : t('favourite'),
+          icon: memo.isFavourite ? 'star.slash' : 'star',
+        },
         share: { hidden: !memo.hasAudio },
       }
     },
@@ -72,7 +78,9 @@ export function MemoList(props: {
       return (
         <div style={{ padding: `${SPACE.s8}px ${SPACE.s5}px`, textAlign: 'center' }}>
           <Icon name="magnifyingglass" size={40} color={palette.accent} />
-          <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>{t('noMatchTitle')}</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: palette.ink, marginTop: SPACE.s3 }}>
+            {t('noMatchTitle')}
+          </div>
           <div style={{ fontSize: 14, color: palette.muted, marginTop: 6 }}>{t('noMatchBody')}</div>
           {filterIsActive(props.filter) ? (
             <div style={{ marginTop: SPACE.s4 }}>
@@ -126,8 +134,15 @@ function MemoRow(props: {
   const tint = memo.hasAudio ? palette.accent : palette.muted
   let pressTimer: number | null = null
   // 手势层在场时 `onMenu` 是 undefined —— 自绘长按整条停用，不与原生 context menu 打架。
-  const startPress = () => { if (props.onMenu) pressTimer = window.setTimeout(props.onMenu, 550) }
-  const endPress = () => { if (pressTimer !== null) { window.clearTimeout(pressTimer); pressTimer = null } }
+  const startPress = () => {
+    if (props.onMenu) pressTimer = window.setTimeout(props.onMenu, 550)
+  }
+  const endPress = () => {
+    if (pressTimer !== null) {
+      window.clearTimeout(pressTimer)
+      pressTimer = null
+    }
+  }
 
   return (
     <div
@@ -137,17 +152,32 @@ function MemoRow(props: {
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
-      onContextMenu={(event) => { event.preventDefault(); props.onMenu?.() }}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        props.onMenu?.()
+      }}
       style={{
-        display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: `8px ${SPACE.s4}px`,
-        borderBottom: `1px solid ${palette.line}`, cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.s3,
+        padding: `8px ${SPACE.s4}px`,
+        borderBottom: `1px solid ${palette.line}`,
+        cursor: 'pointer',
       }}
     >
       <div
         style={{
-          width: 34, height: 34, borderRadius: 17, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: alpha(tint, 0.12), color: tint, fontSize: 14, fontWeight: 600,
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: alpha(tint, 0.12),
+          color: tint,
+          fontSize: 14,
+          fontWeight: 600,
         }}
       >
         <Icon name={memo.hasAudio ? 'waveform' : 'doc'} size={14} />
@@ -157,8 +187,12 @@ function MemoRow(props: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span
             style={{
-              fontSize: 16, fontWeight: 500, color: palette.ink,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontSize: 16,
+              fontWeight: 500,
+              color: palette.ink,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {memo.title}
@@ -168,8 +202,12 @@ function MemoRow(props: {
           {props.busy ? (
             <span
               style={{
-                fontSize: 11, color: palette.accent, background: alpha(palette.accent, 0.12),
-                borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap',
+                fontSize: 11,
+                color: palette.accent,
+                background: alpha(palette.accent, 0.12),
+                borderRadius: 999,
+                padding: '3px 8px',
+                whiteSpace: 'nowrap',
               }}
             >
               {props.busy}
@@ -179,11 +217,27 @@ function MemoRow(props: {
         <div style={{ display: 'flex', gap: SPACE.s2, fontSize: 12, color: palette.muted, flexWrap: 'wrap' }}>
           <span>{shortDate(memo.createdAt, 'default')}</span>
           <span>{clockString(memo.duration)}</span>
-          {!memo.hasAudio ? <span><Icon name="waveform.slash" size={11} /> {t('transcriptOnly')}</span> : null}
-          {memo.hasTranscript ? <span style={{ opacity: 0.8 }}><Icon name="bubble" size={11} /> {t('hasTranscript')}</span> : null}
+          {!memo.hasAudio ? (
+            <span>
+              <Icon name="waveform.slash" size={11} /> {t('transcriptOnly')}
+            </span>
+          ) : null}
+          {memo.hasTranscript ? (
+            <span style={{ opacity: 0.8 }}>
+              <Icon name="bubble" size={11} /> {t('hasTranscript')}
+            </span>
+          ) : null}
         </div>
         {memo.snippet ? (
-          <div style={{ fontSize: 12, color: palette.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: palette.accent,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             <Icon name="bubble" size={11} /> {memo.snippet}
           </div>
         ) : null}
@@ -206,7 +260,8 @@ export function applyFilter(memos: Memo[], filter: MemoFilter, query: string): M
     if (filter.duration === '1to5m' && !(memo.duration >= 60 && memo.duration <= 300)) return false
     if (filter.duration === 'over5m' && !(memo.duration >= 300)) return false
     const age = now - memo.createdAt
-    if (filter.date === 'today' && new Date(memo.createdAt).toDateString() !== new Date(now).toDateString()) return false
+    if (filter.date === 'today' && new Date(memo.createdAt).toDateString() !== new Date(now).toDateString())
+      return false
     if (filter.date === 'week' && age > 7 * 86_400_000) return false
     if (filter.date === 'month' && age > 30 * 86_400_000) return false
     if (filter.date === 'year' && age > 365 * 86_400_000) return false
@@ -214,11 +269,16 @@ export function applyFilter(memos: Memo[], filter: MemoFilter, query: string): M
   })
   rows = [...rows].sort((a, b) => {
     switch (filter.sort) {
-      case 'oldest': return a.createdAt - b.createdAt
-      case 'longest': return b.duration - a.duration
-      case 'shortest': return a.duration - b.duration
-      case 'name': return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
-      default: return b.createdAt - a.createdAt
+      case 'oldest':
+        return a.createdAt - b.createdAt
+      case 'longest':
+        return b.duration - a.duration
+      case 'shortest':
+        return a.duration - b.duration
+      case 'name':
+        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+      default:
+        return b.createdAt - a.createdAt
     }
   })
   return rows
@@ -241,7 +301,15 @@ export function FilterSheet(props: {
     options: { value: MemoFilter[K]; label: string }[],
   ) => (
     <section key={String(key)} style={{ marginBottom: SPACE.s4 }}>
-      <div style={{ fontSize: 12, fontWeight: 500, color: palette.muted, padding: `0 ${SPACE.s4}px 6px`, textTransform: 'uppercase' }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: palette.muted,
+          padding: `0 ${SPACE.s4}px 6px`,
+          textTransform: 'uppercase',
+        }}
+      >
         {title}
       </div>
       {options.map((option) => (
@@ -250,8 +318,15 @@ export function FilterSheet(props: {
           type="button"
           onClick={() => props.onChange({ ...filter, [key]: option.value })}
           style={{
-            display: 'flex', width: '100%', alignItems: 'center', border: 'none', background: 'transparent',
-            padding: `10px ${SPACE.s4}px`, fontSize: 15, color: palette.ink, cursor: 'pointer',
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            border: 'none',
+            background: 'transparent',
+            padding: `10px ${SPACE.s4}px`,
+            fontSize: 15,
+            color: palette.ink,
+            cursor: 'pointer',
             borderBottom: `1px solid ${palette.line}`,
           }}
         >
@@ -270,17 +345,31 @@ export function FilterSheet(props: {
           disabled={isDefault}
           onClick={() => props.onChange(DEFAULT_FILTER)}
           style={{
-            border: 'none', background: 'transparent', color: palette.accent, fontSize: 15,
-            cursor: isDefault ? 'default' : 'pointer', opacity: isDefault ? 0.4 : 1, padding: 0,
+            border: 'none',
+            background: 'transparent',
+            color: palette.accent,
+            fontSize: 15,
+            cursor: isDefault ? 'default' : 'pointer',
+            opacity: isDefault ? 0.4 : 1,
+            padding: 0,
           }}
         >
           {t('reset')}
         </button>
-        <div style={{ flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 600, color: palette.ink }}>{t('filter')}</div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 600, color: palette.ink }}>
+          {t('filter')}
+        </div>
         <button
           type="button"
           onClick={props.onClose}
-          style={{ border: 'none', background: 'transparent', color: palette.accent, fontSize: 15, cursor: 'pointer', padding: 0 }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: palette.accent,
+            fontSize: 15,
+            cursor: 'pointer',
+            padding: 0,
+          }}
         >
           {t('done')}
         </button>
@@ -308,19 +397,40 @@ export function FilterSheet(props: {
       ])}
 
       <div style={{ padding: `0 ${SPACE.s4}px ${SPACE.s6}px` }}>
-        <Toggle palette={palette} label={t('favOnly')} value={filter.favOnly} onChange={(value) => props.onChange({ ...filter, favOnly: value })} />
-        <Toggle palette={palette} label={t('withTranscript')} value={filter.withTranscript} onChange={(value) => props.onChange({ ...filter, withTranscript: value })} />
+        <Toggle
+          palette={palette}
+          label={t('favOnly')}
+          value={filter.favOnly}
+          onChange={(value) => props.onChange({ ...filter, favOnly: value })}
+        />
+        <Toggle
+          palette={palette}
+          label={t('withTranscript')}
+          value={filter.withTranscript}
+          onChange={(value) => props.onChange({ ...filter, withTranscript: value })}
+        />
       </div>
     </Sheet>
   )
 }
 
-export function Toggle(props: { palette: Palette; label: string; value: boolean; onChange: (value: boolean) => void; hint?: string }) {
+export function Toggle(props: {
+  palette: Palette
+  label: string
+  value: boolean
+  onChange: (value: boolean) => void
+  hint?: string
+}) {
   return (
     <label
       style={{
-        display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: '10px 0',
-        fontSize: 15, color: props.palette.ink, cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.s3,
+        padding: '10px 0',
+        fontSize: 15,
+        color: props.palette.ink,
+        cursor: 'pointer',
       }}
     >
       <span style={{ flex: 1 }}>
@@ -330,14 +440,26 @@ export function Toggle(props: { palette: Palette; label: string; value: boolean;
       <span
         onClick={() => props.onChange(!props.value)}
         style={{
-          width: 46, height: 28, borderRadius: 14, position: 'relative', flexShrink: 0,
-          background: props.value ? props.palette.green : props.palette.line, transition: 'background 0.15s',
+          width: 46,
+          height: 28,
+          borderRadius: 14,
+          position: 'relative',
+          flexShrink: 0,
+          background: props.value ? props.palette.green : props.palette.line,
+          transition: 'background 0.15s',
         }}
       >
         <span
           style={{
-            position: 'absolute', top: 2, left: props.value ? 20 : 2, width: 24, height: 24, borderRadius: 12,
-            background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.15s',
+            position: 'absolute',
+            top: 2,
+            left: props.value ? 20 : 2,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            background: '#FFFFFF',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            transition: 'left 0.15s',
           }}
         />
       </span>

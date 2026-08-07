@@ -12,6 +12,7 @@
 //
 // 合成一个「省电模式」之类的总开关必然让一半人被迫接受另一半的行为，所以逐项存。
 import { loadPref, savePref } from './host.js';
+import { isRecord } from './types.js';
 const KEY = 'playback-settings';
 /** 默认值。**后台音频默认开**——「退出去还能继续听」是这类应用最常见的用法。 */
 export const DEFAULTS = {
@@ -22,9 +23,13 @@ export const DEFAULTS = {
 /** 读偏好。缺字段用默认值补齐（老版本存过的记录不会因为新增开关而缺项）。 */
 export async function loadSettings() {
     const saved = await loadPref(KEY, null);
-    if (!saved || typeof saved !== 'object')
+    if (!isRecord(saved))
         return { ...DEFAULTS };
-    return { ...DEFAULTS, ...saved };
+    return {
+        backgroundAudio: typeof saved.backgroundAudio === 'boolean' ? saved.backgroundAudio : DEFAULTS.backgroundAudio,
+        pictureInPicture: typeof saved.pictureInPicture === 'boolean' ? saved.pictureInPicture : DEFAULTS.pictureInPicture,
+        gestureControls: typeof saved.gestureControls === 'boolean' ? saved.gestureControls : DEFAULTS.gestureControls,
+    };
 }
 /** 写一项。回合并后的完整设置，供调用方直接 setState。 */
 export async function updateSetting(key, value) {

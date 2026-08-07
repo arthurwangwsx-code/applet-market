@@ -9,12 +9,23 @@ import { dedupe } from './dedup.js';
 import { normalizeURL } from './text.js';
 import { cluster } from './cluster.js';
 import { extract } from './extractor.js';
-import { httpGet, FAILURE, PAGE_MAX_BYTES } from './host.js';
+import { FAILURE, PAGE_MAX_BYTES, httpGet } from './host.js';
 export const FOREGROUND_TTL_MS = 300 * 1000;
 export const SNAPSHOT_THROTTLE_MS = 15 * 1000;
 /** 一次 fan-out 的并发上限：桥是串行 postMessage，开太多只会互相排队并拖长首屏。 */
 const FETCH_CONCURRENCY = 6;
 export class NewsAggregator {
+    store;
+    timeline;
+    timelineRevision;
+    lastUpdated;
+    lastReport;
+    isRefreshing;
+    inflight;
+    generation;
+    lastPersistAt;
+    pendingPersist;
+    listeners;
     constructor(store) {
         this.store = store;
         this.timeline = [];
@@ -82,7 +93,7 @@ export class NewsAggregator {
                 result = { articles: [], failure: 'unknown', httpStatus: null };
             }
             const duration = (Date.now() - began) / 1000;
-            const status = result.failure ? 'failed' : (result.articles.length > 0 ? 'success' : 'empty');
+            const status = result.failure ? 'failed' : result.articles.length > 0 ? 'success' : 'empty';
             sourceStates.push({
                 id: feed.id,
                 sourceName: feed.title,
@@ -232,8 +243,10 @@ export class NewsAggregator {
      * 时间线检索。时间线为空时退回磁盘快照；有 query 且配了 News API Key 时并入全网检索结果再去重。
      * @returns {Promise<Array>} 按发布时间倒序、截到 limit 的文章
      */
-    async search({ query = '', topic = null, limit = 15 } = {}) {
-        const q = String(query || '').trim().toLowerCase();
+    async search({ query = '', topic = null, limit = 15, } = {}) {
+        const q = String(query || '')
+            .trim()
+            .toLowerCase();
         let pool = this.timeline;
         if (pool.length === 0) {
             const snapshot = await this.store.loadSnapshot();
@@ -250,9 +263,9 @@ export class NewsAggregator {
         if (topic)
             filtered = filtered.filter((article) => article.topic === topic);
         if (q) {
-            filtered = filtered.filter((article) => (article.title || '').toLowerCase().includes(q)
-                || (article.summary || '').toLowerCase().includes(q)
-                || (article.sourceName || '').toLowerCase().includes(q));
+            filtered = filtered.filter((article) => (article.title || '').toLowerCase().includes(q) ||
+                (article.summary || '').toLowerCase().includes(q) ||
+                (article.sourceName || '').toLowerCase().includes(q));
         }
         return [...filtered].sort((a, b) => b.publishedAt - a.publishedAt).slice(0, limit);
     }
@@ -262,7 +275,7 @@ export class NewsAggregator {
         if (hit)
             return hit;
         const snapshot = await this.store.loadSnapshot();
-        return snapshot ? (snapshot.articles.find((article) => article.id === id) || null) : null;
+        return snapshot ? snapshot.articles.find((article) => article.id === id) || null : null;
     }
     /** 按 URL 找一篇（归一后比较；时间线优先，退磁盘快照）。 */
     async articleByURL(url) {
@@ -272,7 +285,7 @@ export class NewsAggregator {
         if (hit)
             return hit;
         const snapshot = await this.store.loadSnapshot();
-        return snapshot ? (match(snapshot.articles) || null) : null;
+        return snapshot ? match(snapshot.articles) || null : null;
     }
     // MARK: 诊断辅助
     get successfulSourceCount() {
@@ -326,7 +339,9 @@ async function mapWithConcurrency(items, limit, worker) {
             cursor += 1;
             if (index >= items.length)
                 return;
-            await worker(items[index], index);
+            const item = items[index];
+            if (item !== undefined)
+                await worker(item, index);
         }
     });
     await Promise.all(runners);

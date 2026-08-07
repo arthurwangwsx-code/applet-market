@@ -17,12 +17,9 @@ import QueuePage from './components/QueuePage.js';
 import ForYouPage from './components/ForYouPage.js';
 import SearchPage from './components/SearchPage.js';
 import LibraryPage from './components/LibraryPage.js';
-import LocalLibrary from './components/LocalLibrary.js';
-import SettingsPage from './components/SettingsPage.js';
-import EffectsPage from './components/EffectsPage.js';
 import OptionsMenu, { OptionPicker } from './components/OptionsMenu.js';
-import { CollectionDetail, CategoryList } from './components/DetailPage.js';
 import { FavoritesSheet, HistorySheet } from './components/Sheets.js';
+import { isTabID, renderRoute, routePath, routeTitle, showMiniFor, TABS, tabTitle } from './components/AppRouting.js';
 import { MusicStore } from './lib/store.js';
 import { MusicController } from './lib/music.js';
 import { fetchLyrics } from './lib/lyrics.js';
@@ -32,13 +29,6 @@ import { actionSheet, confirm, haptics, music as callMusic, openURL, overlay, on
 import { ACTION_HANDLERS } from './lib/actions.js';
 import { useSubpageStack } from 'aibox/ui';
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js';
-const TABS = [
-    { id: 'forYou', titleKey: 'tab.forYou', icon: 'sparkles' },
-    { id: 'search', titleKey: 'tab.search', icon: 'magnifyingglass' },
-    { id: 'player', titleKey: 'tab.player', icon: 'play.circle' },
-    { id: 'queue', titleKey: 'tab.queue', icon: 'list.bullet' },
-    { id: 'albums', titleKey: 'tab.albums', icon: 'square.stack' },
-];
 function useThemeSetup() {
     React.useEffect(() => {
         if (document.getElementById('__music_css__'))
@@ -88,12 +78,21 @@ export default function App() {
     const [picker, setPicker] = React.useState(null);
     const [query, setQuery] = React.useState('');
     const [shell, setShell] = React.useState({
-        tabsRendered: false, toolbarRendered: false, searchRendered: false, overlayRendered: false,
+        tabsRendered: false,
+        toolbarRendered: false,
+        searchRendered: false,
+        overlayRendered: false,
     });
     const [mode, setMode] = React.useState('album');
     const [lyrics, setLyrics] = React.useState({ state: 'none', synced: false, lines: [] });
-    const [artwork, setArtwork] = React.useState({ url: null, color: null });
-    const [favorites, setFavorites] = React.useState({ loading: true, rows: [] });
+    const [artwork, setArtwork] = React.useState({
+        url: null,
+        color: null,
+    });
+    const [favorites, setFavorites] = React.useState({
+        loading: true,
+        rows: [],
+    });
     const [notice, setNotice] = React.useState(null);
     // —— 订阅两个模型 ——
     React.useEffect(() => {
@@ -114,13 +113,19 @@ export default function App() {
             music.refreshEffects();
         };
         boot();
-        return () => { cancelled = true; music.stop(); };
+        return () => {
+            cancelled = true;
+            music.stop();
+        };
     }, [store, music]);
     // —— 页面不可见时停轮询（锁屏/后台的媒体 UI 是原生那一面，与本页无关）——
     React.useEffect(() => {
         const apply = () => music.setVisible(!document.hidden);
         document.addEventListener('visibilitychange', apply);
-        const off = onEvent('lifecycle.background', () => { store.flushNow(); music.setVisible(false); });
+        const off = onEvent('lifecycle.background', () => {
+            store.flushNow();
+            music.setVisible(false);
+        });
         const offForeground = onEvent('lifecycle.foreground', () => music.setVisible(true));
         return () => {
             document.removeEventListener('visibilitychange', apply);
@@ -144,7 +149,9 @@ export default function App() {
     }, [tab, stack.length, playing, music]);
     // —— 对外动作（AI / 自动化）——
     React.useEffect(() => {
-        Object.keys(ACTION_HANDLERS).forEach((name) => registerAction(name, ACTION_HANDLERS[name]));
+        registerAction('nowPlayingSummary', ACTION_HANDLERS.nowPlayingSummary);
+        registerAction('playMostPlayed', ACTION_HANDLERS.playMostPlayed);
+        registerAction('resumeLast', ACTION_HANDLERS.resumeLast);
     }, []);
     // 外壳接线只跑一次，而 reset 要在每次切 Tab 时清掉子页栈 —— 经 ref 取最新那一个。
     const resetRef = React.useRef(subpages.reset);
@@ -166,11 +173,11 @@ export default function App() {
                 // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
                 // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
                 const rendered = payload.rendered !== false;
-                setShell((current) => (current.tabsRendered === rendered
-                    ? current : { ...current, tabsRendered: rendered }));
+                setShell((current) => (current.tabsRendered === rendered ? current : { ...current, tabsRendered: rendered }));
                 if (payload.selected) {
                     haptics.selection();
-                    setTab(payload.selected);
+                    if (isTabID(payload.selected))
+                        setTab(payload.selected);
                     resetRef.current();
                     setMode('album');
                 }
@@ -191,7 +198,10 @@ export default function App() {
             }));
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, [store]);
     // —— 顶栏标题 ——
     React.useEffect(() => {
@@ -200,7 +210,9 @@ export default function App() {
         document.title = title || t('common.music');
         setNavigationTitle(title);
     }, [tab, stack, music.status.queueCount, t]);
-    React.useEffect(() => { store.setSelectedTab(tab); }, [tab, store]);
+    React.useEffect(() => {
+        store.setSelectedTab(tab);
+    }, [tab, store]);
     // —— 当前曲变化：封面 → 主色 → 歌词 ——
     const trackKey = music.trackKey;
     const current = music.currentTrack;
@@ -226,7 +238,9 @@ export default function App() {
                 setArtwork((state) => ({ ...state, color }));
         };
         run();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [trackKey]); // eslint-disable-line react-hooks/exhaustive-deps
     // —— 歌词：**可见性门** —— 歌词面不可见时不取词，避免一打开播放器就急着拉网络。
     React.useEffect(() => {
@@ -234,9 +248,13 @@ export default function App() {
             return undefined;
         let cancelled = false;
         setLyrics({ state: 'loading', synced: false, lines: [] });
-        fetchLyrics(callMusic, current).then((payload) => { if (!cancelled)
-            setLyrics(payload); });
-        return () => { cancelled = true; };
+        fetchLyrics(callMusic, current).then((payload) => {
+            if (!cancelled)
+                setLyrics(payload);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, [trackKey, mode, tab]); // eslint-disable-line react-hooks/exhaustive-deps
     // —— 收藏列表 ——
     const refreshFavorites = React.useCallback(async () => {
@@ -245,7 +263,9 @@ export default function App() {
         rows.forEach((row) => store.rememberArtwork(row));
         setFavorites({ loading: false, rows });
     }, [store]);
-    React.useEffect(() => { refreshFavorites(); }, [refreshFavorites]);
+    React.useEffect(() => {
+        refreshFavorites();
+    }, [refreshFavorites]);
     const showNotice = React.useCallback((message) => {
         setNotice(message);
         setTimeout(() => setNotice(null), 2600);
@@ -288,8 +308,7 @@ export default function App() {
             if (cancelled)
                 return;
             const rendered = !!(state && state.rendered);
-            setShell((current) => (current.overlayRendered === rendered
-                ? current : { ...current, overlayRendered: rendered }));
+            setShell((current) => current.overlayRendered === rendered ? current : { ...current, overlayRendered: rendered });
             offs.push(onNamespaceEvent('overlay', 'invoke', (payload) => {
                 if (overlayInvoke.current)
                     overlayInvoke.current(payload || {});
@@ -298,19 +317,21 @@ export default function App() {
             // 只在启动那一刻判断一次，自绘迷你条就会永远缺席或永远多一条（tabs 那条同款教训）。
             offs.push(onNamespaceEvent('overlay', 'changed', (payload) => {
                 const next = !!(payload && payload.rendered);
-                setShell((current) => (current.overlayRendered === next
-                    ? current : { ...current, overlayRendered: next }));
+                setShell((current) => (current.overlayRendered === next ? current : { ...current, overlayRendered: next }));
             }));
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, []);
-    const favoriteKeys = React.useMemo(() => new Set(favorites.rows.map((row) => stableKey(row)).filter(Boolean)), [favorites.rows]);
+    const favoriteKeys = React.useMemo(() => new Set(favorites.rows.map((row) => stableKey(row)).filter((key) => Boolean(key))), [favorites.rows]);
     const toggleFavorite = React.useCallback(async (track, next) => {
         if (!track)
             return;
         const key = stableKey(track);
-        const on = next === undefined ? !favoriteKeys.has(key) : next;
+        const on = next === undefined ? !(key && favoriteKeys.has(key)) : next;
         haptics.impact('light');
         await callMusic('library', { action: on ? 'favorite' : 'unfavorite', ...playArgs(track) });
         refreshFavorites();
@@ -319,7 +340,7 @@ export default function App() {
     // 走的是既有的 `music_playlist` 工具，不需要新宿主能力。
     const addToPlaylist = React.useCallback(async (track) => {
         const listed = await callMusic('playlist', { action: 'list' });
-        const rows = (listed.json && Array.isArray(listed.json.playlists)) ? listed.json.playlists : [];
+        const rows = listed.json && Array.isArray(listed.json.playlists) ? listed.json.playlists : [];
         if (rows.length === 0) {
             showNotice(t('common.noPlaylists'));
             return;
@@ -327,17 +348,20 @@ export default function App() {
         const picked = await actionSheet({
             title: t('common.pickPlaylist'),
             actions: [
-                ...rows.slice(0, 20).map((row) => ({
+                ...rows
+                    .slice(0, 20)
+                    .map((row) => ({
                     id: String(row.musicItemId || row.id || ''),
                     title: row.title || row.name || '',
-                })).filter((row) => row.id && row.title),
+                }))
+                    .filter((row) => row.id && row.title),
                 { id: 'cancel', title: t('common.cancel'), role: 'cancel' },
             ],
         });
         if (!picked || picked === 'cancel')
             return;
         const result = await callMusic('playlist', { action: 'add_tracks', id: picked, tracks: [playArgs(track)] });
-        showNotice(result.ok ? t('common.addedToPlaylist') : (result.error || t('err.generic')));
+        showNotice(result.ok ? t('common.addedToPlaylist') : result.error || t('err.generic'));
     }, [t, showNotice]);
     const actions = React.useMemo(() => ({
         navigate,
@@ -345,20 +369,29 @@ export default function App() {
         notice: showNotice,
         openSheet: setSheet,
         pickOption: setPicker,
-        playTrack: (track, group) => music.play(track, group),
+        playTrack: (track, group) => {
+            void music.play(track, group);
+        },
         playQueueIndex: (index) => {
             const track = music.queue.tracks[index];
             if (track)
                 music.play(track, music.queue.tracks);
         },
-        addToQueue: (track) => music.addToQueue(track),
-        removeQueue: (index) => music.removeFromQueue(index),
-        moveQueue: (from, to) => music.moveInQueue(from, to),
+        addToQueue: (track) => {
+            void music.addToQueue(track);
+        },
+        removeQueue: (index) => {
+            void music.removeFromQueue(index);
+        },
+        moveQueue: (from, to) => {
+            void music.moveInQueue(from, to);
+        },
         shufflePlay: async (tracks) => {
             // 「随机」= 先开启随机模式，再从第一首起播（与原生同序）。
             await music.setShuffle(true);
-            if (tracks && tracks.length > 0)
-                music.play(tracks[0], tracks);
+            const first = tracks[0];
+            if (first)
+                void music.play(first, tracks);
         },
         openCollection: (item) => {
             store.rememberArtwork(item);
@@ -388,14 +421,14 @@ export default function App() {
             if (ok)
                 run();
         },
-        confirmDestructive: async ({ title, message, confirmTitle, onConfirm }) => {
+        confirmDestructive: async ({ title, message, confirmTitle, onConfirm, }) => {
             const ok = await confirm({ title, message, confirmTitle, cancelTitle: t('common.cancel'), destructive: true });
             if (ok)
-                onConfirm();
+                await onConfirm();
         },
         trackMenu: async (track, options = {}) => {
             const key = stableKey(track);
-            const isFavorite = favoriteKeys.has(key);
+            const isFavorite = Boolean(key && favoriteKeys.has(key));
             const link = store.externalURL(track);
             // Apple Music 曲目才有「加入资料库 / 加入歌单」（本地曲目在服务端没有对应条目）——
             // 与原生 AudioTrackActionsMenu 的 `track.source.isAppleMusic` 分支同判据。
@@ -406,13 +439,16 @@ export default function App() {
                     { id: 'play', title: t('common.play') },
                     { id: 'queue', title: t('common.addToQueue') },
                     { id: 'favorite', title: isFavorite ? t('common.removeFromFavorites') : t('common.addToFavorites') },
-                    ...(isCatalog ? [
-                        { id: 'addToLibrary', title: t('common.addToLibrary') },
-                        { id: 'addToPlaylist', title: t('common.addToPlaylist') },
-                    ] : []),
+                    ...(isCatalog
+                        ? [
+                            { id: 'addToLibrary', title: t('common.addToLibrary') },
+                            { id: 'addToPlaylist', title: t('common.addToPlaylist') },
+                        ]
+                        : []),
                     ...(link ? [{ id: 'open', title: t('common.openInAppleMusic') }] : []),
                     ...(options.queueIndex !== undefined
-                        ? [{ id: 'remove', title: t('common.remove'), role: 'destructive' }] : []),
+                        ? [{ id: 'remove', title: t('common.remove'), role: 'destructive' }]
+                        : []),
                     { id: 'cancel', title: t('common.cancel'), role: 'cancel' },
                 ],
             });
@@ -424,11 +460,11 @@ export default function App() {
                 toggleFavorite(track, !isFavorite);
             else if (picked === 'open' && link)
                 openURL(link);
-            else if (picked === 'remove')
+            else if (picked === 'remove' && options.queueIndex !== undefined)
                 music.removeFromQueue(options.queueIndex);
             else if (picked === 'addToLibrary') {
                 const result = await callMusic('library', { action: 'add_to_library', ...playArgs(track) });
-                showNotice(result.ok ? t('common.addedToLibrary') : (result.error || t('err.generic')));
+                showNotice(result.ok ? t('common.addedToLibrary') : result.error || t('err.generic'));
             }
             else if (picked === 'addToPlaylist') {
                 await addToPlaylist(track);
@@ -469,8 +505,12 @@ export default function App() {
     // 进度按 1% 量化后再比较——`displayProgress()` 每 100ms 变一次，不量化就是每秒 10 次过桥。
     const overlayProgress = Math.round(Math.max(0, Math.min(1, music.displayProgress())) * 100) / 100;
     const overlaySignature = [
-        shell.overlayRendered, showMini, current ? current.title : '', current ? current.artist : '',
-        music.status.isPlaying, overlayProgress,
+        shell.overlayRendered,
+        showMini,
+        current ? current.title : '',
+        current ? current.artist : '',
+        music.status.isPlaying,
+        overlayProgress,
     ].join('');
     const overlaySent = React.useRef(null);
     React.useEffect(() => {
@@ -497,8 +537,16 @@ export default function App() {
     //
     // 每轮重注册：处理器要闭包到最新的 music / navigate / actions。
     React.useEffect(() => {
-        registerAction('toggleShuffle', () => { music.setShuffle(!music.status.isShuffled); return null; });
-        registerAction('setRepeat', (mode) => { music.setRepeat(String(mode || 'off')); return null; });
+        registerAction('toggleShuffle', () => {
+            music.setShuffle(!music.status.isShuffled);
+            return null;
+        });
+        registerAction('setRepeat', (input) => {
+            const value = input;
+            if (value === 'off' || value === 'one' || value === 'all')
+                void music.setRepeat(value);
+            return null;
+        });
         registerAction('setSleepTimer', (input) => {
             const value = input || {};
             if (value.mode === 'off')
@@ -509,9 +557,18 @@ export default function App() {
                 music.setSleepTimer(Math.max(1, Number(value.minutes) || 0));
             return null;
         });
-        registerAction('openEffects', () => { navigate({ name: 'effects' }); return null; });
-        registerAction('openSettings', () => { navigate({ name: 'settings' }); return null; });
-        registerAction('shareCurrent', () => { actions.shareCurrent(); return null; });
+        registerAction('openEffects', () => {
+            navigate({ name: 'effects' });
+            return null;
+        });
+        registerAction('openSettings', () => {
+            navigate({ name: 'settings' });
+            return null;
+        });
+        registerAction('shareCurrent', () => {
+            actions.shareCurrent();
+            return null;
+        });
     });
     // 原生菜单项没有「勾选态」「右侧详情」两个字段，只能覆盖 title / icon / enabled / hidden。
     // 所以：勾选用 `icon: 'checkmark'` 表达（就是系统菜单的写法），当前值并进标题。
@@ -525,14 +582,17 @@ export default function App() {
         // 播放相关的几项只在「正在播放」页出现（照抄原生 AiBoxMusicKit 的 ⋯ 菜单）。
         const isPlayer = tab === 'player' && !route;
         const repeatValue = {
-            off: t('menu.repeatOff'), one: t('menu.repeatOne'), all: t('menu.repeatAll'),
+            off: t('menu.repeatOff'),
+            one: t('menu.repeatOne'),
+            all: t('menu.repeatAll'),
         }[menuStatus.repeatMode] || t('menu.repeatOff');
         const timerValue = sleepTimer.endOfTrack
             ? t('menu.stopAfterSong')
-            : (sleepTimer.remaining !== null && sleepTimer.remaining !== undefined
+            : sleepTimer.remaining !== null && sleepTimer.remaining !== undefined
                 ? t('menu.stopIn', `${Math.floor(sleepTimer.remaining / 60)}:${String(sleepTimer.remaining % 60).padStart(2, '0')}`)
-                : t('menu.notSet'));
-        api.menu.update({
+                : t('menu.notSet');
+        api.menu
+            .update({
             items: {
                 shuffle: { hidden: !isPlayer, icon: menuStatus.isShuffled ? 'checkmark' : 'shuffle' },
                 repeat: {
@@ -548,56 +608,25 @@ export default function App() {
                 audioEffects: { hidden: !isPlayer },
                 shareTrack: { hidden: !isPlayer || !externalURL },
             },
-        }).catch(() => { });
-    }, [tab, route, t, externalURL, menuStatus.isShuffled, menuStatus.repeatMode,
-        sleepTimer.active, sleepTimer.endOfTrack, sleepTimer.remaining]);
-    return (_jsxs("div", { className: "mu-root", children: [!shell.toolbarRendered ? (_jsx(Header, { title: route ? routeTitle(route, t) : tabTitle(tab, music.status.queueCount, t), onBack: route ? back : undefined, onMenu: route ? undefined : () => setMenuOpen(true), transparent: !route && tab === 'player' })) : null, route ? renderRoute(route, ctx) : (_jsxs(_Fragment, { children: [tab === 'player' ? (_jsx(NowPlaying, { track: current, status: music.status, busy: music.isBusy, progress: music.displayProgress(), position: music.displayTime(), duration: music.status.duration, artworkURL: artwork.url, color: artwork.color, lyrics: lyrics, mode: mode, onSetMode: (next) => { haptics.selection(); setMode(next); }, isFavorite: favoriteKeys.has(stableKey(current)), onToggleFavorite: () => toggleFavorite(current), onOpenTrackMenu: () => current && actions.trackMenu(current), scrub: {
+        })
+            .catch(() => { });
+    }, [
+        tab,
+        route,
+        t,
+        externalURL,
+        menuStatus.isShuffled,
+        menuStatus.repeatMode,
+        sleepTimer.active,
+        sleepTimer.endOfTrack,
+        sleepTimer.remaining,
+    ]);
+    return (_jsxs("div", { className: "mu-root", children: [!shell.toolbarRendered ? (_jsx(Header, { title: route ? routeTitle(route, t) : tabTitle(tab, music.status.queueCount, t), onBack: route ? back : undefined, onMenu: route ? undefined : () => setMenuOpen(true), transparent: !route && tab === 'player' })) : null, route ? (renderRoute(route, ctx)) : (_jsxs(_Fragment, { children: [tab === 'player' ? (_jsx(NowPlaying, { track: current, status: music.status, busy: music.isBusy, progress: music.displayProgress(), position: music.displayTime(), duration: music.status.duration, artworkURL: artwork.url, color: artwork.color, lyrics: lyrics, mode: mode, onSetMode: (next) => {
+                            haptics.selection();
+                            setMode(next);
+                        }, isFavorite: Boolean(stableKey(current) && favoriteKeys.has(stableKey(current))), onToggleFavorite: () => toggleFavorite(current), onOpenTrackMenu: () => current && actions.trackMenu(current), scrub: {
                             begin: (ratio) => music.beginScrub(ratio),
                             update: (ratio) => music.updateScrub(ratio),
                             end: () => music.endScrub(),
-                        }, onPrevious: () => music.transport('previous'), onNext: () => music.transport('next'), onTogglePlay: () => music.togglePlayPause(), onSeekSeconds: (seconds) => music.seekTo(seconds), onRetry: () => music.retry(), t: t })) : null, tab === 'forYou' ? _jsx(ForYouPage, { ctx: ctx }) : null, tab === 'search' ? (_jsx(SearchPage, { ctx: ctx, query: query, onQueryChange: setQuery, searchRendered: shell.searchRendered })) : null, tab === 'queue' ? _jsx(QueuePage, { ctx: ctx }) : null, tab === 'albums' ? _jsx(LibraryPage, { ctx: ctx }) : null] })), _jsx(Notice, { message: notice }), showMini && !shell.overlayRendered ? (_jsx(MiniBar, { track: { ...current, artworkUrl: artwork.url }, isPlaying: music.status.isPlaying, busy: music.isBusy, progress: music.displayProgress(), onOpen: () => selectTab('player'), onToggle: () => music.togglePlayPause(), onNext: () => music.transport('next'), t: t })) : null, !shell.tabsRendered ? (_jsx(TabBar, { items: TABS, selected: tab, onSelect: selectTab, t: t })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', flex: '0 0 auto' } })), _jsx(OptionsMenu, { open: menuOpen, onClose: () => setMenuOpen(false), tab: tab, ctx: ctx }), _jsx(OptionPicker, { request: picker, onClose: () => setPicker(null) }), _jsx(FavoritesSheet, { open: sheet === 'favorites', onClose: () => setSheet(null), ctx: ctx }), _jsx(HistorySheet, { open: sheet === 'history', onClose: () => setSheet(null), ctx: ctx })] }));
-}
-/** mini 播放条**只在非 Now Playing tab** 出现，且必须有当前曲目。 */
-function showMiniFor(tab, track) {
-    return tab !== 'player' && !!track;
-}
-function tabTitle(tab, queueCount, t) {
-    if (tab === 'player')
-        return '';
-    if (tab === 'queue')
-        return queueCount > 0 ? t('nav.queueCount', queueCount) : t('tab.queue');
-    const row = TABS.find((item) => item.id === tab);
-    return row ? t(row.titleKey) : '';
-}
-/** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
-function routePath(route) {
-    if (!route)
-        return '#/';
-    if (route.name === 'collection')
-        return `#/collection/${encodeURIComponent((route.item && route.item.musicItemId) || '')}`;
-    if (route.name === 'category')
-        return `#/category/${encodeURIComponent(route.id || '')}`;
-    return `#/${route.name}`;
-}
-function routeTitle(route, t) {
-    if (!route)
-        return '';
-    switch (route.name) {
-        case 'settings': return t('settings.title');
-        case 'effects': return t('effects.title');
-        case 'local': return t('local.title');
-        case 'category': return route.title;
-        case 'collection': return route.item.title || route.item.name || '';
-        default: return '';
-    }
-}
-function renderRoute(route, ctx) {
-    switch (route.name) {
-        case 'settings': return _jsx(SettingsPage, { ctx: ctx });
-        case 'effects': return _jsx(EffectsPage, { ctx: ctx });
-        case 'local': return _jsx(LocalLibrary, { ctx: ctx });
-        case 'category': return _jsx(CategoryList, { ctx: ctx, route: route });
-        case 'collection': return _jsx(CollectionDetail, { ctx: ctx, item: route.item });
-        default: return null;
-    }
+                        }, onPrevious: () => music.transport('previous'), onNext: () => music.transport('next'), onTogglePlay: () => music.togglePlayPause(), onSeekSeconds: (seconds) => music.seekTo(seconds), onRetry: () => music.retry(), t: t })) : null, tab === 'forYou' ? _jsx(ForYouPage, { ctx: ctx }) : null, tab === 'search' ? (_jsx(SearchPage, { ctx: ctx, query: query, onQueryChange: setQuery, searchRendered: shell.searchRendered })) : null, tab === 'queue' ? _jsx(QueuePage, { ctx: ctx }) : null, tab === 'albums' ? _jsx(LibraryPage, { ctx: ctx }) : null] })), _jsx(Notice, { message: notice }), showMini && !shell.overlayRendered ? (_jsx(MiniBar, { track: current ? { ...current, artworkUrl: artwork.url } : null, isPlaying: music.status.isPlaying, busy: music.isBusy, progress: music.displayProgress(), onOpen: () => selectTab('player'), onToggle: () => music.togglePlayPause(), onNext: () => music.transport('next'), t: t })) : null, !shell.tabsRendered ? (_jsx(TabBar, { items: TABS, selected: tab, onSelect: selectTab, t: t })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', flex: '0 0 auto' } })), _jsx(OptionsMenu, { open: menuOpen, onClose: () => setMenuOpen(false), tab: tab, ctx: ctx }), _jsx(OptionPicker, { request: picker, onClose: () => setPicker(null) }), _jsx(FavoritesSheet, { open: sheet === 'favorites', onClose: () => setSheet(null), ctx: ctx }), _jsx(HistorySheet, { open: sheet === 'history', onClose: () => setSheet(null), ctx: ctx })] }));
 }

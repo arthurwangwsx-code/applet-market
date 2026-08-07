@@ -27,7 +27,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  LIMITS, ROOT, appPaths, fail, info, listAppIDs, listReleaseVersions, ok, readJSON, warn,
+  LIMITS,
+  ROOT,
+  appPaths,
+  fail,
+  info,
+  listAppIDs,
+  listReleaseVersions,
+  ok,
+  readJSON,
+  warn,
 } from './lib/market.mjs'
 import { checkManifestKeys, defaultHostSourceDir, loadHostSchema } from './lib/manifest-keys.mjs'
 
@@ -88,8 +97,7 @@ function auditPath(relative) {
       return issue(true, 'path.controlCharacter', `控制字符：${JSON.stringify(value)}`)
     }
   }
-  if (value === '.aibox' || value.startsWith('.aibox/') ||
-      value === '.build' || value.startsWith('.build/')) {
+  if (value === '.aibox' || value.startsWith('.aibox/') || value === '.build' || value.startsWith('.build/')) {
     return issue(true, 'path.protectedSurface', `宿主受保护面：${value}`)
   }
   return null
@@ -115,7 +123,10 @@ function auditBundle(bundlePath) {
     const relative = String(file?.path ?? '').trim()
     if (isHostOwned(relative)) continue
     const pathIssue = auditPath(relative)
-    if (pathIssue) { out.push(pathIssue); continue }
+    if (pathIssue) {
+      out.push(pathIssue)
+      continue
+    }
     if (seen.has(relative)) {
       out.push(issue(true, 'path.duplicate', `重复条目：${relative}`))
       continue
@@ -138,8 +149,7 @@ function auditBundle(bundlePath) {
   // 构建型产物必须自带 index.html（含 import map）；宿主的默认外壳不认识它的 chunk 名。
   const runtimeKind = bundle.manifest?.runtimeKind ?? 'source'
   if (runtimeKind === 'bundle' && !seen.has('index.html')) {
-    out.push(issue(true, 'shape.missingIndexBundle',
-      'runtimeKind="bundle" 但包里没有 index.html —— 装上去是空白页'))
+    out.push(issue(true, 'shape.missingIndexBundle', 'runtimeKind="bundle" 但包里没有 index.html —— 装上去是空白页'))
   }
   return out
 }
@@ -209,5 +219,5 @@ try {
   main()
 } catch (error) {
   fail(String(error.stack ?? error))
-  process.exit(1)   // 只有审计器自己崩了才非零——审计**结论**永远退出 0
+  process.exit(1) // 只有审计器自己崩了才非零——审计**结论**永远退出 0
 }

@@ -18,16 +18,17 @@ export function onLocaleChanged(handler) {
     if (!bus || typeof bus.on !== 'function')
         return () => { };
     return bus.on('environment.localeChanged', (payload) => {
-        handler(normalizeLocale(payload && (payload.locale || payload.language)));
+        handler(normalizeLocale(payload?.locale || payload?.language));
     });
 }
 /** 缺键时回落 en，再回落键名本身（便于发现漏键，不会渲染成空白）。 */
 export function translate(locale, key) {
     const table = STRINGS[locale] || STRINGS.en;
+    const fallback = STRINGS.en;
     if (table[key] !== undefined)
         return table[key];
-    if (STRINGS.en[key] !== undefined)
-        return STRINGS.en[key];
+    if (fallback[key] !== undefined)
+        return fallback[key];
     return key;
 }
 export function fmt(template, ...args) {

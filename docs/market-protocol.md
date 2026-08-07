@@ -174,7 +174,8 @@
   "minHostVersion": "1.0.0",
   "manifest": { "...": "AppletManifest 子集" },
   "files": [
-    { "path": "app.jsx", "bytes": 12043, "sha256": "…", "encoding": "utf8" },
+    { "path": "index.html", "bytes": 3912, "sha256": "…", "encoding": "utf8" },
+    { "path": "app.js", "bytes": 12043, "sha256": "…", "encoding": "utf8" },
     { "path": "assets/logo.png", "bytes": 2210, "sha256": "…", "encoding": "base64" }
   ],
   "totalBytes": 84213
@@ -187,7 +188,7 @@
 {
   "...": "同 release.json",
   "files": [
-    { "path": "app.jsx", "bytes": 12043, "sha256": "…", "encoding": "utf8", "content": "export default function App() {…}" }
+    { "path": "app.js", "bytes": 12043, "sha256": "…", "encoding": "utf8", "content": "export default function App() {…}" }
   ]
 }
 ```
@@ -195,6 +196,7 @@
 - `encoding` 是 `utf8` 或 `base64`。文本文件一律 `utf8`（保持 Git diff 可读），二进制走 `base64`。
 - `sha256` 对**解码后的原始字节**计算，与 encoding 无关。
 - `manifest` 字段是 `src/manifest.json` 的内容，宿主安装时会补上本机 `id`、时间戳和市场归属字段。
+- 当前标准工程发布的是 `dist/**` 平铺结果；`src/**/*.ts(x)` 只作为源码真值，不进入用户安装包。
 
 ## 5. 宿主安装语义
 

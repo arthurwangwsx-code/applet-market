@@ -28,7 +28,7 @@ export function spentMinor(store, monthKey, categoryID) {
     return total;
 }
 function budgetRow(store, monthKey, categoryID) {
-    return store.budgets.find((row) => row.monthKey === monthKey && (row.categoryID ?? null) === (categoryID ?? null)) ?? null;
+    return (store.budgets.find((row) => row.monthKey === monthKey && (row.categoryID ?? null) === (categoryID ?? null)) ?? null);
 }
 /**
  * 有效额度（含结转，递归，最多回看 120 个月）：
@@ -110,7 +110,6 @@ export function budgetPayload(store, monthKey, now = Date.now()) {
 }
 /** 该月的流水（报表页口径：只保留 countsInFlow）。 */
 export function monthFlowTransactions(store, monthKey) {
-    return store.monthTransactions(monthKey)
-        .filter((txn) => txn.kind === KIND.expense || txn.kind === KIND.income);
+    return store.monthTransactions(monthKey).filter((txn) => txn.kind === KIND.expense || txn.kind === KIND.income);
 }
 export { monthKeyOf, monthStart, monthEnd };

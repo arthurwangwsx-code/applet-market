@@ -9,11 +9,30 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  APPS_DIR, BARE_IMPORT_ALLOWLIST, CATEGORIES, CONTAINER_NAMESPACES, KNOWN_CAPABILITIES, LIMITS,
-  ROOT, appPaths, collectBundleEntries, encodingFor, fail, info, isBuiltApp, isValidAppID,
-  listAppIDs, listReleaseVersions, ok, parseSemver, readJSON, relativePathError, sha256, warn,
+  APPS_DIR,
+  BARE_IMPORT_ALLOWLIST,
+  CATEGORIES,
+  CONTAINER_NAMESPACES,
+  KNOWN_CAPABILITIES,
+  LIMITS,
+  ROOT,
+  appPaths,
+  collectBundleEntries,
+  encodingFor,
+  fail,
+  info,
+  isBuiltApp,
+  isValidAppID,
+  listAppIDs,
+  listReleaseVersions,
+  ok,
+  parseSemver,
+  readJSON,
+  relativePathError,
+  sha256,
+  warn,
 } from './lib/market.mjs'
-import { RUNTIME_MODULE_URLS } from '../packages/aibox-vite/lib/runtime-modules.mjs'
+import { RUNTIME_MODULE_URLS } from './lib/runtime-modules.mjs'
 import { checkManifestKeys, defaultHostSourceDir, loadHostSchema } from './lib/manifest-keys.mjs'
 
 const errors = []
@@ -25,7 +44,8 @@ const wrn = (appId, message) => warnings.push(`${appId}: ${message}`)
 let hostSchema = null
 
 // 匹配 import / export ... from '<spec>' 与 import('<spec>')。
-const IMPORT_RE = /(?:^|[\s;}])(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm
+const IMPORT_RE =
+  /(?:^|[\s;}])(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm
 
 /** 抽出一段代码里的全部**裸** import 说明符（相对路径与绝对 URL 由运行时解析，不归白名单管）。 */
 function bareSpecifiers(source) {
@@ -66,14 +86,20 @@ function checkBuiltImports(appId, relative, source) {
   for (const spec of bareSpecifiers(source)) {
     const bundled = BUNDLED_DEPENDENCY_PREFIXES.find((prefix) => spec.startsWith(prefix))
     if (bundled) {
-      err(appId, `dist/${relative} 里仍有 '${spec}' 的裸 import —— 它是**构建期依赖**，必须被打进产物。`
-        + '检查 vite 配置有没有误把它列进 external（宿主 import map 里没有它，运行时会 404 白屏）。')
+      err(
+        appId,
+        `dist/${relative} 里仍有 '${spec}' 的裸 import —— 它是**构建期依赖**，必须被打进产物。` +
+          '检查构建器配置有没有误把它保留为 external（宿主 import map 里没有它，运行时会 404 白屏）。',
+      )
       continue
     }
     if (!BARE_IMPORT_ALLOWLIST.has(spec)) {
-      err(appId, `dist/${relative} 引用了宿主解析不了的模块 '${spec}'。`
-        + `构建产物里允许的裸 import 只有：${[...BARE_IMPORT_ALLOWLIST].join(', ')}。`
-        + '别的依赖要么打进产物，要么自己实现。')
+      err(
+        appId,
+        `dist/${relative} 引用了宿主解析不了的模块 '${spec}'。` +
+          `构建产物里允许的裸 import 只有：${[...BARE_IMPORT_ALLOWLIST].join(', ')}。` +
+          '别的依赖要么打进产物，要么自己实现。',
+      )
     }
   }
 }
@@ -101,7 +127,10 @@ function validateManifest(appId, manifest, meta) {
     if (CONTAINER_NAMESPACES.has(capability)) {
       wrn(appId, `'${capability}' 是容器内建能力，恒可用、无需声明；写在这里只会让用户以为要了更多权限`)
     } else if (!KNOWN_CAPABILITIES.has(capability)) {
-      err(appId, `manifest.permissions.capabilities 含未知能力 '${capability}'（可选：${[...KNOWN_CAPABILITIES].join(', ')}）`)
+      err(
+        appId,
+        `manifest.permissions.capabilities 含未知能力 '${capability}'（可选：${[...KNOWN_CAPABILITIES].join(', ')}）`,
+      )
     }
   }
   if (permissions.network && (permissions.networkAllowed ?? []).length === 0) {
@@ -144,17 +173,25 @@ function validateSourceLayout(appId, srcDir) {
     let entries
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true })
-    } catch { return }
+    } catch {
+      return
+    }
     for (const entry of entries) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name
-      if (entry.name === 'node_modules') { nested.push(relative); continue }  // 不下钻，只记位置
+      if (entry.name === 'node_modules') {
+        nested.push(relative)
+        continue
+      } // 不下钻，只记位置
       if (entry.isDirectory() && !entry.name.startsWith('.')) walk(path.join(dir, entry.name), relative)
     }
   }
   walk(srcDir, '')
   for (const relative of nested) {
-    wrn(appId, `src/${relative}/ 不会进包（发布时被跳过），设备上也没有 npm 解析——`
-      + '装上去会是运行时找不到模块。依赖只能用离线白名单里的裸模块，或改写成相对路径引入自带源码')
+    wrn(
+      appId,
+      `src/${relative}/ 不会进包（发布时被跳过），设备上也没有 npm 解析——` +
+        '装上去会是运行时找不到模块。依赖只能用离线白名单里的裸模块，或改写成相对路径引入自带源码',
+    )
   }
   const packageJSON = path.join(srcDir, 'package.json')
   if (fs.existsSync(packageJSON)) {
@@ -162,12 +199,15 @@ function validateSourceLayout(appId, srcDir) {
     try {
       const parsed = readJSON(packageJSON)
       declared = [...Object.keys(parsed.dependencies ?? {}), ...Object.keys(parsed.devDependencies ?? {})]
-    } catch { /* 坏 JSON 不是本闸门的事 */ }
+    } catch {
+      /* 坏 JSON 不是本闸门的事 */
+    }
     const outside = declared.filter((name) => !BARE_IMPORT_ALLOWLIST.has(name))
-    wrn(appId, `src/package.json 会被原样打进包但不起任何作用（宿主不跑 npm install）`
-      + (outside.length > 0
-        ? `；其中 ${outside.join(', ')} 不在离线白名单里，一旦被 import 就会安装失败`
-        : ''))
+    wrn(
+      appId,
+      `src/package.json 会被原样打进包但不起任何作用（宿主不跑 npm install）` +
+        (outside.length > 0 ? `；其中 ${outside.join(', ')} 不在离线白名单里，一旦被 import 就会安装失败` : ''),
+    )
   }
 }
 
@@ -210,7 +250,10 @@ function validateBundleFiles(appId) {
   let total = 0
   for (const { absDir, relative } of entries) {
     const pathError = relativePathError(relative)
-    if (pathError) { err(appId, pathError); continue }
+    if (pathError) {
+      err(appId, pathError)
+      continue
+    }
     const file = path.join(absDir, relative)
     const bytes = fs.statSync(file).size
     total += bytes
@@ -239,8 +282,11 @@ function validateBuiltShape(appId, manifest, names) {
   //    entry 指向一个不存在的文件 = 打开即 404 空白页。
   const entry = manifest?.entry ?? 'index.html'
   if (!names.includes(entry)) {
-    err(appId, `manifest.entry="${entry}" 不在包里（包内有：${names.slice(0, 8).join(', ')}…）——`
-      + '市场安装器按包内容原样落盘、不会替你补 index.html，entry 找不到就是打开白屏。')
+    err(
+      appId,
+      `manifest.entry="${entry}" 不在包里（包内有：${names.slice(0, 8).join(', ')}…）——` +
+        '市场安装器按包内容原样落盘、不会替你补 index.html，entry 找不到就是打开白屏。',
+    )
   }
   // ② dist 必须是构建出来的，不能是手写残留。
   if (!fs.existsSync(paths.distDir)) {
@@ -266,19 +312,28 @@ function validateBuiltShape(appId, manifest, names) {
   }
   // ④ runtimeKind 声明与工程形态一致。
   if (manifest && manifest.runtimeKind !== 'bundle') {
-    err(appId, `构建型工程的 manifest 必须声明 "runtimeKind": "bundle"（当前 ${JSON.stringify(manifest.runtimeKind ?? null)}）——`
-      + '否则宿主会按源码型处理，拿 Sucrase 去转译已经构建好的产物。')
+    err(
+      appId,
+      `构建型工程的 manifest 必须声明 "runtimeKind": "bundle"（当前 ${JSON.stringify(manifest.runtimeKind ?? null)}）——` +
+        '否则宿主会按源码型处理，拿 Sucrase 去转译已经构建好的产物。',
+    )
   }
   if (manifest && manifest.template !== 'react') {
-    err(appId, `构建型工程必须声明 "template": "react"（当前 ${JSON.stringify(manifest.template ?? null)}）——`
-      + '宿主据此决定要不要准备 React/antd-mobile 运行时资产；声明成 vanilla 会让 import map 指向的 URL 全部 404。')
+    err(
+      appId,
+      `构建型工程必须声明 "template": "react"（当前 ${JSON.stringify(manifest.template ?? null)}）——` +
+        '宿主据此决定要不要准备 React/antd-mobile 运行时资产；声明成 vanilla 会让 import map 指向的 URL 全部 404。',
+    )
   }
   // ⑤ index.html 必须自带 import map（bundle 形态不经系统外壳，没有别处给它）。
   const indexPath = path.join(paths.distDir, 'index.html')
   if (fs.existsSync(indexPath)) {
     const html = fs.readFileSync(indexPath, 'utf8')
     if (!/<script[^>]+type=["']importmap["']/.test(html)) {
-      err(appId, 'dist/index.html 里没有 import map —— 预构建产物的裸 import（react / antd-mobile …）没人解析，必然白屏。')
+      err(
+        appId,
+        'dist/index.html 里没有 import map —— 预构建产物的裸 import（react / antd-mobile …）没人解析，必然白屏。',
+      )
     }
     for (const [specifier, url] of Object.entries(RUNTIME_MODULE_URLS)) {
       if (html.includes(`"${specifier}"`) && !html.includes(url)) {
@@ -286,15 +341,23 @@ function validateBuiltShape(appId, manifest, names) {
       }
     }
     if (/\bsrc=["']\/(?!\/)/.test(html)) {
-      err(appId, 'dist/index.html 里有绝对路径引用（src="/…"）——宿主伺服在 applet://localhost/<appId>/ 下，绝对路径会跨出应用目录。设 base: "./"。')
+      err(
+        appId,
+        'dist/index.html 里有绝对路径引用（src="/…"）——宿主伺服在 applet://localhost/<appId>/ 下，绝对路径会跨出应用目录。设 base: "./"。',
+      )
     }
     // bundle 形态用原生 module 脚本；出现 shim 标签说明这其实是源码型外壳被贴了 bundle 标签，
     // 于是产物会被白白喂一遍 Sucrase（实测 +9% 体积、语义不变，纯浪费）。
     // 按**标签**判而不是按字符串判：注释里提到 "es-module-shims" 这个名字是正常的。
-    if (/<script[^>]+type=["'](?:module-shim|importmap-shim)["']/.test(html)
-        || /<script[^>]+src=["'][^"']*es-module-shims/.test(html)) {
-      err(appId, 'dist/index.html 用的是源码型外壳（module-shim / es-module-shims），与 runtimeKind=bundle 矛盾。'
-        + '预构建产物应当用原生 <script type="module"> + 原生 importmap，一行都不该转译。')
+    if (
+      /<script[^>]+type=["'](?:module-shim|importmap-shim)["']/.test(html) ||
+      /<script[^>]+src=["'][^"']*es-module-shims/.test(html)
+    ) {
+      err(
+        appId,
+        'dist/index.html 用的是源码型外壳（module-shim / es-module-shims），与 runtimeKind=bundle 矛盾。' +
+          '预构建产物应当用原生 <script type="module"> + 原生 importmap，一行都不该转译。',
+      )
     }
     if (!/<script[^>]+type=["']module["']/.test(html)) {
       err(appId, 'dist/index.html 里没有原生 module 脚本标签 —— 没有任何东西会加载构建产物。')
@@ -314,8 +377,14 @@ function validateReleases(appId) {
     const dir = paths.releaseDir(version)
     const releaseFile = path.join(dir, 'release.json')
     const bundleFile = path.join(dir, 'bundle.json')
-    if (!fs.existsSync(releaseFile)) { err(appId, `${version} 缺少 release.json`); continue }
-    if (!fs.existsSync(bundleFile)) { err(appId, `${version} 缺少 bundle.json`); continue }
+    if (!fs.existsSync(releaseFile)) {
+      err(appId, `${version} 缺少 release.json`)
+      continue
+    }
+    if (!fs.existsSync(bundleFile)) {
+      err(appId, `${version} 缺少 bundle.json`)
+      continue
+    }
 
     const release = readJSON(releaseFile)
     const bundle = readJSON(bundleFile)
@@ -328,9 +397,8 @@ function validateReleases(appId) {
         err(appId, `${version} bundle 含 release.json 未登记的文件 ${file.path}`)
         continue
       }
-      const raw = file.encoding === 'base64'
-        ? Buffer.from(file.content ?? '', 'base64')
-        : Buffer.from(file.content ?? '', 'utf8')
+      const raw =
+        file.encoding === 'base64' ? Buffer.from(file.content ?? '', 'base64') : Buffer.from(file.content ?? '', 'utf8')
       const digest = sha256(raw)
       if (digest !== file.sha256) {
         err(appId, `${version} ${file.path} 内容与 sha256 不符（包被手改过？）`)
@@ -341,7 +409,10 @@ function validateReleases(appId) {
       }
     }
     if ((bundle.files ?? []).length !== manifestPaths.size) {
-      err(appId, `${version} bundle 文件数(${(bundle.files ?? []).length}) 与 release.json(${manifestPaths.size}) 不一致`)
+      err(
+        appId,
+        `${version} bundle 文件数(${(bundle.files ?? []).length}) 与 release.json(${manifestPaths.size}) 不一致`,
+      )
     }
   }
 

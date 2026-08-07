@@ -29,7 +29,7 @@ export function fnv1a64(text) {
     let hi = FNV_OFFSET_HI;
     let lo = FNV_OFFSET_LO;
     for (let i = 0; i < bytes.length; i += 1) {
-        lo = (lo ^ bytes[i]) >>> 0;
+        lo = (lo ^ (bytes[i] ?? 0)) >>> 0;
         const next = mul64(hi, lo, FNV_PRIME_HI, FNV_PRIME_LO);
         hi = next[0];
         lo = next[1];
@@ -61,18 +61,30 @@ export function fnv1aHex(text) {
 }
 // MARK: - HTML → 纯文本
 const ENTITIES = {
-    amp: '&', lt: '<', gt: '>', quot: '"',
-    apos: "'", '#39': "'", '#x27': "'",
-    nbsp: ' ', '#160': ' ',
-    mdash: '—', '#8212': '—',
-    ndash: '–', '#8211': '–',
-    hellip: '…', '#8230': '…',
-    ldquo: '“', rdquo: '”', lsquo: '‘',
-    rsquo: '’', '#8217': '’',
+    amp: '&',
+    lt: '<',
+    gt: '>',
+    quot: '"',
+    apos: "'",
+    '#39': "'",
+    '#x27': "'",
+    nbsp: ' ',
+    '#160': ' ',
+    mdash: '—',
+    '#8212': '—',
+    ndash: '–',
+    '#8211': '–',
+    hellip: '…',
+    '#8230': '…',
+    ldquo: '“',
+    rdquo: '”',
+    lsquo: '‘',
+    rsquo: '’',
+    '#8217': '’',
 };
 function decodeEntity(entity) {
     if (Object.prototype.hasOwnProperty.call(ENTITIES, entity))
-        return ENTITIES[entity];
+        return ENTITIES[entity] ?? null;
     if (entity.startsWith('#x') || entity.startsWith('#X')) {
         const code = parseInt(entity.slice(2), 16);
         if (Number.isFinite(code) && code > 0 && code <= 0x10ffff)
@@ -117,7 +129,11 @@ export function decodeEntities(text) {
     return out;
 }
 export function collapse(text) {
-    return String(text).split(/[ \n\t\r ]+/).filter(Boolean).join(' ').trim();
+    return String(text)
+        .split(/[ \n\t\r ]+/)
+        .filter(Boolean)
+        .join(' ')
+        .trim();
 }
 /** 剥 HTML 标签 + 解实体 + 折叠空白（`<` 与 `>` 之间整段丢弃，`>` 补一个空格）。 */
 export function plain(html) {
@@ -175,13 +191,15 @@ export function shingles(text) {
     const words = [];
     const cjk = [];
     let current = '';
-    const flush = () => { if (current) {
-        words.push(current);
-        current = '';
-    } };
+    const flush = () => {
+        if (current) {
+            words.push(current);
+            current = '';
+        }
+    };
     for (const ch of lower) {
         if (LETTER_OR_NUMBER.test(ch)) {
-            if (isCJK(ch.codePointAt(0))) {
+            if (isCJK(ch.codePointAt(0) ?? 0)) {
                 flush();
                 cjk.push(ch);
             }
@@ -197,10 +215,10 @@ export function shingles(text) {
         for (const ch of cjk)
             words.push(ch);
         for (let i = 0; i < cjk.length - 1; i += 1)
-            words.push(cjk[i] + cjk[i + 1]);
+            words.push((cjk[i] ?? '') + (cjk[i + 1] ?? ''));
     }
     else if (cjk.length === 1) {
-        words.push(cjk[0]);
+        words.push(cjk[0] ?? '');
     }
     return words;
 }
@@ -213,17 +231,17 @@ export function simhash(text) {
     for (const token of tokens) {
         const [hi, lo] = fnv1a64(token);
         for (let i = 0; i < 32; i += 1)
-            votes[i] += ((lo >>> i) & 1) === 1 ? 1 : -1;
+            votes[i] = (votes[i] ?? 0) + (((lo >>> i) & 1) === 1 ? 1 : -1);
         for (let i = 0; i < 32; i += 1)
-            votes[i + 32] += ((hi >>> i) & 1) === 1 ? 1 : -1;
+            votes[i + 32] = (votes[i + 32] ?? 0) + (((hi >>> i) & 1) === 1 ? 1 : -1);
     }
     let lo = 0;
     let hi = 0;
     for (let i = 0; i < 32; i += 1)
-        if (votes[i] > 0)
+        if ((votes[i] ?? 0) > 0)
             lo = (lo | (1 << i)) >>> 0;
     for (let i = 0; i < 32; i += 1)
-        if (votes[i + 32] > 0)
+        if ((votes[i + 32] ?? 0) > 0)
             hi = (hi | (1 << i)) >>> 0;
     return [hi, lo];
 }
@@ -234,15 +252,25 @@ function popcount32(value) {
     let v = value - ((value >>> 1) & 0x55555555);
     v = (v & 0x33333333) + ((v >>> 2) & 0x33333333);
     v = (v + (v >>> 4)) & 0x0f0f0f0f;
-    return (Math.imul(v, 0x01010101) >>> 24);
+    return Math.imul(v, 0x01010101) >>> 24;
 }
 export function hamming(a, b) {
     return popcount32((a[0] ^ b[0]) >>> 0) + popcount32((a[1] ^ b[1]) >>> 0);
 }
 // MARK: - URL 归一
 const TRACKING_PARAMS = new Set([
-    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-    'spm', 'frommodule', 'from', 'ref', 'source', 'wxsource', 'scene',
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_term',
+    'utm_content',
+    'spm',
+    'frommodule',
+    'from',
+    'ref',
+    'source',
+    'wxsource',
+    'scene',
 ]);
 /** 归一：去锚点、去追踪参数、host 小写、去尾斜杠 —— 让转载/带参链接对齐同一稳定键。 */
 export function normalizeURL(raw) {

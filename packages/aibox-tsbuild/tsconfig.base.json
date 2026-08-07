@@ -10,8 +10,8 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
 
-    // 迁移期：`.jsx`/`.js` 原样通过（只转 JSX、不检查），这样一个应用可以先换工具链、再逐文件加类型。
-    "allowJs": true,
+    // 标准工程只接受 TS/TSX。迁移器必须先把全部源码改名并收敛类型，不能让 JS 绕过 strict。
+    "allowJs": false,
     "checkJs": false,
 
     "strict": true,

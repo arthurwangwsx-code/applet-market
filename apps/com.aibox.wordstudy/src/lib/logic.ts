@@ -4,8 +4,17 @@
 
 import { WORDS_SEED } from './seed.js'
 import type {
-  ExerciseKind, LangCode, LookupHistoryItem, PronunciationScore, ReviewExercise, ReviewGrade,
-  Suggestion, TranslateDirection, VocabItem, WordEntry, WordLookupPayload,
+  ExerciseKind,
+  LangCode,
+  LookupHistoryItem,
+  PronunciationScore,
+  ReviewExercise,
+  ReviewGrade,
+  Suggestion,
+  TranslateDirection,
+  VocabItem,
+  WordEntry,
+  WordLookupPayload,
 } from './types.js'
 
 // —— §11.2 意图识别（纯函数） ——
@@ -50,7 +59,9 @@ export function suggest(input: {
   vocab: VocabItem[]
   cachedWords: Set<string>
 }): Suggestion[] {
-  const prefix = String(input.prefix ?? '').trim().toLowerCase()
+  const prefix = String(input.prefix ?? '')
+    .trim()
+    .toLowerCase()
   if (!prefix) return []
   const out: Suggestion[] = []
   const seen = new Set<string>()
@@ -148,15 +159,11 @@ export function blankOut(context: string, term: string): string | null {
   return context.replace(pattern, '________')
 }
 
-export function planExercise(input: {
-  index: number
-  item: VocabItem
-  entry: WordEntry | null
-}): ReviewExercise {
+export function planExercise(input: { index: number; item: VocabItem; entry: WordEntry | null }): ReviewExercise {
   const term = input.item.text
   const contexts = [
     ...(input.item.note && input.item.note.trim() ? [input.item.note.trim()] : []),
-    ...((input.entry?.payload.examples ?? []).map((example) => example.en).filter(Boolean)),
+    ...(input.entry?.payload.examples ?? []).map((example) => example.en).filter(Boolean),
   ]
   const kind = preferredKind(input.index)
 
@@ -191,12 +198,11 @@ export function isCorrect(response: string, answer: string): boolean {
 }
 
 function normalizeAnswer(text: string): string {
-  let value = String(text ?? '').trim().replace(/\s+/g, ' ')
+  let value = String(text ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
   value = value.replace(/^[.,!?;:，。！？；：]+/, '').replace(/[.,!?;:，。！？；：]+$/, '')
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
 // —— §13.3 跟读评分（LCS，纯函数，照抄） ——

@@ -1,4 +1,4 @@
-import { bridge } from './bridge';
+import { bridge } from './bridge'
 
 /**
  * 桥事件订阅。
@@ -16,14 +16,14 @@ import { bridge } from './bridge';
 
 /** 订阅一个事件。返回退订函数——**永远返回**，即使桥不在场（此时是 no-op）。 */
 export function on<T = unknown>(name: string, handler: (payload: T) => void): () => void {
-  const host = bridge();
-  if (!host?.events?.on) return () => {};
+  const host = bridge()
+  if (!host?.events?.on) return () => {}
   try {
-    const off = host.events.on<T>(name, handler);
+    const off = host.events.on<T>(name, handler)
     // 宿主返回的就是退订函数；老桥若返回 undefined，退回手动 off。
-    return typeof off === 'function' ? off : () => host.events?.off?.<T>(name, handler);
+    return typeof off === 'function' ? off : () => host.events?.off?.<T>(name, handler)
   } catch {
-    return () => {};
+    return () => {}
   }
 }
 
@@ -38,10 +38,8 @@ export function namespaceOn<T = unknown>(
   events: string[],
   handler: (event: string, payload: T) => void,
 ): () => void {
-  const offs = events.map((event) =>
-    on<T>(`${namespace}.${event}`, (payload) => handler(event, payload)),
-  );
-  return () => offs.forEach((off) => off());
+  const offs = events.map((event) => on<T>(`${namespace}.${event}`, (payload) => handler(event, payload)))
+  return () => offs.forEach((off) => off())
 }
 
 /**
@@ -53,28 +51,24 @@ export function namespaceOn<T = unknown>(
  * 混用的后果是**永远收不到事件而且不报错**——`aibox.download.on` 根本不存在，
  * 写成那样只会拿到一个空的退订函数，页面上表现为「进度永远不动」。
  */
-export function shellOn(
-  namespace: string,
-  event: string,
-  handler: (payload: unknown) => void,
-): () => void {
-  const host = bridge() as Record<string, { on?: (e: string, h: (p: unknown) => void) => unknown }> | undefined;
-  const ns = host?.[namespace];
-  if (!ns || typeof ns.on !== 'function') return () => {};
+export function shellOn(namespace: string, event: string, handler: (payload: unknown) => void): () => void {
+  const host = bridge() as Record<string, { on?: (e: string, h: (p: unknown) => void) => unknown }> | undefined
+  const ns = host?.[namespace]
+  if (!ns || typeof ns.on !== 'function') return () => {}
   try {
-    const off = ns.on(event, handler);
-    return typeof off === 'function' ? (off as () => void) : () => {};
+    const off = ns.on(event, handler)
+    return typeof off === 'function' ? (off as () => void) : () => {}
   } catch {
-    return () => {};
+    return () => {}
   }
 }
 
 /** 一次性订阅：首次触发后自动退订。 */
 export function once<T = unknown>(name: string, handler: (payload: T) => void): () => void {
-  let off = () => {};
+  let off = () => {}
   off = on<T>(name, (payload) => {
-    off();
-    handler(payload);
-  });
-  return off;
+    off()
+    handler(payload)
+  })
+  return off
 }

@@ -19,11 +19,6 @@ const DETAIL_CHIPS = [
     { id: 'peers', icon: 'arrow.left.arrow.right' },
     { id: 'metrics', icon: 'questionmark.circle' },
 ];
-/**
- * 上下文构造（§13.3）。六个部分顺序固定：指数 / 自选 / 组合 / 行情时间 / 来源 / 数据质量。
- * 核心约束是明确告诉模型：**这是页面快照不是实时承诺**；只有页面数值或刚拉的 finance_* 结果
- * 算事实；要区分事实与推断；要保留来源与时间限定；仅供研究与模拟。
- */
 export function buildContext(ctx) {
     const { t, locale, store, quotes, ledger, settings } = ctx;
     const missingQuotes = [];
@@ -34,8 +29,12 @@ export function buildContext(ctx) {
             return null;
         }
         return `${t(row.key)} ${formatPrice(quote.price, 2)} ${formatPercent(quote.changePct)}`;
-    }).filter(Boolean).join('\n');
-    const watch = store.items.slice(0, 20).map((item) => {
+    })
+        .filter(Boolean)
+        .join('\n');
+    const watch = store.items
+        .slice(0, 20)
+        .map((item) => {
         const canonical = item.instrumentSymbol;
         const quote = quotes.quote(canonical);
         const symbol = resolveSymbol(canonical);
@@ -43,20 +42,25 @@ export function buildContext(ctx) {
         if (!quote)
             missingQuotes.push(canonical);
         return `${store.instrumentName(canonical)} [${canonical}] ${quote ? formatPrice(quote.price, decimals) : '—'} ${quote ? formatPercent(quote.changePct) : '—'}`;
-    }).join('\n');
-    const portfolio = ledger.accounts.filter((row) => !row.isArchived).slice(0, 8).map((account) => {
+    })
+        .join('\n');
+    const portfolio = ledger.accounts
+        .filter((row) => !row.isArchived)
+        .slice(0, 8)
+        .map((account) => {
         const valuation = ledger.valuation(account.id, quotes.quoteMap(), quotes.fx);
         const label = `${accountLabel(t, account.name)} (${account.currency})`;
         if (!valuation || !valuation.isComplete)
             return `${label}: —`;
-        const holdings = valuation.rows.slice(0, 12)
+        const holdings = valuation.rows
+            .slice(0, 12)
             .map((row) => `${row.position.name} [${row.position.instrumentSymbol}] ×${row.position.quantity}`)
             .join(', ');
         return `${label} ${(valuation.totalMinor / 100).toFixed(2)}; ${holdings}`;
-    }).join('\n');
+    })
+        .join('\n');
     const stamp = quotes.lastUpdated ? formatStamp(quotes.lastUpdated, locale) : '—';
-    const sourceLabel = quotes.source === 'automatic' ? t('finance.settings.sourceAuto')
-        : quotes.source === 'sina' ? 'Sina' : 'Tencent';
+    const sourceLabel = quotes.source === 'automatic' ? t('finance.settings.sourceAuto') : quotes.source === 'sina' ? 'Sina' : 'Tencent';
     const state = resolveDataState({
         failed: quotes.lastFailed,
         lastUpdated: quotes.lastUpdated,
@@ -90,14 +94,16 @@ export function buildContext(ctx) {
         `\n[Data quality] ${quality.join('; ')}`,
     ].join('\n');
 }
-export default function AIPanel({ ctx, session, onClose }) {
+export default function AIPanel({ ctx, session, onClose, }) {
     const { t, locale, actions } = ctx;
     const [text, setText] = React.useState('');
     const [busy, setBusy] = React.useState(false);
     const visible = !!session;
-    React.useEffect(() => { if (visible)
-        setText(''); }, [visible]);
-    if (!ctx.hasAI)
+    React.useEffect(() => {
+        if (visible)
+            setText('');
+    }, [visible]);
+    if (!ctx.hasAI || !session)
         return null;
     const send = async (seed) => {
         const body = String(seed || text).trim();
@@ -112,13 +118,13 @@ export default function AIPanel({ ctx, session, onClose }) {
         setBusy(false);
         onClose();
     };
-    const detail = session && session.symbolName;
+    const detail = session.symbolName;
     const chips = detail
         ? DETAIL_CHIPS.map((row) => ({
             id: row.id,
             icon: row.icon,
             label: t(`finance.ai.quick.${row.id}`),
-            seed: t(`finance.ai.quick.${row.id}.seed`, session.symbolName),
+            seed: t(`finance.ai.quick.${row.id}.seed`, detail),
         }))
         : ROOT_CHIPS.map((id) => ({
             id,
@@ -126,15 +132,23 @@ export default function AIPanel({ ctx, session, onClose }) {
             seed: t(`finance.ai.chip.${id}.seed`),
         }));
     return (_jsxs(Sheet, { visible: visible, onClose: onClose, children: [_jsx(SheetHeader, { title: detail ? t('finance.companion.title') : t('finance.ai.title'), onClose: onClose, closeLabel: t('finance.done') }), _jsxs("div", { className: "fin-scroll", style: { padding: SPACE.s4, display: 'flex', flexDirection: 'column', gap: SPACE.s3 }, children: [_jsx("span", { style: { fontSize: 15, color: C.muted }, children: t('finance.ai.header') }), _jsxs("div", { style: {
-                            display: 'flex', alignItems: 'flex-end', gap: SPACE.s2,
-                            background: C.surface, borderRadius: RADIUS.field, padding: SPACE.s3,
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            gap: SPACE.s2,
+                            background: C.surface,
+                            borderRadius: RADIUS.field,
+                            padding: SPACE.s3,
                         }, children: [_jsx("textarea", { className: "fin-field", rows: 2, value: text, placeholder: t('finance.ai.ask.placeholder'), onChange: (event) => setText(event.target.value), onKeyDown: (event) => {
                                     if (event.key === 'Enter' && !event.shiftKey) {
                                         event.preventDefault();
                                         send();
                                     }
                                 }, style: { resize: 'none', lineHeight: 1.4, maxHeight: 96 } }), _jsx("button", { type: "button", className: "fin-btn fin-press", "aria-label": t('finance.ai.ask.send'), disabled: !text.trim() || busy, onClick: () => send(), style: { color: C.brand, opacity: text.trim() && !busy ? 1 : 0.35, flex: '0 0 auto' }, children: busy ? _jsx(Spinner, { size: 22, color: C.brand }) : _jsx(Icon, { name: "arrow.up.circle.fill", size: 26 }) })] }), chips.map((chip) => (_jsxs("button", { type: "button", className: "fin-btn fin-press", onClick: () => send(chip.seed), style: {
-                            display: 'flex', alignItems: 'center', gap: SPACE.s3,
-                            background: C.surface, borderRadius: RADIUS.field, padding: SPACE.s4,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: SPACE.s3,
+                            background: C.surface,
+                            borderRadius: RADIUS.field,
+                            padding: SPACE.s4,
                         }, children: [chip.icon ? _jsx(Icon, { name: chip.icon, size: 17, color: C.brand }) : null, _jsx("span", { style: { flex: '1 1 auto', fontSize: 15 }, children: chip.label }), _jsx(Icon, { name: "chevron.right", size: 13, color: C.brand })] }, chip.id))), _jsx("span", { style: { fontSize: 12, color: C.muted, textAlign: 'center', padding: `${SPACE.s2}px 0 ${SPACE.s4}px` }, children: t('finance.settings.disclaimer') })] })] }));
 }

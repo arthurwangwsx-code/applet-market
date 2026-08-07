@@ -99,7 +99,11 @@ export const THEME_CSS = `
 export const SPACE = { s1: 4, s2: 8, s3: 12, s4: 16, s5: 20, s6: 24, s7: 32 };
 export const RADIUS = { card: 16, bubble: 18, field: 14, pill: 999 };
 export const FONT = {
-    title: 17, body: 16, subhead: 15, caption: 13, small: 12,
+    title: 17,
+    body: 16,
+    subhead: 15,
+    caption: 13,
+    small: 12,
 };
 export const C = {
     brand: 'var(--lg-brand)',

@@ -6,20 +6,38 @@
 //
 // 保留这层薄转发而不是让各调用点直接 import SDK：调用点一个都不用改，迁移 diff 只有本文件，
 // 出问题回滚面也只有本文件。真机验过一轮后再把调用点逐步指向 SDK 并删掉本文件。
-import { available, bridge, events, system, intelligence, storage as sdkStorage } from '../lib/aibox-sdk.js';
+import { available, bridge, events, intelligence, registerAction as registerSDKAction, system } from 'aibox/sdk';
 export function hasNamespace(name, method) {
     return available(name, method);
 }
 export const capabilities = {
-    get tabs() { return hasNamespace('tabs', 'getState'); },
-    get toolbar() { return hasNamespace('toolbar', 'on'); },
-    get net() { return hasNamespace('net', 'fetch'); },
-    get ai() { return hasNamespace('ai', 'generate'); },
-    get chat() { return hasNamespace('chat', 'open'); },
-    get notifications() { return hasNamespace('notifications', 'schedule'); },
-    get share() { return hasNamespace('share', 'file'); },
-    get action() { return hasNamespace('action', 'register'); },
-    get haptics() { return hasNamespace('haptics', 'impact'); },
+    get tabs() {
+        return hasNamespace('tabs', 'getState');
+    },
+    get toolbar() {
+        return hasNamespace('toolbar', 'on');
+    },
+    get net() {
+        return hasNamespace('net', 'fetch');
+    },
+    get ai() {
+        return hasNamespace('ai', 'generate');
+    },
+    get chat() {
+        return hasNamespace('chat', 'shareContext');
+    },
+    get notifications() {
+        return hasNamespace('notifications', 'schedule');
+    },
+    get share() {
+        return hasNamespace('share', 'file');
+    },
+    get action() {
+        return hasNamespace('action', 'register');
+    },
+    get haptics() {
+        return hasNamespace('haptics', 'impact');
+    },
 };
 // —— storage（per-applet KV）——
 const memoryStore = new Map();
@@ -72,28 +90,23 @@ export const onNamespaceEvent = events.shellOn;
 // —— AI ——
 export const aiAvailability = intelligence.aiAvailability;
 /** 降级路径：没有停靠会话时跳聊天页开一个带种子的会话（原生自己就有这条降级）。 */
-export async function openChat({ prompt, categoryKey, autoSend = true, identity }) {
-    const api = bridge();
-    if (api && api.chat && typeof api.chat.open === 'function') {
-        try {
-            await api.chat.open({ prompt, categoryKey, autoSend, identity });
-            return true;
-        }
-        catch (error) { /* 落到 ai.generate */ }
-    }
-    return false;
+export async function openChat({ prompt, categoryKey, autoSend = true, identity, }) {
+    void categoryKey;
+    void autoSend;
+    void identity;
+    return intelligence.openChat(prompt);
 }
 export const aiGenerate = intelligence.aiGenerate;
 // —— 本地通知（到价提醒）——
 //
 // 容器只有 `schedule`，**没有后台唤醒**——所以到价检查照原生做法放在「前台刷新时」，
 // UI 文案如实说明「App 活跃时生效」，不假装能后台盯盘。
-export async function scheduleNotification({ title, body, afterMinutes = 0 }) {
+export async function scheduleNotification({ title, body, afterMinutes = 0, }) {
     const api = bridge();
     if (!api || !api.notifications || typeof api.notifications.schedule !== 'function')
         return false;
     try {
-        await api.notifications.schedule({ title, body, afterMinutes });
+        await api.invoke('notifications', 'schedule', { title, body, afterMinutes });
         return true;
     }
     catch (error) {
@@ -108,19 +121,15 @@ export function impact(style = 'light') {
         try {
             api.haptics.impact({ style });
         }
-        catch (error) { /* 触觉是锦上添花 */ }
+        catch (error) {
+            /* 触觉是锦上添花 */
+        }
     }
 }
 /** 注册一个可被 AI / 自动化调用的 action（manifest.actions 里已静态声明的那些）。 */
 export function registerAction(name, handler) {
-    const api = bridge();
-    if (!api || !api.action || typeof api.action.register !== 'function')
+    if (!bridge()?.action)
         return false;
-    try {
-        api.action.register(name, handler);
-        return true;
-    }
-    catch (error) {
-        return false;
-    }
+    registerSDKAction(name, handler);
+    return true;
 }

@@ -15,6 +15,18 @@ const KLINE_TTL_MS = 120000;
 const KLINE_MAX_ENTRIES = 40;
 const FX_TTL_MS = 3600000;
 export class QuoteService {
+    cache;
+    klineCache;
+    fx;
+    fxAt;
+    refreshing;
+    lastUpdated;
+    lastFailed;
+    lastPartial;
+    missingSymbols;
+    source;
+    refreshInterval;
+    listeners;
     constructor() {
         this.cache = new Map(); // canonical → { quote, at }
         this.klineCache = new Map(); // key → { rows, at }
@@ -92,24 +104,34 @@ export class QuoteService {
                 cached[canonical] = this.quote(canonical);
             return { quotes: cached, missing: [], failed: false, fromCache: true };
         }
-        const symbols = stale.map((canonical) => ({ canonical, symbol: resolveSymbol(canonical) }))
-            .filter((row) => row.symbol);
+        const symbols = stale
+            .map((canonical) => ({ canonical, symbol: resolveSymbol(canonical) }))
+            .filter((row) => row.symbol !== null);
         const funds = symbols.filter((row) => row.symbol.market === 'fund');
         const listed = symbols.filter((row) => row.symbol.market !== 'fund');
         const collected = {};
         const tasks = [];
         if (funds.length > 0) {
-            tasks.push(fund.fetchEstimates(funds.map((row) => row.symbol.code))
-                .then((rows) => Object.assign(collected, rows)).catch(() => { }));
+            tasks.push(fund
+                .fetchEstimates(funds.map((row) => row.symbol.code))
+                .then((rows) => {
+                Object.assign(collected, rows);
+            })
+                .catch(() => { }));
         }
         if (listed.length > 0) {
             tasks.push(this.fetchListed(listed.map((row) => row.symbol))
-                .then((rows) => Object.assign(collected, rows)).catch(() => { }));
+                .then((rows) => {
+                Object.assign(collected, rows);
+            })
+                .catch(() => { }));
         }
         await Promise.all(tasks);
         const at = Date.now();
         for (const canonical of Object.keys(collected)) {
-            this.cache.set(canonical, { quote: collected[canonical], at });
+            const quote = collected[canonical];
+            if (quote)
+                this.cache.set(canonical, { quote, at });
         }
         const missing = stale.filter((canonical) => !collected[canonical]);
         const failed = Object.keys(collected).length === 0;
@@ -178,11 +200,7 @@ export class QuoteService {
         return this.fx;
     }
 }
-/**
- * 数据可信状态机（§2.6 `FinanceWatchlistDataState.resolve`）。
- * 显示「缓存 · 」的条件 = `cached || failedWithCache`。
- */
-export function resolveDataState({ failed, lastUpdated, refreshing, missingCount, ttlMs, now }) {
+export function resolveDataState({ failed, lastUpdated, refreshing, missingCount, ttlMs, now, }) {
     // 显式判 null/undefined：`lastUpdated === 0`（epoch）也是「有过数据」，
     // 用真值判断会把它误当成从未刷新过。
     const hasStamp = lastUpdated !== null && lastUpdated !== undefined;
@@ -192,7 +210,7 @@ export function resolveDataState({ failed, lastUpdated, refreshing, missingCount
         return refreshing ? 'loading' : 'unavailable';
     if (missingCount > 0)
         return 'partial';
-    return (now - lastUpdated) > ttlMs ? 'cached' : 'fresh';
+    return now - lastUpdated > ttlMs ? 'cached' : 'fresh';
 }
 export function showsCachedBadge(state) {
     return state === 'cached' || state === 'failedWithCache';

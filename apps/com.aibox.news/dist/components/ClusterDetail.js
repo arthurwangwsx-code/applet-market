@@ -27,5 +27,10 @@ export default function ClusterDetail({ ctx, cluster }) {
         });
         return actions;
     }, [ctx]);
-    return (_jsxs("div", { className: "news-scroll", children: [_jsxs("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s3}px`, display: 'flex', flexDirection: 'column', gap: 6 }, children: [_jsx("span", { style: { fontSize: 18, fontWeight: 500, color: C.ink, lineHeight: 1.3 }, children: cluster.title }), _jsx("span", { style: { fontSize: 13, color: C.muted }, children: ctx.t('news.cluster.reportCount', articles.length) })] }), _jsx(SectionHeader, { children: ctx.t('news.cluster.sources') }), _jsx(ArticleList, { items: items, ctx: ctx, menuFor: menuFor }), _jsx("div", { style: { height: 24 } })] }));
+    return (_jsxs("div", { className: "news-scroll", children: [_jsxs("div", { style: {
+                    padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s3}px`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                }, children: [_jsx("span", { style: { fontSize: 18, fontWeight: 500, color: C.ink, lineHeight: 1.3 }, children: cluster.title }), _jsx("span", { style: { fontSize: 13, color: C.muted }, children: ctx.t('news.cluster.reportCount', articles.length) })] }), _jsx(SectionHeader, { children: ctx.t('news.cluster.sources') }), _jsx(ArticleList, { items: items, ctx: ctx, menuFor: menuFor }), _jsx("div", { style: { height: 24 } })] }));
 }

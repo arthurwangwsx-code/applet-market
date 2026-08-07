@@ -9,14 +9,7 @@
   "iconTintHex": "E64340",
   "category": "media",
   "author": "AiBox",
-  "tags": [
-    "video",
-    "downloader",
-    "bilibili",
-    "youtube",
-    "hls",
-    "offline"
-  ],
+  "tags": ["video", "downloader", "bilibili", "youtube", "hls", "offline"],
   "localizedSummaries": {
     "en": "Parse a video page, pick a quality, keep an offline library"
   },

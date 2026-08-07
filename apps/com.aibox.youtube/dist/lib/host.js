@@ -2,10 +2,11 @@
 // 分叉的代价不是重复代码，是同一件事有好几个答案；语义现在由 SDK 统一裁定
 // （confirm 不可用回 false、openURL 一律超时封顶、图片走 applet:// 不走 data:）。
 // 本文件只留这个应用**自己的**东西：领域投影与外壳编排。
-import { available, bridge, events, system, intelligence, ui } from '../lib/aibox-sdk.js';
+import { bridge, system } from 'aibox/sdk';
 import { imageURL as uiImageURL } from 'aibox/ui';
-const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，'
-    + '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）';
+import { errorMessage } from './types.js';
+const PERMISSION_HINT = '需要先允许这个小应用联网：在 App 的能力中心里打开它的网络权限，' +
+    '然后回到这里重试。（从市场安装的小应用默认不带任何授权。）';
 function isPermissionError(message) {
     return /aibox\/(not-granted|denied|not-visible)/.test(String(message || ''));
 }
@@ -13,17 +14,19 @@ function isPermissionError(message) {
 function fireAndForget(thunk) {
     try {
         const result = thunk();
-        if (result && typeof result.catch === 'function')
+        if (result instanceof Promise)
             result.catch(() => { });
     }
-    catch { /* 连命名空间都不在 */ }
+    catch {
+        /* 连命名空间都不在 */
+    }
 }
 // —— 网络 ——————————————————————————————————————————————
 export async function fetchJSON(url, options = {}) {
     const api = bridge();
     if (!api?.net?.fetch)
         throw new Error('宿主没有开放网络能力');
-    const { method = 'GET', headers = {}, body, responseType = 'json', maxBytes = 2 * 1024 * 1024, } = options;
+    const { method = 'GET', headers = {}, body, responseType = 'json', maxBytes = 2 * 1024 * 1024 } = options;
     let res;
     try {
         const payload = { method, headers, responseType, maxBytes };
@@ -32,7 +35,7 @@ export async function fetchJSON(url, options = {}) {
         res = await api.net.fetch(url, payload);
     }
     catch (cause) {
-        const raw = String(cause?.message || cause);
+        const raw = errorMessage(cause);
         if (isPermissionError(raw)) {
             const denied = new Error(PERMISSION_HINT);
             denied.permission = true;
@@ -51,7 +54,7 @@ export async function fetchJSON(url, options = {}) {
         err.retryable = res.status >= 500 || res.status === 429;
         throw err;
     }
-    return res?.body;
+    return res.body;
 }
 // —— 图片 ——————————————————————————————————————————————
 /** 缩略图必须走这条：secure CSP 会把裸 https 的 `<img>` 拦成空白。 */
@@ -72,7 +75,14 @@ export async function capabilities() {
     // `aibox.video` 命名空间整个不在 = 宿主 App 太旧（没有这条桥）。与「桥在但引擎缺席」
     // 排查方向完全相反，所以用 `reason` 区分，别合成一个布尔。
     if (!api?.video?.availability) {
-        return { available: false, resolve: false, dash: false, stage: false, reason: 'noBridge' };
+        return {
+            available: false,
+            resolve: false,
+            dash: false,
+            stage: false,
+            embeddedPlayer: false,
+            reason: 'noBridge',
+        };
     }
     try {
         const res = await api.video.availability();
@@ -83,12 +93,19 @@ export async function capabilities() {
             // 这次执行能不能开舞台（无头执行恒 false）。
             stage: !!res?.stage,
             // 这个**构建**里有没有内嵌播放器实现。
-            embeddedPlayer: !!res?.embeddedPlayer,
+            embeddedPlayer: 'embeddedPlayer' in res && !!res.embeddedPlayer,
             reason: res?.available ? 'ok' : 'noEngine',
         };
     }
     catch {
-        return { available: false, resolve: false, dash: false, stage: false, reason: 'noBridge' };
+        return {
+            available: false,
+            resolve: false,
+            dash: false,
+            stage: false,
+            embeddedPlayer: false,
+            reason: 'noBridge',
+        };
     }
 }
 /**
@@ -130,7 +147,7 @@ export async function resolve(url) {
  * 播放。**必须传 sourceURL + formatID**，不能拿 resolve 回的裸 url 去播——
  * 那条会丢掉取流请求头与分轨信息（宿主刻意不把它们透给页面）。
  */
-export async function play({ sourceURL, formatID, resumeFrom = 0 }) {
+export async function play({ sourceURL, formatID, resumeFrom = 0, }) {
     const api = bridge();
     if (!api?.video?.play)
         throw new Error('宿主没有视频播放能力');
@@ -155,11 +172,13 @@ export function onVideoProgress(handler) {
         try {
             off();
         }
-        catch { /* 已退订 */ }
+        catch {
+            /* 已退订 */
+        }
     };
 }
 // —— 存储与交互 ——————————————————————————————————
-export async function loadPref(key, fallback = null) {
+export async function loadPref(key, fallback) {
     const api = bridge();
     if (!api?.storage?.get)
         return fallback;
@@ -175,7 +194,9 @@ export async function savePref(key, value) {
     try {
         await bridge()?.storage?.set?.(key, value);
     }
-    catch { /* 偏好存不住不影响主流程 */ }
+    catch {
+        /* 偏好存不住不影响主流程 */
+    }
 }
 export function haptic(kind = 'light') {
     fireAndForget(() => bridge()?.haptics?.impact?.({ style: kind }));

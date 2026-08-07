@@ -2,7 +2,6 @@
 // 与 actions.js 同一套纪律：无 UI 也能跑、走同一条 WAL 写路径、金额第一步转整数分。
 import { money, majorNumberToMinor } from './money.js';
 import { normalizeCurrencyCode } from './currencies.js';
-import { monthTitle } from './dates.js';
 import { buckets, filterTransactions } from './queries.js';
 import { balancesByAccount, netWorth, setBalance } from './balances.js';
 import { activateProject, addCurrency, addMember, applyFetchedRates, archiveAccount, createAccount, createCategory, createProject, removeMember, setBaseCurrency, setRate, updateAccount, updateCategory, updateProject, } from './entities.js';
@@ -18,32 +17,36 @@ export async function actionAccount(store, args, locale) {
     const action = String(args.action ?? 'list').toLowerCase();
     if (action === 'create') {
         const result = await createAccount(store, {
-            name: args.name,
-            kind: args.kind ?? 'cash',
+            name: String(args.name ?? ''),
+            kind: normalizeAccountKind(args.kind),
             currency: normalizeCurrencyCode(args.currency ?? store.baseCode),
-            initialBalanceMinor: majorNumberToMinor(args.initial_balance ?? 0),
-            creditLimitMinor: majorNumberToMinor(args.credit_limit ?? 0),
+            initialBalanceMinor: majorNumberToMinor(Number(args.initial_balance ?? 0)),
+            creditLimitMinor: majorNumberToMinor(Number(args.credit_limit ?? 0)),
             includeInNetWorth: args.include_in_net_worth !== false,
         });
-        if (!result.ok)
+        if (!result.ok || !result.account)
             return fail(result.reason === 'emptyName' ? 'create needs a name.' : PERSISTENCE_FAILURE);
-        return done(`Created account "${result.account.name}" (${result.account.kind}, ${result.account.currency}).`, { id: result.account.id });
+        return done(`Created account "${result.account.name}" (${result.account.kind}, ${result.account.currency}).`, {
+            id: result.account.id,
+        });
     }
     const target = args.account || args.name;
     if (['set_balance', 'archive', 'update'].includes(action)) {
-        const resolved = resolveAccount(store, target, args.currency);
+        const resolved = resolveAccount(store, target, args.currency ? String(args.currency) : null);
         if (!resolved.found)
             return fail(candidatesText('account', resolved.candidates));
         const account = resolved.value;
         if (action === 'set_balance') {
             if (args.balance === undefined || args.balance === null)
                 return fail('set_balance needs balance.');
-            const result = await setBalance(store, account, majorNumberToMinor(args.balance));
+            const result = await setBalance(store, account, majorNumberToMinor(Number(args.balance)));
             if (!result.ok)
                 return fail(PERSISTENCE_FAILURE);
             if (result.noop)
                 return done(`"${account.name}" already matches that balance — nothing to adjust.`);
-            return done(`Adjusted "${account.name}" by ${money(result.delta, account.currency, { signed: true })}.`, { deltaMinor: result.delta });
+            return done(`Adjusted "${account.name}" by ${money(result.delta ?? 0, account.currency, { signed: true })}.`, {
+                deltaMinor: result.delta ?? 0,
+            });
         }
         if (action === 'archive') {
             const result = await archiveAccount(store, account.id, args.archived !== false);
@@ -52,10 +55,10 @@ export async function actionAccount(store, args, locale) {
             return done(`${args.archived === false ? 'Restored' : 'Archived'} account "${account.name}".`);
         }
         const result = await updateAccount(store, account.id, {
-            name: args.new_name ?? args.name,
-            kind: args.kind,
-            includeInNetWorth: args.include_in_net_worth,
-            creditLimitMinor: args.credit_limit !== undefined ? majorNumberToMinor(args.credit_limit) : undefined,
+            name: String(args.new_name ?? args.name ?? account.name),
+            kind: args.kind === undefined ? undefined : normalizeAccountKind(args.kind),
+            includeInNetWorth: args.include_in_net_worth === undefined ? undefined : !!args.include_in_net_worth,
+            creditLimitMinor: args.credit_limit !== undefined ? majorNumberToMinor(Number(args.credit_limit)) : undefined,
         });
         if (!result.ok)
             return fail(PERSISTENCE_FAILURE);
@@ -70,8 +73,13 @@ export async function actionAccount(store, args, locale) {
             : ` ≈ ${money(store.toBaseMinor(balances[account.id] ?? 0, account.currency), store.baseCode)}`;
         return `${account.name} (${account.kind}, ${account.currency}): ${own}${base} [id: ${account.id}]`;
     });
-    return done(`Net worth ${money(worth.net, store.baseCode)} · assets ${money(worth.assets, store.baseCode)} · `
-        + `liabilities ${money(worth.liabilities, store.baseCode)}\n${lines.join('\n')}`, { netWorthMinor: worth.net, assetsMinor: worth.assets, liabilitiesMinor: worth.liabilities, baseCurrency: store.baseCode });
+    return done(`Net worth ${money(worth.net, store.baseCode)} · assets ${money(worth.assets, store.baseCode)} · ` +
+        `liabilities ${money(worth.liabilities, store.baseCode)}\n${lines.join('\n')}`, {
+        netWorthMinor: worth.net,
+        assetsMinor: worth.assets,
+        liabilitiesMinor: worth.liabilities,
+        baseCurrency: store.baseCode,
+    });
 }
 export async function actionCategory(store, args, locale) {
     const action = String(args.action ?? 'list').toLowerCase();
@@ -84,8 +92,8 @@ export async function actionCategory(store, args, locale) {
                 return fail(candidatesText('parent category', resolved.candidates));
             parentID = resolved.value.id;
         }
-        const result = await createCategory(store, { name: args.name, kind, parentID });
-        if (!result.ok)
+        const result = await createCategory(store, { name: String(args.name ?? ''), kind, parentID });
+        if (!result.ok || !result.category)
             return fail(result.reason === 'emptyName' ? 'create needs a name.' : PERSISTENCE_FAILURE);
         return done(`Created category "${store.categoryPath(result.category.id)}".`, { id: result.category.id });
     }
@@ -93,7 +101,7 @@ export async function actionCategory(store, args, locale) {
         const resolved = resolveCategory(store, args.name, kind);
         if (!resolved.found)
             return fail(candidatesText('category', resolved.candidates));
-        const patch = action === 'rename' ? { name: args.new_name } : { isArchived: args.archived !== false };
+        const patch = action === 'rename' ? { name: String(args.new_name ?? '') } : { isArchived: args.archived !== false };
         if (action === 'rename' && !String(args.new_name ?? '').trim())
             return fail('rename needs new_name.');
         const result = await updateCategory(store, resolved.value.id, patch);
@@ -116,7 +124,7 @@ export async function actionCurrency(store, args, locale) {
     if (action === 'add') {
         if (!code || code.length !== 3)
             return fail('add needs a 3-letter ISO currency code.');
-        const result = await addCurrency(store, code, args.rate);
+        const result = await addCurrency(store, code, args.rate === undefined ? undefined : Number(args.rate));
         if (!result.ok)
             return fail(PERSISTENCE_FAILURE);
         const configured = Number(args.rate) > 0;
@@ -127,7 +135,7 @@ export async function actionCurrency(store, args, locale) {
     if (action === 'set_rate') {
         if (!code)
             return fail('set_rate needs code.');
-        const result = await setRate(store, code, args.rate);
+        const result = await setRate(store, code, Number(args.rate));
         if (!result.ok)
             return fail(result.reason === 'invalidRate' ? 'rate must be greater than 0.' : PERSISTENCE_FAILURE);
         return done(`1 ${code} = ${Number(args.rate)} ${store.baseCode} (marked manual; online refresh will not overwrite it).`);
@@ -152,23 +160,23 @@ export async function actionCurrency(store, args, locale) {
             return fail(PERSISTENCE_FAILURE);
         return done(result.changed ? 'Exchange rates refreshed.' : 'Rates were already up to date.');
     }
-    const lines = store.currencies.map((row) => (row.isBase
+    const lines = store.currencies.map((row) => row.isBase
         ? `${row.code} (base)`
-        : `1 ${row.code} = ${row.rateConfigured ? Number(row.rateToBase).toFixed(4) : 'no rate'} ${store.baseCode}`
-            + `${row.manualRate ? ' (manual)' : ''}`));
+        : `1 ${row.code} = ${row.rateConfigured ? Number(row.rateToBase).toFixed(4) : 'no rate'} ${store.baseCode}` +
+            `${row.manualRate ? ' (manual)' : ''}`);
     return done(`Base currency ${store.baseCode}.\n${lines.join('\n')}`, { baseCurrency: store.baseCode });
 }
 export async function actionProject(store, args, locale) {
     const action = String(args.action ?? 'list').toLowerCase();
     if (action === 'create') {
         const result = await createProject(store, {
-            name: args.name,
-            budgetMinor: majorNumberToMinor(args.budget ?? 0),
+            name: String(args.name ?? ''),
+            budgetMinor: majorNumberToMinor(Number(args.budget ?? 0)),
             startOn: args.start ? parseFlexibleDate(args.start) : null,
             endOn: args.end ? parseFlexibleDate(args.end) : null,
             isActive: !!args.activate,
         });
-        if (!result.ok)
+        if (!result.ok || !result.project)
             return fail(result.reason === 'emptyName' ? 'create needs a name.' : PERSISTENCE_FAILURE);
         return done(`Created project "${result.project.name}".`, { id: result.project.id });
     }
@@ -186,9 +194,9 @@ export async function actionProject(store, args, locale) {
     if (action === 'list') {
         const rows = store.projects.map((project) => {
             const spent = projectSpentMinor(store, project.id);
-            return `${project.name}${project.isActive ? ' (current)' : ''}${project.isArchived ? ' (archived)' : ''}: `
-                + `${money(spent, store.baseCode)}`
-                + `${project.budgetMinor > 0 ? ` / ${money(project.budgetMinor, store.baseCode)}` : ''} [id: ${project.id}]`;
+            return (`${project.name}${project.isActive ? ' (current)' : ''}${project.isArchived ? ' (archived)' : ''}: ` +
+                `${money(spent, store.baseCode)}` +
+                `${project.budgetMinor > 0 ? ` / ${money(project.budgetMinor, store.baseCode)}` : ''} [id: ${project.id}]`);
         });
         return done(rows.length > 0 ? rows.join('\n') : 'No projects yet.', { count: store.projects.length });
     }
@@ -199,8 +207,8 @@ export async function actionProject(store, args, locale) {
     switch (action) {
         case 'update': {
             const result = await updateProject(store, project.id, {
-                name: args.new_name,
-                budgetMinor: args.budget !== undefined ? majorNumberToMinor(args.budget) : undefined,
+                name: args.new_name === undefined ? undefined : String(args.new_name),
+                budgetMinor: args.budget !== undefined ? majorNumberToMinor(Number(args.budget)) : undefined,
                 startOn: args.start ? parseFlexibleDate(args.start) : undefined,
                 endOn: args.end ? parseFlexibleDate(args.end) : undefined,
             });
@@ -208,10 +216,14 @@ export async function actionProject(store, args, locale) {
         }
         case 'archive': {
             const result = await updateProject(store, project.id, { isArchived: args.archived !== false });
-            return result.ok ? done(`${args.archived === false ? 'Restored' : 'Archived'} "${project.name}".`) : fail(PERSISTENCE_FAILURE);
+            return result.ok
+                ? done(`${args.archived === false ? 'Restored' : 'Archived'} "${project.name}".`)
+                : fail(PERSISTENCE_FAILURE);
         }
         case 'members': {
-            const rows = store.projectMembers(project.id).map((row) => `${row.name}${row.isMe ? ' (me)' : ''} [id: ${row.id}]`);
+            const rows = store
+                .projectMembers(project.id)
+                .map((row) => `${row.name}${row.isMe ? ' (me)' : ''} [id: ${row.id}]`);
             return done(rows.length > 0 ? rows.join('\n') : 'No members yet.', { count: rows.length });
         }
         case 'add_member': {
@@ -225,7 +237,9 @@ export async function actionProject(store, args, locale) {
                     return fail(PERSISTENCE_FAILURE);
             }
             const result = await addMember(store, project.id, { name, isMe: !!args.is_me });
-            return result.ok ? done(`Added member "${name}".`, { id: result.member.id }) : fail(PERSISTENCE_FAILURE);
+            return result.ok && result.member
+                ? done(`Added member "${name}".`, { id: result.member.id })
+                : fail(PERSISTENCE_FAILURE);
         }
         case 'remove_member': {
             const resolvedMember = resolveMember(store, project.id, args.member);
@@ -237,7 +251,8 @@ export async function actionProject(store, args, locale) {
         case 'settle': {
             const net = memberBalances(store, project.id);
             const plan = settlementPlan(store, project.id);
-            const balanceLines = store.projectMembers(project.id)
+            const balanceLines = store
+                .projectMembers(project.id)
                 .map((row) => `${row.name}: ${money(net[row.id] ?? 0, store.baseCode, { signed: true })}`);
             const planLines = plan.map((row) => {
                 const from = store.member(row.fromMemberID);
@@ -253,8 +268,8 @@ export async function actionProject(store, args, locale) {
                 return fail(candidatesText('member', from.candidates));
             if (!to.found)
                 return fail(candidatesText('member', to.candidates));
-            const result = await recordSettlement(store, project.id, from.value.id, to.value.id, majorNumberToMinor(args.amount ?? 0));
-            if (!result.ok)
+            const result = await recordSettlement(store, project.id, from.value.id, to.value.id, majorNumberToMinor(Number(args.amount ?? 0)));
+            if (!result.ok || !result.settlement)
                 return fail(result.reason === 'invalidAmount' ? 'amount must be greater than 0.' : PERSISTENCE_FAILURE);
             return done(`Recorded ${from.value.name} → ${to.value.name} ${money(result.settlement.amountBaseMinor, store.baseCode)}.`, { id: result.settlement.id, linkedTransactionID: result.settlement.linkedTransactionID });
         }
@@ -264,10 +279,15 @@ export async function actionProject(store, args, locale) {
             const rows = filterTransactions(store, { projectID: project.id });
             const list = buckets(store, rows, 'byCategory', 'expense', locale);
             const lines = list.slice(0, 10).map((bucket) => `${bucket.label}: ${money(bucket.amountMinor, store.baseCode)}`);
-            return done(`"${project.name}" — spent ${money(spent, store.baseCode)}`
-                + `${income > 0 ? `, income ${money(income, store.baseCode)}` : ''}`
-                + `${project.budgetMinor > 0 ? `, budget ${money(project.budgetMinor, store.baseCode)}` : ''}`
-                + `, ${rows.length} entries.\n${lines.join('\n')}`, { spentMinor: spent, incomeMinor: income, budgetMinor: project.budgetMinor, buckets: list });
+            return done(`"${project.name}" — spent ${money(spent, store.baseCode)}` +
+                `${income > 0 ? `, income ${money(income, store.baseCode)}` : ''}` +
+                `${project.budgetMinor > 0 ? `, budget ${money(project.budgetMinor, store.baseCode)}` : ''}` +
+                `, ${rows.length} entries.\n${lines.join('\n')}`, { spentMinor: spent, incomeMinor: income, budgetMinor: project.budgetMinor, buckets: list });
         }
     }
+}
+function normalizeAccountKind(value) {
+    return value === 'debit' || value === 'credit' || value === 'ewallet' || value === 'prepaid' || value === 'investment'
+        ? value
+        : 'cash';
 }

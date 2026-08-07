@@ -16,23 +16,12 @@
     "network": true,
     "storage": true,
     "ai": false,
-    "networkAllowed": [
-      "mzstatic.com"
-    ],
-    "capabilities": [
-      "music",
-      "haptics",
-      "share",
-      "open",
-      "ui"
-    ]
+    "networkAllowed": ["mzstatic.com"],
+    "capabilities": ["music", "haptics", "share", "open", "ui"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ],
+    "surfaces": ["page", "fullscreen"],
     "subpages": true
   },
   "actions": [
@@ -41,22 +30,11 @@
       "name": "nowPlayingSummary",
       "displayName": "当前播放摘要",
       "summary": "Return the current track, queue summary, sleep timer and lyrics availability in one call, instead of chaining music_status + music_queue + music_lyrics.",
-      "keywords": [
-        "music",
-        "now playing",
-        "queue",
-        "音乐",
-        "正在播放",
-        "队列"
-      ],
+      "keywords": ["music", "now playing", "queue", "音乐", "正在播放", "队列"],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"isPlaying\":{\"type\":\"boolean\"},\"playbackState\":{\"type\":\"string\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"durationSeconds\":{\"type\":\"integer\"},\"queueCount\":{\"type\":\"integer\"},\"currentIndex\":{\"type\":\"integer\"},\"upNext\":{\"type\":\"array\"},\"repeatMode\":{\"type\":\"string\"},\"isShuffled\":{\"type\":\"boolean\"},\"sleepTimer\":{\"type\":[\"string\",\"null\"]},\"lyrics\":{\"type\":\"object\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation",
-        "applet"
-      ],
+      "visibility": ["agent", "automation", "applet"],
       "effect": "read",
       "readOnly": true,
       "idempotent": true
@@ -66,22 +44,11 @@
       "name": "playMostPlayed",
       "displayName": "播放最常听的歌",
       "summary": "Play the user's most-played tracks, ranked by this app's own play history (the host music tools do not expose play history).",
-      "keywords": [
-        "music",
-        "most played",
-        "history",
-        "音乐",
-        "最常播放",
-        "播放历史"
-      ],
+      "keywords": ["music", "most played", "history", "音乐", "最常播放", "播放历史"],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":50,\"description\":\"How many tracks to queue (default 20).\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"queued\":{\"type\":\"integer\"},\"startedWith\":{\"type\":[\"string\",\"null\"]},\"message\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation",
-        "shortcut"
-      ],
+      "visibility": ["agent", "automation", "shortcut"],
       "effect": "mediaPlayback",
       "readOnly": false,
       "idempotent": false
@@ -91,22 +58,11 @@
       "name": "resumeLast",
       "displayName": "接着上次继续听",
       "summary": "Resume the last track this app played, seeking back to the stored position (this app's own restore point; no host tool persists it).",
-      "keywords": [
-        "music",
-        "resume",
-        "continue",
-        "音乐",
-        "继续播放",
-        "接着听"
-      ],
+      "keywords": ["music", "resume", "continue", "音乐", "继续播放", "接着听"],
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"track\":{\"type\":[\"object\",\"null\"]},\"positionSeconds\":{\"type\":\"integer\"},\"message\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation",
-        "shortcut"
-      ],
+      "visibility": ["agent", "automation", "shortcut"],
       "effect": "mediaPlayback",
       "readOnly": false,
       "idempotent": false
@@ -117,9 +73,7 @@
       "displayName": "随机播放",
       "summary": "Toggle shuffle on the host playback engine. Drives the ⋯ menu row, so it is a UI action rather than an agent tool (music_shuffle already covers agents).",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -129,9 +83,7 @@
       "displayName": "循环模式",
       "summary": "Set the repeat mode to off / one / all. Input is the bare mode string supplied by the ⋯ menu row.",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -141,9 +93,7 @@
       "displayName": "睡眠定时器",
       "summary": "Set or cancel the sleep timer. Input is {minutes} for a preset, {mode:'endOfTrack'} to stop after the current song, or {mode:'off'} to cancel.",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "mediaPlayback",
       "readOnly": false
     },
@@ -153,9 +103,7 @@
       "displayName": "音效",
       "summary": "Open the audio effects subpage.",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "nativePresentation",
       "readOnly": true
     },
@@ -165,9 +113,7 @@
       "displayName": "分享当前歌曲",
       "summary": "Share the current track through the system share sheet.",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "nativePresentation",
       "readOnly": true
     },
@@ -177,9 +123,7 @@
       "displayName": "音乐设置",
       "summary": "Open the music settings subpage.",
       "headless": false,
-      "visibility": [
-        "userInterface"
-      ],
+      "visibility": ["userInterface"],
       "effect": "nativePresentation",
       "readOnly": true
     }

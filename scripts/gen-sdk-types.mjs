@@ -26,25 +26,27 @@
 //  （宁可不生成，也不生成一份缺了一半的类型）。
 //
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parametersType, hasRequired, resultType } from './lib/schema-type.mjs';
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { parametersType, hasRequired, resultType } from './lib/schema-type.mjs'
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const MARKET_ROOT = path.resolve(HERE, '..');
-const SNAPSHOT = path.join(MARKET_ROOT, 'docs', 'api', 'capabilities.snapshot.json');
-const OUT_DIR = path.join(MARKET_ROOT, 'packages', 'aibox-sdk', 'src', 'generated');
-const OUT_FILE = path.join(OUT_DIR, 'aibox-global.d.ts');
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const MARKET_ROOT = path.resolve(HERE, '..')
+const SNAPSHOT = path.join(MARKET_ROOT, 'docs', 'api', 'capabilities.snapshot.json')
+const OUT_DIR = path.join(MARKET_ROOT, 'packages', 'aibox-sdk', 'src', 'generated')
+const OUT_FILE = path.join(OUT_DIR, 'aibox-global.d.ts')
+const BIOME = path.join(MARKET_ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'biome.cmd' : 'biome')
 
 /** 宿主仓库根（市场是主仓库的子目录时成立；独立 clone 时为 null）。 */
 function hostRoot() {
-  const candidate = path.resolve(MARKET_ROOT, '..');
-  const probe = path.join(candidate, 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit');
-  return fs.existsSync(probe) ? candidate : null;
+  const candidate = path.resolve(MARKET_ROOT, '..')
+  const probe = path.join(candidate, 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit')
+  return fs.existsSync(probe) ? candidate : null
 }
 
-const KIT = (root) => path.join(root, 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit');
+const KIT = (root) => path.join(root, 'Packages', 'AppletPluginKit', 'Sources', 'AppletPluginKit')
 
 // ---------------------------------------------------------------------------
 // 1. Swift 多行字符串常量抽取
@@ -53,22 +55,20 @@ const KIT = (root) => path.join(root, 'Packages', 'AppletPluginKit', 'Sources', 
 // **没有插值** —— 有插值说明常量形态变了，宁可硬失败也不要生成一份被 `\(…)` 污染的 .d.ts。
 
 function extractSwiftMultiline(source, constName) {
-  const decl = new RegExp(`static\\s+let\\s+${constName}\\s*=\\s*"""\\n`);
-  const start = decl.exec(source);
-  if (!start) throw new Error(`在 Swift 源码里找不到 ${constName} 的多行字符串常量`);
-  const bodyStart = start.index + start[0].length;
-  const end = source.indexOf('"""', bodyStart);
-  if (end < 0) throw new Error(`${constName} 的多行字符串没有闭合`);
-  const raw = source.slice(bodyStart, end);
+  const decl = new RegExp(`static\\s+let\\s+${constName}\\s*=\\s*"""\\n`)
+  const start = decl.exec(source)
+  if (!start) throw new Error(`在 Swift 源码里找不到 ${constName} 的多行字符串常量`)
+  const bodyStart = start.index + start[0].length
+  const end = source.indexOf('"""', bodyStart)
+  if (end < 0) throw new Error(`${constName} 的多行字符串没有闭合`)
+  const raw = source.slice(bodyStart, end)
   if (/\\\(/.test(raw)) {
-    throw new Error(`${constName} 里出现了字符串插值，抽取器不能保证正确性——请更新 gen-sdk-types.mjs`);
+    throw new Error(`${constName} 里出现了字符串插值，抽取器不能保证正确性——请更新 gen-sdk-types.mjs`)
   }
   // Swift 多行字符串以闭合 `"""` 的缩进为基准去缩进。
-  const closingIndent = /(^|\n)([ \t]*)$/.exec(source.slice(0, end))?.[2] ?? '';
-  const lines = raw.replace(/\n$/, '').split('\n');
-  return lines
-    .map((line) => (line.startsWith(closingIndent) ? line.slice(closingIndent.length) : line))
-    .join('\n');
+  const closingIndent = /(^|\n)([ \t]*)$/.exec(source.slice(0, end))?.[2] ?? ''
+  const lines = raw.replace(/\n$/, '').split('\n')
+  return lines.map((line) => (line.startsWith(closingIndent) ? line.slice(closingIndent.length) : line)).join('\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -84,14 +84,14 @@ function extractSwiftMultiline(source, constName) {
 // 而真值是两个位置参数 `setRows(regionId, rows)` —— 编译绿、真机炸。
 // 手抄清单迟早会漂，所以把「谁是手写的」这件事变成**从文本推导**，不再有第二处真值。
 function handwrittenNamespaces(...blocks) {
-  const found = new Set();
+  const found = new Set()
   for (const block of blocks) {
-    if (!block) continue;
+    if (!block) continue
     // 顶层（两空格缩进）的 `namespace X {`、`const X: T`、`interface XNamespace` 三种形态。
-    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?namespace\s+([A-Za-z_$][\w$]*)\s*\{/gm)) found.add(m[1]);
-    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:/gm)) found.add(m[1]);
+    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?namespace\s+([A-Za-z_$][\w$]*)\s*\{/gm)) found.add(m[1])
+    for (const m of block.matchAll(/^\s{0,4}(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:/gm)) found.add(m[1])
   }
-  return found;
+  return found
 }
 
 // ECMAScript 保留字。descriptor 里**真的有**这样的方法名（`files.delete`、`voiceMemos.delete`、
@@ -102,46 +102,80 @@ function handwrittenNamespaces(...blocks) {
 //  `.aibox/aibox.d.ts` 在 `files` 之后整块解析不出来——模型正是照那份文件写代码。
 //  2026-08-04 已按同一手法修好，两侧现在形态一致。）
 const RESERVED_WORDS = new Set([
-  'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do',
-  'else', 'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import',
-  'in', 'instanceof', 'new', 'null', 'return', 'super', 'switch', 'this', 'throw', 'true',
-  'try', 'typeof', 'var', 'void', 'while', 'with',
-]);
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'new',
+  'null',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+])
 
 function interfaceName(namespace) {
-  return `${namespace.charAt(0).toUpperCase()}${namespace.slice(1)}Namespace`;
+  return `${namespace.charAt(0).toUpperCase()}${namespace.slice(1)}Namespace`
 }
 
 function generatedNamespaces(snapshot, handwritten) {
-  const blocks = [];
+  const blocks = []
   for (const entry of snapshot.namespaces) {
-    if (handwritten.has(entry.namespace)) continue;
-    const needsInterface = entry.methods.some((method) => RESERVED_WORDS.has(method.name));
+    if (handwritten.has(entry.namespace)) continue
+    const needsInterface = entry.methods.some((method) => RESERVED_WORDS.has(method.name))
     const signatures = entry.methods.map((method) => {
-      const input = parametersType(method.parametersJSON);
-      const optional = hasRequired(method.parametersJSON) ? '' : '?';
-      const result = resultType(method.resultSchemaJSON);
-      const doc = `    /** ${method.summary} Result: ${method.resultSummary} */`;
-      const name = needsInterface && RESERVED_WORDS.has(method.name) ? `"${method.name}"` : method.name;
+      const input = parametersType(method.parametersJSON)
+      const optional = hasRequired(method.parametersJSON) ? '' : '?'
+      const result = resultType(method.resultSchemaJSON)
+      const doc = `    /** ${method.summary} Result: ${method.resultSummary} */`
+      const name = needsInterface && RESERVED_WORDS.has(method.name) ? `"${method.name}"` : method.name
       const decl = needsInterface
         ? `    ${name}(input${optional}: ${input}): Promise<${result}>`
-        : `    function ${method.name}(input${optional}: ${input}): Promise<${result}>`;
-      return `${doc}\n${decl}`;
-    });
+        : `    function ${method.name}(input${optional}: ${input}): Promise<${result}>`
+      return `${doc}\n${decl}`
+    })
     if (needsInterface) {
-      const type = interfaceName(entry.namespace);
-      blocks.push([
-        `  // ${entry.namespace} 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。`,
-        `  interface ${type} {`,
-        ...signatures,
-        '  }',
-        `  const ${entry.namespace}: ${type}`,
-      ].join('\n'));
+      const type = interfaceName(entry.namespace)
+      blocks.push(
+        [
+          `  // ${entry.namespace} 含保留字方法名，故用 interface + const 而不是 namespace（语义等价）。`,
+          `  interface ${type} {`,
+          ...signatures,
+          '  }',
+          `  const ${entry.namespace}: ${type}`,
+        ].join('\n'),
+      )
     } else {
-      blocks.push([`  namespace ${entry.namespace} {`, ...signatures, '  }'].join('\n'));
+      blocks.push([`  namespace ${entry.namespace} {`, ...signatures, '  }'].join('\n'))
     }
   }
-  return blocks.join('\n\n');
+  return blocks.join('\n\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -181,23 +215,23 @@ const TOOLS_BLOCK = `  namespace tools {
     function callBatch(input: {
       calls: Array<{ name: HostToolName; arguments?: Record<string, unknown> }>
     }): Promise<ToolCallResult[]>
-  }`;
+  }`
 
 function indent(block, spaces) {
-  const pad = ' '.repeat(spaces);
+  const pad = ' '.repeat(spaces)
   return block
     .split('\n')
     .map((line) => (line.trim() === '' ? line : pad + line))
-    .join('\n');
+    .join('\n')
 }
 
 function render({ platform, ai, snapshot }) {
   // 手写块覆盖了哪些命名空间，从手写文本自身推导（连 TOOLS_BLOCK 一起，它也是手写的）。
   // 推导失败（一个都没找到）说明抽取器与 Swift 常量的形态对不上了 —— 硬失败，
   // 不要生成一份「手写块与生成块同名合并成重载」的 .d.ts：那种文件会让错误调用过 tsc。
-  const handwritten = handwrittenNamespaces(platform, ai, TOOLS_BLOCK);
+  const handwritten = handwrittenNamespaces(platform, ai, TOOLS_BLOCK)
   if (handwritten.size === 0) {
-    throw new Error('未能从手写 TS 块里推导出任何命名空间——抽取器可能已失效，拒绝生成');
+    throw new Error('未能从手写 TS 块里推导出任何命名空间——抽取器可能已失效，拒绝生成')
   }
 
   const header = [
@@ -211,7 +245,7 @@ function render({ platform, ai, snapshot }) {
     '',
     '/* eslint-disable */',
     '',
-  ].join('\n');
+  ].join('\n')
 
   const body = [
     'declare namespace aibox {',
@@ -242,7 +276,7 @@ function render({ platform, ai, snapshot }) {
     '}',
     '',
     'interface Window {',
-    '  /** Effective host language, available before the applet\'s first render. */',
+    "  /** Effective host language, available before the applet's first render. */",
     '  readonly __aiboxEnvironment?: Readonly<{ locale: string; language: string }>',
     '  /** The bridge object. Present in every applet WebView; `undefined` outside one. */',
     '  readonly aibox?: typeof aibox',
@@ -257,9 +291,29 @@ function render({ platform, ai, snapshot }) {
     '// 本文件**必须**保持为 global script（没有顶层 import/export）——加一行 `export {}` 就会把它变成',
     '// 模块，`declare namespace aibox` 随即只在该模块内可见，全仓的 `aibox.*` 类型一起失效。',
     '',
-  ].join('\n');
+  ].join('\n')
 
-  return `${header}${body}`;
+  return `${header}${body}`
+}
+
+function formatGeneratedTypeScript(text) {
+  if (!fs.existsSync(BIOME)) {
+    throw new Error('缺少本地 Biome；请先运行 npm ci，再生成 SDK 类型')
+  }
+  let current = text
+  // Biome 对特别长的生成声明偶尔需要第二遍才能达到固定点。生成与 --check 必须比较
+  // 最终稳定文本，否则 `npm run format` 会制造一份下一次生成必然判漂移的文件。
+  for (let pass = 0; pass < 8; pass += 1) {
+    const next = execFileSync(BIOME, ['format', '--stdin-file-path', OUT_FILE], {
+      cwd: MARKET_ROOT,
+      input: current,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    if (next === current) return next
+    current = next
+  }
+  throw new Error('Biome 在 8 次格式化后仍未收敛，拒绝写入不稳定的 SDK 类型生成物')
 }
 
 // ---------------------------------------------------------------------------
@@ -268,56 +322,60 @@ function render({ platform, ai, snapshot }) {
 
 function build() {
   if (!fs.existsSync(SNAPSHOT)) {
-    throw new Error(`缺少 ${path.relative(MARKET_ROOT, SNAPSHOT)}（先跑 node scripts/gen-api-docs.mjs extract）`);
+    throw new Error(`缺少 ${path.relative(MARKET_ROOT, SNAPSHOT)}（先跑 node scripts/gen-api-docs.mjs extract）`)
   }
-  const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
-  const root = hostRoot();
+  const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'))
+  const root = hostRoot()
   if (!root) {
-    throw new Error('宿主源码不在场（需要 ../Packages/AppletPluginKit），无法抽取 platformTypeScript / aiTypeScript');
+    throw new Error('宿主源码不在场（需要 ../Packages/AppletPluginKit），无法抽取 platformTypeScript / aiTypeScript')
   }
-  const kit = KIT(root);
+  const kit = KIT(root)
   const platform = extractSwiftMultiline(
     fs.readFileSync(path.join(kit, 'Runtime', 'AppletDeveloperSDK+TypeScript.swift'), 'utf8'),
-    'platformTypeScript');
+    'platformTypeScript',
+  )
   const ai = extractSwiftMultiline(
     fs.readFileSync(path.join(kit, 'Runtime', 'AppletDeveloperSDK.swift'), 'utf8'),
-    'aiTypeScript');
-  return { text: render({ platform, ai, snapshot }), snapshot };
+    'aiTypeScript',
+  )
+  return { text: formatGeneratedTypeScript(render({ platform, ai, snapshot })), snapshot }
 }
 
 function main() {
-  const check = process.argv.includes('--check');
-  let built;
+  const check = process.argv.includes('--check')
+  let built
   try {
-    built = build();
+    built = build()
   } catch (error) {
     if (check && !hostRoot()) {
       // 独立 CI：宿主源码不在场，只能确认生成物存在（内容漂移由主仓库 CI 兜住）。
       if (fs.existsSync(OUT_FILE)) {
-        console.log('SDK 类型：宿主源码不在场，跳过漂移检查（生成物存在）。');
-        return 0;
+        console.log('SDK 类型：宿主源码不在场，跳过漂移检查（生成物存在）。')
+        return 0
       }
-      console.error('✗ SDK 类型生成物缺失，且宿主源码不在场，无法生成。');
-      return 1;
+      console.error('✗ SDK 类型生成物缺失，且宿主源码不在场，无法生成。')
+      return 1
     }
-    console.error(`✗ ${error.message}`);
-    return 1;
+    console.error(`✗ ${error.message}`)
+    return 1
   }
 
   if (check) {
-    const old = fs.existsSync(OUT_FILE) ? fs.readFileSync(OUT_FILE, 'utf8') : null;
+    const old = fs.existsSync(OUT_FILE) ? fs.readFileSync(OUT_FILE, 'utf8') : null
     if (old !== built.text) {
-      console.error('✗ packages/aibox-sdk/src/generated/aibox-global.d.ts 与宿主真值不一致，跑 npm run sdk:types 重新生成。');
-      return 1;
+      console.error(
+        '✗ packages/aibox-sdk/src/generated/aibox-global.d.ts 与宿主真值不一致，跑 npm run sdk:types 重新生成。',
+      )
+      return 1
     }
-    console.log(`✓ SDK 类型与宿主真值一致（${built.snapshot.namespaces.length} 个命名空间）。`);
-    return 0;
+    console.log(`✓ SDK 类型与宿主真值一致（${built.snapshot.namespaces.length} 个命名空间）。`)
+    return 0
   }
 
-  fs.mkdirSync(OUT_DIR, { recursive: true });
-  fs.writeFileSync(OUT_FILE, built.text, 'utf8');
-  console.log(`✓ 已生成 ${path.relative(MARKET_ROOT, OUT_FILE)}（${built.snapshot.namespaces.length} 个命名空间）`);
-  return 0;
+  fs.mkdirSync(OUT_DIR, { recursive: true })
+  fs.writeFileSync(OUT_FILE, built.text, 'utf8')
+  console.log(`✓ 已生成 ${path.relative(MARKET_ROOT, OUT_FILE)}（${built.snapshot.namespaces.length} 个命名空间）`)
+  return 0
 }
 
-process.exit(main());
+process.exit(main())

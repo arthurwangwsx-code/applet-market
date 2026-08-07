@@ -35,7 +35,7 @@ export function parseLRC(raw) {
         const text = line.replace(TIME_TAG, '').trim();
         times.forEach((time) => out.push({ time: Math.max(0, time + offset), text, translation: null }));
     });
-    return out.sort((a, b) => a.time - b.time);
+    return out.sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
 }
 /** 纯文本歌词 → 行模型：按行拆、trim、去空行，`time = null`。 */
 export function plainLines(raw) {
@@ -52,7 +52,7 @@ export function currentLineIndex(lines, displayTime) {
     const threshold = Number(displayTime) + 0.05;
     let found = -1;
     for (let i = 0; i < lines.length; i += 1) {
-        const time = lines[i].time;
+        const time = lines[i]?.time;
         if (time === null || time === undefined)
             continue;
         if (time <= threshold)
@@ -71,10 +71,10 @@ export function sweepRatio(lines, index, displayTime) {
     if (!Array.isArray(lines) || index < 0 || index >= lines.length)
         return 0;
     const line = lines[index];
-    if (line.time === null || line.time === undefined)
+    if (!line || line.time === null || line.time === undefined)
         return 0;
     const next = lines[index + 1];
-    const end = (next && next.time !== null && next.time !== undefined) ? next.time : line.time + 4;
+    const end = next && next.time !== null && next.time !== undefined ? next.time : line.time + 4;
     const span = Math.max(0.25, end - line.time);
     const raw = (Number(displayTime) - line.time) / span;
     const clamped = Math.max(0, Math.min(1, raw));
@@ -83,24 +83,16 @@ export function sweepRatio(lines, index, displayTime) {
 const HEADER = /^Lyrics for [\s\S]*?:\n\n/;
 const NO_LYRICS = /^No lyrics found for/i;
 const NOTHING_PLAYING = /^No song specified/i;
-/**
- * 把 `music_lyrics` 的返回读成行模型。
- * 三条路径，按可用性从高到低：
- *  1. 宿主已经透出结构化 `lines`（未来补上缺口 #2 后）→ 直接用，`synced` 由宿主给；
- *  2. 文本里带 `[mm:ss]` → 按 LRC 解析（宿主某天改成回传原始 LRC 也能直接吃）；
- *  3. 当前实现：纯文本 → 无时间轴行模型。
- */
 export function readLyricsPayload(result) {
     if (!result || !result.ok) {
         return { state: 'none', synced: false, lines: [], source: null };
     }
-    const structured = result.json && !Array.isArray(result.json) ? result.json : null;
+    const structured = result.json;
     if (structured && Array.isArray(structured.lines)) {
-        const lines = structured.lines
-            .map((row) => ({
-            time: (row && typeof row.time === 'number') ? row.time : null,
+        const lines = structured.lines.map((row) => ({
+            time: row && typeof row.time === 'number' ? row.time : null,
             text: String((row && row.text) || ''),
-            translation: (row && row.translation) ? String(row.translation) : null,
+            translation: row && row.translation ? String(row.translation) : null,
         }));
         return {
             state: lines.length > 0 ? 'ok' : 'none',

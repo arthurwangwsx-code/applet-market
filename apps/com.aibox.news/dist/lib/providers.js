@@ -1,6 +1,6 @@
 // 三个数据源 Provider 的移植：RSS/Atom（原样 GET）、RSSHub（实例基址 + 路由 + limit）、
 // NewsAPI（NewsData.io JSON）。统一返回 `{ articles, failure, httpStatus }`，失败不抛。
-import { httpGet, FAILURE, FEED_MAX_BYTES } from './host.js';
+import { FAILURE, FEED_MAX_BYTES, httpGet } from './host.js';
 import { parseFeed } from './feedParser.js';
 import { plain, stableKey } from './text.js';
 import { parseDate } from './dates.js';
@@ -8,7 +8,11 @@ export const RSSHUB_DEFAULT_INSTANCE = 'https://rsshub.app';
 export const FEED_LIMIT = 40;
 export const API_LIMIT = 20;
 const success = (articles) => ({ articles, failure: null, httpStatus: null });
-const failed = (failure, httpStatus = null) => ({ articles: [], failure, httpStatus });
+const failed = (failure, httpStatus = null) => ({
+    articles: [],
+    failure,
+    httpStatus,
+});
 function refOf(feed) {
     return { sourceID: feed.id, sourceName: feed.title, topic: feed.topic };
 }
@@ -39,22 +43,31 @@ export async function fetchRSSHub(feed, { instance, now = Date.now(), limit = FE
 /** NewsData.io 分类 → 本地主题。 */
 export function mapAPITopic(category) {
     switch (String(category || '').toLowerCase()) {
-        case 'world': return 'world';
+        case 'world':
+            return 'world';
         case 'politics':
-        case 'top': return 'top';
-        case 'technology': return 'tech';
-        case 'business': return 'business';
+        case 'top':
+            return 'top';
+        case 'technology':
+            return 'tech';
+        case 'business':
+            return 'business';
         case 'science':
-        case 'environment': return 'science';
-        case 'sports': return 'sports';
+        case 'environment':
+            return 'science';
+        case 'sports':
+            return 'sports';
         case 'health':
-        case 'food': return 'health';
-        case 'entertainment': return 'culture';
-        default: return 'top';
+        case 'food':
+            return 'health';
+        case 'entertainment':
+            return 'culture';
+        default:
+            return 'top';
     }
 }
 /** News API（NewsData.io latest）：apiKey + 关键词 + 语言，一次 20 条。 */
-export async function fetchNewsAPI(feed, { apiKey, language = 'zh', now = Date.now(), limit = API_LIMIT } = {}) {
+export async function fetchNewsAPI(feed, { apiKey, language = 'zh', now = Date.now(), limit = API_LIMIT, } = {}) {
     const key = String(apiKey || '').trim();
     if (!key)
         return failed(FAILURE.configuration);
@@ -76,20 +89,23 @@ export async function fetchNewsAPI(feed, { apiKey, language = 'zh', now = Date.n
     catch (error) {
         return failed(FAILURE.decoding);
     }
-    if (!payload || !Array.isArray(payload.results))
+    if (!payload || typeof payload !== 'object' || !('results' in payload) || !Array.isArray(payload.results))
         return failed(FAILURE.decoding);
     const articles = [];
     for (const row of payload.results.slice(0, limit)) {
-        const title = String((row && row.title) || '').trim();
-        const link = String((row && row.link) || '');
+        if (!row || typeof row !== 'object')
+            continue;
+        const item = row;
+        const title = String(item.title || '').trim();
+        const link = String(item.link || '');
         if (!title || !link)
             continue;
-        const description = row.description || row.content || '';
-        const src = row.source_id || row.source_name || 'news api';
-        const category = Array.isArray(row.category) ? row.category[0] : 'top';
-        const parsed = parseDate(row.pubDate || '');
-        const guid = row.article_id || '';
-        const author = Array.isArray(row.creator) ? (row.creator[0] || '') : '';
+        const description = String(item.description || item.content || '');
+        const src = String(item.source_id || item.source_name || 'news api');
+        const category = Array.isArray(item.category) ? item.category[0] : 'top';
+        const parsed = parseDate(String(item.pubDate || ''));
+        const guid = String(item.article_id || '');
+        const author = Array.isArray(item.creator) ? String(item.creator[0] || '') : '';
         articles.push({
             id: stableKey(link, guid, title),
             title,
@@ -100,7 +116,7 @@ export async function fetchNewsAPI(feed, { apiKey, language = 'zh', now = Date.n
             sourceID: `api:${src}`,
             sourceName: src,
             topic: mapAPITopic(category),
-            imageURL: row.image_url || null,
+            imageURL: typeof item.image_url === 'string' ? item.image_url : null,
             publishedAt: parsed ? parsed.getTime() : now,
             fetchedAt: now,
             clusterID: null,

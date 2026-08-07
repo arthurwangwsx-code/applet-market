@@ -16,7 +16,13 @@ const FLOW_DAYS = 20;
 export default function FundamentalsView({ ctx, symbol }) {
     const { t, settings } = ctx;
     const canonical = canonicalOf(symbol);
-    const [state, setState] = React.useState({ loading: true, financials: [], flows: [], dividends: [], announcements: [] });
+    const [state, setState] = React.useState({
+        loading: true,
+        financials: [],
+        flows: [],
+        dividends: [],
+        announcements: [],
+    });
     React.useEffect(() => {
         if (symbol.market !== 'ashare')
             return undefined;
@@ -33,7 +39,9 @@ export default function FundamentalsView({ ctx, symbol }) {
             setState({ loading: false, financials, flows, dividends, announcements });
         };
         run();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [canonical, symbol]);
     if (symbol.market !== 'ashare')
         return null;
@@ -44,8 +52,11 @@ export default function FundamentalsView({ ctx, symbol }) {
     const recentFlows = state.flows.slice(-FLOW_DAYS);
     const cumulative = recentFlows.reduce((sum, row) => sum + row.mainNet, 0);
     const upIsRed = settings.upIsRed;
-    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [latest ? (_jsx(Card, { title: t('finance.fin.title'), subtitle: latest.periodName, children: _jsxs("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: SPACE.s3 }, children: [_jsx(Stat, { label: t('finance.fin.revenue'), value: (_jsxs("span", { style: { display: 'flex', alignItems: 'baseline', gap: 5 }, children: [formatCompactCurrency(latest.revenue, latest.currency), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: trendColor(latest.revenueYoY, upIsRed) }, children: formatPercent(latest.revenueYoY) })] })) }), _jsx(Stat, { label: t('finance.fin.netprofit'), value: (_jsxs("span", { style: { display: 'flex', alignItems: 'baseline', gap: 5 }, children: [formatCompactCurrency(latest.netProfit, latest.currency), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: trendColor(latest.netProfitYoY, upIsRed) }, children: formatPercent(latest.netProfitYoY) })] })) }), _jsx(Stat, { label: t('finance.fin.roe'), value: formatPercent(latest.roe, false) }), _jsx(Stat, { label: t('finance.fin.gross'), value: formatPercent(latest.grossMargin, false) }), _jsx(Stat, { label: t('finance.fin.eps'), value: formatPrice(latest.eps, 2) }), _jsx(Stat, { label: t('finance.fin.bps'), value: formatPrice(latest.bps, 2) })] }) })) : null, recentFlows.length > 0 ? (_jsxs(Card, { title: t('finance.flow.title'), children: [_jsxs("div", { style: { display: 'flex', alignItems: 'baseline', gap: SPACE.s2, marginBottom: SPACE.s2 }, children: [_jsx("span", { style: { fontSize: 12, color: C.muted }, children: t('finance.flow.mainCum') }), _jsx("span", { className: "fin-mono", style: { fontSize: 15, fontWeight: 500, color: trendColor(cumulative, upIsRed) }, children: formatCompactCurrency(cumulative, 'CNY') })] }), _jsx(BarChart, { values: recentFlows.map((row) => row.mainNet / 1e8), height: 90, upIsRed: upIsRed })] })) : null, state.dividends.length > 0 ? (_jsx(Card, { title: t('finance.div.title'), children: state.dividends.slice(0, 5).map((row) => (_jsxs("div", { style: { display: 'flex', gap: SPACE.s2, padding: '4px 0' }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted, width: 82, flex: '0 0 auto' }, children: row.reportDate }), _jsx("span", { className: "fin-clamp-2", style: { fontSize: 12, color: C.ink }, children: row.plan })] }, `${row.reportDate}-${row.plan}`))) })) : null, state.announcements.length > 0 ? (_jsx(Card, { title: t('finance.news.annTitle'), children: state.announcements.slice(0, 6).map((row) => (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: 2, padding: '5px 0' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 6 }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted }, children: row.date }), row.kind ? (_jsx("span", { style: {
-                                        fontSize: 12, color: C.brand, padding: '1px 5px', borderRadius: RADIUS.pill,
+    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [latest ? (_jsx(Card, { title: t('finance.fin.title'), subtitle: latest.periodName, children: _jsxs("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: SPACE.s3 }, children: [_jsx(Stat, { label: t('finance.fin.revenue'), value: _jsxs("span", { style: { display: 'flex', alignItems: 'baseline', gap: 5 }, children: [formatCompactCurrency(latest.revenue, latest.currency), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: trendColor(latest.revenueYoY, upIsRed) }, children: formatPercent(latest.revenueYoY) })] }) }), _jsx(Stat, { label: t('finance.fin.netprofit'), value: _jsxs("span", { style: { display: 'flex', alignItems: 'baseline', gap: 5 }, children: [formatCompactCurrency(latest.netProfit, latest.currency), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: trendColor(latest.netProfitYoY, upIsRed) }, children: formatPercent(latest.netProfitYoY) })] }) }), _jsx(Stat, { label: t('finance.fin.roe'), value: formatPercent(latest.roe, false) }), _jsx(Stat, { label: t('finance.fin.gross'), value: formatPercent(latest.grossMargin, false) }), _jsx(Stat, { label: t('finance.fin.eps'), value: formatPrice(latest.eps, 2) }), _jsx(Stat, { label: t('finance.fin.bps'), value: formatPrice(latest.bps, 2) })] }) })) : null, recentFlows.length > 0 ? (_jsxs(Card, { title: t('finance.flow.title'), children: [_jsxs("div", { style: { display: 'flex', alignItems: 'baseline', gap: SPACE.s2, marginBottom: SPACE.s2 }, children: [_jsx("span", { style: { fontSize: 12, color: C.muted }, children: t('finance.flow.mainCum') }), _jsx("span", { className: "fin-mono", style: { fontSize: 15, fontWeight: 500, color: trendColor(cumulative, upIsRed) }, children: formatCompactCurrency(cumulative, 'CNY') })] }), _jsx(BarChart, { values: recentFlows.map((row) => row.mainNet / 1e8), height: 90, upIsRed: upIsRed })] })) : null, state.dividends.length > 0 ? (_jsx(Card, { title: t('finance.div.title'), children: state.dividends.slice(0, 5).map((row) => (_jsxs("div", { style: { display: 'flex', gap: SPACE.s2, padding: '4px 0' }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted, width: 82, flex: '0 0 auto' }, children: row.reportDate }), _jsx("span", { className: "fin-clamp-2", style: { fontSize: 12, color: C.ink }, children: row.plan })] }, `${row.reportDate}-${row.plan}`))) })) : null, state.announcements.length > 0 ? (_jsx(Card, { title: t('finance.news.annTitle'), children: state.announcements.slice(0, 6).map((row) => (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: 2, padding: '5px 0' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 6 }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted }, children: row.date }), row.kind ? (_jsx("span", { style: {
+                                        fontSize: 12,
+                                        color: C.brand,
+                                        padding: '1px 5px',
+                                        borderRadius: RADIUS.pill,
                                         background: 'color-mix(in srgb, var(--fin-brand) 10%, transparent)',
                                     }, children: row.kind })) : null] }), _jsx("span", { className: "fin-clamp-2", style: { fontSize: 12, color: C.ink }, children: row.title })] }, row.id))) })) : null] }));
 }

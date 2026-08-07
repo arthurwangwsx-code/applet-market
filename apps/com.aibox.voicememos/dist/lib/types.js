@@ -21,8 +21,5 @@ export const DEFAULT_FILTER = {
 };
 /** `isActive` = 任一收窄条件生效（**排序不算**）—— 决定筛选图标是否填充。 */
 export function filterIsActive(filter) {
-    return filter.duration !== 'any'
-        || filter.date !== 'all'
-        || filter.favOnly
-        || filter.withTranscript;
+    return filter.duration !== 'any' || filter.date !== 'all' || filter.favOnly || filter.withTranscript;
 }

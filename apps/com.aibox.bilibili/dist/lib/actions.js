@@ -7,8 +7,11 @@
 // 任何组件，等 React 副作用就来不及了。
 import * as api from './api.js';
 import { playVideo, videoAvailable } from './host.js';
+import { errorMessage, isRecord } from './types.js';
 /** 搜索视频。回结构化列表 + 一段给模型读的文本。 */
-async function search({ keyword, limit }) {
+async function search(input) {
+    const keyword = isRecord(input) ? input.keyword : '';
+    const limit = isRecord(input) ? input.limit : 10;
     const query = String(keyword || '').trim();
     if (!query)
         return { ok: false, error: 'keyword is required', text: '需要一个搜索关键词。' };
@@ -18,8 +21,11 @@ async function search({ keyword, limit }) {
         return {
             ok: true,
             videos: videos.map((v) => ({
-                bvid: v.bvid, title: v.title, author: v.author,
-                durationSeconds: v.duration, plays: v.play,
+                bvid: v.bvid,
+                title: v.title,
+                author: v.author,
+                durationSeconds: v.duration,
+                plays: v.play,
                 url: `https://www.bilibili.com/video/${v.bvid}`,
             })),
             text: videos.length
@@ -28,11 +34,14 @@ async function search({ keyword, limit }) {
         };
     }
     catch (err) {
-        return { ok: false, error: String(err?.message || err), text: `搜索失败：${err?.message || err}` };
+        const message = errorMessage(err);
+        return { ok: false, error: message, text: `搜索失败：${message}` };
     }
 }
 /** 热门 / 排行榜。 */
-async function trending({ kind, limit }) {
+async function trending(input) {
+    const kind = isRecord(input) ? input.kind : 'popular';
+    const limit = isRecord(input) ? input.limit : 10;
     const count = Math.min(Math.max(1, Number(limit) || 10), 30);
     try {
         const list = kind === 'ranking' ? await api.ranking(0) : await api.popular(1);
@@ -40,14 +49,18 @@ async function trending({ kind, limit }) {
         return {
             ok: true,
             videos: videos.map((v) => ({
-                bvid: v.bvid, title: v.title, author: v.author, plays: v.play,
+                bvid: v.bvid,
+                title: v.title,
+                author: v.author,
+                plays: v.play,
                 url: `https://www.bilibili.com/video/${v.bvid}`,
             })),
             text: videos.map((v, i) => `${i + 1}. ${v.title} — ${v.author}（${v.bvid}）`).join('\n'),
         };
     }
     catch (err) {
-        return { ok: false, error: String(err?.message || err), text: `拿不到榜单：${err?.message || err}` };
+        const message = errorMessage(err);
+        return { ok: false, error: message, text: `拿不到榜单：${message}` };
     }
 }
 /**
@@ -56,11 +69,12 @@ async function trending({ kind, limit }) {
  * 注意它**不是**「返回一个链接让调用方自己播」——播放归宿主引擎，
  * 这个动作做的是取流 + 交给 `aibox.video`（于是全屏、画中画、锁屏卡片都在）。
  */
-async function play({ bvid }) {
+async function play(input) {
+    const bvid = isRecord(input) ? input.bvid : '';
     const id = String(bvid || '').trim();
     if (!id)
         return { ok: false, error: 'bvid is required', text: '需要一个视频的 BV 号。' };
-    if (!await videoAvailable()) {
+    if (!(await videoAvailable())) {
         return { ok: false, error: 'no video engine', text: '这个版本没有装视频引擎，播放不了。' };
     }
     try {
@@ -74,7 +88,8 @@ async function play({ bvid }) {
         };
     }
     catch (err) {
-        return { ok: false, error: String(err?.message || err), text: `播放失败：${err?.message || err}` };
+        const message = errorMessage(err);
+        return { ok: false, error: message, text: `播放失败：${message}` };
     }
 }
 export function registerActions() {

@@ -9,7 +9,12 @@
 import { queryAll, removeMany } from '@aibox/applet-sdk'
 
 import type {
-  DailySentence, LookupHistoryItem, TranslationRecord, VocabItem, WordEntry, WordLookupPayload,
+  DailySentence,
+  LookupHistoryItem,
+  TranslationRecord,
+  VocabItem,
+  WordEntry,
+  WordLookupPayload,
 } from './types.js'
 
 const COLLECTIONS = {
@@ -120,12 +125,18 @@ export function cryptoID(): string {
 
 /** 词条 / 生词本的键归一：trim + 小写。 */
 export function normalizeTerm(text: string): string {
-  return String(text ?? '').trim().toLowerCase()
+  return String(text ?? '')
+    .trim()
+    .toLowerCase()
 }
 
 /** 查询历史的键归一：**按空白切分再用单空格 join**，再小写（折叠连续空白，不是简单 trim）。 */
 export function normalizeHistoryTerm(text: string): string {
-  return String(text ?? '').split(/\s+/).filter(Boolean).join(' ').toLowerCase()
+  return String(text ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
 }
 
 /** 一行简义 = 首个 `sense.pos` + 空格 + 首个 gloss；无 sense 时空串。 */
@@ -226,7 +237,10 @@ async function dedupeHistory(): Promise<HistoryDoc[]> {
   // 批量删：逐条 drop 时每条都是一趟「读全表 → 改 → 原子写全表」，清理 200 条重复项 = 200 趟全表 IO，
   // 且中途失败会停在删了一半的状态。`removeMany` 是一趟。
   const overflow = keep.slice(LIMITS.history)
-  await dropMany(COLLECTIONS.history, [...stale, ...overflow].map((row) => row._id))
+  await dropMany(
+    COLLECTIONS.history,
+    [...stale, ...overflow].map((row) => row._id),
+  )
   return keep.slice(0, LIMITS.history)
 }
 
@@ -251,12 +265,18 @@ export async function recordHistory(term: string, brief: string, source: 'ui' | 
 export async function removeHistory(term: string): Promise<void> {
   const key = normalizeHistoryTerm(term)
   const rows = await all<HistoryDoc>(COLLECTIONS.history)
-  await dropMany(COLLECTIONS.history, rows.filter((item) => item.term === key).map((row) => row._id))
+  await dropMany(
+    COLLECTIONS.history,
+    rows.filter((item) => item.term === key).map((row) => row._id),
+  )
 }
 
 export async function clearHistory(): Promise<void> {
   const rows = await all<HistoryDoc>(COLLECTIONS.history)
-  await dropMany(COLLECTIONS.history, rows.map((row) => row._id))
+  await dropMany(
+    COLLECTIONS.history,
+    rows.map((row) => row._id),
+  )
 }
 
 // —— 生词本 ——
@@ -346,7 +366,10 @@ export async function listTranslations(limit = 50): Promise<TranslationRecord[]>
   const rows = await all<TranslationDoc>(COLLECTIONS.translations)
   rows.sort((a, b) => b.at - a.at)
   // 物理上限 200，超限按时间升序删到 200。
-  await dropMany(COLLECTIONS.translations, rows.slice(LIMITS.translations).map((row) => row._id))
+  await dropMany(
+    COLLECTIONS.translations,
+    rows.slice(LIMITS.translations).map((row) => row._id),
+  )
   return rows.slice(0, limit)
 }
 

@@ -37,9 +37,12 @@ function useBridgeEvent(namespace, event, handler, enabled = true) {
         return () => {
             if (typeof unsubscribe === 'function') {
                 try {
+                    ;
                     unsubscribe();
                 }
-                catch { /* 退订失败不该影响卸载 */ }
+                catch {
+                    /* 退订失败不该影响卸载 */
+                }
             }
         };
     }, [namespace, event, enabled]);
@@ -52,22 +55,35 @@ export function useTabs() {
         const host = bridge();
         if (!host?.tabs)
             return undefined;
-        host.tabs.getState().then((next) => { if (!cancelled)
-            setState(next); }).catch(() => undefined);
-        return () => { cancelled = true; };
+        host.tabs
+            .getState()
+            .then((next) => {
+            if (!cancelled)
+                setState(next);
+        })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
     }, []);
     useBridgeEvent('tabs', 'changed', (payload) => setState(payload));
     const select = useCallback((id) => {
         const host = bridge();
         if (!host?.tabs)
             return;
-        host.tabs.select(id).then(setState).catch(() => undefined);
+        host.tabs
+            .select(id)
+            .then(setState)
+            .catch(() => undefined);
     }, []);
     const setBadge = useCallback((id, badge) => {
         const host = bridge();
         if (!host?.tabs)
             return;
-        host.tabs.update({ items: { [id]: { badge } } }).then(setState).catch(() => undefined);
+        host.tabs
+            .update({ items: { [id]: { badge } } })
+            .then(setState)
+            .catch(() => undefined);
     }, []);
     return {
         state,
@@ -80,13 +96,18 @@ export function useTabs() {
 /** 导航栏搜索。`rendered === false`（如 fullscreen 面）时自己画输入框。 */
 export function useToolbarSearch() {
     const [search, setSearch] = useState(null);
-    const [event, setEvent] = useState({ query: '', scope: '', submitted: false });
+    const [event, setEvent] = useState({
+        query: '',
+        scope: '',
+        submitted: false,
+    });
     useEffect(() => {
         let cancelled = false;
         const host = bridge();
         if (!host?.toolbar)
             return undefined;
-        host.toolbar.getState()
+        host.toolbar
+            .getState()
             .then((next) => {
             if (cancelled)
                 return;
@@ -94,7 +115,9 @@ export function useToolbarSearch() {
             setEvent({ query: next.search?.query ?? '', scope: next.search?.scope ?? '', submitted: false });
         })
             .catch(() => undefined);
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
     useBridgeEvent('toolbar', 'searchChanged', (payload) => {
         const next = (payload ?? {});
@@ -105,7 +128,10 @@ export function useToolbarSearch() {
         const host = bridge();
         if (!host?.toolbar)
             return;
-        host.toolbar.setSearch({ query }).then(setSearch).catch(() => undefined);
+        host.toolbar
+            .setSearch({ query })
+            .then(setSearch)
+            .catch(() => undefined);
     }, []);
     return {
         query: event.query,
@@ -132,7 +158,11 @@ export function useKeyboardInset() {
         const covered = (window.innerHeight || 0) - (viewport.height + viewport.offsetTop);
         return covered > 1 ? Math.round(covered) : 0;
     };
-    const [inset, setInset] = useState(() => ({ height: measure(), animationMs: 250, source: 'viewport' }));
+    const [inset, setInset] = useState(() => ({
+        height: measure(),
+        animationMs: 250,
+        source: 'viewport',
+    }));
     useBridgeEvent('events', 'keyboardChanged', (payload) => {
         const next = (payload ?? {});
         setInset({
@@ -194,9 +224,16 @@ export function useScene() {
         const host = bridge();
         if (!host?.scene)
             return undefined;
-        host.scene.getState().then((next) => { if (!cancelled)
-            setState(next); }).catch(() => undefined);
-        return () => { cancelled = true; };
+        host.scene
+            .getState()
+            .then((next) => {
+            if (!cancelled)
+                setState(next);
+        })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
     }, []);
     useBridgeEvent('scene', 'changed', (payload) => setState(payload));
     return state;

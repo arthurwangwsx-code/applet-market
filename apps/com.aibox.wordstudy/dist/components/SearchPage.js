@@ -53,13 +53,15 @@ export function SearchPage(props) {
             await saveDaily(value);
             setDaily(value);
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [props.aiAvailable, props.surface]);
     const suggestions = useMemo(() => suggest({ prefix: trimmed, history: store.history, vocab: store.vocab, cachedWords: store.cachedWords }), [trimmed, store.history, store.vocab, store.cachedWords]);
     if (trimmed) {
         return (_jsxs("div", { children: [suggestions.map((item) => (_jsx(Row, { palette: palette, title: item.term, subtitle: item.brief || undefined, 
                     // 点联想行永远走查词，不做句子判定。
-                    onClick: () => props.onOpenWord(item.term), trailing: item.isCached ? _jsx(InfoChip, { palette: palette, label: t('cached'), tint: palette.green, filled: true }) : undefined }, item.term))), _jsx(Row, { palette: palette, title: _jsxs("span", { children: [_jsx(Icon, { name: "sparkles", size: 13, color: palette.accent }), ' ', t('lookupAction'), " ", _jsxs("span", { style: { fontWeight: 600 }, children: ["\u201C", trimmed, "\u201D"] })] }), onClick: () => {
+                    onClick: () => props.onOpenWord(item.term), trailing: item.isCached ? _jsx(InfoChip, { palette: palette, label: t('cached'), tint: palette.green, filled: true }) : undefined }, item.term))), _jsx(Row, { palette: palette, title: _jsxs("span", { children: [_jsx(Icon, { name: "sparkles", size: 13, color: palette.accent }), " ", t('lookupAction'), ' ', _jsxs("span", { style: { fontWeight: 600 }, children: ["\u201C", trimmed, "\u201D"] })] }), onClick: () => {
                         // 兜底行 A 走意图分流。
                         if (resolveIntent(trimmed) === 'translate')
                             props.onTranslateSentence(trimmed);
@@ -72,7 +74,19 @@ export function SearchPage(props) {
     const historyRows = expandHistory ? store.history : store.history.slice(0, 5);
     const translationRows = expandTranslations ? store.translations : store.translations.slice(0, 5);
     const bothEmpty = store.history.length === 0 && store.translations.length === 0;
-    return (_jsxs("div", { style: { paddingBottom: SPACE.s6 }, children: [due > 0 ? (_jsx("div", { style: { padding: `${SPACE.s3}px ${SPACE.s4}px 0` }, children: _jsx(DueBanner, { palette: palette, text: dueBanner(t, props.lang, due), onClick: props.onOpenReview }) })) : null, daily && daily.en ? (_jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px 4px` }, children: _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s2 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 500, color: palette.accent, textTransform: 'uppercase', letterSpacing: 0.6 }, children: t('dailyHeader') }), _jsx("div", { style: { fontSize: 15, fontWeight: 500, color: palette.ink }, children: daily.en }), daily.zh ? (_jsx("div", { style: { fontSize: 13, color: palette.muted }, children: `“${daily.zh}” — ${daily.author}` })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: 2 }, children: [_jsx(InfoChip, { palette: palette, icon: "speaker", label: t('speakNormal'), onClick: () => void speak(daily.en, 'us', 'normal') }), _jsx(InfoChip, { palette: palette, icon: "tortoise", label: t('speakSlow'), onClick: () => void speak(daily.en, 'us', 'slow') })] })] }) })) : null, bothEmpty ? _jsx(EmptyState, { palette: palette, icon: "magnifyingglass", text: t('emptySearchHint') }) : null, store.history.length > 0 ? (_jsxs("section", { style: { marginTop: SPACE.s5 }, children: [_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(SectionHeader, { palette: palette, title: t('recentLookups'), trailing: _jsx("button", { type: "button", style: { border: 'none', background: 'transparent', color: palette.accent, fontSize: 11, cursor: 'pointer' }, onClick: async () => {
+    return (_jsxs("div", { style: { paddingBottom: SPACE.s6 }, children: [due > 0 ? (_jsx("div", { style: { padding: `${SPACE.s3}px ${SPACE.s4}px 0` }, children: _jsx(DueBanner, { palette: palette, text: dueBanner(t, props.lang, due), onClick: props.onOpenReview }) })) : null, daily && daily.en ? (_jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px 4px` }, children: _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s2 }, children: [_jsx("div", { style: {
+                                fontSize: 11,
+                                fontWeight: 500,
+                                color: palette.accent,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.6,
+                            }, children: t('dailyHeader') }), _jsx("div", { style: { fontSize: 15, fontWeight: 500, color: palette.ink }, children: daily.en }), daily.zh ? (_jsx("div", { style: { fontSize: 13, color: palette.muted }, children: `“${daily.zh}” — ${daily.author}` })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: 2 }, children: [_jsx(InfoChip, { palette: palette, icon: "speaker", label: t('speakNormal'), onClick: () => void speak(daily.en, 'us', 'normal') }), _jsx(InfoChip, { palette: palette, icon: "tortoise", label: t('speakSlow'), onClick: () => void speak(daily.en, 'us', 'slow') })] })] }) })) : null, bothEmpty ? _jsx(EmptyState, { palette: palette, icon: "magnifyingglass", text: t('emptySearchHint') }) : null, store.history.length > 0 ? (_jsxs("section", { style: { marginTop: SPACE.s5 }, children: [_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(SectionHeader, { palette: palette, title: t('recentLookups'), trailing: _jsx("button", { type: "button", style: {
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: palette.accent,
+                                    fontSize: 11,
+                                    cursor: 'pointer',
+                                }, onClick: async () => {
                                     const ok = await confirm({
                                         title: t('clearHistoryTitle'),
                                         confirmTitle: t('clear'),
@@ -99,7 +113,13 @@ export function SearchPage(props) {
                                 await removeHistory(item.term);
                                 store.refresh();
                             }
-                        } }, item.term))), store.history.length > 5 ? (_jsxs("button", { type: "button", onClick: () => setExpandHistory((value) => !value), style: expandStyle(palette), children: [expandHistory ? t('collapse') : t('expandAll'), " ", _jsx(Icon, { name: expandHistory ? 'chevron.up' : 'chevron.down', size: 11 })] })) : null] })) : null, store.translations.length > 0 ? (_jsxs("section", { style: { marginTop: SPACE.s5 }, children: [_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(SectionHeader, { palette: palette, title: t('translationHistory'), trailing: _jsx("button", { type: "button", style: { border: 'none', background: 'transparent', color: palette.accent, fontSize: 11, cursor: 'pointer' }, onClick: async () => {
+                        } }, item.term))), store.history.length > 5 ? (_jsxs("button", { type: "button", onClick: () => setExpandHistory((value) => !value), style: expandStyle(palette), children: [expandHistory ? t('collapse') : t('expandAll'), ' ', _jsx(Icon, { name: expandHistory ? 'chevron.up' : 'chevron.down', size: 11 })] })) : null] })) : null, store.translations.length > 0 ? (_jsxs("section", { style: { marginTop: SPACE.s5 }, children: [_jsx("div", { style: { padding: `0 ${SPACE.s4}px` }, children: _jsx(SectionHeader, { palette: palette, title: t('translationHistory'), trailing: _jsx("button", { type: "button", style: {
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: palette.accent,
+                                    fontSize: 11,
+                                    cursor: 'pointer',
+                                }, onClick: async () => {
                                     const ok = await confirm({
                                         title: t('clearTranslationsTitle'),
                                         confirmTitle: t('clear'),
@@ -114,9 +134,15 @@ export function SearchPage(props) {
 }
 function expandStyle(palette) {
     return {
-        display: 'block', width: '100%', textAlign: 'left', border: 'none',
-        background: 'transparent', color: palette.accent, fontSize: 13,
-        padding: `10px ${SPACE.s4}px`, cursor: 'pointer',
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        border: 'none',
+        background: 'transparent',
+        color: palette.accent,
+        fontSize: 13,
+        padding: `10px ${SPACE.s4}px`,
+        cursor: 'pointer',
         borderBottom: `1px solid ${alpha(palette.line, 1)}`,
     };
 }

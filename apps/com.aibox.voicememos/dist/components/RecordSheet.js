@@ -5,7 +5,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // 自上而下：标题输入 / 环境行 / 实时滚动波形 / 百分秒计时 / 已暂停标 / 控制排。
 import { useEffect, useRef, useState } from 'react';
 import { clockCentis } from '../lib/format.js';
-import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop } from '../lib/memos.js';
+import { haptic, recordCancel, recordPause, recordResume, recordStatus, recordStop, } from '../lib/memos.js';
 import { SPACE } from '../lib/theme.js';
 import { Icon, Sheet } from './primitives.js';
 /** 20 Hz —— 与底座的采样率一致，即便以更低频率轮询也不会丢样本（环形缓冲有 6 秒余量）。 */
@@ -52,35 +52,83 @@ export function RecordSheet(props) {
     };
     return (_jsxs(Sheet, { palette: palette, open: props.open, 
         // 录音中不能误滑关掉：点遮罩只在已停止时才关（原生是 interactiveDismissDisabled）。
-        onClose: () => { if (!recording)
-            props.onCancel(); }, children: [_jsx("div", { style: { padding: `${SPACE.s5}px ${SPACE.s5}px ${SPACE.s3}px` }, children: _jsx("input", { value: props.title, onChange: (event) => props.onTitleChange(event.target.value), placeholder: t('recordTitlePlaceholder'), style: {
-                        width: '100%', boxSizing: 'border-box', border: 'none', background: 'transparent',
-                        textAlign: 'center', fontSize: 17, fontWeight: 600, color: palette.ink, outline: 'none',
-                    } }) }), _jsxs("div", { style: { display: 'flex', gap: SPACE.s3, padding: `0 ${SPACE.s5}px ${SPACE.s2}px`, fontSize: 12, color: palette.muted }, children: [_jsxs("span", { style: { flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }, children: [_jsx(Icon, { name: "waveform.and.mic", size: 11 }), " ", t('localeAuto')] }), props.backgroundSupported ? _jsx("span", { children: _jsx(Icon, { name: "checkmark.circle", size: 11 }) }) : null] }), _jsx(LiveWaveform, { palette: palette, levels: levels, active: recording && !paused }), _jsx("div", { style: {
-                    padding: `${SPACE.s4}px 0`, textAlign: 'center',
-                    fontSize: 44, fontWeight: 200, fontVariantNumeric: 'tabular-nums',
+        onClose: () => {
+            if (!recording)
+                props.onCancel();
+        }, children: [_jsx("div", { style: { padding: `${SPACE.s5}px ${SPACE.s5}px ${SPACE.s3}px` }, children: _jsx("input", { value: props.title, onChange: (event) => props.onTitleChange(event.target.value), placeholder: t('recordTitlePlaceholder'), style: {
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        border: 'none',
+                        background: 'transparent',
+                        textAlign: 'center',
+                        fontSize: 17,
+                        fontWeight: 600,
+                        color: palette.ink,
+                        outline: 'none',
+                    } }) }), _jsxs("div", { style: {
+                    display: 'flex',
+                    gap: SPACE.s3,
+                    padding: `0 ${SPACE.s5}px ${SPACE.s2}px`,
+                    fontSize: 12,
+                    color: palette.muted,
+                }, children: [_jsxs("span", { style: { flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }, children: [_jsx(Icon, { name: "waveform.and.mic", size: 11 }), " ", t('localeAuto')] }), props.backgroundSupported ? (_jsx("span", { children: _jsx(Icon, { name: "checkmark.circle", size: 11 }) })) : null] }), _jsx(LiveWaveform, { palette: palette, levels: levels, active: recording && !paused }), _jsx("div", { style: {
+                    padding: `${SPACE.s4}px 0`,
+                    textAlign: 'center',
+                    fontSize: 44,
+                    fontWeight: 200,
+                    fontVariantNumeric: 'tabular-nums',
                     fontFamily: 'ui-monospace, Menlo, monospace',
                     color: recording && !paused ? palette.accent : palette.muted,
-                }, children: clockCentis(elapsed) }), paused ? (_jsxs("div", { style: { textAlign: 'center', fontSize: 12, color: palette.muted, marginBottom: SPACE.s2 }, children: [_jsx(Icon, { name: "pause", size: 12 }), " ", t('paused')] })) : null, _jsxs("div", { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: SPACE.s6, paddingBottom: SPACE.s6 }, children: [_jsx("button", { type: "button", onClick: async () => {
+                }, children: clockCentis(elapsed) }), paused ? (_jsxs("div", { style: { textAlign: 'center', fontSize: 12, color: palette.muted, marginBottom: SPACE.s2 }, children: [_jsx(Icon, { name: "pause", size: 12 }), " ", t('paused')] })) : null, _jsxs("div", { style: {
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: SPACE.s6,
+                    paddingBottom: SPACE.s6,
+                }, children: [_jsx("button", { type: "button", onClick: async () => {
                             if (paused)
                                 await recordResume();
                             else
                                 await recordPause();
                         }, "aria-label": paused ? t('resume') : t('pause'), style: {
-                            width: 56, height: 56, borderRadius: 28, background: palette.surface,
-                            border: `1px solid ${palette.line}`, color: palette.ink, fontSize: 20, cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 56,
+                            height: 56,
+                            borderRadius: 28,
+                            background: palette.surface,
+                            border: `1px solid ${palette.line}`,
+                            color: palette.ink,
+                            fontSize: 20,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                         }, children: _jsx(Icon, { name: paused ? 'record.circle' : 'pause', size: 20, color: paused ? palette.red : undefined }) }), _jsx("button", { type: "button", onClick: stop, "aria-label": t('stop'), style: {
-                            width: 72, height: 72, borderRadius: 36, background: palette.red, border: 'none',
-                            color: '#FFFFFF', fontSize: 22, cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 72,
+                            height: 72,
+                            borderRadius: 36,
+                            background: palette.red,
+                            border: 'none',
+                            color: '#FFFFFF',
+                            fontSize: 22,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                         }, children: _jsx(Icon, { name: "stop", size: 22, color: "#FFFFFF" }) }), _jsx("button", { type: "button", onClick: async () => {
                             await recordCancel();
                             props.onCancel();
                         }, "aria-label": t('cancel'), style: {
-                            width: 56, height: 56, borderRadius: 28, background: 'transparent',
-                            border: `1px solid ${palette.line}`, color: palette.muted, fontSize: 15, cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 56,
+                            height: 56,
+                            borderRadius: 28,
+                            background: 'transparent',
+                            border: `1px solid ${palette.line}`,
+                            color: palette.muted,
+                            fontSize: 15,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                         }, children: _jsx(Icon, { name: "xmark", size: 18 }) })] })] }));
 }
 /**

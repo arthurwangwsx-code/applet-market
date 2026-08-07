@@ -15,7 +15,7 @@
 //    导致 parse 必失败，症状同样是"永远不成功"。
 //  · **AI 报的秒数一律不信**（原生靠 startPhrase 回查原始 segments）。容器拿不到 segments，
 //    所以复刻版的校正段**不带时间戳**，而不是把模型编的秒数当真显示出来。
-import { normalizeError } from '../lib/aibox-sdk.js';
+import { normalizeError } from 'aibox/sdk';
 /** 长文本截断口径，与原生一致（8000 字符）。 */
 const MAX_CHARS = 8000;
 const ai = () => {
@@ -69,8 +69,8 @@ async function generate(input) {
 }
 // —— 摘要模板（规格 §13.5） ——
 /** 公共 guide：GFM Markdown、`##` 段标题 + `-` 列表、忠实简洁、没内容就整段省略、用转录原文的语言。 */
-const COMMON_GUIDE = 'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. '
-    + 'Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.';
+const COMMON_GUIDE = 'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. ' +
+    'Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.';
 const TEMPLATE_GUIDE = {
     general: {
         system: 'You summarize spoken recordings faithfully.',
@@ -78,8 +78,8 @@ const TEMPLATE_GUIDE = {
     },
     meeting: {
         system: 'You write meeting minutes.',
-        guide: 'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" '
-            + '(only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".',
+        guide: 'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" ' +
+            '(only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".',
     },
     interview: {
         system: 'You write interview debriefs.',
@@ -110,9 +110,10 @@ export async function summarize(transcript, template) {
     if (template === 'general') {
         const raw = await generate({
             system: TEMPLATE_GUIDE.general.system,
-            prompt: 'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n'
-                + '{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\n'
-                + 'Answer in the language of the transcript.\n\nTranscript:\n' + text,
+            prompt: 'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n' +
+                '{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\n' +
+                'Answer in the language of the transcript.\n\nTranscript:\n' +
+                text,
             maxTokens: 900,
             temperature: 0.3,
         });
@@ -146,11 +147,12 @@ export async function actionItems(transcript) {
         throw new AiError('empty-transcript');
     const raw = await generate({
         system: 'You extract commitments from spoken recordings. You never invent tasks that were not actually stated.',
-        prompt: 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n'
-            + '[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\n'
-            + 'Rules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. '
-            + 'Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. '
-            + 'Use the language of the transcript.\n\nTranscript:\n' + text,
+        prompt: 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n' +
+            '[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\n' +
+            'Rules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. ' +
+            'Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. ' +
+            'Use the language of the transcript.\n\nTranscript:\n' +
+            text,
         maxTokens: 900,
         temperature: 0.2,
     });
@@ -183,10 +185,11 @@ export async function chapters(transcript, segments) {
         throw new AiError('empty-transcript');
     const raw = await generate({
         system: 'You segment spoken recordings into chapters.',
-        prompt: 'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n'
-            + '[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\n'
-            + 'Rules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim '
-            + 'from the transcript. Use the language of the transcript.\n\nTranscript:\n' + text,
+        prompt: 'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n' +
+            '[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\n' +
+            'Rules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim ' +
+            'from the transcript. Use the language of the transcript.\n\nTranscript:\n' +
+            text,
         maxTokens: 700,
         temperature: 0.3,
     });
@@ -216,8 +219,8 @@ export async function ask(transcript, question) {
     if (!question.trim())
         throw new AiError('empty-question');
     const answer = await generate({
-        system: 'You answer questions about one recording using ONLY its transcript. '
-            + 'If the transcript does not contain the answer, say so plainly instead of guessing.',
+        system: 'You answer questions about one recording using ONLY its transcript. ' +
+            'If the transcript does not contain the answer, say so plainly instead of guessing.',
         prompt: `Question: ${question.trim()}\n\nTranscript:\n${text}`,
         maxTokens: 700,
         temperature: 0.2,
@@ -236,9 +239,10 @@ export async function cleanTranscript(transcript) {
         throw new AiError('empty-transcript');
     const cleaned = await generate({
         system: 'You clean up raw speech-to-text output.',
-        prompt: 'Remove filler words and false starts, fix punctuation and capitalization, and break the text into '
-            + 'paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. '
-            + 'Output only the cleaned text.\n\nTranscript:\n' + text,
+        prompt: 'Remove filler words and false starts, fix punctuation and capitalization, and break the text into ' +
+            'paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. ' +
+            'Output only the cleaned text.\n\nTranscript:\n' +
+            text,
         maxTokens: 2000,
         temperature: 0.2,
     });
@@ -254,16 +258,17 @@ export async function correct(input) {
     const speakerRule = input.mode === 'none'
         ? 'Do NOT attribute speakers; return a single turn per paragraph with an empty "speaker".'
         : input.mode === 'named'
-            ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(', ')}. `
-                + 'Use those exact names.'
+            ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(', ')}. ` +
+                'Use those exact names.'
             : 'Identify how many distinct speakers there are and label them "S1", "S2", … in order of first appearance.';
     const raw = await generate({
         system: 'You clean up raw speech-recognition transcripts.',
-        prompt: 'Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. '
-            + 'Preserve meaning and language exactly — do not summarize, do not add or remove content. '
-            + `${speakerRule}\n`
-            + 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n'
-            + '[{"speaker":"S1","text":"..."}]\n\nTranscript:\n' + text,
+        prompt: 'Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. ' +
+            'Preserve meaning and language exactly — do not summarize, do not add or remove content. ' +
+            `${speakerRule}\n` +
+            'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n' +
+            '[{"speaker":"S1","text":"..."}]\n\nTranscript:\n' +
+            text,
         maxTokens: 2400,
         temperature: 0.2,
     });
@@ -305,8 +310,14 @@ export function speakerDisplayName(label, index, template) {
 /** 8 种目标语言。语言名用英文保证模型认得（`ja → Japanese`）。 */
 export const TRANSLATION_LANGS = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'ru'];
 const LANG_NAME = {
-    zh: 'Chinese', en: 'English', ja: 'Japanese', ko: 'Korean',
-    fr: 'French', de: 'German', es: 'Spanish', ru: 'Russian',
+    zh: 'Chinese',
+    en: 'English',
+    ja: 'Japanese',
+    ko: 'Korean',
+    fr: 'French',
+    de: 'German',
+    es: 'Spanish',
+    ru: 'Russian',
 };
 /** 分块 4000（与原生一致），纯文本输出。 */
 const TRANSLATE_CHUNK = 4000;
@@ -316,8 +327,8 @@ export async function translate(input) {
         throw new AiError('empty-transcript');
     const name = LANG_NAME[input.lang];
     const guide = input.bilingual
-        ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation `
-            + 'on the next line, then a blank line. Do not add any other commentary.'
+        ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation ` +
+            'on the next line, then a blank line. Do not add any other commentary.'
         : `Output ONLY the ${name} translation, preserving paragraph breaks.`;
     const chunks = [];
     for (let index = 0; index < source.length; index += TRANSLATE_CHUNK) {

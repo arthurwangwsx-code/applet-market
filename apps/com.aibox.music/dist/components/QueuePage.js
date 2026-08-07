@@ -17,7 +17,7 @@ export default function QueuePage({ ctx }) {
     const [drag, setDrag] = React.useState(null);
     const tracks = music.queue.tracks;
     const index = Number(music.status.currentIndex);
-    const current = (index >= 0 && index < tracks.length) ? tracks[index] : null;
+    const current = index >= 0 && index < tracks.length ? tracks[index] : null;
     const upNext = index >= 0 ? tracks.slice(index + 1) : tracks.slice();
     const currentKey = current ? (current.musicItemId ? `am:${current.musicItemId}` : `url:${current.url}`) : null;
     const mostPlayed = store.mostPlayed(8, currentKey);
@@ -72,6 +72,8 @@ export default function QueuePage({ ctx }) {
             return upNext;
         const list = upNext.slice();
         const [moved] = list.splice(drag.from, 1);
+        if (!moved)
+            return list;
         list.splice(drag.to, 0, moved);
         return list;
     }, [upNext, drag]);
@@ -80,9 +82,7 @@ export default function QueuePage({ ctx }) {
     }
     return (_jsxs("div", { className: "mu-scroll", children: [upNext.length > 0 ? (_jsx("div", { style: { display: 'flex', justifyContent: 'flex-end', padding: `8px ${SPACE.s4}px 0` }, children: _jsx("button", { type: "button", className: "mu-btn mu-press", onClick: () => setEditing(!editing), style: { fontSize: 16, fontWeight: 600, color: C.accent }, children: editing ? t('common.done') : t('common.edit') }) })) : null, current ? (_jsxs(_Fragment, { children: [_jsx(ListHeader, { children: t('queue.nowPlaying') }), _jsx(QueueRow, { track: current, isCurrent: true, isPlaying: music.status.isPlaying, onClick: () => actions.playQueueIndex(index) })] })) : null, upNext.length > 0 ? (_jsxs(_Fragment, { children: [_jsx(ListHeader, { children: t('queue.playingNext') }), _jsx("div", { style: { position: 'relative' }, ...upNextGestures.regionProps, children: ordered.map((track, position) => {
                             const absolute = index + 1 + position;
-                            const row = (_jsx(QueueRow, { rowId: String(absolute), track: track, isCurrent: false, isPlaying: false, onClick: editing ? undefined : () => actions.playQueueIndex(absolute), onLongPress: upNextGestures.rendered
-                                    ? undefined
-                                    : () => actions.trackMenu(track, { queueIndex: absolute }), trailing: editing ? (_jsx("span", { className: "mu-press", style: { padding: '6px 2px 6px 10px', color: C.muted, touchAction: 'none' }, onPointerDown: (event) => {
+                            const row = (_jsx(QueueRow, { rowId: String(absolute), track: track, isCurrent: false, isPlaying: false, onClick: editing ? undefined : () => actions.playQueueIndex(absolute), onLongPress: upNextGestures.rendered ? undefined : () => actions.trackMenu(track, { queueIndex: absolute }), trailing: editing ? (_jsx("span", { className: "mu-press", style: { padding: '6px 2px 6px 10px', color: C.muted, touchAction: 'none' }, onPointerDown: (event) => {
                                         event.currentTarget.setPointerCapture(event.pointerId);
                                         setDrag({ from: position, to: position, startY: event.clientY });
                                     }, onPointerMove: (event) => {
@@ -105,5 +105,8 @@ export default function QueuePage({ ctx }) {
                                 return _jsx(React.Fragment, { children: row }, `${track.id || track.title}-${absolute}`);
                             }
                             return (_jsx(SwipeRow, { actionLabel: t('common.remove'), onAction: () => actions.removeQueue(absolute), children: row }, `${track.id || track.title}-${absolute}`));
-                        }) })] })) : null, mostPlayed.length > 0 ? (_jsxs(_Fragment, { children: [_jsx(ListHeader, { children: t('queue.mostPlayed') }), _jsx("div", { ...frequentGestures.regionProps, children: mostPlayed.map((row) => (_jsx(QueueRow, { rowId: row.key, track: row.track, isCurrent: false, isPlaying: false, onClick: () => actions.playTrack(row.track, mostPlayed.map((item) => item.track)), onLongPress: frequentGestures.rendered ? undefined : () => actions.trackMenu(row.track), trailing: (_jsx("button", { type: "button", className: "mu-btn mu-press", onClick: (event) => { event.stopPropagation(); actions.addToQueue(row.track); }, style: { padding: '6px 2px 6px 10px', color: C.accent }, children: _jsx(Icon, { name: "text.append", size: 15 }) })) }, row.key))) })] })) : null, _jsx("div", { style: { height: 24 } })] }));
+                        }) })] })) : null, mostPlayed.length > 0 ? (_jsxs(_Fragment, { children: [_jsx(ListHeader, { children: t('queue.mostPlayed') }), _jsx("div", { ...frequentGestures.regionProps, children: mostPlayed.map((row) => (_jsx(QueueRow, { rowId: row.key, track: row.track, isCurrent: false, isPlaying: false, onClick: () => actions.playTrack(row.track, mostPlayed.map((item) => item.track)), onLongPress: frequentGestures.rendered ? undefined : () => actions.trackMenu(row.track), trailing: _jsx("button", { type: "button", className: "mu-btn mu-press", onClick: (event) => {
+                                    event.stopPropagation();
+                                    actions.addToQueue(row.track);
+                                }, style: { padding: '6px 2px 6px 10px', color: C.accent }, children: _jsx(Icon, { name: "text.append", size: 15 }) }) }, row.key))) })] })) : null, _jsx("div", { style: { height: 24 } })] }));
 }

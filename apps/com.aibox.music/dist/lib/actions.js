@@ -13,7 +13,7 @@ import { readLyricsPayload, currentLineIndex } from './lyrics.js';
 import { playArgs } from './format.js';
 async function readStatus() {
     const result = await callMusic('status', {});
-    return (result.ok && result.json) ? result.json : null;
+    return result.ok && result.json ? result.json : null;
 }
 /** 当前播放摘要。read / idempotent / headless。 */
 export async function nowPlayingSummary() {
@@ -22,7 +22,7 @@ export async function nowPlayingSummary() {
         callMusic('queue', { action: 'list' }),
         callMusic('sleepTimer', { action: 'status' }),
     ]);
-    const status = (statusResult.ok && statusResult.json) ? statusResult.json : null;
+    const status = statusResult.ok && statusResult.json ? statusResult.json : null;
     if (!status) {
         return { ok: false, message: statusResult.error || 'Music engine unavailable.' };
     }
@@ -32,16 +32,19 @@ export async function nowPlayingSummary() {
         .filter((row) => Number(row.index) > index)
         .slice(0, 5)
         .map((row) => ({ title: row.title, artist: row.artist || null, index: row.index }));
-    let lyrics = { available: false, synced: false, currentLine: null, note: null };
+    let lyrics = {
+        available: false,
+        synced: false,
+        currentLine: null,
+        note: null,
+    };
     if (status.currentTrack) {
         const payload = readLyricsPayload(await callMusic('lyrics', {}));
-        const line = payload.synced
-            ? currentLineIndex(payload.lines, Number(status.currentTime) || 0)
-            : -1;
+        const line = payload.synced ? currentLineIndex(payload.lines, Number(status.currentTime) || 0) : -1;
         lyrics = {
             available: payload.state === 'ok',
             synced: payload.synced,
-            currentLine: line >= 0 ? payload.lines[line].text : null,
+            currentLine: line >= 0 ? (payload.lines[line]?.text ?? null) : null,
             // 如实说明：宿主 `music_lyrics` 返回的是剥掉时间轴的纯文本，所以当前行通常拿不到。
             note: payload.synced ? null : 'The host returns lyrics without a timeline, so the current line is unknown.',
         };
@@ -73,31 +76,35 @@ export async function playMostPlayed(input) {
     }
     const ranked = rows
         .slice()
-        .sort((a, b) => (b.count - a.count) || (b.lastPlayed - a.lastPlayed))
+        .sort((a, b) => b.count - a.count || b.lastPlayed - a.lastPlayed)
         .slice(0, limit)
         .map((row) => playArgs(row.track));
     const first = ranked[0];
+    if (!first) {
+        return { ok: false, queued: 0, startedWith: null, message: 'No playable history entries.' };
+    }
     const result = await callMusic('play', { ...first, queue: ranked });
     return {
         ok: result.ok,
         queued: result.ok ? ranked.length : 0,
-        startedWith: result.ok ? (first.title || null) : null,
+        startedWith: result.ok ? first.title || null : null,
         message: result.ok ? `Playing ${ranked.length} most-played tracks.` : String(result.error || 'Playback failed.'),
     };
 }
 /** 接着上次继续听。write / mediaPlayback / headless。 */
 export async function resumeLast() {
     const ui = await storage.get('music.uiState');
-    const track = ui && ui.lastTrack;
+    const track = ui?.lastTrack;
     if (!track || !track.title) {
         return { ok: false, track: null, positionSeconds: 0, message: 'No previous track recorded.' };
     }
     const position = Math.max(0, Math.floor(Number(ui.lastPosition) || 0));
     // 已经在放同一首就只补 seek，不重新起播（重新起播会打断，且会重置队列）。
     const status = await readStatus();
-    const same = status && status.currentTrack
-        && (String(status.currentTrack.musicItemId || status.currentTrack.url || '')
-            === String(track.musicItemId || track.url || ''));
+    const same = status &&
+        status.currentTrack &&
+        String(status.currentTrack.musicItemId || status.currentTrack.url || '') ===
+            String(track.musicItemId || track.url || '');
     if (same) {
         if (position > 1)
             await callMusic('seek', { seconds: position });
@@ -105,7 +112,7 @@ export async function resumeLast() {
             await callMusic('transport', { action: 'resume' });
         return { ok: true, track, positionSeconds: position, message: 'Resumed the current track.' };
     }
-    const result = await callMusic('play', playArgs(track));
+    const result = await callMusic('play', { ...playArgs(track) });
     if (!result.ok) {
         return { ok: false, track, positionSeconds: position, message: String(result.error || 'Playback failed.') };
     }

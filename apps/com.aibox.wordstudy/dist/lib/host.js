@@ -2,8 +2,8 @@
 //  1. 先探测再使用 —— 能力缺席时入口整块不渲染，不留「点了没反应」的按钮；
 //  2. 调用不抛到 UI 层，一律回落成可判定的返回值；
 //  3. 没有 window.aibox 时（普通浏览器里预览）退化成 no-op，页面仍能跑。
-import { isAvailable, normalizeError } from '../lib/aibox-sdk.js';
-const api = () => (typeof window !== 'undefined' ? window.aibox : undefined);
+import { bridge, isAvailable, normalizeError } from 'aibox/sdk';
+const api = bridge;
 /**
  * AI 是否**现在**真的能用。
  *
@@ -23,16 +23,36 @@ export async function probeAI() {
     }
 }
 export const capabilities = {
-    get tts() { return isAvailable('tts', 'speak'); },
-    get speech() { return isAvailable('speech', 'recognize'); },
-    get clipboard() { return isAvailable('clipboard', 'write'); },
-    get share() { return isAvailable('share', 'text'); },
-    get ui() { return isAvailable('ui', 'confirm'); },
-    get haptics() { return isAvailable('haptics', 'impact'); },
-    get picker() { return isAvailable('picker', 'photo'); },
-    get ocr() { return isAvailable('photos', 'ocr'); },
-    get ai() { return isAvailable('ai', 'generate'); },
-    get chat() { return isAvailable('chat', 'bind'); },
+    get tts() {
+        return isAvailable('tts', 'speak');
+    },
+    get speech() {
+        return isAvailable('speech', 'recognize');
+    },
+    get clipboard() {
+        return isAvailable('clipboard', 'write');
+    },
+    get share() {
+        return isAvailable('share', 'text');
+    },
+    get ui() {
+        return isAvailable('ui', 'confirm');
+    },
+    get haptics() {
+        return isAvailable('haptics', 'impact');
+    },
+    get picker() {
+        return isAvailable('picker', 'photo');
+    },
+    get ocr() {
+        return isAvailable('photos', 'ocr');
+    },
+    get ai() {
+        return isAvailable('ai', 'generate');
+    },
+    get chat() {
+        return isAvailable('chat', 'bind');
+    },
 };
 // —— TTS ——
 /** 口音 → BCP-47。由调用方显式指定，**不跟随系统语言**。 */

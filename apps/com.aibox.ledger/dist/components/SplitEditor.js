@@ -41,21 +41,32 @@ export default function SplitEditor({ ctx, request, onSubmit }) {
         shares: ordered.map((row) => ({ memberID: row.id, value: Number(values[row.id] ?? 0) })),
     }), [mode, ordered, values]);
     const resolved = React.useMemo(() => resolveSplit(draft, total), [draft, total]);
-    const amountFor = (memberID) => (resolved.find((row) => row.memberID === memberID)?.amountMinor ?? 0);
+    const amountFor = (memberID) => resolved.find((row) => row.memberID === memberID)?.amountMinor ?? 0;
     const assigned = mode === 'exact'
         ? ordered.reduce((sum, row) => sum + Math.round((Number(values[row.id]) || 0) * 100), 0)
         : resolved.reduce((sum, row) => sum + row.amountMinor, 0);
     React.useEffect(() => {
         onSubmit.current = () => ({ split: ordered.length > 0 ? draft : null, valid: ordered.length > 0 });
     });
-    const hint = { equal: t('ent.equalHint'), exact: t('ent.exactHint'), shares: t('ent.sharesHint'), percent: t('ent.percentHint') }[mode];
-    const placeholder = { percent: '%', shares: '1', exact: '0.00', equal: '' }[mode];
-    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s3 }, children: [_jsx(Segmented, { value: mode, onChange: setMode, items: MODES.map((id) => ({ id, label: t(`ent.${id}`) })) }), _jsx("span", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4 }, children: hint }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', padding: '0 4px' }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.4 }, children: t('ent.splitAmong') }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx("span", { className: "lg-mono", style: { fontSize: 13, color: C.muted }, children: money(total, store.baseCode) })] }), _jsx("div", { style: {
-                    background: C.surface, border: `1px solid ${C.line}`, borderRadius: RADIUS.card, overflow: 'hidden',
+    const hint = {
+        equal: t('ent.equalHint'),
+        exact: t('ent.exactHint'),
+        shares: t('ent.sharesHint'),
+        percent: t('ent.percentHint'),
+    };
+    const placeholder = { percent: '%', shares: '1', exact: '0.00', equal: '' };
+    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s3 }, children: [_jsx(Segmented, { value: mode, onChange: setMode, items: MODES.map((id) => ({ id, label: t(`ent.${id}`) })) }), _jsx("span", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4 }, children: hint[mode] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', padding: '0 4px' }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.4 }, children: t('ent.splitAmong') }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx("span", { className: "lg-mono", style: { fontSize: 13, color: C.muted }, children: money(total, store.baseCode) })] }), _jsx("div", { style: {
+                    background: C.surface,
+                    border: `1px solid ${C.line}`,
+                    borderRadius: RADIUS.card,
+                    overflow: 'hidden',
                 }, children: members.map((member, index) => {
                     const on = checked.has(member.id);
                     return (_jsxs("div", { style: {
-                            display: 'flex', alignItems: 'center', gap: SPACE.s3, padding: SPACE.s3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: SPACE.s3,
+                            padding: SPACE.s3,
                             borderTop: index === 0 ? 'none' : `1px solid ${C.line}`,
                         }, children: [_jsx("button", { type: "button", className: "lg-btn", onClick: () => setChecked((current) => {
                                     const next = new Set(current);
@@ -64,9 +75,15 @@ export default function SplitEditor({ ctx, request, onSubmit }) {
                                     else
                                         next.add(member.id);
                                     return next;
-                                }), children: _jsx(Icon, { name: on ? 'checkmark.circle.fill' : 'circle', size: 18, color: on ? C.brand : C.muted }) }), _jsxs("span", { className: "lg-clamp-1", style: { fontSize: 15, color: C.ink, flex: '1 1 auto', minWidth: 0 }, children: [member.name, member.isMe ? _jsx("span", { style: { fontSize: 11, color: C.muted }, children: ` ${t('prj.me')}` }) : null] }), mode === 'equal' ? (_jsx("span", { className: "lg-mono", style: { fontSize: 14, color: C.muted }, children: on ? money(amountFor(member.id), store.baseCode) : '—' })) : (_jsxs(_Fragment, { children: [_jsx("input", { className: "lg-field lg-mono", inputMode: "decimal", disabled: !on, placeholder: placeholder, value: values[member.id] ?? '', onChange: (event) => setValues((current) => ({ ...current, [member.id]: event.target.value })), style: {
-                                            width: 74, flex: '0 0 auto', textAlign: 'right', fontSize: 15,
-                                            background: C.bg, borderRadius: 8, padding: '5px 8px', opacity: on ? 1 : 0.4,
+                                }), children: _jsx(Icon, { name: on ? 'checkmark.circle.fill' : 'circle', size: 18, color: on ? C.brand : C.muted }) }), _jsxs("span", { className: "lg-clamp-1", style: { fontSize: 15, color: C.ink, flex: '1 1 auto', minWidth: 0 }, children: [member.name, member.isMe ? _jsx("span", { style: { fontSize: 11, color: C.muted }, children: ` ${t('prj.me')}` }) : null] }), mode === 'equal' ? (_jsx("span", { className: "lg-mono", style: { fontSize: 14, color: C.muted }, children: on ? money(amountFor(member.id), store.baseCode) : '—' })) : (_jsxs(_Fragment, { children: [_jsx("input", { className: "lg-field lg-mono", inputMode: "decimal", disabled: !on, placeholder: placeholder[mode], value: values[member.id] ?? '', onChange: (event) => setValues((current) => ({ ...current, [member.id]: event.target.value })), style: {
+                                            width: 74,
+                                            flex: '0 0 auto',
+                                            textAlign: 'right',
+                                            fontSize: 15,
+                                            background: C.bg,
+                                            borderRadius: 8,
+                                            padding: '5px 8px',
+                                            opacity: on ? 1 : 0.4,
                                         } }), _jsx("span", { className: "lg-mono", style: { fontSize: 12, color: C.muted, flex: '0 0 auto' }, children: on ? `= ${money(amountFor(member.id), store.baseCode)}` : '' })] }))] }, member.id));
                 }) }), mode !== 'equal' ? (_jsxs(_Fragment, { children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', padding: '0 4px' }, children: [_jsx("span", { style: { fontSize: 14, color: C.muted }, children: t('ent.assigned') }), _jsx("div", { style: { flex: '1 1 auto' } }), _jsx("span", { className: "lg-mono", style: { fontSize: 14, fontWeight: 500, color: assigned === total ? C.ink : C.expense }, children: money(assigned, store.baseCode) })] }), _jsx("span", { style: { fontSize: 12, color: C.muted, padding: '0 4px', lineHeight: 1.4 }, children: t('ent.remainderHint') })] })) : null] }));
 }

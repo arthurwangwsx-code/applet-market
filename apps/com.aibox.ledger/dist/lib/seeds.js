@@ -6,7 +6,10 @@
 /** 支出分类：10 个一级 / 34 个二级。 */
 export const EXPENSE_SEEDS = [
     {
-        en: 'Food & Drink', zh: '餐饮', icon: 'fork.knife', color: '#E8863C',
+        en: 'Food & Drink',
+        zh: '餐饮',
+        icon: 'fork.knife',
+        color: '#E8863C',
         children: [
             { en: 'Breakfast', zh: '早餐', icon: 'cup.and.saucer.fill' },
             { en: 'Lunch', zh: '午餐', icon: 'takeoutbag.and.cup.and.straw.fill' },
@@ -17,7 +20,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Transport', zh: '交通', icon: 'car.fill', color: '#3A83D0',
+        en: 'Transport',
+        zh: '交通',
+        icon: 'car.fill',
+        color: '#3A83D0',
         children: [
             { en: 'Ride-hailing', zh: '打车', icon: 'car.circle.fill' },
             { en: 'Public Transit', zh: '公共交通', icon: 'bus.fill' },
@@ -26,7 +32,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Shopping', zh: '购物', icon: 'bag.fill', color: '#C15F9C',
+        en: 'Shopping',
+        zh: '购物',
+        icon: 'bag.fill',
+        color: '#C15F9C',
         children: [
             { en: 'Clothing', zh: '服饰', icon: 'tshirt.fill' },
             { en: 'Electronics', zh: '数码', icon: 'desktopcomputer' },
@@ -35,7 +44,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Housing', zh: '居住', icon: 'house.fill', color: '#7C6BD0',
+        en: 'Housing',
+        zh: '居住',
+        icon: 'house.fill',
+        color: '#7C6BD0',
         children: [
             { en: 'Rent', zh: '房租', icon: 'key.fill' },
             { en: 'Utilities', zh: '水电', icon: 'bolt.fill' },
@@ -44,7 +56,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Entertainment', zh: '娱乐', icon: 'gamecontroller.fill', color: '#3BAF7E',
+        en: 'Entertainment',
+        zh: '娱乐',
+        icon: 'gamecontroller.fill',
+        color: '#3BAF7E',
         children: [
             { en: 'Movies', zh: '电影', icon: 'film.fill' },
             { en: 'Games', zh: '游戏', icon: 'gamecontroller.fill' },
@@ -53,7 +68,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Health', zh: '医疗健康', icon: 'cross.case.fill', color: '#D9534F',
+        en: 'Health',
+        zh: '医疗健康',
+        icon: 'cross.case.fill',
+        color: '#D9534F',
         children: [
             { en: 'Medical', zh: '就医', icon: 'stethoscope' },
             { en: 'Fitness', zh: '健身', icon: 'dumbbell.fill' },
@@ -61,7 +79,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Education', zh: '教育', icon: 'book.fill', color: '#4C8FB0',
+        en: 'Education',
+        zh: '教育',
+        icon: 'book.fill',
+        color: '#4C8FB0',
         children: [
             { en: 'Courses', zh: '课程', icon: 'graduationcap.fill' },
             { en: 'Books', zh: '书籍', icon: 'books.vertical.fill' },
@@ -69,7 +90,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Social', zh: '人情', icon: 'gift.fill', color: '#D48F20',
+        en: 'Social',
+        zh: '人情',
+        icon: 'gift.fill',
+        color: '#D48F20',
         children: [
             { en: 'Gifts', zh: '礼物', icon: 'gift.fill' },
             { en: 'Treats', zh: '请客', icon: 'wineglass.fill' },
@@ -77,7 +101,10 @@ export const EXPENSE_SEEDS = [
         ],
     },
     {
-        en: 'Subscriptions', zh: '订阅', icon: 'repeat', color: '#5E9EA0',
+        en: 'Subscriptions',
+        zh: '订阅',
+        icon: 'repeat',
+        color: '#5E9EA0',
         children: [
             { en: 'Streaming', zh: '影音会员', icon: 'play.tv.fill' },
             { en: 'Cloud & Apps', zh: '云与应用', icon: 'icloud.fill' },
@@ -124,22 +151,46 @@ export const ACCOUNT_KIND_COLOR = {
 export const ACCOUNT_KIND_ORDER = ['cash', 'debit', 'ewallet', 'prepaid', 'credit', 'investment'];
 /** 项目编辑器的图标网格（7 列 × 14 个）。 */
 export const PROJECT_ICONS = [
-    'airplane', 'figure.hiking', 'party.popper', 'gift', 'fork.knife', 'house.fill',
-    'briefcase.fill', 'heart.fill', 'graduationcap.fill', 'cart.fill', 'camera.fill',
-    'map.fill', 'star.fill', 'folder.fill',
+    'airplane',
+    'figure.hiking',
+    'party.popper',
+    'gift',
+    'fork.knife',
+    'house.fill',
+    'briefcase.fill',
+    'heart.fill',
+    'graduationcap.fill',
+    'cart.fill',
+    'camera.fill',
+    'map.fill',
+    'star.fill',
+    'folder.fill',
 ];
 /** 项目配色（10 色）。 */
 export const PROJECT_COLORS = [
-    '#3A83D0', '#2A9D63', '#E8863C', '#C15F9C', '#7C6BD0',
-    '#D4A017', '#5E9EA0', '#D9534F', '#1477FF', '#E0685F',
+    '#3A83D0',
+    '#2A9D63',
+    '#E8863C',
+    '#C15F9C',
+    '#7C6BD0',
+    '#D4A017',
+    '#5E9EA0',
+    '#D9534F',
+    '#1477FF',
+    '#E0685F',
 ];
 /** 成员调色板（8 色，按加入序号取模）。 */
-export const MEMBER_COLORS = [
-    '#3A83D0', '#2A9D63', '#E8863C', '#C15F9C', '#7C6BD0', '#D4A017', '#5E9EA0', '#D9534F',
-];
+export const MEMBER_COLORS = ['#3A83D0', '#2A9D63', '#E8863C', '#C15F9C', '#7C6BD0', '#D4A017', '#5E9EA0', '#D9534F'];
 /** 图表回退色板（桶没有自带 colorHex 时按序取）。 */
 export const CHART_FALLBACK_COLORS = [
-    '#E8863C', '#3A83D0', '#3BAF7E', '#C15F9C', '#7C6BD0', '#D4A017', '#5E9EA0', '#D9534F',
+    '#E8863C',
+    '#3A83D0',
+    '#3BAF7E',
+    '#C15F9C',
+    '#7C6BD0',
+    '#D4A017',
+    '#5E9EA0',
+    '#D9534F',
 ];
 /** 按 locale 取种子名。 */
 export function seedName(entry, locale) {

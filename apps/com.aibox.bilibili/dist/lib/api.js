@@ -23,18 +23,17 @@ const PASSPORT = 'https://passport.bilibili.com';
 /** B 站接口一律要 Referer 防盗链；UA 用移动端串，拿到的是移动端口径的数据。 */
 const HEADERS = {
     Referer: 'https://www.bilibili.com',
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
-        + '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ' +
+        '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
 };
 // —— WBI 签名 ——————————————————————————————————————————————
 // 官方前端脚本里的固定重排表。搜索/推荐/空间等接口都要签，签错回 -403。
 const MIXIN_TAB = [
-    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
-    33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61,
-    26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36,
-    20, 34, 44, 52,
+    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41,
+    13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34,
+    44, 52,
 ];
-let cachedKey = null; // { key, at }
+let cachedKey = null;
 const KEY_TTL_MS = 6 * 60 * 60 * 1000;
 /** 取 WBI mixin key。nav 未登录也回 key（code=-101 但 data.wbi_img 在），所以不看 code。 */
 async function mixinKey() {
@@ -44,9 +43,11 @@ async function mixinKey() {
     const img = res?.data?.wbi_img;
     if (!img?.img_url || !img?.sub_url)
         throw new Error('拿不到 WBI 密钥');
-    const name = (u) => u.slice(u.lastIndexOf('/') + 1).split('.')[0];
+    const name = (url) => url.slice(url.lastIndexOf('/') + 1).split('.')[0] ?? '';
     const raw = name(img.img_url) + name(img.sub_url);
-    const key = MIXIN_TAB.map((i) => raw[i]).join('').slice(0, 32);
+    const key = MIXIN_TAB.map((index) => raw[index] ?? '')
+        .join('')
+        .slice(0, 32);
     cachedKey = { key, at: Date.now() };
     return key;
 }
@@ -54,9 +55,10 @@ async function mixinKey() {
 async function signed(params) {
     const key = await mixinKey();
     const all = { ...params, wts: Math.floor(Date.now() / 1000) };
-    const query = Object.keys(all).sort()
+    const query = Object.keys(all)
+        .sort()
         // 官方实现会先剔除 value 里的 `!'()*` 再编码；不剔的话签名对不上。
-        .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(String(all[k]).replace(/[!'()*]/g, ''))}`)
+        .map((name) => `${encodeURIComponent(name)}=${encodeURIComponent(String(all[name]).replace(/[!'()*]/g, ''))}`)
         .join('&');
     return `${query}&w_rid=${md5(query + key)}`;
 }
@@ -75,7 +77,7 @@ async function withRetry(run) {
         return await run();
     }
     catch (err) {
-        if (!err?.retryable)
+        if (!(err instanceof Error) || !err.retryable)
             throw err;
         await new Promise((resolve) => setTimeout(resolve, 600));
         return run();
@@ -83,14 +85,17 @@ async function withRetry(run) {
 }
 /** 把 B 站的业务错误码翻成 Error，并标记可否重试。 */
 function apiError(res) {
-    const err = new Error(res?.message || `接口返回 ${res?.code}`);
+    const err = new Error(res.message || `接口返回 ${res.code}`);
     err.code = res?.code;
     err.retryable = RETRYABLE_CODES.has(res?.code);
     return err;
 }
 async function get(path, params, base = API) {
     const query = params
-        ? '?' + Object.keys(params).map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&')
+        ? '?' +
+            Object.keys(params)
+                .map((name) => `${encodeURIComponent(name)}=${encodeURIComponent(String(params[name]))}`)
+                .join('&')
         : '';
     return withRetry(async () => {
         const res = await fetchJSON(`${base}${path}${query}`, HEADERS);
@@ -119,16 +124,16 @@ function normalizeVideo(raw) {
     const stat = raw.stat || {};
     return {
         bvid,
-        aid: raw.aid || raw.id || 0,
-        cid: raw.cid || 0,
+        aid: Number(raw.aid || raw.id || 0),
+        cid: Number(raw.cid || 0),
         title: String(raw.title || '').replace(/<[^>]+>/g, ''), // 搜索结果的标题带 <em> 高亮标签
         cover: normalizeImage(raw.pic || raw.cover || raw.first_frame || ''),
         author: raw.owner?.name || raw.author || raw.up_name || '',
-        mid: raw.owner?.mid || raw.mid || 0,
+        mid: Number(raw.owner?.mid || raw.mid || 0),
         duration: parseDuration(raw.duration),
-        play: stat.view ?? raw.play ?? raw.stat?.view ?? 0,
-        danmaku: stat.danmaku ?? raw.video_review ?? 0,
-        pubdate: raw.pubdate || raw.ctime || raw.senddate || 0,
+        play: Number(stat.view ?? raw.play ?? 0),
+        danmaku: Number(stat.danmaku ?? raw.video_review ?? 0),
+        pubdate: Number(raw.pubdate || raw.ctime || raw.senddate || 0),
     };
 }
 /** 封面 URL 归一：搜索结果给的是 `//i0.hdslb.com/…` 协议相对地址，直接用会变成 applet://。 */
@@ -146,7 +151,7 @@ function parseDuration(raw) {
     if (typeof raw !== 'string' || !raw)
         return 0;
     const parts = raw.split(':').map((n) => parseInt(n, 10) || 0);
-    return parts.reduce((acc, n) => acc * 60 + n, 0);
+    return parts.reduce((acc, part) => acc * 60 + part, 0);
 }
 /**
  * 首页推荐流（免登录也有，登录后是个性化的）。
@@ -157,40 +162,43 @@ function parseDuration(raw) {
  * 同理不传 `fresh_type`：带上它同样会 -400。
  */
 export async function recommend(freshIdx = 1) {
-    const data = await getSigned('/x/web-interface/wbi/index/top/rcmd', { ps: 12, fresh_idx: freshIdx });
-    return (data?.item || []).map(normalizeVideo).filter(Boolean);
+    const data = await getSigned('/x/web-interface/wbi/index/top/rcmd', {
+        ps: 12,
+        fresh_idx: freshIdx,
+    });
+    return (data.item || []).map(normalizeVideo).filter((video) => video !== null);
 }
 /** 热门（免签）。 */
 export async function popular(pn = 1) {
     const data = await get('/x/web-interface/popular', { ps: 20, pn });
-    return (data?.list || []).map(normalizeVideo).filter(Boolean);
+    return (data.list || []).map(normalizeVideo).filter((video) => video !== null);
 }
 /** 排行榜（免签，一次回 100 条，无分页）。`rid=0` 是全站。 */
 export async function ranking(rid = 0) {
     const data = await get('/x/web-interface/ranking/v2', { rid, type: 'all' });
-    return (data?.list || []).map(normalizeVideo).filter(Boolean);
+    return (data.list || []).map(normalizeVideo).filter((video) => video !== null);
 }
 /** 综合搜索。**用 all/v2 而不是 type**：后者在风控下静默回空壳（见文件头纪律 1）。 */
 export async function search(keyword, page = 1) {
     const data = await getSigned('/x/web-interface/wbi/search/all/v2', { keyword, page });
-    const groups = data?.result || [];
-    const videos = groups.find((g) => g.result_type === 'video')?.data || [];
-    const bangumi = groups.find((g) => g.result_type === 'media_bangumi')?.data || [];
-    const users = groups.find((g) => g.result_type === 'bili_user')?.data || [];
+    const groups = data.result || [];
+    const videos = (groups.find((group) => group.result_type === 'video')?.data || []);
+    const bangumi = (groups.find((group) => group.result_type === 'media_bangumi')?.data || []);
+    const users = (groups.find((group) => group.result_type === 'bili_user')?.data || []);
     return {
-        videos: videos.map(normalizeVideo).filter(Boolean),
-        bangumi: bangumi.map((b) => ({
-            title: String(b.title || '').replace(/<[^>]+>/g, ''),
-            cover: normalizeImage(b.cover),
-            url: b.url || '',
-            desc: b.desc || b.styles || '',
+        videos: videos.map(normalizeVideo).filter((video) => video !== null),
+        bangumi: bangumi.map((item) => ({
+            title: String(item.title || '').replace(/<[^>]+>/g, ''),
+            cover: normalizeImage(item.cover),
+            url: item.url || '',
+            desc: item.desc || item.styles || '',
         })),
-        users: users.map((u) => ({
-            mid: u.mid,
-            name: u.uname || '',
-            avatar: normalizeImage(u.upic),
-            fans: u.fans || 0,
-            videos: u.videos || 0,
+        users: users.map((user) => ({
+            mid: Number(user.mid || 0),
+            name: user.uname || '',
+            avatar: normalizeImage(user.upic),
+            fans: Number(user.fans || 0),
+            videos: Number(user.videos || 0),
         })),
     };
 }
@@ -198,7 +206,9 @@ export async function search(keyword, page = 1) {
 export async function hotSearch() {
     try {
         const data = await getSigned('/x/web-interface/wbi/search/square', { limit: 10 });
-        return (data?.trending?.list || []).map((t) => t.keyword).filter(Boolean);
+        return (data.trending?.list || [])
+            .map((item) => item.keyword)
+            .filter((keyword) => typeof keyword === 'string' && keyword.length > 0);
     }
     catch {
         return []; // 热搜是锦上添花，挂了不该让搜索页开不了
@@ -208,21 +218,24 @@ export async function hotSearch() {
 /** 视频详情。含分P（pages）与 UP 主信息。 */
 export async function videoDetail(bvid) {
     const data = await get('/x/web-interface/view', { bvid });
+    const base = normalizeVideo(data);
+    if (!base)
+        throw new Error('视频详情缺少 BV 号');
     return {
-        ...normalizeVideo(data),
-        cid: data.cid,
+        ...base,
+        cid: Number(data.cid || 0),
         desc: data.desc || '',
-        like: data.stat?.like || 0,
-        coin: data.stat?.coin || 0,
-        favorite: data.stat?.favorite || 0,
-        share: data.stat?.share || 0,
-        reply: data.stat?.reply || 0,
+        like: Number(data.stat?.like || 0),
+        coin: Number(data.stat?.coin || 0),
+        favorite: Number(data.stat?.favorite || 0),
+        share: Number(data.stat?.share || 0),
+        reply: Number(data.stat?.reply || 0),
         avatar: normalizeImage(data.owner?.face || ''),
-        pages: (data.pages || []).map((p) => ({
-            cid: p.cid,
-            page: p.page,
-            title: p.part || `P${p.page}`,
-            duration: p.duration || 0,
+        pages: (data.pages || []).map((part) => ({
+            cid: Number(part.cid || 0),
+            page: Number(part.page || 0),
+            title: part.part || `P${part.page || ''}`,
+            duration: Number(part.duration || 0),
         })),
     };
 }
@@ -237,27 +250,31 @@ export async function videoDetail(bvid) {
  */
 export async function playURL(bvid, cid, qn = 80) {
     const data = await get('/x/player/playurl', { bvid, cid, qn, fnval: 1, fourk: 1 });
-    const durl = data?.durl || [];
-    if (!durl.length)
+    const first = data.durl?.[0];
+    if (!first?.url)
         throw new Error('这个视频没有可直接播放的地址');
     return {
-        url: durl[0].url,
-        backup: durl[0].backup_url || [],
-        quality: data.quality,
+        url: first.url,
+        backup: first.backup_url || [],
+        quality: Number(data.quality || 0),
         format: data.format || '',
         // 服务端给的是毫秒
-        duration: Math.round((data.timelength || 0) / 1000),
-        accepted: (data.accept_description || []).map((label, i) => ({
+        duration: Math.round(Number(data.timelength || 0) / 1000),
+        accepted: (data.accept_description || [])
+            .map((label, index) => ({
             label,
-            qn: (data.accept_quality || [])[i],
-        })).filter((q) => q.qn != null),
+            qn: Number((data.accept_quality || [])[index] || 0),
+        }))
+            .filter((quality) => quality.qn > 0),
     };
 }
 /** 相关推荐（免签，一次 40 条）。 */
 export async function related(bvid) {
     try {
         const data = await get('/x/web-interface/archive/related', { bvid });
-        return (Array.isArray(data) ? data : []).map(normalizeVideo).filter(Boolean);
+        return (Array.isArray(data) ? data : [])
+            .map(normalizeVideo)
+            .filter((video) => video !== null);
     }
     catch {
         return [];
@@ -297,20 +314,22 @@ export async function me() {
     if (res?.code !== 0 || !res?.data?.isLogin)
         return null;
     return {
-        mid: res.data.mid,
+        mid: Number(res.data.mid || 0),
         name: res.data.uname || '',
         avatar: normalizeImage(res.data.face || ''),
-        level: res.data.level_info?.current_level || 0,
-        coins: res.data.money || 0,
+        level: Number(res.data.level_info?.current_level || 0),
+        coins: Number(res.data.money || 0),
     };
 }
 /** 观看历史（需登录）。 */
 export async function history() {
     const data = await get('/x/web-interface/history/cursor', { ps: 20, type: 'archive' });
-    return (data?.list || []).map((item) => normalizeVideo({
+    return (data.list || [])
+        .map((item) => normalizeVideo({
         ...item,
         bvid: item.history?.bvid,
         cid: item.history?.cid,
         owner: { name: item.author_name, mid: item.author_mid },
-    })).filter(Boolean);
+    }))
+        .filter((video) => video !== null);
 }

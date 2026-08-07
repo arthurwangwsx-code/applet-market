@@ -22,6 +22,16 @@ const LIMITS = {
     artwork: 400,
 };
 export class MusicStore {
+    ui;
+    history;
+    search;
+    artwork;
+    prefs;
+    version;
+    listeners;
+    loaded;
+    flushTimer;
+    dirty;
     constructor() {
         this.ui = { selectedTab: 'player', lastTrack: null, lastPosition: 0 };
         this.history = [];
@@ -44,8 +54,11 @@ export class MusicStore {
     }
     async load() {
         const [ui, history, search, artwork, prefs] = await Promise.all([
-            storage.get(KEYS.ui), storage.get(KEYS.history), storage.get(KEYS.search),
-            storage.get(KEYS.artwork), storage.get(KEYS.prefs),
+            storage.get(KEYS.ui),
+            storage.get(KEYS.history),
+            storage.get(KEYS.search),
+            storage.get(KEYS.artwork),
+            storage.get(KEYS.prefs),
         ]);
         if (ui && typeof ui === 'object')
             this.ui = { ...this.ui, ...ui };
@@ -128,10 +141,11 @@ export class MusicStore {
         const now = Date.now();
         const found = this.history.findIndex((row) => row.key === key);
         if (found >= 0) {
+            const existing = this.history[found];
             this.history[found] = {
-                ...this.history[found],
+                ...existing,
                 track: playArgs(track),
-                count: (this.history[found].count || 0) + 1,
+                count: (existing.count || 0) + 1,
                 lastPlayed: now,
             };
         }
@@ -139,7 +153,7 @@ export class MusicStore {
             this.history.push({ key, track: playArgs(track), count: 1, lastPlayed: now });
         }
         if (this.history.length > LIMITS.history) {
-            this.history.sort((a, b) => (a.count - b.count) || (a.lastPlayed - b.lastPlayed));
+            this.history.sort((a, b) => a.count - b.count || a.lastPlayed - b.lastPlayed);
             this.history = this.history.slice(this.history.length - LIMITS.history);
         }
         this.schedule(KEYS.history);
@@ -160,19 +174,23 @@ export class MusicStore {
         return this.history
             .filter((row) => row.key !== excludeKey)
             .slice()
-            .sort((a, b) => (b.count - a.count) || (b.lastPlayed - a.lastPlayed))
+            .sort((a, b) => b.count - a.count || b.lastPlayed - a.lastPlayed)
             .slice(0, limit);
     }
     /** 最近播放（播放历史页的「最近」分段）。 */
     recentlyPlayed(limit = 60) {
-        return this.history.slice().sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, limit);
+        return this.history
+            .slice()
+            .sort((a, b) => b.lastPlayed - a.lastPlayed)
+            .slice(0, limit);
     }
     // MARK: - 搜索历史
     recordQuery(query) {
         const value = String(query || '').trim();
         if (!value)
             return;
-        this.search.queries = [value].concat(this.search.queries.filter((row) => row !== value))
+        this.search.queries = [value]
+            .concat(this.search.queries.filter((row) => row !== value))
             .slice(0, LIMITS.recentQueries);
         this.schedule(KEYS.search);
         this.notify();
@@ -192,7 +210,8 @@ export class MusicStore {
         if (!key)
             return;
         const row = { key, track: playArgs(track) };
-        this.search.tracks = [row].concat(this.search.tracks.filter((item) => item.key !== key))
+        this.search.tracks = [row]
+            .concat(this.search.tracks.filter((item) => item.key !== key))
             .slice(0, LIMITS.recentTracks);
         this.schedule(KEYS.search);
         this.notify();
@@ -218,22 +237,23 @@ export class MusicStore {
         if (!key || !track)
             return;
         const art = track.artworkUrl || null;
-        const link = (typeof track.url === 'string' && /^https?:\/\//i.test(track.url)) ? track.url : null;
+        const link = typeof track.url === 'string' && /^https?:\/\//i.test(track.url) ? track.url : null;
         if (!art && !link)
             return;
-        const existing = this.artwork[key] || {};
+        const existing = this.artwork[key] || { art: null, link: null };
         const next = { art: art || existing.art || null, link: link || existing.link || null };
         if (existing.art === next.art && existing.link === next.link)
             return;
         const keys = Object.keys(this.artwork);
-        if (keys.length >= LIMITS.artwork && !this.artwork[key])
-            delete this.artwork[keys[0]];
+        const oldest = keys[0];
+        if (keys.length >= LIMITS.artwork && !this.artwork[key] && oldest !== undefined)
+            delete this.artwork[oldest];
         this.artwork[key] = next;
         this.schedule(KEYS.artwork);
     }
     entry(track) {
         const key = stableKey(track);
-        return key ? (this.artwork[key] || null) : null;
+        return key ? this.artwork[key] || null : null;
     }
     artworkURL(track) {
         if (track && track.artworkUrl)

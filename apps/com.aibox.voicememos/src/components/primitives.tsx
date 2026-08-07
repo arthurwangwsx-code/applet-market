@@ -95,7 +95,9 @@ function useSymbolSupport(): boolean {
         image.src = url
       }
     }
-    return () => { symbolProbeWaiters.delete(setSupported) }
+    return () => {
+      symbolProbeWaiters.delete(setSupported)
+    }
   }, [])
 
   return supported
@@ -248,9 +250,13 @@ export function InfoChip(props: {
       <span>{props.label}</span>
     </>
   )
-  return props.onClick
-    ? <button type="button" style={style} onClick={props.onClick}>{content}</button>
-    : <span style={style}>{content}</span>
+  return props.onClick ? (
+    <button type="button" style={style} onClick={props.onClick}>
+      {content}
+    </button>
+  ) : (
+    <span style={style}>{content}</span>
+  )
 }
 
 /** `ChipsFlow` = FlowLayout(spacing 6, lineSpacing 6)。 */
@@ -262,14 +268,21 @@ export function ChipsFlow({ children }: { children: ReactNode }) {
 export function EmptyState(props: { palette: Palette; icon: string; text: string }) {
   return (
     <div style={{ padding: '18px 16px', textAlign: 'center', color: props.palette.muted }}>
-      <div style={{ opacity: 0.7 }}><Icon name={props.icon} size={26} /></div>
+      <div style={{ opacity: 0.7 }}>
+        <Icon name={props.icon} size={26} />
+      </div>
       <div style={{ fontSize: 13, marginTop: SPACE.s2 }}>{props.text}</div>
     </div>
   )
 }
 
 /** `CopyButton`：点击后 1.5s 内变 ✓ + 绿色 + "已复制"。 */
-export function CopyButton(props: { palette: Palette; label: string; copiedLabel: string; onCopy: () => Promise<boolean> | boolean }) {
+export function CopyButton(props: {
+  palette: Palette
+  label: string
+  copiedLabel: string
+  onCopy: () => Promise<boolean> | boolean
+}) {
   const [done, setDone] = useState(false)
   useEffect(() => {
     if (!done) return
@@ -280,11 +293,20 @@ export function CopyButton(props: { palette: Palette; label: string; copiedLabel
     <button
       type="button"
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', background: 'transparent',
-        padding: 0, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        border: 'none',
+        background: 'transparent',
+        padding: 0,
+        fontSize: 12,
+        fontWeight: 500,
+        cursor: 'pointer',
         color: done ? props.palette.green : props.palette.accent,
       }}
-      onClick={async () => { if (await props.onCopy()) setDone(true) }}
+      onClick={async () => {
+        if (await props.onCopy()) setDone(true)
+      }}
     >
       <Icon name={done ? 'check' : 'clipboard'} size={12} />
       {done ? props.copiedLabel : props.label}
@@ -296,7 +318,15 @@ export function CopyButton(props: { palette: Palette; label: string; copiedLabel
 export function SectionHeader(props: { palette: Palette; title: string; trailing?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.s2 }}>
-      <div style={{ fontSize: 12, fontWeight: 500, color: props.palette.muted, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: props.palette.muted,
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+        }}
+      >
         {props.title}
       </div>
       {props.trailing}
@@ -350,7 +380,9 @@ export function SecondaryButton(props: {
       disabled={props.disabled}
       onClick={props.onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
         border: `1px solid ${props.palette.line}`,
         borderRadius: RADIUS.field,
         padding: '8px 14px',
@@ -416,18 +448,37 @@ export function Row(props: {
         props.onLongPress()
       }}
       style={{
-        display: 'flex', alignItems: 'center', gap: SPACE.s3,
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.s3,
         padding: '10px 16px',
         cursor: props.onClick ? 'pointer' : 'default',
         borderBottom: `1px solid ${props.palette.line}`,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: props.palette.ink, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 500,
+            color: props.palette.ink,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {props.title}
         </div>
         {props.subtitle ? (
-          <div style={{ fontSize: 12, color: props.palette.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: props.palette.muted,
+              marginTop: 2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {props.subtitle}
           </div>
         ) : null}
@@ -447,8 +498,12 @@ export function SpeakButton(props: { palette: Palette; onClick: () => void; size
         props.onClick()
       }}
       style={{
-        border: 'none', background: 'transparent', color: props.palette.accent,
-        padding: 6, cursor: 'pointer', lineHeight: 1,
+        border: 'none',
+        background: 'transparent',
+        color: props.palette.accent,
+        padding: 6,
+        cursor: 'pointer',
+        lineHeight: 1,
       }}
       aria-label="Speak"
     >
@@ -463,7 +518,11 @@ export function Sheet(props: { palette: Palette; open: boolean; onClose: () => v
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 40, display: 'flex', alignItems: 'flex-end',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 40,
+        display: 'flex',
+        alignItems: 'flex-end',
         background: 'rgba(0,0,0,0.35)',
       }}
       onClick={props.onClose}
@@ -471,9 +530,12 @@ export function Sheet(props: { palette: Palette; open: boolean; onClose: () => v
       <div
         onClick={(event) => event.stopPropagation()}
         style={{
-          width: '100%', maxHeight: '86dvh', overflowY: 'auto',
+          width: '100%',
+          maxHeight: '86dvh',
+          overflowY: 'auto',
           background: props.palette.bg,
-          borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
@@ -509,30 +571,55 @@ export function PushPage(props: {
   return (
     <div
       style={{
-        position: 'absolute', inset: 0, zIndex: 20, background: props.palette.bg,
-        display: 'flex', flexDirection: 'column',
+        position: 'absolute',
+        inset: 0,
+        zIndex: 20,
+        background: props.palette.bg,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {chrome ? (
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', gap: SPACE.s2, padding: '10px 12px',
-          borderBottom: `1px solid ${props.palette.line}`, background: props.palette.bg,
-        }}
-      >
-        <button
-          type="button"
-          onClick={props.onBack}
-          style={{ border: 'none', background: 'transparent', color: props.palette.accent, fontSize: 17, cursor: 'pointer', padding: '4px 8px' }}
-          aria-label="Back"
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s2,
+            padding: '10px 12px',
+            borderBottom: `1px solid ${props.palette.line}`,
+            background: props.palette.bg,
+          }}
         >
-          ‹
-        </button>
-        <div style={{ flex: 1, fontSize: 16, fontWeight: 600, color: props.palette.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {props.title}
+          <button
+            type="button"
+            onClick={props.onBack}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: props.palette.accent,
+              fontSize: 17,
+              cursor: 'pointer',
+              padding: '4px 8px',
+            }}
+            aria-label="Back"
+          >
+            ‹
+          </button>
+          <div
+            style={{
+              flex: 1,
+              fontSize: 16,
+              fontWeight: 600,
+              color: props.palette.ink,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {props.title}
+          </div>
+          {props.trailing}
         </div>
-        {props.trailing}
-      </div>
       ) : null}
       {!chrome && props.trailing ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 12px 0' }}>{props.trailing}</div>

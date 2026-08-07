@@ -5,21 +5,27 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 //  · 自选行的**现价是中性 ink 色**，只有涨跌幅 pill 带 13% 半透明底（§15 第 2 条）；
 //  · 涨跌幅为 0 用**中性灰**，不是红也不是绿（§15 第 3 条）；
 //  · 页脚时间戳带**日期 + 时区缩写**，避免把昨天的快照当今天。
+import { VirtualList } from 'aibox/ui';
 import React from 'react';
-import Icon from './Icon.js';
-import { VirtualList } from './VirtualList.js';
-import { Chip, ChipRow, EmptyState, Menu, PullRefresh, Spinner, SwipeRow, } from './primitives.js';
-import { C, RADIUS, SPACE } from './theme.js';
-import { formatPercent, formatPrice, formatPriceFor, formatStamp, trendColor, trendTint } from '../lib/format.js';
-import { INDEX_ROWS, decimalsFor, resolveSymbol } from '../lib/symbol.js';
-import { quoteTTL, resolveDataState, showsCachedBadge } from '../lib/quotes.js';
 import { groupLabel } from '../i18n/index.js';
+import { formatPercent, formatPrice, formatStamp, trendColor, trendTint } from '../lib/format.js';
+import { quoteTTL, resolveDataState, showsCachedBadge } from '../lib/quotes.js';
+import { decimalsFor, INDEX_ROWS, resolveSymbol } from '../lib/symbol.js';
+import Icon from './Icon.js';
+import { Chip, ChipRow, EmptyState, Menu, PullRefresh, Spinner, SwipeRow } from './primitives.js';
+import { C, RADIUS, SPACE } from './theme.js';
 const SORTS = ['manual', 'changeDescending', 'changeAscending'];
 /** 指数卡：宽 104、padding 12、surface 底、圆角 16。无数据时点位显 `—`、涨跌幅留空。 */
 function IndexCard({ row, quote, t, upIsRed, onOpen }) {
     return (_jsxs("button", { type: "button", className: "fin-btn fin-press", onClick: () => onOpen(row.canonical), style: {
-            width: 104, flex: '0 0 auto', padding: SPACE.s3, background: C.surface,
-            borderRadius: RADIUS.card, display: 'flex', flexDirection: 'column', gap: 3,
+            width: 104,
+            flex: '0 0 auto',
+            padding: SPACE.s3,
+            background: C.surface,
+            borderRadius: RADIUS.card,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
         }, children: [_jsx("span", { className: "fin-clamp-1", style: { fontSize: 12, color: C.muted }, children: t(row.key) }), _jsx("span", { className: "fin-mono", style: { fontSize: 17, fontWeight: 500, color: C.ink }, children: quote ? formatPrice(quote.price, 2) : '—' }), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: quote ? trendColor(quote.changePct, upIsRed) : 'transparent' }, children: quote ? formatPercent(quote.changePct) : ' ' })] }));
 }
 /** 自选行。现价中性、pill 半透明。 */
@@ -27,11 +33,21 @@ function WatchRow({ canonical, name, quote, upIsRed, onOpen }) {
     const symbol = resolveSymbol(canonical);
     const decimals = symbol ? decimalsFor(symbol.market) : 2;
     return (_jsxs("button", { type: "button", className: "fin-btn fin-press", onClick: () => onOpen(canonical), style: {
-            display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%',
-            padding: `6px ${SPACE.s4}px`, minHeight: 52, background: C.bg,
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.s3,
+            width: '100%',
+            padding: `6px ${SPACE.s4}px`,
+            minHeight: 52,
+            background: C.bg,
         }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: '1 1 auto' }, children: [_jsx("span", { className: "fin-clamp-1", style: { fontSize: 16, fontWeight: 500, color: C.ink }, children: name }), _jsx("span", { className: "fin-mono", style: { fontSize: 12, color: C.muted }, children: canonical })] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flex: '0 0 auto' }, children: [_jsx("span", { className: "fin-mono", style: { fontSize: 16, fontWeight: 500, color: C.ink }, children: quote ? formatPrice(quote.price, decimals) : '—' }), _jsx("span", { className: "fin-mono", style: {
-                            fontSize: 13, fontWeight: 500, color: C.ink,
-                            padding: '2px 7px', minWidth: 66, textAlign: 'center', borderRadius: 6,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: C.ink,
+                            padding: '2px 7px',
+                            minWidth: 66,
+                            textAlign: 'center',
+                            borderRadius: 6,
                             background: trendTint(quote ? quote.changePct : null, upIsRed),
                         }, children: quote ? formatPercent(quote.changePct) : '—' })] })] }));
 }
@@ -40,11 +56,16 @@ function Footer({ ctx, state }) {
     const { t, locale, quotes } = ctx;
     const cached = showsCachedBadge(state);
     const stamp = quotes.lastUpdated ? formatStamp(quotes.lastUpdated, locale) : null;
-    const sourceLabel = quotes.source === 'automatic' ? t('finance.settings.sourceAuto')
-        : quotes.source === 'sina' ? 'Sina' : 'Tencent';
+    const sourceLabel = quotes.source === 'automatic' ? t('finance.settings.sourceAuto') : quotes.source === 'sina' ? 'Sina' : 'Tencent';
     return (_jsxs("div", { style: {
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-            padding: `${SPACE.s5}px ${SPACE.s4}px ${SPACE.s6}px`, fontSize: 12, color: C.muted, textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 5,
+            padding: `${SPACE.s5}px ${SPACE.s4}px ${SPACE.s6}px`,
+            fontSize: 12,
+            color: C.muted,
+            textAlign: 'center',
         }, children: [_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 6 }, children: [ctx.refreshing ? _jsx(Spinner, { size: 12, color: C.muted }) : null, stamp ? (cached ? t('finance.updated.cached', stamp) : t('finance.updated', stamp)) : null] }), _jsx("span", { children: t('finance.watch.source', sourceLabel) }), state === 'partial' ? (_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 4 }, children: [_jsx(Icon, { name: "exclamationmark.triangle", size: 11 }), t('finance.quote.partial')] })) : state === 'failedWithoutData' ? (_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 4 }, children: [_jsx(Icon, { name: "wifi.exclamationmark", size: 11 }), t('finance.quote.failed')] })) : state === 'failedWithCache' ? (_jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: 4 }, children: [_jsx(Icon, { name: "wifi.exclamationmark", size: 11 }), t('finance.quote.stale')] })) : null] }));
 }
 export default function WatchlistPage({ ctx }) {
@@ -77,7 +98,7 @@ export default function WatchlistPage({ ctx }) {
                 return 1;
             if (!qb)
                 return -1;
-            return descending ? qb.changePct - qa.changePct : qa.changePct - qb.changePct;
+            return descending ? (qb.changePct ?? 0) - (qa.changePct ?? 0) : (qa.changePct ?? 0) - (qb.changePct ?? 0);
         });
     }, [sort, quotes, ctx.quoteVersion]); // eslint-disable-line react-hooks/exhaustive-deps
     // 扁平化成 VirtualList 的行（分组头也是一行，让长自选也能虚拟滚动）。
@@ -107,10 +128,12 @@ export default function WatchlistPage({ ctx }) {
         ttlMs: quoteTTL(settings.refreshInterval),
         now: Date.now(),
     });
-    const header = (_jsxs(_Fragment, { children: [_jsx(ChipRow, { style: { paddingTop: SPACE.s1, paddingBottom: SPACE.s2 }, children: INDEX_ROWS.map((row) => (_jsx(IndexCard, { row: row, quote: quotes.quote(row.canonical), t: t, upIsRed: settings.upIsRed, onOpen: actions.openDetail }, row.canonical))) }), store.groups.length > 0 ? (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, paddingBottom: SPACE.s2 }, children: [_jsxs(ChipRow, { style: { flex: '1 1 auto', minWidth: 0, paddingRight: 0 }, children: [_jsx(Chip, { variant: "plain", label: t('finance.watch.group.all'), selected: group === null, onClick: () => setGroup(null) }), store.groups.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((row) => (_jsx(Chip, { variant: "plain", label: groupLabel(t, row.name), selected: group === row.id, onClick: () => setGroup(row.id) }, row.id)))] }), _jsx("div", { style: { flex: '0 0 auto', paddingRight: SPACE.s4 }, children: _jsx(Menu, { icon: "ellipsis.circle", label: "", trailing: null, value: sort, items: SORTS.map((id) => ({ id, label: t(`finance.watch.sort.${id}`) })), onSelect: setSort, align: "right" }) })] })) : null] }));
+    const header = (_jsxs(_Fragment, { children: [_jsx(ChipRow, { style: { paddingTop: SPACE.s1, paddingBottom: SPACE.s2 }, children: INDEX_ROWS.map((row) => (_jsx(IndexCard, { row: row, quote: quotes.quote(row.canonical), t: t, upIsRed: settings.upIsRed, onOpen: actions.openDetail }, row.canonical))) }), store.groups.length > 0 ? (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, paddingBottom: SPACE.s2 }, children: [_jsxs(ChipRow, { style: { flex: '1 1 auto', minWidth: 0, paddingRight: 0 }, children: [_jsx(Chip, { variant: "plain", label: t('finance.watch.group.all'), selected: group === null, onClick: () => setGroup(null) }), store.groups
+                                .slice()
+                                .sort((a, b) => a.sortOrder - b.sortOrder)
+                                .map((row) => (_jsx(Chip, { variant: "plain", label: groupLabel(t, row.name), selected: group === row.id, onClick: () => setGroup(row.id) }, row.id)))] }), _jsx("div", { style: { flex: '0 0 auto', paddingRight: SPACE.s4 }, children: _jsx(Menu, { icon: "ellipsis.circle", label: "", trailing: null, value: sort, items: SORTS.map((id) => ({ id, label: t(`finance.watch.sort.${id}`) })), onSelect: setSort, align: "right" }) })] })) : null] }));
     const empty = (_jsx(EmptyState, { icon: "star", text: t('finance.watch.empty'), actionLabel: t('finance.watch.add'), onAction: actions.openSearch }));
-    return (_jsx(PullRefresh, { scrollRef: scrollRef, refreshing: ctx.refreshing, onRefresh: () => actions.refresh(true), style: { display: 'flex', flexDirection: 'column' }, children: _jsx(VirtualList, { items: rows, estimatedRowHeight: 52, restoreKey: "watchlist", scrollParentRef: scrollRef, header: header, footer: (quotes.lastUpdated || ctx.refreshing || quotes.lastFailed)
-                ? _jsx(Footer, { ctx: ctx, state: dataState }) : _jsx("div", { style: { height: SPACE.s6 } }), empty: rows.length === 0 ? empty : null, renderRow: (row) => {
+    return (_jsx(PullRefresh, { scrollRef: scrollRef, refreshing: ctx.refreshing, onRefresh: () => actions.refresh(true), style: { display: 'flex', flexDirection: 'column' }, children: _jsx(VirtualList, { items: rows, estimatedRowHeight: 52, restoreKey: "watchlist", scrollParentRef: scrollRef, header: header, footer: quotes.lastUpdated || ctx.refreshing || quotes.lastFailed ? (_jsx(Footer, { ctx: ctx, state: dataState })) : (_jsx("div", { style: { height: SPACE.s6 } })), empty: rows.length === 0 ? empty : null, renderRow: (row) => {
                 if (row.kind === 'header') {
                     return (_jsx("div", { style: { padding: `${SPACE.s3}px ${SPACE.s4}px 4px`, fontSize: 13, color: C.muted }, children: row.label }));
                 }

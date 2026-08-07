@@ -65,7 +65,8 @@ export async function playVideo(args) {
     if (!host?.video?.play)
         throw new Error('宿主没有视频播放能力');
     const payload = {
-        title: args.title, resumeFrom: args.resumeFrom ?? 0,
+        title: args.title,
+        resumeFrom: args.resumeFrom ?? 0,
     };
     if (args.sourceURL) {
         payload.sourceURL = args.sourceURL;

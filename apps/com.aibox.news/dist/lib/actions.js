@@ -16,12 +16,17 @@ import { TOPICS, FEED_KINDS } from './catalog.js';
 export const READ_EXCERPT_LIMIT = 6000;
 const SEARCH_DEFAULT_LIMIT = 15;
 const SAVED_LIST_LIMIT = 30;
+const actionInput = (input) => input !== null && typeof input === 'object' && !Array.isArray(input) ? input : {};
 function normalizeTopic(raw) {
-    const value = String(raw || '').trim().toLowerCase();
+    const value = String(raw || '')
+        .trim()
+        .toLowerCase();
     return TOPICS.includes(value) ? value : null;
 }
 function normalizeKind(raw) {
-    const value = String(raw || '').trim().toLowerCase();
+    const value = String(raw || '')
+        .trim()
+        .toLowerCase();
     return FEED_KINDS.includes(value) ? value : null;
 }
 /** 结果里的一篇文章（对齐原生 NewsArticleLite 的字段集）。 */
@@ -47,20 +52,24 @@ function clusterGroups(articles) {
             buckets.set(key, []);
             order.push(key);
         }
-        buckets.get(key).push(article);
+        buckets.get(key)?.push(article);
     }
     return order.map((key) => {
-        const members = [...buckets.get(key)].sort((a, b) => b.publishedAt - a.publishedAt);
-        return { lead: lite(members[0]), others: members.slice(1).map(lite) };
+        const members = [...(buckets.get(key) ?? [])].sort((a, b) => b.publishedAt - a.publishedAt);
+        const lead = members[0];
+        if (!lead)
+            throw new Error(`Missing cluster lead for ${key}`);
+        return { lead: lite(lead), others: members.slice(1).map(lite) };
     });
 }
 // MARK: - news_search
 export async function search(input = {}) {
+    const values = actionInput(input);
     const { agg } = await whenReady();
-    const query = String(input.query || '');
-    const topic = normalizeTopic(input.topic);
-    const useClusters = input.cluster === true;
-    const limit = Math.min(Math.max(Number(input.limit) || SEARCH_DEFAULT_LIMIT, 1), 30);
+    const query = String(values.query || '');
+    const topic = normalizeTopic(values.topic);
+    const useClusters = values.cluster === true;
+    const limit = Math.min(Math.max(Number(values.limit) || SEARCH_DEFAULT_LIMIT, 1), 30);
     // 时间线空则先刷一遍（TTL 内会直接返回缓存）。
     if (agg.timeline.length === 0)
         await agg.refresh({ force: false });
@@ -77,20 +86,27 @@ export async function search(input = {}) {
     const header = query ? `News for "${query}":` : 'Latest headlines:';
     if (useClusters) {
         const groups = clusterGroups(results).slice(0, limit);
-        const lines = [header, ...groups.map((group) => {
+        const lines = [
+            header,
+            ...groups.map((group) => {
                 const extra = group.others.length > 0 ? ` (+${group.others.length} more reports)` : '';
                 return `• [${group.lead.source} · ${group.lead.time}] ${group.lead.title}${extra}\n  ${group.lead.url}`;
-            })];
+            }),
+        ];
         return { ok: true, query, count: groups.length, items: results.map(lite), clusters: groups, text: lines.join('\n') };
     }
-    const lines = [header, ...results.map((article) => (`• [${article.sourceName} · ${shortStamp(article.publishedAt)}] ${article.title}\n  ${article.url}`))];
+    const lines = [
+        header,
+        ...results.map((article) => `• [${article.sourceName} · ${shortStamp(article.publishedAt)}] ${article.title}\n  ${article.url}`),
+    ];
     return { ok: true, query, count: results.length, items: results.map(lite), text: lines.join('\n') };
 }
 // MARK: - news_read
 export async function read(input = {}) {
+    const values = actionInput(input);
     const { agg, store } = await whenReady();
-    let url = String(input.url || '').trim();
-    const id = String(input.id || '').trim();
+    let url = String(values.url || '').trim();
+    const id = String(values.id || '').trim();
     if (!url && id) {
         const hit = await agg.article(id);
         if (hit)
@@ -99,38 +115,54 @@ export async function read(input = {}) {
     if (!url) {
         return { ok: false, error: 'Set "url" to an article link (or "id" from a search result).' };
     }
-    const article = await agg.articleByURL(url)
-        || (await agg.article(stableKey(url, '', ''))); // 归一 URL 的稳定键也试一次
-    const source = article || { url, title: url, summary: '', contentHTML: null, sourceName: '', topic: 'top', publishedAt: 0, imageURL: null, id: '' };
+    const article = (await agg.articleByURL(url)) || (await agg.article(stableKey(url, '', ''))); // 归一 URL 的稳定键也试一次
+    const source = article || {
+        url,
+        title: url,
+        summary: '',
+        contentHTML: null,
+        sourceName: '',
+        topic: 'top',
+        publishedAt: 0,
+        imageURL: null,
+        id: '',
+        author: '',
+        sourceID: '',
+        fetchedAt: 0,
+        clusterID: null,
+    };
     const text = await resolveContent(source, store, { allowNetwork: true });
     const excerpt = String(text || '').slice(0, READ_EXCERPT_LIMIT);
     const head = article ? `${article.title} — ${article.sourceName}\n\n` : '';
     return {
         ok: true,
-        article: article ? lite(article) : { id: '', title: url, url, source: '', topic: 'top', image: '', time: '', summary: '' },
+        article: article
+            ? lite(article)
+            : { id: '', title: url, url, source: '', topic: 'top', image: '', time: '', summary: '' },
         excerpt,
         text: head + (excerpt || '(No extractable text — open the original article.)'),
     };
 }
 // MARK: - news_source
 export async function source(input = {}) {
+    const values = actionInput(input);
     const { store } = await whenReady();
-    const action = String(input.action || 'list').toLowerCase();
+    const action = String(values.action || 'list').toLowerCase();
     if (action === 'add') {
-        const endpoint = String(input.url || '').trim();
+        const endpoint = String(values.url || '').trim();
         if (!endpoint) {
             return { ok: false, error: 'Set "url" to an RSS URL or an RSSHub route like "/zhihu/hotlist".' };
         }
         // 显式 kind 优先；没给就按「/ 开头 = rsshub」推断（与原生 news_source 一致）。
-        const explicit = normalizeKind(input.kind);
+        const explicit = normalizeKind(values.kind);
         const kind = explicit || (endpoint.startsWith('/') ? 'rsshub' : 'rss');
-        const topic = normalizeTopic(input.topic) || 'top';
-        const title = String(input.title || '').trim() || endpoint;
+        const topic = normalizeTopic(values.topic) || 'top';
+        const title = String(values.title || '').trim() || endpoint;
         const feed = await store.addFeed({ title, endpoint, kind, topic, explicitKind: true });
         return { ok: true, action, feeds: feedList(store), text: `Subscribed: ${feed.title} [${kind}].` };
     }
     if (action === 'remove') {
-        const selector = String(input.title || input.url || '').trim();
+        const selector = String(values.title || values.url || '').trim();
         if (!selector)
             return { ok: false, error: 'Set "title" or "url" of the source to remove.' };
         const match = store.feeds.find((feed) => feed.title === selector || feed.endpoint === selector);
@@ -140,7 +172,7 @@ export async function source(input = {}) {
         return { ok: true, action, feeds: feedList(store), text: `Removed subscription: ${match.title}.` };
     }
     if (action === 'test') {
-        const endpoint = String(input.url || '').trim();
+        const endpoint = String(values.url || '').trim();
         if (!endpoint)
             return { ok: false, error: 'Set "url" (RSS URL or RSSHub route) to test.' };
         const kind = endpoint.startsWith('/') ? 'rsshub' : 'rss';
@@ -152,20 +184,26 @@ export async function source(input = {}) {
             return {
                 ok: false,
                 action,
-                error: `Test failed — no articles from ${endpoint}. Check the URL/route, the RSSHub instance, `
-                    + 'or whether the host is inside this applet\'s network allowlist.',
+                error: `Test failed — no articles from ${endpoint}. Check the URL/route, the RSSHub instance, ` +
+                    "or whether the host is inside this applet's network allowlist.",
             };
         }
+        const sample = result.articles[0];
+        if (!sample)
+            return { ok: false, action, error: `Test failed — no articles from ${endpoint}.` };
         return {
             ok: true,
             action,
             count: result.articles.length,
-            sample: result.articles[0].title,
-            text: `OK — ${result.articles.length}+ articles from ${endpoint}. e.g. ${result.articles[0].title}`,
+            sample: sample.title,
+            text: `OK — ${result.articles.length}+ articles from ${endpoint}. e.g. ${sample.title}`,
         };
     }
     const feeds = feedList(store);
-    const lines = [`Subscriptions (${feeds.length}):`, ...feeds.map((feed) => `• ${feed.title} [${feed.kind}/${feed.topic}] ${feed.enabled ? 'on' : 'off'}`)];
+    const lines = [
+        `Subscriptions (${feeds.length}):`,
+        ...feeds.map((feed) => `• ${feed.title} [${feed.kind}/${feed.topic}] ${feed.enabled ? 'on' : 'off'}`),
+    ];
     return { ok: true, action: 'list', feeds, text: lines.join('\n') };
 }
 function feedList(store) {
@@ -179,10 +217,11 @@ function feedList(store) {
 }
 // MARK: - news_save
 export async function save(input = {}) {
+    const values = actionInput(input);
     const { store, agg } = await whenReady();
-    const action = String(input.action || 'list').toLowerCase();
+    const action = String(values.action || 'list').toLowerCase();
     if (action === 'save') {
-        const article = await resolveArticle(agg, input);
+        const article = await resolveArticle(agg, values);
         if (!article) {
             return { ok: false, error: 'Article not found — search or read it first, then save by url/id.' };
         }
@@ -190,9 +229,9 @@ export async function save(input = {}) {
         return { ok: true, action, articles: savedList(store), text: `Saved: ${article.title}` };
     }
     if (action === 'unsave') {
-        let id = String(input.id || '').trim();
+        let id = String(values.id || '').trim();
         if (!id) {
-            const article = await resolveArticle(agg, input);
+            const article = await resolveArticle(agg, values);
             if (article)
                 id = article.id;
         }
@@ -205,7 +244,10 @@ export async function save(input = {}) {
     const saved = savedList(store);
     if (saved.length === 0)
         return { ok: true, action: 'list', articles: [], text: 'Read-later list is empty.' };
-    const lines = [`Saved articles (${saved.length}):`, ...saved.map((row) => `• [${row.source}] ${row.title}\n  ${row.url}`)];
+    const lines = [
+        `Saved articles (${saved.length}):`,
+        ...saved.map((row) => `• [${row.source}] ${row.title}\n  ${row.url}`),
+    ];
     return { ok: true, action: 'list', articles: saved, text: lines.join('\n') };
 }
 function savedList(store) {
@@ -270,10 +312,10 @@ export function registerActions() {
     const api = typeof window !== 'undefined' ? window.aibox : undefined;
     if (!api || !api.action || typeof api.action.register !== 'function')
         return false;
-    api.action.register('search', search);
-    api.action.register('read', read);
-    api.action.register('source', source);
-    api.action.register('save', save);
+    api.action.register('search', async (input) => (await search(input)));
+    api.action.register('read', async (input) => (await read(input)));
+    api.action.register('source', async (input) => (await source(input)));
+    api.action.register('save', async (input) => (await save(input)));
     api.action.register('toggleBroadcast', async () => {
         const session = await whenReady();
         if (session.broadcast.active)

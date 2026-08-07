@@ -24,19 +24,35 @@
 //
 // ⚠️ 老用户在宿主录音库里的数据**原地不动**，本应用不读也不删它。
 //    2.0.0 是一次干净的切线，不是数据迁移。
-import { normalizeError, queryAll } from '../lib/aibox-sdk.js';
+import { normalizeError, queryAll } from 'aibox/sdk';
 import { hashText, snippetOf } from './format.js';
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined);
 export const capabilities = {
-    get recorder() { return Boolean(api()?.audio); },
+    get recorder() {
+        return Boolean(api()?.audio);
+    },
     /** 转写出口是否存在。**注意它只说"方法在"，不说"此刻能转"** —— 后者要问 transcribeAvailability()。 */
-    get transcribe() { return typeof api()?.audio?.transcribe === 'function'; },
-    get ai() { return Boolean(api()?.ai); },
-    get share() { return Boolean(api()?.share); },
-    get shareFile() { return typeof api()?.share?.file === 'function'; },
-    get clipboard() { return Boolean(api()?.clipboard); },
-    get ui() { return Boolean(api()?.ui); },
-    get haptics() { return Boolean(api()?.haptics); },
+    get transcribe() {
+        return typeof api()?.audio?.transcribe === 'function';
+    },
+    get ai() {
+        return Boolean(api()?.ai);
+    },
+    get share() {
+        return Boolean(api()?.share);
+    },
+    get shareFile() {
+        return typeof api()?.share?.file === 'function';
+    },
+    get clipboard() {
+        return Boolean(api()?.clipboard);
+    },
+    get ui() {
+        return Boolean(api()?.ui);
+    },
+    get haptics() {
+        return Boolean(api()?.haptics);
+    },
 };
 export function parseJSON(text) {
     const trimmed = String(text ?? '').trim();
@@ -83,9 +99,15 @@ export async function recordStart(input) {
         return { started: false, error: normalizeError(error).message };
     }
 }
-export async function recordPause() { await safeAudio((audio) => audio.recordPause()); }
-export async function recordResume() { await safeAudio((audio) => audio.recordResume()); }
-export async function recordCancel() { await safeAudio((audio) => audio.recordCancel()); }
+export async function recordPause() {
+    await safeAudio((audio) => audio.recordPause());
+}
+export async function recordResume() {
+    await safeAudio((audio) => audio.recordResume());
+}
+export async function recordCancel() {
+    await safeAudio((audio) => audio.recordCancel());
+}
 async function safeAudio(run) {
     const bridge = api();
     if (!bridge?.audio)
@@ -124,7 +146,14 @@ export async function recordStop() {
     try {
         const value = await bridge.audio.recordStop();
         if (value.discarded || !value.handle || !value.url) {
-            return { discarded: true, durationMs: value.durationMs ?? 0, handle: '', url: '', byteCount: 0, interrupted: false };
+            return {
+                discarded: true,
+                durationMs: value.durationMs ?? 0,
+                handle: '',
+                url: '',
+                byteCount: 0,
+                interrupted: false,
+            };
         }
         return {
             discarded: false,
@@ -183,12 +212,14 @@ export async function transcribeClip(handle, locale) {
     try {
         const value = await bridge.audio.transcribe(locale ? { handle, locale } : { handle });
         const segments = Array.isArray(value.segments)
-            ? value.segments.map((raw) => ({
+            ? value.segments
+                .map((raw) => ({
                 text: String(raw.text ?? ''),
                 start: Number(raw.start ?? 0),
                 duration: Number(raw.duration ?? 0),
                 end: Number(raw.end ?? 0),
-            })).filter((segment) => segment.text)
+            }))
+                .filter((segment) => segment.text)
             : [];
         return {
             ok: true,

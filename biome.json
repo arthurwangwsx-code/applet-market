@@ -1,0 +1,58 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+  "files": {
+    "includes": [
+      "scripts/**/*.mjs",
+      "scripts/**/*.json",
+      "config/**/*.json",
+      "apps/*/src/**/*.ts",
+      "apps/*/src/**/*.tsx",
+      "apps/*/src/manifest.json",
+      "apps/*/src/.tests.json",
+      "apps/*/app.json",
+      "apps/*/package.json",
+      "apps/*/tsconfig.json",
+      "biome.json",
+      "package.json",
+      "packages/aibox-sdk/src/**/*.ts",
+      "packages/aibox-sdk/tests/**/*.mjs",
+      "packages/aibox-sdk/package.json",
+      "packages/aibox-tsbuild/**/*.mjs",
+      "packages/aibox-tsbuild/package.json",
+      "packages/aibox-tsbuild/types/**/*.d.ts",
+      "packages/aibox-tsbuild/tsconfig.base.json",
+      "!scripts/result-schema-baseline.json",
+      "!apps/*/src/**/*.d.ts",
+      "!node_modules/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none",
+      "correctness": {
+        "noUnreachable": "error"
+      },
+      "suspicious": {
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noExplicitAny": "error",
+        "noTsIgnore": "error"
+      }
+    }
+  }
+}

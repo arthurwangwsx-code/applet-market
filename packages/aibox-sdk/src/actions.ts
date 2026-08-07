@@ -1,6 +1,6 @@
-import { bridge } from './bridge';
-import type { JSONValue } from './json';
-import { AiboxError, normalizeError } from './errors';
+import { bridge } from './bridge'
+import type { JSONValue } from './json'
+import { AiboxError, normalizeError } from './errors'
 
 /**
  * 类型化的 action 注册。
@@ -41,34 +41,31 @@ import { AiboxError, normalizeError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface AppletActionMap {}
 
-type MapIsEmpty = [keyof AppletActionMap] extends [never] ? true : false;
+type MapIsEmpty = [keyof AppletActionMap] extends [never] ? true : false
 
 /** 可注册的 action 名。有生成表时是字面量联合，没有时退化成 `string`。 */
-export type ActionName = MapIsEmpty extends true ? string : keyof AppletActionMap;
+export type ActionName = MapIsEmpty extends true ? string : keyof AppletActionMap
 
-type Entry<K> = K extends keyof AppletActionMap ? AppletActionMap[K] : { input: JSONValue; output: JSONValue };
+type Entry<K> = K extends keyof AppletActionMap ? AppletActionMap[K] : { input: JSONValue; output: JSONValue }
 
 /** 某个 action 的入参类型。 */
-export type ActionInput<K extends ActionName> =
-  Entry<K> extends { input: infer I } ? I : JSONValue;
+export type ActionInput<K extends ActionName> = Entry<K> extends { input: infer I } ? I : JSONValue
 
 /** 某个 action 的返回类型。 */
-export type ActionOutput<K extends ActionName> =
-  Entry<K> extends { output: infer O } ? O : JSONValue;
+export type ActionOutput<K extends ActionName> = Entry<K> extends { output: infer O } ? O : JSONValue
 
 /** 一个 action 的处理函数。 */
-export type ActionHandler<K extends ActionName> =
-  (input: ActionInput<K>) => ActionOutput<K> | Promise<ActionOutput<K>>;
+export type ActionHandler<K extends ActionName> = (input: ActionInput<K>) => ActionOutput<K> | Promise<ActionOutput<K>>
 
 function requireAction(): NonNullable<ReturnType<typeof bridge>>['action'] {
-  const host = bridge();
+  const host = bridge()
   if (!host?.action || typeof host.action.register !== 'function') {
     throw new AiboxError(
       'aibox/unavailable',
       'aibox/unavailable: aibox.action.register is not available. Actions only work inside the applet container.',
-    );
+    )
   }
-  return host.action;
+  return host.action
 }
 
 /**
@@ -78,17 +75,17 @@ function requireAction(): NonNullable<ReturnType<typeof bridge>>['action'] {
  * 不该让页面在 Node 里崩掉。真正的桥缺失会在 `registerActions` 的 strict 模式里显式抛。
  */
 export function registerAction<K extends ActionName>(name: K, handler: ActionHandler<K>): void {
-  const host = bridge();
-  if (!host?.action || typeof host.action.register !== 'function') return;
+  const host = bridge()
+  if (!host?.action || typeof host.action.register !== 'function') return
   // handler 的入参是 manifest schema 推出来的具体类型，桥那侧只知道 JSONValue——
   // 这个方向的收窄由 schema 保证（宿主按 inputSchemaJSON 校验后才派发），不是这里能表达的。
-  host.action.register(name as string, handler as unknown as (input: JSONValue) => JSONValue | Promise<JSONValue>);
+  host.action.register(name as string, handler as unknown as (input: JSONValue) => JSONValue | Promise<JSONValue>)
 }
 
 /** 一次注册整张表。键必须覆盖 `AppletActionMap` 声明的**全部** action——漏一个就是编译错。 */
 export type ActionHandlers = MapIsEmpty extends true
   ? Record<string, (input: JSONValue) => JSONValue | Promise<JSONValue>>
-  : { [K in keyof AppletActionMap]: ActionHandler<K & ActionName> };
+  : { [K in keyof AppletActionMap]: ActionHandler<K & ActionName> }
 
 /**
  * 一次注册全部 action。
@@ -97,19 +94,19 @@ export type ActionHandlers = MapIsEmpty extends true
  * 用整表注册就把「漏一个」变成编译错（`Property 'x' is missing in type ...`）。
  */
 export function registerActions(handlers: ActionHandlers): void {
-  const host = bridge();
-  if (!host?.action || typeof host.action.register !== 'function') return;
+  const host = bridge()
+  if (!host?.action || typeof host.action.register !== 'function') return
   for (const [name, handler] of Object.entries(handlers as Record<string, unknown>)) {
-    if (typeof handler !== 'function') continue;
-    host.action.register(name, handler as (input: JSONValue) => JSONValue | Promise<JSONValue>);
+    if (typeof handler !== 'function') continue
+    host.action.register(name, handler as (input: JSONValue) => JSONValue | Promise<JSONValue>)
   }
 }
 
 /** 把结构化结果回给当前调用方（AI / 自动化）。 */
 export async function actionResult(data: JSONValue): Promise<boolean> {
   try {
-    return await requireAction().result(data);
+    return await requireAction().result(data)
   } catch (error) {
-    throw normalizeError(error);
+    throw normalizeError(error)
   }
 }

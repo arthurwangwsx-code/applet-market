@@ -1,4 +1,4 @@
-import { bridge } from './bridge';
+import { bridge } from './bridge'
 
 /**
  * 原生对话框与轻提示。
@@ -14,76 +14,72 @@ import { bridge } from './bridge';
  * 在删除类操作上就是数据事故。要区分「用户拒绝」和「问不出来」的，用 `available('ui')` 先判。
  */
 
-export type DialogAction = { id: string; title: string; role?: 'default' | 'cancel' | 'destructive' };
+export type DialogAction = { id: string; title: string; role?: 'default' | 'cancel' | 'destructive' }
 
 /** 确认框。返回 true 仅当用户**明确**点了非 cancel 的动作；桥缺席、报错、用户取消都返回 false。 */
-export async function confirm(input: {
-  title?: string;
-  message?: string;
-  actions?: DialogAction[];
-}): Promise<boolean> {
-  const host = bridge();
-  if (!host?.ui?.confirm) return false;
+export async function confirm(input: { title?: string; message?: string; actions?: DialogAction[] }): Promise<boolean> {
+  const host = bridge()
+  if (!host?.ui?.confirm) return false
   try {
-    const result = await host.ui.confirm(input);
-    return !result.cancelled;
+    const result = await host.ui.confirm(input)
+    return !result.cancelled
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 提示框。返回是否真的弹了出来（不可用时 false，调用方可自己退化成页内提示）。 */
 export async function alert(input: { title?: string; message?: string }): Promise<boolean> {
-  const host = bridge();
-  if (!host?.ui?.alert) return false;
+  const host = bridge()
+  if (!host?.ui?.alert) return false
   try {
-    await host.ui.alert(input);
-    return true;
+    await host.ui.alert(input)
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
 /** 输入框。取消或不可用一律返回 null——调用方只需判 null，不必区分两种「没拿到」。 */
 export async function prompt(input: {
-  title?: string;
-  message?: string;
-  placeholder?: string;
-  defaultValue?: string;
+  title?: string
+  message?: string
+  placeholder?: string
+  defaultValue?: string
 }): Promise<string | null> {
-  const host = bridge();
-  if (!host?.ui?.prompt) return null;
+  const host = bridge()
+  if (!host?.ui?.prompt) return null
   try {
-    const result = await host.ui.prompt(input);
-    return result.cancelled ? null : result.value;
+    const result = await host.ui.prompt(input)
+    return result.cancelled ? null : result.value
   } catch {
-    return null;
+    return null
   }
 }
 
 /** 动作面板。返回用户选中的 action id；取消或不可用返回 null。 */
 export async function actionSheet(input: {
-  title?: string;
-  message?: string;
-  actions: DialogAction[];
+  title?: string
+  message?: string
+  actions: DialogAction[]
 }): Promise<string | null> {
-  const host = bridge();
-  if (!host?.ui?.actionSheet) return null;
+  const host = bridge()
+  if (!host?.ui?.actionSheet) return null
   try {
-    const result = await host.ui.actionSheet(input);
-    return result.cancelled ? null : result.actionId;
+    const result = await host.ui.actionSheet(input)
+    return result.cancelled ? null : result.actionId
   } catch {
-    return null;
+    return null
   }
 }
 
 /** 轻提示。**从不抛错、从不阻塞**——提示失败不该影响主流程，故只回布尔。 */
 export async function toast(message: string): Promise<boolean> {
-  const host = bridge();
-  if (!host?.toast?.show) return false;
+  const host = bridge()
+  if (!host?.toast?.show) return false
   try {
-    return await host.toast.show({ message });
+    return await host.toast.show({ message })
   } catch {
-    return false;
+    return false
   }
 }

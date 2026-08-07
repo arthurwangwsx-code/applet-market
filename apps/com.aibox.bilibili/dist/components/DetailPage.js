@@ -16,10 +16,11 @@ import { C, RADIUS, SPACE } from './theme.js';
 import * as api from '../lib/api.js';
 // 挑流按像素数、不按 quality 字符串 —— 判据住在 SDK（`pickBestFormat`），
 // 这是宿主解析结果的通用读法，不是 B 站特有的。
-import { pickBestFormat as pickFormat } from '../lib/aibox-sdk.js';
+import { pickBestFormat as pickFormat } from 'aibox/sdk';
 import { aspectFor, closeStage, copyText, haptic, imageURL, loadPref, onVideoProgress, openInBrowser, openStage, playVideo, resolveVideo, savePref, share, toast, videoReadiness, } from '../lib/host.js';
 import { formatCount, formatDate, formatDuration } from '../lib/format.js';
 import { loadSettings } from '../lib/settings.js';
+import { errorMessage } from '../lib/types.js';
 const PROGRESS_KEY = 'watch-progress';
 export default function DetailPage({ bvid, onOpen }) {
     const [detail, setDetail] = React.useState(null);
@@ -47,19 +48,25 @@ export default function DetailPage({ bvid, onOpen }) {
                 setDetail(data);
                 setActiveCid(data.cid);
                 setState('ready');
-                api.related(bvid).then((list) => { if (alive)
-                    setRelated(list); });
+                api.related(bvid).then((list) => {
+                    if (alive)
+                        setRelated(list);
+                });
             }
             catch (err) {
                 if (!alive)
                     return;
-                setError(String(err?.message || err));
+                setError(errorMessage(err));
                 setState('error');
             }
         })();
-        videoReadiness().then((s) => { if (alive)
-            setVideoState(s); });
-        return () => { alive = false; };
+        videoReadiness().then((s) => {
+            if (alive)
+                setVideoState(s);
+        });
+        return () => {
+            alive = false;
+        };
     }, [bvid]);
     // 订阅播放进度。三处刻意的节流——事件是 ~2Hz，而这一页下面挂着 20 条相关推荐：
     //
@@ -98,11 +105,15 @@ export default function DetailPage({ bvid, onOpen }) {
         if (!pending)
             return;
         loadPref(PROGRESS_KEY, {})
-            .then((all) => savePref(PROGRESS_KEY, { ...(all || {}), [pending.key]: pending.value }))
-            .catch(() => { });
+            .then((all) => savePref(PROGRESS_KEY, { ...all, [pending.key]: pending.value }))
+            .catch(() => {
+            /* 存不住续播位置不值得打扰用户，也不该变成未处理拒绝 */
+        });
     }, []);
     // 离开这一页就收起视频区（不停播——转画中画或后台听声都是用户可能想要的）。
-    React.useEffect(() => () => { closeStage(); }, []);
+    React.useEffect(() => () => {
+        closeStage();
+    }, []);
     const play = React.useCallback(async (cid) => {
         if (!detail || busy)
             return;
@@ -113,9 +124,7 @@ export default function DetailPage({ bvid, onOpen }) {
             const part = detail.pages.find((p) => p.cid === targetCid);
             // 分P 视频要把 `?p=N` 带上，否则宿主解析的永远是第一P。
             const index = detail.pages.findIndex((p) => p.cid === targetCid);
-            const pageURL = index > 0
-                ? `https://www.bilibili.com/video/${bvid}?p=${index + 1}`
-                : `https://www.bilibili.com/video/${bvid}`;
+            const pageURL = index > 0 ? `https://www.bilibili.com/video/${bvid}?p=${index + 1}` : `https://www.bilibili.com/video/${bvid}`;
             // ① 先让**宿主**解析。它带 Referer，我们带不了（见 host.js `resolveVideo`）。
             //    这一步也顺便给出真实分辨率，②③ 都要用。
             const resolved = await resolveVideo(pageURL);
@@ -140,7 +149,7 @@ export default function DetailPage({ bvid, onOpen }) {
             // 失败就把舞台收掉，让封面回来——留着一块黑舞台比什么都不显示更糟。
             closeStage();
             setStageOn(false);
-            toast(`播放失败：${err?.message || err}`);
+            toast(`播放失败：${errorMessage(err)}`);
         }
         finally {
             setBusy(false);
@@ -149,44 +158,86 @@ export default function DetailPage({ bvid, onOpen }) {
     if (state === 'loading')
         return _jsx(Spinner, {});
     if (state === 'error') {
-        return _jsx(EmptyState, { title: "\u6253\u4E0D\u5F00\u8FD9\u4E2A\u89C6\u9891", detail: error, actionLabel: "\u7528\u6D4F\u89C8\u5668\u6253\u5F00", onAction: () => openInBrowser(`https://www.bilibili.com/video/${bvid}`) });
+        return (_jsx(EmptyState, { title: "\u6253\u4E0D\u5F00\u8FD9\u4E2A\u89C6\u9891", detail: error, actionLabel: "\u7528\u6D4F\u89C8\u5668\u6253\u5F00", onAction: () => openInBrowser(`https://www.bilibili.com/video/${bvid}`) }));
     }
+    if (!detail)
+        return _jsx(EmptyState, { title: "\u89C6\u9891\u8BE6\u60C5\u7F3A\u5931", detail: "\u8BF7\u8FD4\u56DE\u540E\u91CD\u8BD5\u3002" });
     const url = `https://www.bilibili.com/video/${bvid}`;
     return (_jsxs("div", { className: "bl-scroll", style: { height: '100%', overflowY: 'auto', background: C.bg }, children: [stageOn ? null : (_jsxs("div", { onClick: () => playable && play(), style: {
-                    position: 'relative', width: '100%', aspectRatio: '16 / 9',
-                    background: C.surface, overflow: 'hidden',
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: '16 / 9',
+                    background: C.surface,
+                    overflow: 'hidden',
                 }, children: [detail.cover ? (_jsx("img", { src: imageURL(detail.cover, 400), alt: "", style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } })) : null, _jsx("div", { style: {
-                            position: 'absolute', inset: 0, display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             background: 'rgba(0,0,0,0.25)',
                         }, children: _jsx("div", { style: {
-                                width: 58, height: 58, borderRadius: 29,
-                                background: 'rgba(0,0,0,0.5)', color: '#fff',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                                width: 58,
+                                height: 58,
+                                borderRadius: 29,
+                                background: 'rgba(0,0,0,0.5)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 24,
                             }, children: busy ? '···' : '▶' }) }), progress?.mine && progress.duration > 0 ? (_jsx("div", { style: {
-                            position: 'absolute', left: 0, bottom: 0, height: 3,
+                            position: 'absolute',
+                            left: 0,
+                            bottom: 0,
+                            height: 3,
                             width: `${Math.min(100, (progress.currentTime / progress.duration) * 100)}%`,
                             background: C.brand,
                         } })) : null] })), videoState && !videoState.ok ? (_jsxs("div", { style: { padding: SPACE.s3, background: C.brandDim, fontSize: 13, color: C.sub, lineHeight: 1.6 }, children: [videoState.reason === 'noBridge'
-                        ? '这个 App 版本还没有视频播放桥（aibox.video）。需要重新构建安装 App 本体，'
-                            + '换小应用版本没用。'
+                        ? '这个 App 版本还没有视频播放桥（aibox.video）。需要重新构建安装 App 本体，' + '换小应用版本没用。'
                         : '这个 App 构建没有链入视频播放器模块（MODULE_VIDEOPLAYER），播不了。', _jsx("br", {}), "\u53EA\u80FD\u5148\u7528\u6D4F\u89C8\u5668\u6253\u5F00\u3002"] })) : null, _jsxs("div", { style: { padding: SPACE.s4 }, children: [_jsx("div", { style: { fontSize: 17, fontWeight: 600, color: C.text, lineHeight: 1.4 }, children: detail.title }), _jsxs("div", { style: { fontSize: 12, color: C.faint, marginTop: SPACE.s2 }, children: [formatCount(detail.play), "\u89C2\u770B \u00B7 ", formatDate(detail.pubdate)] }), _jsxs("div", { className: "bl-press", onClick: () => openInBrowser(`https://space.bilibili.com/${detail.mid}`), style: { display: 'flex', alignItems: 'center', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [detail.avatar ? (_jsx("img", { src: imageURL(detail.avatar, 36), alt: "", style: { width: 36, height: 36, borderRadius: 18, objectFit: 'cover', background: C.surface } })) : null, _jsx("div", { style: { fontSize: 14, color: C.text }, children: detail.author })] }), _jsxs("div", { style: {
-                            display: 'flex', marginTop: SPACE.s4, padding: `${SPACE.s3}px 0`,
-                            borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}`,
+                            display: 'flex',
+                            marginTop: SPACE.s4,
+                            padding: `${SPACE.s3}px 0`,
+                            borderTop: `1px solid ${C.line}`,
+                            borderBottom: `1px solid ${C.line}`,
                         }, children: [_jsx(StatItem, { label: "\u70B9\u8D5E", value: formatCount(detail.like) }), _jsx(StatItem, { label: "\u6295\u5E01", value: formatCount(detail.coin) }), _jsx(StatItem, { label: "\u6536\u85CF", value: formatCount(detail.favorite) }), _jsx(StatItem, { label: "\u8BC4\u8BBA", value: formatCount(detail.reply) })] }), detail.desc ? (_jsx("div", { onClick: () => setDescOpen((v) => !v), style: {
-                            marginTop: SPACE.s3, fontSize: 13, color: C.sub, lineHeight: 1.6,
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                            maxHeight: descOpen ? 'none' : 60, overflow: 'hidden',
-                        }, children: detail.desc })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [_jsx(PrimaryButton, { onClick: () => play(), disabled: !playable || busy, children: busy ? '正在准备…' : '播放' }), _jsx("button", { type: "button", onClick: async () => { await copyText(url); toast('链接已复制'); }, style: {
-                                    border: `1px solid ${C.line}`, background: 'transparent', color: C.sub,
-                                    borderRadius: RADIUS.md, padding: `0 ${SPACE.s4}px`, fontSize: 14, flexShrink: 0,
+                            marginTop: SPACE.s3,
+                            fontSize: 13,
+                            color: C.sub,
+                            lineHeight: 1.6,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            maxHeight: descOpen ? 'none' : 60,
+                            overflow: 'hidden',
+                        }, children: detail.desc })) : null, _jsxs("div", { style: { display: 'flex', gap: SPACE.s2, marginTop: SPACE.s4 }, children: [_jsx(PrimaryButton, { onClick: () => play(), disabled: !playable || busy, children: busy ? '正在准备…' : '播放' }), _jsx("button", { type: "button", onClick: async () => {
+                                    await copyText(url);
+                                    toast('链接已复制');
+                                }, style: {
+                                    border: `1px solid ${C.line}`,
+                                    background: 'transparent',
+                                    color: C.sub,
+                                    borderRadius: RADIUS.md,
+                                    padding: `0 ${SPACE.s4}px`,
+                                    fontSize: 14,
+                                    flexShrink: 0,
                                 }, children: "\u590D\u5236" }), _jsx("button", { type: "button", onClick: () => share(detail.title, url), style: {
-                                    border: `1px solid ${C.line}`, background: 'transparent', color: C.sub,
-                                    borderRadius: RADIUS.md, padding: `0 ${SPACE.s4}px`, fontSize: 14, flexShrink: 0,
+                                    border: `1px solid ${C.line}`,
+                                    background: 'transparent',
+                                    color: C.sub,
+                                    borderRadius: RADIUS.md,
+                                    padding: `0 ${SPACE.s4}px`,
+                                    fontSize: 14,
+                                    flexShrink: 0,
                                 }, children: "\u5206\u4EAB" })] })] }), detail.pages.length > 1 ? (_jsxs("div", { style: { paddingBottom: SPACE.s3 }, children: [_jsxs("div", { style: { padding: `0 ${SPACE.s4}px ${SPACE.s2}px`, fontSize: 13, fontWeight: 600, color: C.sub }, children: ["\u9009\u96C6\uFF08", detail.pages.length, "\uFF09"] }), _jsx("div", { className: "bl-scroll", style: { display: 'flex', gap: SPACE.s2, overflowX: 'auto', padding: `0 ${SPACE.s4}px` }, children: detail.pages.map((part) => (_jsxs("button", { type: "button", onClick: () => play(part.cid), style: {
-                                flexShrink: 0, maxWidth: 160, textAlign: 'left',
-                                border: 'none', borderRadius: RADIUS.md, padding: SPACE.s2,
+                                flexShrink: 0,
+                                maxWidth: 160,
+                                textAlign: 'left',
+                                border: 'none',
+                                borderRadius: RADIUS.md,
+                                padding: SPACE.s2,
                                 background: part.cid === activeCid ? C.brandDim : C.surface,
-                                color: part.cid === activeCid ? C.brand : C.text, fontSize: 12,
+                                color: part.cid === activeCid ? C.brand : C.text,
+                                fontSize: 12,
                             }, children: [_jsxs("div", { style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }, children: ["P", part.page, " ", part.title] }), _jsx("div", { style: { color: C.faint, marginTop: 2 }, children: formatDuration(part.duration) })] }, part.cid))) })] })) : null, relatedList.length ? (_jsxs("div", { style: { borderTop: `8px solid ${C.surface}`, paddingTop: SPACE.s2 }, children: [_jsx("div", { style: { padding: `${SPACE.s2}px ${SPACE.s4}px`, fontSize: 13, fontWeight: 600, color: C.sub }, children: "\u76F8\u5173\u63A8\u8350" }), relatedList.slice(0, 20).map((video) => (_jsx(VideoCard, { video: video, onOpen: onOpen }, video.bvid)))] })) : null, _jsx("div", { style: { height: SPACE.s6 } })] }));
 }

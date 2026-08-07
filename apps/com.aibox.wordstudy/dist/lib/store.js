@@ -28,7 +28,9 @@ export function useWordStore() {
             setEntries(nextEntries);
             setReady(true);
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [tick]);
     const cachedWords = useMemo(() => new Set(entries.map((entry) => entry.word)), [entries]);
     const entryOf = useCallback((word) => entries.find((entry) => entry.word === word.trim().toLowerCase()) ?? null, [entries]);

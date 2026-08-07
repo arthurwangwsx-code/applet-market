@@ -88,17 +88,25 @@ export function VocabPage(props) {
 }
 function matchesFilter(item, filter) {
     switch (filter) {
-        case 'word': return item.kind === 'word';
-        case 'sentence': return item.kind === 'sentence';
-        case 'mastered': return item.masteredAt !== null;
-        case 'unmastered': return item.masteredAt === null;
-        default: return true;
+        case 'word':
+            return item.kind === 'word';
+        case 'sentence':
+            return item.kind === 'sentence';
+        case 'mastered':
+            return item.masteredAt !== null;
+        case 'unmastered':
+            return item.masteredAt === null;
+        default:
+            return true;
     }
 }
 function filterLabel(t, filter) {
     const map = {
-        all: 'filterAll', word: 'filterWord', sentence: 'filterSentence',
-        mastered: 'filterMastered', unmastered: 'filterUnmastered',
+        all: 'filterAll',
+        word: 'filterWord',
+        sentence: 'filterSentence',
+        mastered: 'filterMastered',
+        unmastered: 'filterUnmastered',
     };
     return t(map[filter]);
 }
@@ -108,11 +116,15 @@ function sortLabel(t, sort) {
 }
 function buildGroups(items, sort) {
     if (sort === 'alpha') {
-        return [{ key: '', items: [...items].sort((a, b) => a.text.localeCompare(b.text, undefined, { sensitivity: 'base' })) }];
+        return [
+            { key: '', items: [...items].sort((a, b) => a.text.localeCompare(b.text, undefined, { sensitivity: 'base' })) },
+        ];
     }
     if (sort === 'urgency') {
         // 从未复习过（null）视为最紧急排最前。
-        return [{ key: '', items: [...items].sort((a, b) => (a.nextReviewAt ?? -Infinity) - (b.nextReviewAt ?? -Infinity)) }];
+        return [
+            { key: '', items: [...items].sort((a, b) => (a.nextReviewAt ?? -Infinity) - (b.nextReviewAt ?? -Infinity)) },
+        ];
     }
     const buckets = new Map();
     for (const item of [...items].sort((a, b) => b.addedAt - a.addedAt)) {
@@ -124,7 +136,5 @@ function buildGroups(items, sort) {
         else
             buckets.set(key, [item]);
     }
-    return [...buckets.entries()]
-        .sort((a, b) => b[0].localeCompare(a[0]))
-        .map(([key, group]) => ({ key, items: group }));
+    return [...buckets.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([key, group]) => ({ key, items: group }));
 }

@@ -1,13 +1,14 @@
 {
-  "_doc": "每个应用私有 host.js 的行数。只减不增；迁到 SDK 后把该应用从这里删掉。",
+  "_doc": "每个应用私有 host.js/host.ts 适配器的行数。JS 改 TS 不算删除；只有领域逻辑迁出后才应下降。",
   "linesByApp": {
-    "com.aibox.bilibili": 268,
-    "com.aibox.downloads": 230,
-    "com.aibox.finance": 129,
-    "com.aibox.ledger": 138,
-    "com.aibox.music": 236,
-    "com.aibox.news": 306,
-    "com.aibox.viddl": 119,
-    "com.aibox.youtube": 204
+    "com.aibox.bilibili": 300,
+    "com.aibox.downloads": 301,
+    "com.aibox.finance": 166,
+    "com.aibox.ledger": 274,
+    "com.aibox.music": 326,
+    "com.aibox.news": 267,
+    "com.aibox.viddl": 157,
+    "com.aibox.wordstudy": 346,
+    "com.aibox.youtube": 256
   }
 }

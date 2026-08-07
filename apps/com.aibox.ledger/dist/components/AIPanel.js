@@ -17,23 +17,29 @@ import { aiGenerate } from '../lib/host.js';
 const SCENARIOS = [
     { id: 'review', icon: 'sparkles.rectangle.stack', tint: C.brand, titleKey: 'ai.review', subKey: 'ai.reviewSub' },
     { id: 'budget', icon: 'target', tint: C.info, titleKey: 'ai.budget', subKey: 'ai.budgetSub' },
-    { id: 'anomaly', icon: 'exclamationmark.magnifyingglass', tint: C.expense, titleKey: 'ai.anomaly', subKey: 'ai.anomalySub' },
+    {
+        id: 'anomaly',
+        icon: 'exclamationmark.magnifyingglass',
+        tint: C.expense,
+        titleKey: 'ai.anomaly',
+        subKey: 'ai.anomalySub',
+    },
     { id: 'subs', icon: 'repeat.circle', tint: C.insight, titleKey: 'ai.subs', subKey: 'ai.subsSub' },
 ];
 // 给模型的静默系统上下文（不面向用户，不本地化）。
-const SYSTEM = 'You are helping the user with their personal ledger. Every number in the DATA block below '
-    + 'was computed locally from the real ledger — treat it as ground truth, never invent figures, and never give '
-    + 'generic financial advice that is not anchored to this data. Answer in the user\'s language. Be concise.';
+const SYSTEM = 'You are helping the user with their personal ledger. Every number in the DATA block below ' +
+    'was computed locally from the real ledger — treat it as ground truth, never invent figures, and never give ' +
+    "generic financial advice that is not anchored to this data. Answer in the user's language. Be concise.";
 const PROMPTS = {
     quick: 'Using the budget status in DATA, tell me how much I can still spend today. One or two sentences.',
-    review: 'Review this month\'s spending. Use the category breakdown, daily trend and month-over-month figures in '
-        + 'DATA, plus the budget status, then give a short verdict and 2–3 actionable suggestions.',
-    budget: 'Check whether my budgets are realistic. Compare each category budget with actual spending in DATA '
-        + '(including the recent three-month averages), point out the biggest deviations and suggest adjustments.',
-    anomaly: 'Scan for unusual spending. Use the large expenses and month-over-month comparison in DATA and flag '
-        + 'anything that stands out against history.',
-    subs: 'Tally my recurring and subscription spending. Use the repeated merchants/notes in DATA and total up my '
-        + 'fixed monthly costs.',
+    review: "Review this month's spending. Use the category breakdown, daily trend and month-over-month figures in " +
+        'DATA, plus the budget status, then give a short verdict and 2–3 actionable suggestions.',
+    budget: 'Check whether my budgets are realistic. Compare each category budget with actual spending in DATA ' +
+        '(including the recent three-month averages), point out the biggest deviations and suggest adjustments.',
+    anomaly: 'Scan for unusual spending. Use the large expenses and month-over-month comparison in DATA and flag ' +
+        'anything that stands out against history.',
+    subs: 'Tally my recurring and subscription spending. Use the repeated merchants/notes in DATA and total up my ' +
+        'fixed monthly costs.',
 };
 /** 把真实账本算成一段紧凑的数据简报（所有金额都是基准币）。 */
 function buildBrief(store, locale, t, scenario) {
@@ -58,8 +64,10 @@ function buildBrief(store, locale, t, scenario) {
     if (scenario !== 'quick') {
         const rows = monthFlowTransactions(store, month);
         const byCategory = buckets(store, rows, 'byCategory', 'expense', locale, labels);
-        lines.push(`categories_this_month: ${byCategory.slice(0, 12)
-            .map((row) => `${row.label}=${money(row.amountMinor, base)}(${row.count})`).join(', ') || 'none'}`);
+        lines.push(`categories_this_month: ${byCategory
+            .slice(0, 12)
+            .map((row) => `${row.label}=${money(row.amountMinor, base)}(${row.count})`)
+            .join(', ') || 'none'}`);
         const byDay = buckets(store, rows, 'byDay', 'expense', locale, labels);
         lines.push(`daily_trend: ${byDay.map((row) => `${row.label}=${money(row.amountMinor, base)}`).join(', ') || 'none'}`);
     }
@@ -78,8 +86,7 @@ function buildBrief(store, locale, t, scenario) {
             .filter((txn) => txn.kind === 'expense')
             .sort((a, b) => store.reportingBaseMinor(b) - store.reportingBaseMinor(a))
             .slice(0, 10)
-            .map((txn) => `${money(store.reportingBaseMinor(txn), base)} ${txn.merchant
-            || (txn.categoryID ? store.categoryPath(txn.categoryID) : '')}`);
+            .map((txn) => `${money(store.reportingBaseMinor(txn), base)} ${txn.merchant || (txn.categoryID ? store.categoryPath(txn.categoryID) : '')}`);
         lines.push(`largest_expenses_this_month: ${large.join(' | ') || 'none'}`);
     }
     if (scenario === 'subs') {
@@ -95,10 +102,11 @@ function buildBrief(store, locale, t, scenario) {
             row.total += store.reportingBaseMinor(txn);
             counter.set(key, row);
         }
-        const repeated = [...counter.values()].filter((row) => row.count >= 2)
-            .sort((a, b) => b.total - a.total).slice(0, 12);
-        lines.push(`repeated_payees: ${repeated
-            .map((row) => `${row.label}×${row.count}=${money(row.total, base)}`).join(' | ') || 'none'}`);
+        const repeated = [...counter.values()]
+            .filter((row) => row.count >= 2)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 12);
+        lines.push(`repeated_payees: ${repeated.map((row) => `${row.label}×${row.count}=${money(row.total, base)}`).join(' | ') || 'none'}`);
     }
     return lines.join('\n');
 }
@@ -124,15 +132,23 @@ export default function AIPanel({ ctx }) {
             setRunning(null);
         }
     };
-    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsxs(Card, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => run('quick'), disabled: running !== null, style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%' }, children: [_jsx(IconBadge, { name: "bolt.fill", size: 38, color: C.brand, background: fade(C.brand, 14) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 500, color: C.ink }, children: t('ai.quickQuestion') }), _jsx("span", { style: { fontSize: 12, color: C.muted }, children: t('ai.quickSub') })] }), running === 'quick'
-                                ? _jsx(Spinner, { size: 18, color: C.brand })
-                                : _jsx(Icon, { name: "arrow.right.circle", size: 18, color: C.brand })] }), answers.quick ? (_jsx("div", { style: {
-                            marginTop: SPACE.s3, background: fade(C.brand, 8), borderRadius: RADIUS.field,
-                            padding: SPACE.s3, fontSize: 14, color: C.ink, lineHeight: 1.5, whiteSpace: 'pre-wrap',
-                        }, children: answers.quick })) : null] }), _jsxs("div", { children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted, padding: '0 4px' }, children: t('ai.deepAnalysis') }), _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s3, marginTop: SPACE.s2 }, children: SCENARIOS.map((scenario) => (_jsxs(Card, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => run(scenario.id), disabled: running !== null, style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%' }, children: [_jsx(IconBadge, { name: scenario.icon, size: 38, color: scenario.tint, background: fade(scenario.tint, 14) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 500, color: C.ink }, children: t(scenario.titleKey) }), _jsx("span", { style: { fontSize: 12, color: C.muted }, children: t(scenario.subKey) })] }), running === scenario.id
-                                            ? _jsx(Spinner, { size: 16, color: C.brand })
-                                            : _jsx(Icon, { name: "chevron.right", size: 13, color: C.muted })] }), answers[scenario.id] ? (_jsx("div", { style: {
-                                        marginTop: SPACE.s3, background: fade(C.brand, 8), borderRadius: RADIUS.field,
-                                        padding: SPACE.s3, fontSize: 14, color: C.ink, lineHeight: 1.5, whiteSpace: 'pre-wrap',
+    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s4 }, children: [_jsxs(Card, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => run('quick'), disabled: running !== null, style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%' }, children: [_jsx(IconBadge, { name: "bolt.fill", size: 38, color: C.brand, background: fade(C.brand, 14) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 500, color: C.ink }, children: t('ai.quickQuestion') }), _jsx("span", { style: { fontSize: 12, color: C.muted }, children: t('ai.quickSub') })] }), running === 'quick' ? (_jsx(Spinner, { size: 18, color: C.brand })) : (_jsx(Icon, { name: "arrow.right.circle", size: 18, color: C.brand }))] }), answers.quick ? (_jsx("div", { style: {
+                            marginTop: SPACE.s3,
+                            background: fade(C.brand, 8),
+                            borderRadius: RADIUS.field,
+                            padding: SPACE.s3,
+                            fontSize: 14,
+                            color: C.ink,
+                            lineHeight: 1.5,
+                            whiteSpace: 'pre-wrap',
+                        }, children: answers.quick })) : null] }), _jsxs("div", { children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: C.muted, padding: '0 4px' }, children: t('ai.deepAnalysis') }), _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: SPACE.s3, marginTop: SPACE.s2 }, children: SCENARIOS.map((scenario) => (_jsxs(Card, { children: [_jsxs("button", { type: "button", className: "lg-btn", onClick: () => run(scenario.id), disabled: running !== null, style: { display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%' }, children: [_jsx(IconBadge, { name: scenario.icon, size: 38, color: scenario.tint, background: fade(scenario.tint, 14) }), _jsxs("div", { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 500, color: C.ink }, children: t(scenario.titleKey) }), _jsx("span", { style: { fontSize: 12, color: C.muted }, children: t(scenario.subKey) })] }), running === scenario.id ? (_jsx(Spinner, { size: 16, color: C.brand })) : (_jsx(Icon, { name: "chevron.right", size: 13, color: C.muted }))] }), answers[scenario.id] ? (_jsx("div", { style: {
+                                        marginTop: SPACE.s3,
+                                        background: fade(C.brand, 8),
+                                        borderRadius: RADIUS.field,
+                                        padding: SPACE.s3,
+                                        fontSize: 14,
+                                        color: C.ink,
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
                                     }, children: answers[scenario.id] })) : null] }, scenario.id))) })] })] }));
 }

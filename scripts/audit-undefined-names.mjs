@@ -4,16 +4,14 @@
 // ## 为什么单独有这么一条
 // 2026-08-06：viddl 1.1.4 发到用户手上，点资料库的 ▶ 必崩。原因是包里 `playJob`
 // **只有调用点、没有定义**——一次半成品构建被发布了出去。
-// 而当时全线是绿的：`typecheck` 绿、`build` 绿、`validate` 绿、旁装 `run`/`test` 也绿。
-// 复现确认过：往 `.jsx` 里塞一个完全不存在的 `totallyUndefinedFn(j)`，
-// `tsc --noEmit` 与 `aibox-tsbuild` 双双通过——因为 `.jsx/.js` 在 `checkJs:false` 下不被检查，
-// 而无头验收只点得到首屏，点不到需要真实数据才出现的那一行。
+// 当时 `.jsx/.js` 在 `checkJs:false` 下绕过了类型检查，而无头验收只点得到首屏。当前市场已经
+// 全量严格 TypeScript，这类问题会被应用 typecheck 拦住；本脚本仍作为一个只关注运行时
+// ReferenceError 的独立纵深闸门，防止未来 tsconfig 或统一验证入口漂移。
 //
 // ## 判据
-// 用 TypeScript 自己的语义分析（`checkJs: true`），但**只取 TS2304 / TS2552**
+// 用 TypeScript 自己的语义分析，但**只取 TS2304 / TS2552**
 // （"Cannot find name" / "Did you mean"）。其余类型噪音一律丢弃——
-// 目标是「这个名字在运行时会不会是 ReferenceError」，不是把应用全量类型化。
-// 这样既零误报（找不到名字就是找不到），又不需要先把 40 个 JS 文件补上类型。
+// 目标是「这个名字在运行时会不会是 ReferenceError」，不是重复输出全部类型诊断。
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -31,7 +29,7 @@ function sourceFiles(dir, acc = []) {
     if (entry.name === 'node_modules' || entry.name === 'dist') continue
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) sourceFiles(full, acc)
-    else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) acc.push(full)
+    else if (/\.(ts|tsx)$/.test(entry.name)) acc.push(full)
   }
   return acc
 }
@@ -43,8 +41,8 @@ function auditApp(appDir) {
   if (!files.length) return []
 
   const program = ts.createProgram(files, {
-    allowJs: true,
-    checkJs: true,                 // ← 关键：不开这个，.jsx 里的未定义名字根本不会被看一眼
+    allowJs: false,
+    strict: true,
     noEmit: true,
     jsx: ts.JsxEmit.ReactJSX,
     module: ts.ModuleKind.ESNext,
@@ -86,7 +84,7 @@ for (const app of apps) {
 
 if (total) {
   console.log(`\n共 ${total} 处「名字找不到」。这些在运行时就是 ReferenceError —— 点到那条路径必崩。`)
-  console.log('注意：typecheck / build / 无头验收都拦不住这一类（.jsx 默认不检查，无头点不到深层交互）。')
+  console.log('这类错误在运行时就是 ReferenceError；请修正源码，不要调整诊断基线。')
   process.exit(1)
 }
 console.log(`✓ 未定义标识符闸门通过（${apps.length} 个应用）。`)

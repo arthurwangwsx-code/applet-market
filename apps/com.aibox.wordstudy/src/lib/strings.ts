@@ -43,7 +43,10 @@ const TABLE = {
   regenerate: { zh: '重新生成', en: 'Regenerate' },
   copyEntry: { zh: '复制词条', en: 'Copy entry' },
   share: { zh: '分享', en: 'Share' },
-  regenerateFailed: { zh: '更新词条失败，已保留原有版本。', en: 'Could not update the entry; the previous version is kept.' },
+  regenerateFailed: {
+    zh: '更新词条失败，已保留原有版本。',
+    en: 'Could not update the entry; the previous version is kept.',
+  },
   didYouMean: { zh: '你要找的是不是', en: 'Did you mean' },
   sourceAI: { zh: 'AI 生成', en: 'AI generated' },
   sourceYoudao: { zh: '有道词典', en: 'Youdao Dictionary' },
@@ -127,11 +130,26 @@ const TABLE = {
   practiceScoring: { zh: '评分中…', en: 'Scoring…' },
   practiceMatchLabel: { zh: '语音识别文本匹配度', en: 'Speech recognition text match' },
   practiceRetry: { zh: '重试', en: 'Try again' },
-  speechRecognizerUnavailable: { zh: '此设备暂时无法使用语音识别。', en: 'Speech recognition is unavailable on this device.' },
-  speechOnDeviceUnsupported: { zh: '此设备不支持该语言的本地语音识别。', en: 'On-device recognition is not supported for this language.' },
-  speechMicDenied: { zh: '需要麦克风权限，请在设置中允许。', en: 'Microphone access is required. Allow it in Settings.' },
-  speechDenied: { zh: '需要语音识别权限，请在设置中允许。', en: 'Speech recognition access is required. Allow it in Settings.' },
-  photoPickHint: { zh: '选一张带英文的图片，点其中的词即可查询。', en: 'Pick a picture with English text, then tap a word to look it up.' },
+  speechRecognizerUnavailable: {
+    zh: '此设备暂时无法使用语音识别。',
+    en: 'Speech recognition is unavailable on this device.',
+  },
+  speechOnDeviceUnsupported: {
+    zh: '此设备不支持该语言的本地语音识别。',
+    en: 'On-device recognition is not supported for this language.',
+  },
+  speechMicDenied: {
+    zh: '需要麦克风权限，请在设置中允许。',
+    en: 'Microphone access is required. Allow it in Settings.',
+  },
+  speechDenied: {
+    zh: '需要语音识别权限，请在设置中允许。',
+    en: 'Speech recognition access is required. Allow it in Settings.',
+  },
+  photoPickHint: {
+    zh: '选一张带英文的图片，点其中的词即可查询。',
+    en: 'Pick a picture with English text, then tap a word to look it up.',
+  },
   photoPick: { zh: '选择照片', en: 'Choose photo' },
   photoChange: { zh: '换一张照片', en: 'Choose another' },
   photoTapWord: { zh: '点其中的词即可查询', en: 'Tap a word to look it up' },

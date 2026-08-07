@@ -10,8 +10,15 @@
 
 import { registerActions } from '@aibox/applet-sdk'
 import {
-  cryptoID, getEntry, listVocab, normalizeTerm, recordHistory, removeVocab, saveTranslation,
-  upsertEntry, upsertVocab,
+  cryptoID,
+  getEntry,
+  listVocab,
+  normalizeTerm,
+  recordHistory,
+  removeVocab,
+  saveTranslation,
+  upsertEntry,
+  upsertVocab,
 } from './db.js'
 import { LookupError, lookupWord, translateText } from './dict.js'
 import { formatEntryText, formatVocabList, previewDirection } from './logic.js'
@@ -31,7 +38,13 @@ export function registerWordActions(refresh: () => void): void {
       // 缓存命中直出，零网络零 AI。
       const cached = await getEntry(term)
       if (cached) {
-        return { ok: true, text: formatEntryText(cached.payload), word: cached.word, source: cached.source, cached: true }
+        return {
+          ok: true,
+          text: formatEntryText(cached.payload),
+          word: cached.word,
+          source: cached.source,
+          cached: true,
+        }
       }
       try {
         const payload = await lookupWord(term)
@@ -140,10 +153,15 @@ export function registerWordActions(refresh: () => void): void {
 
 function matchesFilter(item: VocabItem, filter: string): boolean {
   switch (filter) {
-    case 'word': return item.kind === 'word'
-    case 'sentence': return item.kind === 'sentence'
-    case 'mastered': return item.masteredAt !== null
-    case 'unmastered': return item.masteredAt === null
-    default: return true
+    case 'word':
+      return item.kind === 'word'
+    case 'sentence':
+      return item.kind === 'sentence'
+    case 'mastered':
+      return item.masteredAt !== null
+    case 'unmastered':
+      return item.masteredAt === null
+    default:
+      return true
   }
 }

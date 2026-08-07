@@ -22,7 +22,7 @@ function groupInteger(text) {
  * `money(1234_56, 'CNY')` → `"¥1,234.56"`；`signed` 为真时正数补 `+`。
  * `decimals` 显式给时覆盖币种目录（0 位币不输出小数部分）。
  */
-export function money(minor, currency, { signed = false, grouping = true, decimals } = {}) {
+export function money(minor, currency, { signed = false, grouping = true, decimals, } = {}) {
     const value = Math.round(Number(minor) || 0);
     const symbol = currencySymbol(currency);
     const digits = decimals === undefined || decimals === null ? currencyDecimals(currency) : decimals;
@@ -36,7 +36,7 @@ export function money(minor, currency, { signed = false, grouping = true, decima
         const fraction = String(cents).padStart(2, '0').slice(0, Math.min(2, digits));
         body = `${wholeText}.${digits > 2 ? fraction.padEnd(digits, '0') : fraction}`;
     }
-    const sign = negative ? MINUS : (signed ? '+' : '');
+    const sign = negative ? MINUS : signed ? '+' : '';
     return `${sign}${symbol}${body}`;
 }
 /** 紧凑金额：≥1,000,000 → `¥1.2M`；≥1,000 → `¥12.3k`；否则整数化。 */

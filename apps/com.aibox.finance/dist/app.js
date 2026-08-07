@@ -6,7 +6,7 @@ import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-run
 // 宿主能力缺席时全部走自绘降级件（见 components/Shell.jsx），不留点了没反应的按钮。
 import React from 'react';
 import { THEME_CSS } from './components/theme.js';
-import { NavBar, SearchField, StorageBanner, TabBar, ToolbarButton } from './components/Shell.js';
+import { NavBar, StorageBanner, TabBar, ToolbarButton } from './components/Shell.js';
 import WatchlistPage from './components/WatchlistPage.js';
 import IndustryPage from './components/IndustryPage.js';
 import PortfolioPage from './components/PortfolioPage.js';
@@ -26,7 +26,7 @@ import { registerTools } from './lib/tools.js';
 import { useSubpageStack } from 'aibox/ui';
 import { INDEX_ROWS, decimalsFor, resolveSymbol } from './lib/symbol.js';
 import { formatPercent, formatPrice } from './lib/format.js';
-import { aiAvailability, capabilities, onEvent, onNamespaceEvent, openChat, scheduleNotification, } from './lib/host.js';
+import { aiAvailability, capabilities, onEvent, onNamespaceEvent, openChat, scheduleNotification } from './lib/host.js';
 import { currentLocale, makeT, onLocaleChanged } from './i18n/index.js';
 const TABS = [
     { id: 'markets', titleKey: 'finance.tab.markets', icon: 'chart.line.uptrend.xyaxis' },
@@ -75,8 +75,8 @@ export default function App() {
     const [tab, setTab] = React.useState('markets');
     // 子页栈 = 宿主原生页栈的镜像（框架资产 `aibox/ui`）：进详情走 `aibox.navigation.push`，
     // 返回一律经 popstate 回来，于是最左缘左滑是**系统自己的** interactive pop。
-    const subpages = useSubpageStack({ pathFor: routePath, titleFor: (row) => (row && row.title) || '' });
-    const [sheet, setSheet] = React.useState(null); // { name, ... }
+    const subpages = useSubpageStack({ pathFor: routePath, titleFor: (row) => row.title });
+    const [sheet, setSheet] = React.useState(null);
     const [aiSession, setAISession] = React.useState(null);
     const [refreshing, setRefreshing] = React.useState(false);
     const [accountID, setAccountID] = React.useState(null);
@@ -105,7 +105,9 @@ export default function App() {
             setReady(true);
         };
         boot();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [store, ledger, quotes]);
     // 设置变化要立刻改写行情服务的 TTL 与故障切换策略。
     React.useEffect(() => {
@@ -120,7 +122,9 @@ export default function App() {
                 setHasAI(!!info.available && capabilities.chat);
         };
         probe();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
     // —— 刷新（§2.5）——
     //
@@ -196,21 +200,22 @@ export default function App() {
                     const state = await api.tabs.getState();
                     if (!cancelled && state && state.rendered) {
                         setShell((current) => ({ ...current, tabsRendered: true }));
-                        if (state.selected)
+                        if (isTabID(state.selected))
                             setTab(state.selected);
                     }
                 }
-                catch (error) { /* 宿主没这能力：留给自绘 TabBar */ }
-                offs.push(onNamespaceEvent('tabs', 'changed', (state) => {
-                    if (!state)
+                catch (error) {
+                    /* 宿主没这能力：留给自绘 TabBar */
+                }
+                offs.push(onNamespaceEvent('tabs', 'changed', (payload) => {
+                    if (!isRecord(payload))
                         return;
                     // `rendered` 会**在挂载之后翻转**（形态切换、控制器重建都会重发 changed）。
                     // 只在启动那一刻判断一次，自绘 TabBar 就会永远缺席或永远多一条。
-                    const rendered = state.rendered !== false;
-                    setShell((current) => (current.tabsRendered === rendered
-                        ? current : { ...current, tabsRendered: rendered }));
-                    if (state.selected) {
-                        setTab(state.selected);
+                    const rendered = payload.rendered !== false;
+                    setShell((current) => current.tabsRendered === rendered ? current : { ...current, tabsRendered: rendered });
+                    if (isTabID(payload.selected)) {
+                        setTab(payload.selected);
                         resetRef.current();
                     }
                 }));
@@ -221,9 +226,11 @@ export default function App() {
                     if (!cancelled && state)
                         setShell((current) => ({ ...current, toolbarRendered: state.rendered !== false }));
                 }
-                catch (error) { /* 同上 */ }
+                catch (error) {
+                    /* 同上 */
+                }
                 offs.push(onNamespaceEvent('toolbar', 'invoke', (payload) => {
-                    if (!payload)
+                    if (!isRecord(payload))
                         return;
                     if (payload.id === 'search' && openSearchRef.current)
                         openSearchRef.current();
@@ -233,7 +240,10 @@ export default function App() {
             }
         };
         wire();
-        return () => { cancelled = true; offs.forEach((off) => off && off()); };
+        return () => {
+            cancelled = true;
+            offs.forEach((off) => off && off());
+        };
     }, []);
     // 没有 AI 就把 ✨ 隐藏——不留死按钮。
     React.useEffect(() => {
@@ -260,8 +270,8 @@ export default function App() {
         const context = buildContext({ t, locale, store, quotes, ledger, settings: store.settings });
         await openChat({ prompt: `${context}\n\n${seed}`, categoryKey: 'finance', autoSend: true, identity });
     }, [t, locale, store, quotes, ledger]);
-    const valuation = (ready && accountID) ? ledger.valuation(accountID, quotes.quoteMap(), quotes.fx) : null;
-    const perf = (ready && accountID) ? ledger.performance(accountID) : null;
+    const valuation = ready && accountID ? ledger.valuation(accountID, quotes.quoteMap(), quotes.fx) : null;
+    const perf = ready && accountID ? ledger.performance(accountID) : null;
     const ctx = React.useMemo(() => ({
         t,
         locale,
@@ -275,6 +285,7 @@ export default function App() {
         perf,
         hasAI,
         refreshing,
+        quoteVersion: quotes.lastUpdated,
         actions: {
             navigate,
             back,
@@ -288,10 +299,8 @@ export default function App() {
             openTrade: (canonical, symbol, name) => setSheet({ name: 'trade', canonical, symbol, symbolName: name }),
             openAlert: (canonical, symbol, name) => setSheet({ name: 'alert', canonical, symbol, symbolName: name }),
             openStrategy: (canonical, symbol, name) => setSheet({ name: 'strategy', canonical, symbol, symbolName: name }),
-            selectAccount: setAccountID,
-            toggleWatch: (canonical, name) => (store.isWatched(canonical)
-                ? store.removeWatch(canonical)
-                : store.addWatch(canonical, { name })),
+            selectAccount: (id) => setAccountID(id),
+            toggleWatch: (canonical, name) => store.isWatched(canonical) ? store.removeWatch(canonical) : store.addWatch(canonical, { name }),
             removeWatch: (canonical) => store.removeWatch(canonical),
             askAI,
             askAboutSymbol: (canonical, name, quote) => setAISession({
@@ -299,12 +308,31 @@ export default function App() {
                 symbolName: `${name}（${canonical}）${quote ? ` ${formatPrice(quote.price, 2)} ${formatPercent(quote.changePct)}` : ''}`,
             }),
         },
-    }), [t, locale, store, ledger, quotes, alerts, store.version, ledger.version, quotes.lastUpdated,
-        accountID, valuation, perf, hasAI, refreshing, navigate, back, refresh, openDetail, askAI]); // eslint-disable-line react-hooks/exhaustive-deps
+    }), [
+        t,
+        locale,
+        store,
+        ledger,
+        quotes,
+        alerts,
+        store.version,
+        ledger.version,
+        quotes.lastUpdated,
+        accountID,
+        valuation,
+        perf,
+        hasAI,
+        refreshing,
+        navigate,
+        back,
+        refresh,
+        openDetail,
+        askAI,
+    ]); // eslint-disable-line react-hooks/exhaustive-deps
     openSearchRef.current = ctx.actions.openSearch;
     openAIRef.current = () => setAISession({ identity: 'finance:root' });
     const { route } = subpages;
-    const currentTab = TABS.find((row) => row.id === tab) || TABS[0];
+    const currentTab = TABS.find((row) => row.id === tab) ?? TABS[0];
     const title = route ? route.title : t(currentTab.titleKey);
     React.useEffect(() => {
         document.title = title;
@@ -321,13 +349,15 @@ export default function App() {
     };
     const closeSheet = () => setSheet(null);
     const sheetName = sheet ? sheet.name : null;
-    return (_jsxs("div", { className: "fin-root", children: [!shell.toolbarRendered ? (_jsx(NavBar, { title: title, onBack: route ? back : undefined, backLabel: t('finance.cancel'), trailing: !route ? (_jsxs(_Fragment, { children: [hasAI ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('finance.ai.title'), onClick: () => openAIRef.current() })) : null, _jsx(ToolbarButton, { icon: "magnifyingglass", label: t('finance.search.title'), onClick: ctx.actions.openSearch })] })) : null })) : null, !store.storageHealthy ? _jsx(StorageBanner, { text: t('finance.storage.banner') }) : null, !ready ? _jsx("div", { className: "fin-scroll" }) : route ? (route.name === 'detail' ? _jsx(DetailPage, { ctx: ctx, route: route }) : null) : (_jsxs(_Fragment, { children: [tab === 'markets' ? _jsx(WatchlistPage, { ctx: ctx }) : null, tab === 'industry' ? _jsx(IndustryPage, { ctx: ctx }) : null, tab === 'portfolio' ? _jsx(PortfolioPage, { ctx: ctx }) : null, tab === 'settings' ? _jsx(SettingsPage, { ctx: ctx }) : null] })), !shell.tabsRendered ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', flex: '0 0 auto' } })), _jsx(SearchPage, { ctx: ctx, visible: sheetName === 'search', onClose: closeSheet }), _jsx(AccountsSheet, { ctx: ctx, visible: sheetName === 'accounts', onClose: closeSheet }), _jsx(CashFlowSheet, { ctx: ctx, visible: sheetName === 'cashflow', onClose: closeSheet }), _jsx(HistorySheet, { ctx: ctx, visible: sheetName === 'history', onClose: closeSheet }), _jsx(GroupsSheet, { ctx: ctx, visible: sheetName === 'groups', onClose: closeSheet }), _jsx(TradePanel, { ctx: ctx, visible: sheetName === 'trade', onClose: closeSheet, route: sheet && sheet.name === 'trade' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(AlertPanel, { ctx: ctx, visible: sheetName === 'alert', onClose: closeSheet, route: sheet && sheet.name === 'alert' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(StrategyPage, { ctx: ctx, visible: sheetName === 'strategy', onClose: closeSheet, route: sheet && sheet.name === 'strategy' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(AIPanel, { ctx: ctx, session: aiSession, onClose: () => setAISession(null) })] }));
+    return (_jsxs("div", { className: "fin-root", children: [!shell.toolbarRendered ? (_jsx(NavBar, { title: title, onBack: route ? back : undefined, backLabel: t('finance.cancel'), trailing: !route ? (_jsxs(_Fragment, { children: [hasAI ? (_jsx(ToolbarButton, { icon: "sparkles", label: t('finance.ai.title'), onClick: () => openAIRef.current?.() })) : null, _jsx(ToolbarButton, { icon: "magnifyingglass", label: t('finance.search.title'), onClick: ctx.actions.openSearch })] })) : null })) : null, !store.storageHealthy ? _jsx(StorageBanner, { text: t('finance.storage.banner') }) : null, !ready ? (_jsx("div", { className: "fin-scroll" })) : route ? (route.name === 'detail' ? (_jsx(DetailPage, { ctx: ctx, route: route })) : null) : (_jsxs(_Fragment, { children: [tab === 'markets' ? _jsx(WatchlistPage, { ctx: ctx }) : null, tab === 'industry' ? _jsx(IndustryPage, { ctx: ctx }) : null, tab === 'portfolio' ? _jsx(PortfolioPage, { ctx: ctx }) : null, tab === 'settings' ? _jsx(SettingsPage, { ctx: ctx }) : null] })), !shell.tabsRendered ? (_jsx(TabBar, { items: TABS.map((row) => ({ ...row, title: t(row.titleKey) })), selected: tab, onSelect: selectTab })) : (_jsx("div", { style: { height: 'env(safe-area-inset-bottom)', flex: '0 0 auto' } })), _jsx(SearchPage, { ctx: ctx, visible: sheetName === 'search', onClose: closeSheet }), _jsx(AccountsSheet, { ctx: ctx, visible: sheetName === 'accounts', onClose: closeSheet }), _jsx(CashFlowSheet, { ctx: ctx, visible: sheetName === 'cashflow', onClose: closeSheet }), _jsx(HistorySheet, { ctx: ctx, visible: sheetName === 'history', onClose: closeSheet }), _jsx(GroupsSheet, { ctx: ctx, visible: sheetName === 'groups', onClose: closeSheet }), _jsx(TradePanel, { ctx: ctx, visible: sheetName === 'trade', onClose: closeSheet, route: sheet && sheet.name === 'trade' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(AlertPanel, { ctx: ctx, visible: sheetName === 'alert', onClose: closeSheet, route: sheet && sheet.name === 'alert' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(StrategyPage, { ctx: ctx, visible: sheetName === 'strategy', onClose: closeSheet, route: sheet && sheet.name === 'strategy' ? { ...sheet, name: sheet.symbolName } : null }), _jsx(AIPanel, { ctx: ctx, session: aiSession, onClose: () => setAISession(null) })] }));
 }
 /** 子页在 history 里的路径。页面自己不读它，只为宿主诊断与 `navigation.getState().url` 可读。 */
 function routePath(route) {
-    if (!route)
-        return '#/';
-    if (route.name === 'detail')
-        return `#/detail/${encodeURIComponent(route.canonical || '')}`;
-    return `#/${route.name}`;
+    return `#/detail/${encodeURIComponent(route.canonical)}`;
+}
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
+}
+function isTabID(value) {
+    return TABS.some((tab) => tab.id === value);
 }

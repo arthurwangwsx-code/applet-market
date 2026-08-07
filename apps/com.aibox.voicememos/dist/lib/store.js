@@ -14,19 +14,21 @@ export function useMemoStore() {
     useEffect(() => {
         let cancelled = false;
         void (async () => {
-            const [nextClips, stored] = await Promise.all([
-                listClips(),
-                loadSetting(SETTINGS_KEY, {}),
-            ]);
+            const [nextClips, stored] = await Promise.all([listClips(), loadSetting(SETTINGS_KEY, {})]);
             if (cancelled)
                 return;
             setClips(nextClips);
             setSettings({ ...DEFAULT_SETTINGS, ...stored });
             setReady(true);
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [tick]);
-    const memos = useMemo(() => clips.filter((clip) => !clip.isTrashed).map(clipToMemo).sort((a, b) => b.createdAt - a.createdAt), [clips]);
+    const memos = useMemo(() => clips
+        .filter((clip) => !clip.isTrashed)
+        .map(clipToMemo)
+        .sort((a, b) => b.createdAt - a.createdAt), [clips]);
     const updateSettings = useCallback((patch) => {
         setSettings((current) => {
             const next = { ...current, ...patch };

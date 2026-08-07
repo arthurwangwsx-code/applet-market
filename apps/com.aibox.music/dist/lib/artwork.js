@@ -7,7 +7,7 @@
 //  2. `music_status.currentTrack` 用的是 `AudioTrack.toolJSON`，**不含 artworkUrl**；
 //     `music_local` 的条目也没有封面字段。所以封面要靠「搜索/推荐/资料库结果里见过就记下来」
 //     这条旁路补齐（见 store.rememberArtwork），本地曲目则永远是音符占位。
-import { imageURL } from '../lib/aibox-sdk.js';
+import { imageURL } from 'aibox/sdk';
 import { stableKey } from './format.js';
 const dataURLCache = new Map();
 const inflight = new Map();
@@ -19,21 +19,24 @@ export async function artworkDataURL(url) {
     if (!key)
         return null;
     if (dataURLCache.has(key))
-        return dataURLCache.get(key);
+        return dataURLCache.get(key) ?? null;
     if (inflight.has(key))
-        return inflight.get(key);
+        return inflight.get(key) ?? null;
     // 2026-08-05：从 `fetchImageDataURL`（整张图 base64 进 JS 内存再进 DOM，比原图大 33%、
     // 60 张常驻必爆）换成 `imageURL()` —— 走宿主图片通道，字节不经过 JS，宿主两级缓存跨会话。
     // ⚠️ 取色那条路（canvas getImageData）此前依赖 data: URL 的同源性，换成 applet:// 之后
     // **是否仍不被判跨域污染尚未真机验证**；`dominantColor` 已加 try/catch 兜底，
     // 万一被污染就退回无主色，不会崩，但主色会消失——这条要在真机上确认。
-    const task = Promise.resolve(imageURL(key, { width: 300 })).then((value) => {
+    const task = Promise.resolve(imageURL(key, { width: 300 }))
+        .then((value) => {
         inflight.delete(key);
-        if (dataURLCache.size >= MAX_CACHE)
-            dataURLCache.delete(dataURLCache.keys().next().value);
+        const oldest = dataURLCache.keys().next().value;
+        if (dataURLCache.size >= MAX_CACHE && oldest !== undefined)
+            dataURLCache.delete(oldest);
         dataURLCache.set(key, value);
         return value;
-    }).catch(() => {
+    })
+        .catch(() => {
         inflight.delete(key);
         return null;
     });
@@ -57,7 +60,7 @@ export async function dominantColor(dataURL) {
     if (!key)
         return null;
     if (colorCache.has(key))
-        return colorCache.get(key);
+        return colorCache.get(key) ?? null;
     try {
         const color = await new Promise((resolve) => {
             const image = new Image();
@@ -80,10 +83,11 @@ export async function dominantColor(dataURL) {
                 }
             };
             image.onerror = () => resolve(null);
-            image.src = dataURL;
+            image.src = String(dataURL);
         });
-        if (colorCache.size >= MAX_CACHE)
-            colorCache.delete(colorCache.keys().next().value);
+        const oldest = colorCache.keys().next().value;
+        if (colorCache.size >= MAX_CACHE && oldest !== undefined)
+            colorCache.delete(oldest);
         colorCache.set(key, color);
         return color;
     }
@@ -98,12 +102,12 @@ function averageColor(pixels) {
     let b = 0;
     let count = 0;
     for (let i = 0; i < pixels.length; i += 4) {
-        const alpha = pixels[i + 3];
+        const alpha = pixels[i + 3] ?? 0;
         if (alpha < 24)
             continue;
-        const pr = pixels[i];
-        const pg = pixels[i + 1];
-        const pb = pixels[i + 2];
+        const pr = pixels[i] ?? 0;
+        const pg = pixels[i + 1] ?? 0;
+        const pb = pixels[i + 2] ?? 0;
         const max = Math.max(pr, pg, pb);
         const min = Math.min(pr, pg, pb);
         if (max < 24 || min > 236)
@@ -142,7 +146,7 @@ export function rgba(color, alpha) {
  * 只对 Apple Music 曲目做（本地曲目服务端没有对应条目），且每个 key 只查一次。
  */
 const backfilled = new Set();
-export async function backfillArtworkURL(track, { store, music }) {
+export async function backfillArtworkURL(track, { store, music, }) {
     if (!track || !track.musicItemId)
         return null;
     const key = stableKey(track);
@@ -153,9 +157,9 @@ export async function backfillArtworkURL(track, { store, music }) {
     if (!query)
         return null;
     const result = await music('search', { query, types: ['song'], limit: 5 });
-    const songs = (result.json && Array.isArray(result.json.songs)) ? result.json.songs : [];
-    const hit = songs.find((row) => String(row.musicItemId) === String(track.musicItemId))
-        || songs.find((row) => String(row.title || '').toLowerCase() === String(track.title || '').toLowerCase());
+    const songs = result.json && Array.isArray(result.json.songs) ? result.json.songs : [];
+    const hit = songs.find((row) => String(row.musicItemId) === String(track.musicItemId)) ||
+        songs.find((row) => String(row.title || '').toLowerCase() === String(track.title || '').toLowerCase());
     if (hit && (hit.artworkUrl || hit.url)) {
         // 顺带把 Apple Music 页面链接记下来——`music_status` 也不给 externalURL，分享要用。
         store.rememberArtwork({ ...track, artworkUrl: hit.artworkUrl, url: hit.url });

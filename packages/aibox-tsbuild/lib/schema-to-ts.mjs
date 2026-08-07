@@ -11,30 +11,33 @@
 
 /** JSON Schema -> TS 类型串（单行）。 */
 export function schemaToType(schema) {
-  if (!schema || typeof schema !== 'object') return 'unknown';
+  if (!schema || typeof schema !== 'object') return 'unknown'
   if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    return schema.enum
-      .map((value) => (typeof value === 'string' ? JSON.stringify(value) : String(value)))
-      .join(' | ');
+    return schema.enum.map((value) => (typeof value === 'string' ? JSON.stringify(value) : String(value))).join(' | ')
   }
   switch (schema.type) {
-    case 'string': return 'string';
+    case 'string':
+      return 'string'
     case 'integer':
-    case 'number': return 'number';
-    case 'boolean': return 'boolean';
-    case 'null': return 'null';
-    case 'array': return `Array<${schemaToType(schema.items ?? {})}>`;
+    case 'number':
+      return 'number'
+    case 'boolean':
+      return 'boolean'
+    case 'null':
+      return 'null'
+    case 'array':
+      return `Array<${schemaToType(schema.items ?? {})}>`
     case 'object': {
-      const properties = schema.properties ?? {};
-      const required = new Set(schema.required ?? []);
-      const keys = Object.keys(properties).sort();
-      if (keys.length === 0) return 'Record<string, unknown>';
-      const fields = keys.map((key) => `${key}${required.has(key) ? '' : '?'}: ${schemaToType(properties[key])}`);
-      return `{ ${fields.join('; ')} }`;
+      const properties = schema.properties ?? {}
+      const required = new Set(schema.required ?? [])
+      const keys = Object.keys(properties).sort()
+      if (keys.length === 0) return 'Record<string, unknown>'
+      const fields = keys.map((key) => `${key}${required.has(key) ? '' : '?'}: ${schemaToType(properties[key])}`)
+      return `{ ${fields.join('; ')} }`
     }
     default:
       // 无 type 的 schema（如 `{}` 或只有 description）——保持宽松，别造一个骗人的窄类型。
-      return Object.keys(schema).length === 0 ? 'unknown' : 'unknown';
+      return Object.keys(schema).length === 0 ? 'unknown' : 'unknown'
   }
 }
 
@@ -43,34 +46,34 @@ export function schemaToType(schema) {
  * 开发者和 AI 看的，压成单行就丢了。非 object schema 退回 `schemaToType`。
  */
 export function schemaToBlock(schema, indent = '    ') {
-  if (!schema || schema.type !== 'object') return schemaToType(schema);
-  const properties = schema.properties ?? {};
-  const required = new Set(schema.required ?? []);
-  const keys = Object.keys(properties).sort();
-  if (keys.length === 0) return 'Record<string, unknown>';
-  const inner = `${indent}  `;
-  const lines = ['{'];
+  if (!schema || schema.type !== 'object') return schemaToType(schema)
+  const properties = schema.properties ?? {}
+  const required = new Set(schema.required ?? [])
+  const keys = Object.keys(properties).sort()
+  if (keys.length === 0) return 'Record<string, unknown>'
+  const inner = `${indent}  `
+  const lines = ['{']
   for (const key of keys) {
-    const property = properties[key] ?? {};
-    if (property.description) lines.push(`${inner}/** ${String(property.description).replace(/\*\//g, '*\\/')} */`);
-    lines.push(`${inner}${key}${required.has(key) ? '' : '?'}: ${schemaToType(property)};`);
+    const property = properties[key] ?? {}
+    if (property.description) lines.push(`${inner}/** ${String(property.description).replace(/\*\//g, '*\\/')} */`)
+    lines.push(`${inner}${key}${required.has(key) ? '' : '?'}: ${schemaToType(property)};`)
   }
-  lines.push(`${indent}}`);
-  return lines.join('\n');
+  lines.push(`${indent}}`)
+  return lines.join('\n')
 }
 
 /** schema 是否声明了必填字段（决定 handler 入参能不能省）。 */
 export function schemaHasRequired(schema) {
-  return Boolean(schema && Array.isArray(schema.required) && schema.required.length > 0);
+  return Boolean(schema && Array.isArray(schema.required) && schema.required.length > 0)
 }
 
 /** 安全解析 schema 字符串。解析不了返回 null（调用方决定是报错还是退化）。 */
 export function parseSchemaJSON(value) {
-  if (typeof value !== 'string' || value.trim() === '') return null;
+  if (typeof value !== 'string' || value.trim() === '') return null
   try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' ? parsed : null
   } catch {
-    return null;
+    return null
   }
 }

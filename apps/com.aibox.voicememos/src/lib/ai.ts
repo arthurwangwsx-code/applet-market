@@ -59,7 +59,12 @@ export function extractJSON<T>(raw: string): T | null {
   }
 }
 
-async function generate(input: { system?: string; prompt: string; maxTokens?: number; temperature?: number }): Promise<string> {
+async function generate(input: {
+  system?: string
+  prompt: string
+  maxTokens?: number
+  temperature?: number
+}): Promise<string> {
   const api = ai()
   if (!api) throw new AiError('aibox/ai-unavailable')
   try {
@@ -73,8 +78,8 @@ async function generate(input: { system?: string; prompt: string; maxTokens?: nu
 
 /** 公共 guide：GFM Markdown、`##` 段标题 + `-` 列表、忠实简洁、没内容就整段省略、用转录原文的语言。 */
 const COMMON_GUIDE =
-  'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. '
-  + 'Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.'
+  'Write GFM Markdown using "##" section headings and "-" lists. Be faithful and concise. ' +
+  'Omit a whole section when the transcript has nothing for it. Answer in the language of the transcript.'
 
 const TEMPLATE_GUIDE: Record<SummaryTemplate, { system: string; guide: string }> = {
   general: {
@@ -83,8 +88,9 @@ const TEMPLATE_GUIDE: Record<SummaryTemplate, { system: string; guide: string }>
   },
   meeting: {
     system: 'You write meeting minutes.',
-    guide: 'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" '
-      + '(only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".',
+    guide:
+      'Sections: "## Overview", "## Discussion", "## Decisions", "## Action Items" ' +
+      '(only tasks that were explicitly stated, as "- [ ] task — owner (due)"), "## Open Questions".',
   },
   interview: {
     system: 'You write interview debriefs.',
@@ -121,9 +127,11 @@ export async function summarize(transcript: string, template: SummaryTemplate): 
   if (template === 'general') {
     const raw = await generate({
       system: TEMPLATE_GUIDE.general.system,
-      prompt: 'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n'
-        + '{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\n'
-        + 'Answer in the language of the transcript.\n\nTranscript:\n' + text,
+      prompt:
+        'Output ONLY a single JSON object (no markdown fences, no explanation) shaped exactly like:\n' +
+        '{"abstract":"2-3 sentence summary","points":["short key point", "..."]}\n' +
+        'Answer in the language of the transcript.\n\nTranscript:\n' +
+        text,
       maxTokens: 900,
       temperature: 0.3,
     })
@@ -148,7 +156,6 @@ export async function summarize(transcript: string, template: SummaryTemplate): 
   return { text: body.trim(), points: [] }
 }
 
-
 // —— 待办 / 章节 / 问答 / 转写整理（2.0.0 从宿主 memo_* 工具搬过来） ——
 
 /**
@@ -160,11 +167,13 @@ export async function actionItems(transcript: string): Promise<ActionItem[]> {
   if (!text) throw new AiError('empty-transcript')
   const raw = await generate({
     system: 'You extract commitments from spoken recordings. You never invent tasks that were not actually stated.',
-    prompt: 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n'
-      + '[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\n'
-      + 'Rules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. '
-      + 'Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. '
-      + 'Use the language of the transcript.\n\nTranscript:\n' + text,
+    prompt:
+      'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n' +
+      '[{"text":"the task as stated","kind":"task|decision|commitment","owner":"who, only if named","dueHint":"when, only if stated"}]\n' +
+      'Rules: include an item ONLY if the speaker actually committed to it, decided it, or assigned it. ' +
+      'Leave owner/dueHint out entirely when the recording does not say. Return [] when there is nothing. ' +
+      'Use the language of the transcript.\n\nTranscript:\n' +
+      text,
     maxTokens: 900,
     temperature: 0.2,
   })
@@ -196,10 +205,12 @@ export async function chapters(transcript: string, segments: { text: string; sta
   if (!text) throw new AiError('empty-transcript')
   const raw = await generate({
     system: 'You segment spoken recordings into chapters.',
-    prompt: 'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n'
-      + '[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\n'
-      + 'Rules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim '
-      + 'from the transcript. Use the language of the transcript.\n\nTranscript:\n' + text,
+    prompt:
+      'Output ONLY a JSON array (no markdown fences) shaped exactly like:\n' +
+      '[{"title":"short chapter title","startPhrase":"the first few words actually spoken at the start of this chapter"}]\n' +
+      'Rules: 3-8 chapters for a normal recording, fewer for a short one. startPhrase MUST be copied verbatim ' +
+      'from the transcript. Use the language of the transcript.\n\nTranscript:\n' +
+      text,
     maxTokens: 700,
     temperature: 0.3,
   })
@@ -227,8 +238,9 @@ export async function ask(transcript: string, question: string): Promise<string>
   if (!text) throw new AiError('empty-transcript')
   if (!question.trim()) throw new AiError('empty-question')
   const answer = await generate({
-    system: 'You answer questions about one recording using ONLY its transcript. '
-      + 'If the transcript does not contain the answer, say so plainly instead of guessing.',
+    system:
+      'You answer questions about one recording using ONLY its transcript. ' +
+      'If the transcript does not contain the answer, say so plainly instead of guessing.',
     prompt: `Question: ${question.trim()}\n\nTranscript:\n${text}`,
     maxTokens: 700,
     temperature: 0.2,
@@ -247,9 +259,11 @@ export async function cleanTranscript(transcript: string): Promise<string> {
   if (!text) throw new AiError('empty-transcript')
   const cleaned = await generate({
     system: 'You clean up raw speech-to-text output.',
-    prompt: 'Remove filler words and false starts, fix punctuation and capitalization, and break the text into '
-      + 'paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. '
-      + 'Output only the cleaned text.\n\nTranscript:\n' + text,
+    prompt:
+      'Remove filler words and false starts, fix punctuation and capitalization, and break the text into ' +
+      'paragraphs. Do NOT summarize, reorder, translate or add anything that was not said. ' +
+      'Output only the cleaned text.\n\nTranscript:\n' +
+      text,
     maxTokens: 2000,
     temperature: 0.2,
   })
@@ -273,17 +287,19 @@ export async function correct(input: {
     input.mode === 'none'
       ? 'Do NOT attribute speakers; return a single turn per paragraph with an empty "speaker".'
       : input.mode === 'named'
-        ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(', ')}. `
-          + 'Use those exact names.'
+        ? `There are exactly ${input.speakers.length} speakers named: ${input.speakers.join(', ')}. ` +
+          'Use those exact names.'
         : 'Identify how many distinct speakers there are and label them "S1", "S2", … in order of first appearance.'
 
   const raw = await generate({
     system: 'You clean up raw speech-recognition transcripts.',
-    prompt: 'Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. '
-      + 'Preserve meaning and language exactly — do not summarize, do not add or remove content. '
-      + `${speakerRule}\n`
-      + 'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n'
-      + '[{"speaker":"S1","text":"..."}]\n\nTranscript:\n' + text,
+    prompt:
+      'Fix recognition errors, restore punctuation and casing, and split the text into speaker turns. ' +
+      'Preserve meaning and language exactly — do not summarize, do not add or remove content. ' +
+      `${speakerRule}\n` +
+      'Output ONLY a JSON array (no markdown fences, no explanation) shaped exactly like:\n' +
+      '[{"speaker":"S1","text":"..."}]\n\nTranscript:\n' +
+      text,
     maxTokens: 2400,
     temperature: 0.2,
   })
@@ -325,24 +341,26 @@ export const TRANSLATION_LANGS = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'ru'
 export type TranslationLang = (typeof TRANSLATION_LANGS)[number]
 
 const LANG_NAME: Record<TranslationLang, string> = {
-  zh: 'Chinese', en: 'English', ja: 'Japanese', ko: 'Korean',
-  fr: 'French', de: 'German', es: 'Spanish', ru: 'Russian',
+  zh: 'Chinese',
+  en: 'English',
+  ja: 'Japanese',
+  ko: 'Korean',
+  fr: 'French',
+  de: 'German',
+  es: 'Spanish',
+  ru: 'Russian',
 }
 
 /** 分块 4000（与原生一致），纯文本输出。 */
 const TRANSLATE_CHUNK = 4000
 
-export async function translate(input: {
-  text: string
-  lang: TranslationLang
-  bilingual: boolean
-}): Promise<string> {
+export async function translate(input: { text: string; lang: TranslationLang; bilingual: boolean }): Promise<string> {
   const source = input.text.trim()
   if (!source) throw new AiError('empty-transcript')
   const name = LANG_NAME[input.lang]
   const guide = input.bilingual
-    ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation `
-      + 'on the next line, then a blank line. Do not add any other commentary.'
+    ? `Translate paragraph by paragraph: output each source paragraph on one line, then its ${name} translation ` +
+      'on the next line, then a blank line. Do not add any other commentary.'
     : `Output ONLY the ${name} translation, preserving paragraph breaks.`
 
   const chunks: string[] = []

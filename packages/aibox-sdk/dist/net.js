@@ -3,8 +3,8 @@ import { AiboxError, normalizeError } from './errors';
 function requireNet() {
     const host = bridge();
     if (!host?.net || typeof host.net.fetch !== 'function') {
-        throw new AiboxError('aibox/unavailable', 'aibox/unavailable: aibox.net.fetch is not registered. Set "network": true and list hosts in '
-            + 'manifest.permissions.networkAllowed — page-level fetch() is blocked by CSP and will never work.');
+        throw new AiboxError('aibox/unavailable', 'aibox/unavailable: aibox.net.fetch is not registered. Set "network": true and list hosts in ' +
+            'manifest.permissions.networkAllowed — page-level fetch() is blocked by CSP and will never work.');
     }
     return host.net;
 }
@@ -13,8 +13,8 @@ function assertResponse(url, meta, options) {
         throw new AiboxError('aibox/upstream-failed', `aibox/upstream-failed: ${meta.status} from ${url}`, { data: meta });
     }
     if (!options.allowTruncated && meta.truncated) {
-        throw new AiboxError('aibox/truncated', `aibox/truncated: ${url} returned ${meta.bytes} bytes and was cut off. `
-            + 'Raise maxBytes, or pass allowTruncated: true if a partial body is genuinely acceptable.', { data: meta });
+        throw new AiboxError('aibox/truncated', `aibox/truncated: ${url} returned ${meta.bytes} bytes and was cut off. ` +
+            'Raise maxBytes, or pass allowTruncated: true if a partial body is genuinely acceptable.', { data: meta });
     }
 }
 /** base64 -> 字节。宿主 `responseType:'base64'` 的标准解法。 */
@@ -61,7 +61,9 @@ export async function fetchText(url, options = {}) {
         return new TextDecoder(options.encoding).decode(bytes);
     }
     catch (error) {
-        throw new AiboxError('aibox/parse-failed', `aibox/parse-failed: unsupported encoding "${options.encoding}"`, { cause: error });
+        throw new AiboxError('aibox/parse-failed', `aibox/parse-failed: unsupported encoding "${options.encoding}"`, {
+            cause: error,
+        });
     }
 }
 /** 取 JSON。宿主侧解析（`responseType:'json'`），解析失败按 `aibox/parse-failed` 抛。 */

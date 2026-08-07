@@ -64,15 +64,26 @@ async function drop(collection, id) {
 /** 读回全部数据：`{ tables: {name: rows}, tx: {monthKey: rows} }`。抛错交给上层切降级态。 */
 export async function loadAll() {
     await replayPendingWAL();
-    const tables = {};
+    const tables = {
+        accounts: [],
+        categories: [],
+        currencies: [],
+        budgets: [],
+        projects: [],
+        members: [],
+        settlements: [],
+        snapshots: [],
+        meta: [],
+    };
     for (const doc of await queryAll(TABLES)) {
-        if (doc && typeof doc._id === 'string')
-            tables[doc._id] = Array.isArray(doc.rows) ? doc.rows : [];
+        if (typeof doc._id === 'string' && isTableName(doc._id)) {
+            setTable(tables, doc._id, (Array.isArray(doc.rows) ? doc.rows : []));
+        }
     }
     const tx = {};
     for (const doc of await queryAll(TX)) {
-        if (doc && typeof doc._id === 'string' && doc._id.startsWith('m')) {
-            tx[Number(doc._id.slice(1))] = Array.isArray(doc.rows) ? doc.rows : [];
+        if (typeof doc._id === 'string' && doc._id.startsWith('m')) {
+            tx[Number(doc._id.slice(1))] = (Array.isArray(doc.rows) ? doc.rows : []);
         }
     }
     return { tables, tx };
@@ -81,22 +92,21 @@ export async function loadAll() {
 async function replayPendingWAL() {
     const rows = await queryAll(WAL);
     const pending = rows.find((row) => row && row._id === PENDING_ID);
-    if (!pending || !Array.isArray(pending.ops) || pending.ops.length === 0) {
+    const operations = pending && Array.isArray(pending.ops) ? parseOperations(pending.ops) : [];
+    if (!pending || operations.length === 0) {
         if (pending)
             await drop(WAL, PENDING_ID);
         return;
     }
-    await applyOps(pending.ops);
+    await applyOps(operations);
     await drop(WAL, PENDING_ID);
 }
 async function applyOps(ops) {
     for (const op of ops) {
-        if (!op || typeof op.c !== 'string' || typeof op.id !== 'string')
-            continue;
         if (op.del)
             await drop(op.c, op.id);
         else
-            await put(op.c, op.id, Array.isArray(op.rows) ? op.rows : []);
+            await put(op.c, op.id, op.rows);
     }
 }
 // MARK: - 写
@@ -110,7 +120,7 @@ async function applyOps(ops) {
  * 任何一步失败都向上抛 —— 调用方必须切只读态并告知用户，**绝不能吞掉后照常刷新 UI**。
  */
 export async function commit(ops) {
-    const batch = (ops ?? []).filter((op) => op && typeof op.c === 'string' && typeof op.id === 'string');
+    const batch = ops.filter((op) => typeof op.c === 'string' && typeof op.id === 'string');
     if (batch.length === 0)
         return;
     if (batch.length === 1) {
@@ -126,4 +136,38 @@ export async function commit(ops) {
     });
     await applyOps(batch);
     await drop(WAL, PENDING_ID);
+}
+const TABLE_NAME_SET = new Set([
+    'accounts',
+    'categories',
+    'currencies',
+    'budgets',
+    'projects',
+    'members',
+    'settlements',
+    'snapshots',
+    'meta',
+]);
+function isTableName(value) {
+    return TABLE_NAME_SET.has(value);
+}
+function setTable(tables, name, rows) {
+    tables[name] = rows;
+}
+function parseOperations(values) {
+    const operations = [];
+    for (const value of values) {
+        if (!value || typeof value !== 'object')
+            continue;
+        const row = value;
+        if ((row.c !== 'tables' && row.c !== 'tx') || typeof row.id !== 'string')
+            continue;
+        if (row.del === true && row.c === 'tx') {
+            operations.push({ c: 'tx', id: row.id, del: true });
+        }
+        else if (Array.isArray(row.rows)) {
+            operations.push({ c: row.c, id: row.id, rows: row.rows });
+        }
+    }
+    return operations;
 }

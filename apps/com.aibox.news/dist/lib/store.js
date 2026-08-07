@@ -9,9 +9,10 @@
 //   news.snapshot       时间线快照 { articles(≤timelineLimit), savedAt }
 //   news.content.index  正文缓存索引 { [hash]: { bytes, accessedAt } }
 //   news.content.<hash> 正文分片 { url, text, bytes, accessedAt }
-import { storage } from './host.js';
+// migrate: 本文件对 ./host.js 的依赖已全部由 @aibox/applet-sdk 取代
 import { SEEDS } from './catalog.js';
 import { fnv1aHex, normalizeURL } from './text.js';
+import { storage } from 'aibox/sdk';
 export const KEYS = {
     feeds: 'news.feeds',
     saved: 'news.saved',
@@ -52,8 +53,19 @@ export function newID() {
 function asArray(value) {
     return Array.isArray(value) ? value : [];
 }
+function json(value) {
+    return value;
+}
 /** 一个极小的可订阅状态容器（React 侧用 useStore 订阅）。 */
 export class NewsStore {
+    feeds;
+    saved;
+    read;
+    settings;
+    contentIndex;
+    ready;
+    listeners;
+    version;
     constructor() {
         this.feeds = [];
         this.saved = [];
@@ -75,20 +87,26 @@ export class NewsStore {
     }
     async load() {
         const [feeds, saved, read, settings, contentIndex] = await Promise.all([
-            storage.get(KEYS.feeds),
-            storage.get(KEYS.saved),
-            storage.get(KEYS.read),
-            storage.get(KEYS.settings),
-            storage.get(KEYS.contentIndex),
+            storage.get(KEYS.feeds, null),
+            storage.get(KEYS.saved, null),
+            storage.get(KEYS.read, null),
+            storage.get(KEYS.settings, null),
+            storage.get(KEYS.contentIndex, null),
         ]);
         this.feeds = asArray(feeds);
         this.saved = asArray(saved);
         this.read = asArray(read);
-        this.settings = { ...DEFAULT_SETTINGS, ...(settings && typeof settings === 'object' ? settings : {}) };
-        this.contentIndex = (contentIndex && typeof contentIndex === 'object') ? contentIndex : {};
+        this.settings = {
+            ...DEFAULT_SETTINGS,
+            ...(settings && typeof settings === 'object' ? settings : {}),
+        };
+        this.contentIndex =
+            contentIndex && typeof contentIndex === 'object' && !Array.isArray(contentIndex)
+                ? contentIndex
+                : {};
         if (this.feeds.length === 0) {
             this.feeds = seedFeeds();
-            await storage.set(KEYS.feeds, this.feeds);
+            await storage.set(KEYS.feeds, json(this.feeds));
         }
         this.ready = true;
         this.emit();
@@ -97,7 +115,7 @@ export class NewsStore {
     async updateSettings(patch) {
         this.settings = { ...this.settings, ...patch };
         this.emit();
-        await storage.set(KEYS.settings, this.settings);
+        await storage.set(KEYS.settings, json(this.settings));
     }
     // MARK: 订阅源
     get enabledFeeds() {
@@ -105,7 +123,7 @@ export class NewsStore {
     }
     async persistFeeds() {
         this.emit();
-        await storage.set(KEYS.feeds, this.feeds);
+        await storage.set(KEYS.feeds, json(this.feeds));
     }
     /**
      * @param explicitKind true 时 `kind` 说了算（news_source 工具语义：显式 kind 优先）；
@@ -113,9 +131,7 @@ export class NewsStore {
      */
     async addFeed({ title, endpoint, kind, topic, explicitKind = false }) {
         const trimmedEndpoint = String(endpoint || '').trim();
-        const effectiveKind = explicitKind
-            ? kind
-            : (trimmedEndpoint.startsWith('/') ? 'rsshub' : kind);
+        const effectiveKind = explicitKind ? kind : trimmedEndpoint.startsWith('/') ? 'rsshub' : kind;
         const maxOrder = this.feeds.reduce((max, feed) => Math.max(max, feed.sortOrder || 0), 0);
         const feed = {
             id: newID(),
@@ -154,6 +170,8 @@ export class NewsStore {
             return;
         const a = siblings[index];
         const b = siblings[swapWith];
+        if (!a || !b)
+            return;
         const orderA = a.sortOrder || 0;
         const orderB = b.sortOrder || 0;
         this.feeds = this.feeds.map((feed) => {
@@ -174,7 +192,7 @@ export class NewsStore {
             return { ...feed, lastFetched: at };
         });
         if (changed)
-            await storage.set(KEYS.feeds, this.feeds);
+            await storage.set(KEYS.feeds, json(this.feeds));
     }
     // MARK: 收藏
     get savedKeys() {
@@ -183,7 +201,8 @@ export class NewsStore {
     async save(article) {
         if (this.saved.some((entry) => entry.id === article.id))
             return;
-        this.saved = [{
+        this.saved = [
+            {
                 id: article.id,
                 url: article.url,
                 title: article.title,
@@ -195,14 +214,16 @@ export class NewsStore {
                 publishedAt: article.publishedAt,
                 savedAt: Date.now(),
                 fullText: '',
-            }, ...this.saved];
+            },
+            ...this.saved,
+        ];
         this.emit();
-        await storage.set(KEYS.saved, this.saved);
+        await storage.set(KEYS.saved, json(this.saved));
     }
     async unsave(id) {
         this.saved = this.saved.filter((entry) => entry.id !== id);
         this.emit();
-        await storage.set(KEYS.saved, this.saved);
+        await storage.set(KEYS.saved, json(this.saved));
     }
     // MARK: 已读 / 历史
     get readKeys() {
@@ -229,12 +250,12 @@ export class NewsStore {
         }
         this.read = next;
         this.emit();
-        await storage.set(KEYS.read, this.read);
+        await storage.set(KEYS.read, json(this.read));
     }
     async markUnread(articleKey) {
         this.read = this.read.filter((row) => row.articleKey !== articleKey);
         this.emit();
-        await storage.set(KEYS.read, this.read);
+        await storage.set(KEYS.read, json(this.read));
     }
     /** 删除一条历史（收藏页历史子 Tab 的左滑删除）。 */
     async removeHistory(articleKey) {
@@ -242,16 +263,17 @@ export class NewsStore {
     }
     // MARK: 时间线快照
     async loadSnapshot() {
-        const snapshot = await storage.get(KEYS.snapshot);
+        const snapshot = await storage.get(KEYS.snapshot, null);
         if (!snapshot || typeof snapshot !== 'object')
             return null;
-        return { articles: asArray(snapshot.articles), savedAt: Number(snapshot.savedAt) || 0 };
+        const row = snapshot;
+        return { articles: asArray(row.articles), savedAt: Number(row.savedAt) || 0 };
     }
     async persistSnapshot(articles) {
-        await storage.set(KEYS.snapshot, {
+        await storage.set(KEYS.snapshot, json({
             articles: articles.slice(0, this.settings.timelineLimit),
             savedAt: Date.now(),
-        });
+        }));
     }
     // MARK: 正文缓存（分片 + LRU）
     contentCacheBytes() {
@@ -262,23 +284,26 @@ export class NewsStore {
     }
     async readContent(url) {
         const key = NewsStore.shardKey(url);
-        const shard = await storage.get(key);
-        if (!shard || typeof shard !== 'object' || !shard.text)
+        const shard = await storage.get(key, null);
+        if (!shard || typeof shard !== 'object' || Array.isArray(shard) || !('text' in shard))
+            return null;
+        const text = shard.text;
+        if (typeof text !== 'string' || !text)
             return null;
         const row = this.contentIndex[key];
         if (row) {
             // 读命中会 touch 访问时间（LRU 靠它排序）。
             this.contentIndex = { ...this.contentIndex, [key]: { ...row, accessedAt: Date.now() } };
-            await storage.set(KEYS.contentIndex, this.contentIndex);
+            await storage.set(KEYS.contentIndex, json(this.contentIndex));
         }
-        return shard.text;
+        return text;
     }
     async writeContent(url, text) {
         if (!text)
             return;
         const key = NewsStore.shardKey(url);
         const bytes = text.length * 2;
-        await storage.set(key, { url, text, bytes, accessedAt: Date.now() });
+        await storage.set(key, json({ url, text, bytes, accessedAt: Date.now() }));
         this.contentIndex = { ...this.contentIndex, [key]: { bytes, accessedAt: Date.now() } };
         await this.enforceCacheLimit();
     }
@@ -287,7 +312,7 @@ export class NewsStore {
         const limit = (this.settings.cacheLimitMB || 50) * 1000 * 1000;
         let total = this.contentCacheBytes();
         if (total <= limit) {
-            await storage.set(KEYS.contentIndex, this.contentIndex);
+            await storage.set(KEYS.contentIndex, json(this.contentIndex));
             return;
         }
         const target = limit * 0.9;
@@ -301,14 +326,14 @@ export class NewsStore {
             await storage.remove(key);
         }
         this.contentIndex = next;
-        await storage.set(KEYS.contentIndex, this.contentIndex);
+        await storage.set(KEYS.contentIndex, json(this.contentIndex));
         this.emit();
     }
     async clearContentCache() {
         for (const key of Object.keys(this.contentIndex))
             await storage.remove(key);
         this.contentIndex = {};
-        await storage.set(KEYS.contentIndex, this.contentIndex);
+        await storage.set(KEYS.contentIndex, json(this.contentIndex));
         this.emit();
     }
 }

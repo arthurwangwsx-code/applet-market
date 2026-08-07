@@ -17,20 +17,11 @@
     "storage": true,
     "ai": false,
     "networkAllowed": [],
-    "capabilities": [
-      "tools",
-      "download",
-      "clipboard",
-      "share",
-      "haptics"
-    ]
+    "capabilities": ["tools", "download", "clipboard", "share", "haptics"]
   },
   "presentation": {
     "default": "page",
-    "surfaces": [
-      "page",
-      "fullscreen"
-    ]
+    "surfaces": ["page", "fullscreen"]
   },
   "actions": [
     {
@@ -52,10 +43,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\",\"description\":\"The video page or stream URL.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"video\":{\"type\":\"object\"},\"formats\":{\"type\":\"array\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "read",
       "readOnly": true,
       "idempotent": true,
@@ -84,10 +72,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"required\":[\"url\"],\"properties\":{\"url\":{\"type\":\"string\"},\"formatId\":{\"type\":\"string\",\"description\":\"Format id from the inspect action. Omit for best quality.\"},\"audioOnly\":{\"type\":\"boolean\",\"description\":\"Keep only the audio track as .m4a. Default false.\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"jobId\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "idempotent": false,
@@ -116,10 +101,7 @@
       "inputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"list\",\"status\",\"pause\",\"resume\",\"cancel\",\"retry\",\"play\",\"export\"]},\"jobId\":{\"type\":\"string\"}},\"additionalProperties\":false}",
       "outputSchemaJSON": "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"},\"action\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"},\"error\":{\"type\":\"string\"}}}",
       "headless": true,
-      "visibility": [
-        "agent",
-        "automation"
-      ],
+      "visibility": ["agent", "automation"],
       "effect": "write",
       "readOnly": false,
       "idempotent": false,
@@ -170,9 +152,7 @@
   },
   "toolRequirements": {
     "mode": "allowlist",
-    "prefixes": [
-      "viddl"
-    ],
+    "prefixes": ["viddl"],
     "tools": []
   },
   "runtimeKind": "bundle"

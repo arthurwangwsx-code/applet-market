@@ -3,10 +3,10 @@
 //  2. 调用不抛到 UI 层，一律回落成可判定的返回值；
 //  3. 没有 window.aibox 时（普通浏览器里预览）退化成 no-op，页面仍能跑。
 
-import { isAvailable, normalizeError } from '@aibox/applet-sdk'
+import { bridge, isAvailable, normalizeError } from '@aibox/applet-sdk'
 import type { Accent } from './types.js'
 
-const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
+const api = bridge
 
 /**
  * AI 是否**现在**真的能用。
@@ -26,16 +26,36 @@ export async function probeAI(): Promise<boolean> {
 }
 
 export const capabilities = {
-  get tts() { return isAvailable('tts', 'speak') },
-  get speech() { return isAvailable('speech', 'recognize') },
-  get clipboard() { return isAvailable('clipboard', 'write') },
-  get share() { return isAvailable('share', 'text') },
-  get ui() { return isAvailable('ui', 'confirm') },
-  get haptics() { return isAvailable('haptics', 'impact') },
-  get picker() { return isAvailable('picker', 'photo') },
-  get ocr() { return isAvailable('photos', 'ocr') },
-  get ai() { return isAvailable('ai', 'generate') },
-  get chat() { return isAvailable('chat', 'bind') },
+  get tts() {
+    return isAvailable('tts', 'speak')
+  },
+  get speech() {
+    return isAvailable('speech', 'recognize')
+  },
+  get clipboard() {
+    return isAvailable('clipboard', 'write')
+  },
+  get share() {
+    return isAvailable('share', 'text')
+  },
+  get ui() {
+    return isAvailable('ui', 'confirm')
+  },
+  get haptics() {
+    return isAvailable('haptics', 'impact')
+  },
+  get picker() {
+    return isAvailable('picker', 'photo')
+  },
+  get ocr() {
+    return isAvailable('photos', 'ocr')
+  },
+  get ai() {
+    return isAvailable('ai', 'generate')
+  },
+  get chat() {
+    return isAvailable('chat', 'bind')
+  },
 }
 
 // —— TTS ——
@@ -78,7 +98,11 @@ export async function stopSpeaking(): Promise<void> {
 // —— 端侧语音识别（跟读评分用） ——
 
 export type SpeechUnavailable =
-  | 'recognizerUnavailable' | 'onDeviceUnsupported' | 'micDenied' | 'speechDenied' | 'engineError'
+  | 'recognizerUnavailable'
+  | 'onDeviceUnsupported'
+  | 'micDenied'
+  | 'speechDenied'
+  | 'engineError'
 
 export interface SpeechProbe {
   available: boolean

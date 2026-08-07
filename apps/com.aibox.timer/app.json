@@ -13,5 +13,5 @@
   "category": "productivity",
   "author": "AiBox",
   "minHostVersion": "1.0.0",
-  "tags": ["timer", "pomodoro", "stopwatch", "typescript", "vite"]
+  "tags": ["timer", "pomodoro", "stopwatch", "typescript"]
 }

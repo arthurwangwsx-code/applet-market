@@ -26,22 +26,36 @@
 //    2.0.0 是一次干净的切线，不是数据迁移。
 import { normalizeError, queryAll } from '@aibox/applet-sdk'
 import { hashText, snippetOf } from './format.js'
-import type {
-  LocalClip, Memo, MemoArtifacts, SummaryTemplate, TranscriptSegment,
-} from './types.js'
+import type { LocalClip, Memo, MemoArtifacts, SummaryTemplate, TranscriptSegment } from './types.js'
 
 const api = () => (typeof window !== 'undefined' ? window.aibox : undefined)
 
 export const capabilities = {
-  get recorder() { return Boolean(api()?.audio) },
+  get recorder() {
+    return Boolean(api()?.audio)
+  },
   /** 转写出口是否存在。**注意它只说"方法在"，不说"此刻能转"** —— 后者要问 transcribeAvailability()。 */
-  get transcribe() { return typeof api()?.audio?.transcribe === 'function' },
-  get ai() { return Boolean(api()?.ai) },
-  get share() { return Boolean(api()?.share) },
-  get shareFile() { return typeof api()?.share?.file === 'function' },
-  get clipboard() { return Boolean(api()?.clipboard) },
-  get ui() { return Boolean(api()?.ui) },
-  get haptics() { return Boolean(api()?.haptics) },
+  get transcribe() {
+    return typeof api()?.audio?.transcribe === 'function'
+  },
+  get ai() {
+    return Boolean(api()?.ai)
+  },
+  get share() {
+    return Boolean(api()?.share)
+  },
+  get shareFile() {
+    return typeof api()?.share?.file === 'function'
+  },
+  get clipboard() {
+    return Boolean(api()?.clipboard)
+  },
+  get ui() {
+    return Boolean(api()?.ui)
+  },
+  get haptics() {
+    return Boolean(api()?.haptics)
+  },
 }
 
 export function parseJSON(text: string): unknown {
@@ -77,7 +91,10 @@ export async function recorderAvailability(): Promise<RecorderAvailability> {
   }
 }
 
-export async function recordStart(input: { sampleRate: number; bitrate: number }): Promise<{ started: boolean; error: string }> {
+export async function recordStart(input: {
+  sampleRate: number
+  bitrate: number
+}): Promise<{ started: boolean; error: string }> {
   const bridge = api()
   if (!bridge?.audio) return { started: false, error: 'aibox/unavailable' }
   try {
@@ -94,9 +111,15 @@ export async function recordStart(input: { sampleRate: number; bitrate: number }
   }
 }
 
-export async function recordPause(): Promise<void> { await safeAudio((audio) => audio.recordPause()) }
-export async function recordResume(): Promise<void> { await safeAudio((audio) => audio.recordResume()) }
-export async function recordCancel(): Promise<void> { await safeAudio((audio) => audio.recordCancel()) }
+export async function recordPause(): Promise<void> {
+  await safeAudio((audio) => audio.recordPause())
+}
+export async function recordResume(): Promise<void> {
+  await safeAudio((audio) => audio.recordResume())
+}
+export async function recordCancel(): Promise<void> {
+  await safeAudio((audio) => audio.recordCancel())
+}
 
 async function safeAudio<T>(run: (audio: typeof aibox.audio) => Promise<T>): Promise<T | null> {
   const bridge = api()
@@ -150,7 +173,14 @@ export async function recordStop(): Promise<StoppedClip | null> {
   try {
     const value = await bridge.audio.recordStop()
     if (value.discarded || !value.handle || !value.url) {
-      return { discarded: true, durationMs: value.durationMs ?? 0, handle: '', url: '', byteCount: 0, interrupted: false }
+      return {
+        discarded: true,
+        durationMs: value.durationMs ?? 0,
+        handle: '',
+        url: '',
+        byteCount: 0,
+        interrupted: false,
+      }
     }
     return {
       discarded: false,
@@ -229,12 +259,14 @@ export async function transcribeClip(handle: string, locale?: string): Promise<T
   try {
     const value = await bridge.audio.transcribe(locale ? { handle, locale } : { handle })
     const segments = Array.isArray(value.segments)
-      ? (value.segments as Record<string, unknown>[]).map((raw) => ({
-          text: String(raw.text ?? ''),
-          start: Number(raw.start ?? 0),
-          duration: Number(raw.duration ?? 0),
-          end: Number(raw.end ?? 0),
-        })).filter((segment) => segment.text)
+      ? (value.segments as Record<string, unknown>[])
+          .map((raw) => ({
+            text: String(raw.text ?? ''),
+            start: Number(raw.start ?? 0),
+            duration: Number(raw.duration ?? 0),
+            end: Number(raw.end ?? 0),
+          }))
+          .filter((segment) => segment.text)
       : []
     return {
       ok: true,

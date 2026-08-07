@@ -25,7 +25,7 @@ export async function recordEntry(store, input) {
     const existing = findByIdempotencyKey(store, input.idempotencyKey);
     if (existing)
         return { ok: true, transaction: existing, duplicate: true };
-    const accountID = input.accountID ?? (store.defaultAccount() ? store.defaultAccount().id : null);
+    const accountID = input.accountID ?? store.defaultAccount()?.id ?? null;
     if (!accountID)
         return { ok: false, reason: 'noAccount' };
     const currency = accountCurrency(store, accountID);
@@ -33,7 +33,9 @@ export async function recordEntry(store, input) {
         return { ok: false, reason: 'rateNeeded', currency };
     const txn = store.makeTransaction({ ...input, accountID, currency });
     store.applyPostingSnapshot(txn);
-    const ok = await store.mutate((draft) => { draft.putTx(txn); });
+    const ok = await store.mutate((draft) => {
+        draft.putTx(txn);
+    });
     return ok ? { ok: true, transaction: txn } : { ok: false, reason: 'persistence' };
 }
 /**
@@ -71,36 +73,45 @@ export async function recordTransfer(store, input) {
         batchID: input.batchID ?? null,
     };
     const legOut = store.makeTransaction({
-        ...shared, id: outID, kind: KIND.transferOut, amountMinor: outAmount,
-        accountID: fromAccount.id, currency: fromAccount.currency, transferPeerID: inID,
+        ...shared,
+        id: outID,
+        kind: KIND.transferOut,
+        amountMinor: outAmount,
+        accountID: fromAccount.id,
+        currency: fromAccount.currency,
+        transferPeerID: inID,
         idempotencyKey: input.idempotencyKey ?? null,
     });
     const legIn = store.makeTransaction({
-        ...shared, id: inID, kind: KIND.transferIn, amountMinor: inAmount,
-        accountID: toAccount.id, currency: toAccount.currency, transferPeerID: outID,
+        ...shared,
+        id: inID,
+        kind: KIND.transferIn,
+        amountMinor: inAmount,
+        accountID: toAccount.id,
+        currency: toAccount.currency,
+        transferPeerID: outID,
     });
     store.applyPostingSnapshot(legOut);
     store.applyPostingSnapshot(legIn);
-    const ok = await store.mutate((draft) => { draft.putTx(legOut); draft.putTx(legIn); });
+    const ok = await store.mutate((draft) => {
+        draft.putTx(legOut);
+        draft.putTx(legIn);
+    });
     return ok ? { ok: true, transaction: legOut, peer: legIn } : { ok: false, reason: 'persistence' };
 }
 /** 需要重新锁定入账快照的「实质变更」。 */
 function needsResnapshot(before, after) {
-    return before.amountMinor !== after.amountMinor
-        || before.currency !== after.currency
-        || before.accountID !== after.accountID;
+    return (before.amountMinor !== after.amountMinor ||
+        before.currency !== after.currency ||
+        before.accountID !== after.accountID);
 }
 /** 编辑一笔（转账会顺着 transferPeerID 同步对手腿的日期/备注/项目）。 */
 export async function updateEntry(store, id, patch) {
     const current = store.transaction(id);
     if (!current)
         return { ok: false, reason: 'notFound' };
-    const next = { ...current };
-    for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined)
-            continue;
-        next[key] = value;
-    }
+    const { transferAmountMinor: _transferAmountMinor, ...transactionPatch } = patch;
+    const next = { ...current, ...transactionPatch };
     if (patch.tags !== undefined)
         next.tags = normalizeTags(patch.tags);
     if (patch.occurredOn !== undefined)
@@ -182,16 +193,15 @@ export async function purgeEntry(store, id) {
 }
 /** 最近删除列表：`deletedAt != nil`，按 deletedAt 倒序，上限 200，**转账两腿只展示一条**。 */
 export function recentlyDeleted(store, limit = 200) {
-    const rows = store.allTransactionsIncludingDeleted()
+    const rows = store
+        .allTransactionsIncludingDeleted()
         .filter((row) => !!row.deletedAt)
-        .sort((a, b) => b.deletedAt - a.deletedAt);
+        .sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
     const seen = new Set();
     const out = [];
     for (const row of rows) {
         // 以「两个 id 里字典序较小的那个」作为配对键去重。
-        const key = row.transferPeerID
-            ? [row.id, row.transferPeerID].sort()[0]
-            : row.id;
+        const key = row.transferPeerID ? ([row.id, row.transferPeerID].sort()[0] ?? row.id) : row.id;
         if (seen.has(key))
             continue;
         seen.add(key);
@@ -208,7 +218,9 @@ export function groupByDay(transactions) {
         const key = dayStart(row.occurredOn);
         if (!map.has(key))
             map.set(key, []);
-        map.get(key).push(row);
+        const rows = map.get(key);
+        if (rows)
+            rows.push(row);
     }
     return [...map.entries()]
         .sort((a, b) => b[0] - a[0])

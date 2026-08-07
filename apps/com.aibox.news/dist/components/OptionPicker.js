@@ -4,13 +4,28 @@ import React from 'react';
 import Icon from './Icon.js';
 import { Row, Sheet } from './primitives.js';
 import { C, SPACE } from './theme.js';
-export default function PickerRow({ icon, title, value, options, onChange, disabled, last, cancelLabel }) {
+export default function PickerRow({ icon, title, value, options, onChange, disabled, last, cancelLabel, }) {
     const [open, setOpen] = React.useState(false);
     const selected = options.find((option) => option.value === value);
-    return (_jsxs(_Fragment, { children: [_jsx(Row, { icon: icon, title: title, detail: selected ? selected.label : '', accessory: _jsx(Icon, { name: "chevron.down", size: 12, color: disabled ? C.line : C.muted }), onClick: disabled ? undefined : () => setOpen(true), last: last }), _jsxs(Sheet, { visible: open, onClose: () => setOpen(false), children: [_jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s2}px`, fontSize: 13, color: C.muted }, children: title }), options.map((option, i) => (_jsxs("button", { type: "button", className: "news-btn news-press", onClick: () => { setOpen(false); onChange(option.value); }, style: {
-                            display: 'flex', alignItems: 'center', gap: SPACE.s3, width: '100%',
-                            padding: `13px ${SPACE.s4}px`, fontSize: 16, color: C.ink,
+    return (_jsxs(_Fragment, { children: [_jsx(Row, { icon: icon, title: title, detail: selected ? selected.label : '', accessory: _jsx(Icon, { name: "chevron.down", size: 12, color: disabled ? C.line : C.muted }), onClick: disabled ? undefined : () => setOpen(true), last: last }), _jsxs(Sheet, { visible: open, onClose: () => setOpen(false), children: [_jsx("div", { style: { padding: `${SPACE.s4}px ${SPACE.s4}px ${SPACE.s2}px`, fontSize: 13, color: C.muted }, children: title }), options.map((option, i) => (_jsxs("button", { type: "button", className: "news-btn news-press", onClick: () => {
+                            setOpen(false);
+                            onChange(option.value);
+                        }, style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: SPACE.s3,
+                            width: '100%',
+                            padding: `13px ${SPACE.s4}px`,
+                            fontSize: 16,
+                            color: C.ink,
                             borderTop: `0.5px solid ${C.line}`,
                             borderBottom: i === options.length - 1 ? `0.5px solid ${C.line}` : 'none',
-                        }, children: [_jsx("span", { style: { flex: '1 1 auto' }, children: option.label }), option.value === value ? _jsx(Icon, { name: "checkmark", size: 16, color: C.brand }) : null] }, String(option.value)))), cancelLabel ? (_jsx("button", { type: "button", className: "news-btn news-press", onClick: () => setOpen(false), style: { display: 'block', width: '100%', padding: `14px ${SPACE.s4}px`, color: C.brand, fontSize: 16, textAlign: 'center' }, children: cancelLabel })) : null] })] }));
+                        }, children: [_jsx("span", { style: { flex: '1 1 auto' }, children: option.label }), option.value === value ? _jsx(Icon, { name: "checkmark", size: 16, color: C.brand }) : null] }, String(option.value)))), cancelLabel ? (_jsx("button", { type: "button", className: "news-btn news-press", onClick: () => setOpen(false), style: {
+                            display: 'block',
+                            width: '100%',
+                            padding: `14px ${SPACE.s4}px`,
+                            color: C.brand,
+                            fontSize: 16,
+                            textAlign: 'center',
+                        }, children: cancelLabel })) : null] })] }));
 }

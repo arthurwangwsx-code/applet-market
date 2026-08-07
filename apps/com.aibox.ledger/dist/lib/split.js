@@ -7,11 +7,11 @@ export const SPLIT_MODES = ['equal', 'exact', 'shares', 'percent'];
  * 零头加到**份额数组第一位**；调用方总把付款人排到首位 → 付款人吃零头。
  */
 export function resolveSplit(split, totalMinor) {
-    const shares = (split && Array.isArray(split.shares)) ? split.shares : [];
+    const shares = split?.shares ?? [];
     if (shares.length === 0)
         return [];
     const total = Math.round(totalMinor);
-    const mode = split.mode ?? 'equal';
+    const mode = split?.mode ?? 'equal';
     const out = shares.map((share) => ({ memberID: share.memberID, amountMinor: 0 }));
     if (mode === 'equal') {
         const each = Math.trunc(total / shares.length);
@@ -21,23 +21,33 @@ export function resolveSplit(split, totalMinor) {
     else if (mode === 'exact') {
         shares.forEach((share, index) => {
             const value = Number(share.value) || 0;
-            out[index].amountMinor = value < 0 ? -Math.round(-value * 100) : Math.round(value * 100);
+            const target = out[index];
+            if (target)
+                target.amountMinor = value < 0 ? -Math.round(-value * 100) : Math.round(value * 100);
         });
     }
     else if (mode === 'shares') {
         const weights = shares.map((share) => Math.max(0, Number(share.value) || 0));
         const sum = weights.reduce((acc, value) => acc + value, 0);
         if (sum > 0)
-            weights.forEach((weight, index) => { out[index].amountMinor = Math.round(total * weight / sum); });
+            weights.forEach((weight, index) => {
+                const target = out[index];
+                if (target)
+                    target.amountMinor = Math.round((total * weight) / sum);
+            });
     }
     else if (mode === 'percent') {
         shares.forEach((share, index) => {
             const percent = Math.max(0, Number(share.value) || 0);
-            out[index].amountMinor = Math.round(total * percent / 100);
+            const target = out[index];
+            if (target)
+                target.amountMinor = Math.round((total * percent) / 100);
         });
     }
     const assigned = out.reduce((acc, row) => acc + row.amountMinor, 0);
-    out[0].amountMinor += total - assigned;
+    const first = out[0];
+    if (first)
+        first.amountMinor += total - assigned;
     return out;
 }
 /** 项目里的「我」（没有则 null）。 */
@@ -63,46 +73,54 @@ export function memberBalances(store, projectID) {
         const payerID = txn.payerMemberID ?? (me ? me.id : null);
         if (!payerID || net[payerID] === undefined)
             continue;
-        net[payerID] += base;
+        net[payerID] = (net[payerID] ?? 0) + base;
         const resolved = txn.split ? resolveSplit(txn.split, base) : [];
         if (resolved.length > 0) {
             for (const row of resolved) {
                 if (net[row.memberID] === undefined)
                     continue;
-                net[row.memberID] -= row.amountMinor;
+                net[row.memberID] = (net[row.memberID] ?? 0) - row.amountMinor;
             }
         }
         else {
-            net[payerID] -= base;
+            net[payerID] = (net[payerID] ?? 0) - base;
         }
     }
     for (const settlement of store.projectSettlements(projectID)) {
         if (net[settlement.fromMemberID] !== undefined)
-            net[settlement.fromMemberID] += settlement.amountBaseMinor;
+            net[settlement.fromMemberID] = (net[settlement.fromMemberID] ?? 0) + settlement.amountBaseMinor;
         if (net[settlement.toMemberID] !== undefined)
-            net[settlement.toMemberID] -= settlement.amountBaseMinor;
+            net[settlement.toMemberID] = (net[settlement.toMemberID] ?? 0) - settlement.amountBaseMinor;
     }
     return net;
 }
 /** 贪心 min-cash-flow：最少笔数把所有净额归零。返回 `[{fromMemberID, toMemberID, amountMinor}]`。 */
 export function settlementPlan(store, projectID) {
     const net = memberBalances(store, projectID);
-    const creditors = Object.entries(net).filter(([, value]) => value > 0)
-        .map(([id, value]) => ({ id, value })).sort((a, b) => b.value - a.value);
-    const debtors = Object.entries(net).filter(([, value]) => value < 0)
-        .map(([id, value]) => ({ id, value: -value })).sort((a, b) => b.value - a.value);
+    const creditors = Object.entries(net)
+        .filter(([, value]) => value > 0)
+        .map(([id, value]) => ({ id, value }))
+        .sort((a, b) => b.value - a.value);
+    const debtors = Object.entries(net)
+        .filter(([, value]) => value < 0)
+        .map(([id, value]) => ({ id, value: -value }))
+        .sort((a, b) => b.value - a.value);
     const plan = [];
     let ci = 0;
     let di = 0;
     while (ci < creditors.length && di < debtors.length) {
-        const amount = Math.min(creditors[ci].value, debtors[di].value);
+        const creditor = creditors[ci];
+        const debtor = debtors[di];
+        if (!creditor || !debtor)
+            break;
+        const amount = Math.min(creditor.value, debtor.value);
         if (amount > 0)
-            plan.push({ fromMemberID: debtors[di].id, toMemberID: creditors[ci].id, amountMinor: amount });
-        creditors[ci].value -= amount;
-        debtors[di].value -= amount;
-        if (creditors[ci].value <= 0)
+            plan.push({ fromMemberID: debtor.id, toMemberID: creditor.id, amountMinor: amount });
+        creditor.value -= amount;
+        debtor.value -= amount;
+        if (creditor.value <= 0)
             ci += 1;
-        if (debtors[di].value <= 0)
+        if (debtor.value <= 0)
             di += 1;
     }
     return plan;
@@ -135,9 +153,7 @@ export async function recordSettlement(store, projectID, fromMemberID, toMemberI
                 currency: account.currency,
                 occurredOn: now,
                 source: 'settlement',
-                note: from.isMe
-                    ? `AA settlement to ${counterpart.name}`
-                    : `AA settlement from ${counterpart.name}`,
+                note: from.isMe ? `AA settlement to ${counterpart.name}` : `AA settlement from ${counterpart.name}`,
                 projectID: null,
             });
             store.applyPostingSnapshot(linked);

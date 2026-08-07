@@ -69,7 +69,7 @@ export function stateColor(state) {
         return C.muted;
     return C.running;
 }
-export function formatBytes(n) {
+export function formatBytes(n = 0) {
     if (!Number.isFinite(n) || n <= 0)
         return '0 B';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -81,12 +81,12 @@ export function formatBytes(n) {
     }
     return `${value >= 100 || i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
 }
-export function formatSpeed(bytesPerSecond) {
+export function formatSpeed(bytesPerSecond = 0) {
     if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0)
         return '';
     return `${formatBytes(bytesPerSecond)}/s`;
 }
-export function formatETA(seconds) {
+export function formatETA(seconds = 0) {
     if (!Number.isFinite(seconds) || seconds <= 0)
         return '';
     if (seconds < 60)

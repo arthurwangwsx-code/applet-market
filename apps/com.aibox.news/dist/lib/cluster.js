@@ -59,7 +59,10 @@ export function cluster(articles, threshold = DEFAULT_THRESHOLD) {
     let counter = 0;
     let clusteredCount = 0;
     for (let i = 0; i < assigned.length; i += 1) {
-        const vector = vectorize(`${assigned[i].title} ${assigned[i].summary}`);
+        const article = assigned[i];
+        if (!article)
+            continue;
+        const vector = vectorize(`${article.title} ${article.summary}`);
         if (!vector)
             continue;
         let bestIndex = -1;
@@ -72,14 +75,14 @@ export function cluster(articles, threshold = DEFAULT_THRESHOLD) {
             }
         }
         if (bestIndex >= 0) {
-            assigned[i].clusterID = clusterIDs[bestIndex];
+            article.clusterID = clusterIDs[bestIndex] ?? null;
         }
         else {
             counter += 1;
             const id = `c${counter}`;
             reps.push(vector);
             clusterIDs.push(id);
-            assigned[i].clusterID = id;
+            article.clusterID = id;
         }
         clusteredCount += 1;
     }
